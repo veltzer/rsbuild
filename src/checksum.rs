@@ -53,11 +53,6 @@ impl ChecksumCache {
         Ok(true)
     }
 
-    pub fn update_checksum(&mut self, file_path: &Path) -> Result<()> {
-        let checksum = Self::calculate_checksum(file_path)?;
-        self.checksums.insert(file_path.to_path_buf(), checksum);
-        Ok(())
-    }
 
     pub fn clear(&mut self) {
         self.checksums.clear();

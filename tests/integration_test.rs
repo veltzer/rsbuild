@@ -121,13 +121,13 @@ fn test_incremental_build() {
     let output1 = run_rsb(project_path, &["build"]);
     assert!(output1.status.success());
     let stdout1 = String::from_utf8_lossy(&output1.stdout);
-    assert!(stdout1.contains("Processed template"));
+    assert!(stdout1.contains("[template] Processing:"));
 
-    // Second build (should skip unchanged template)
-    let output2 = run_rsb(project_path, &["build"]);
+    // Second build (should skip unchanged template - use verbose to see skip message)
+    let output2 = run_rsb(project_path, &["build", "--verbose"]);
     assert!(output2.status.success());
     let stdout2 = String::from_utf8_lossy(&output2.stdout);
-    assert!(stdout2.contains("Skipping unchanged template"));
+    assert!(stdout2.contains("[template] Skipping (unchanged):"));
 
     // Verify cache file exists
     assert!(project_path.join(".rsb_cache.json").exists());
@@ -189,9 +189,8 @@ fn test_force_rebuild() {
     let output = run_rsb(project_path, &["build", "--force"]);
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("forced build"));
-    assert!(stdout.contains("Processed template"));
-    assert!(!stdout.contains("Skipping unchanged"));
+    assert!(stdout.contains("[template] Processing:"));
+    assert!(!stdout.contains("Skipping (unchanged)"));
 }
 
 #[test]

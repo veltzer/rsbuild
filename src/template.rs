@@ -1,68 +1,34 @@
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
+use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use tera::{Tera, Context as TeraContext, Function, Value as TeraValue, to_value};
-use serde_json::{Value, Map};
-use crate::checksum::ChecksumCache;
+use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value};
 
-pub struct TemplateProcessor {
-    templates_dir: PathBuf,
-    output_dir: PathBuf,
+use crate::checksum::ChecksumCache;
+use crate::processor::{Processable, ProcessStats, Processor};
+
+/// Represents a single template file to be processed
+pub struct TemplateItem {
+    /// Path to the .tera template file
+    source_path: PathBuf,
+    /// Path where the rendered output will be written
+    output_path: PathBuf,
 }
 
-impl TemplateProcessor {
-    pub fn new(templates_dir: PathBuf, output_dir: PathBuf) -> Result<Self> {
-        Ok(Self {
-            templates_dir,
-            output_dir,
-        })
+impl TemplateItem {
+    pub fn new(source_path: PathBuf, output_path: PathBuf) -> Self {
+        Self {
+            source_path,
+            output_path,
+        }
     }
 
-    /// Process all .tera template files in the templates directory
-    pub fn process_all(&mut self, checksum_cache: &mut ChecksumCache, force: bool) -> Result<()> {
-        if !self.templates_dir.exists() {
-            println!("No templates directory found at: {}", self.templates_dir.display());
-            return Ok(());
-        }
-
-        // Create output directory if it doesn't exist
-        if !self.output_dir.exists() {
-            fs::create_dir_all(&self.output_dir)?;
-        }
-
-        // Find all .tera files in the templates directory
-        for entry in fs::read_dir(&self.templates_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-
-            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("tera") {
-                // Check if template has changed
-                let changed = force || checksum_cache.has_changed(&path)?;
-
-                if changed {
-                    self.process_single_template(&path)?;
-                    println!("Processed template: {}", path.display());
-                } else {
-                    println!("Skipping unchanged template: {}", path.display());
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Process a single .tera template file
-    fn process_single_template(&mut self, template_path: &Path) -> Result<()> {
-        // Get the output filename (remove .tera extension)
-        let output_name = template_path
-            .file_stem()
-            .and_then(|n| n.to_str())
-            .context("Invalid template filename")?;
-
+    /// Render the template and write to output
+    fn render(&self) -> Result<()> {
         // Read template content
-        let template_content = fs::read_to_string(template_path)?;
+        let template_content = fs::read_to_string(&self.source_path)?;
 
         // Create a new Tera instance for this template
         let mut tera = Tera::default();
@@ -78,16 +44,97 @@ impl TemplateProcessor {
         let context = TeraContext::new();
 
         // Render the template
-        let rendered = tera.render("template", &context)
+        let rendered = tera
+            .render("template", &context)
             .context("Failed to render template")?;
 
         // Write to output file
-        let output_path = self.output_dir.join(output_name);
-        fs::write(&output_path, rendered)?;
-        println!("Generated: {}", output_path.display());
+        fs::write(&self.output_path, rendered)?;
 
         Ok(())
     }
+}
+
+impl Processable for TemplateItem {
+    fn source_path(&self) -> &Path {
+        &self.source_path
+    }
+
+    fn cache_key(&self) -> String {
+        format!("template:{}", self.source_path.display())
+    }
+
+    fn display_name(&self) -> String {
+        self.source_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown")
+            .to_string()
+    }
+
+    fn process(&self) -> Result<()> {
+        self.render()
+    }
+}
+
+pub struct TemplateProcessor {
+    templates_dir: PathBuf,
+    output_dir: PathBuf,
+    processor: Processor,
+}
+
+impl TemplateProcessor {
+    pub fn new(templates_dir: PathBuf, output_dir: PathBuf) -> Result<Self> {
+        Ok(Self {
+            templates_dir,
+            output_dir,
+            processor: Processor::new("template"),
+        })
+    }
+
+    /// Process all .tera template files in the templates directory
+    pub fn process_all(
+        &self,
+        checksum_cache: &mut ChecksumCache,
+        force: bool,
+        verbose: bool,
+    ) -> Result<ProcessStats> {
+        if !self.templates_dir.exists() {
+            return Ok(ProcessStats::new("template"));
+        }
+
+        // Create output directory if it doesn't exist
+        if !self.output_dir.exists() {
+            fs::create_dir_all(&self.output_dir)?;
+        }
+
+        // Collect all template items
+        let items = self.find_templates()?;
+
+        // Process all templates using the unified processor
+        self.processor.process_all(&items, checksum_cache, force, verbose)
+    }
+
+    /// Find all .tera template files
+    fn find_templates(&self) -> Result<Vec<TemplateItem>> {
+        let mut items = Vec::new();
+
+        for entry in fs::read_dir(&self.templates_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("tera") {
+                // Get the output filename (remove .tera extension)
+                if let Some(output_name) = path.file_stem().and_then(|n| n.to_str()) {
+                    let output_path = self.output_dir.join(output_name);
+                    items.push(TemplateItem::new(path, output_path));
+                }
+            }
+        }
+
+        Ok(items)
+    }
+
 }
 
 /// Custom Tera function to load Python configuration files
@@ -96,7 +143,8 @@ struct LoadPythonFunction;
 impl Function for LoadPythonFunction {
     fn call(&self, args: &HashMap<String, TeraValue>) -> tera::Result<TeraValue> {
         // Get the path argument
-        let path = args.get("path")
+        let path = args
+            .get("path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| tera::Error::msg("load_python requires a 'path' argument"))?;
 
@@ -172,8 +220,8 @@ print(json.dumps(result))
 
     // Parse the JSON output
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let variables: Map<String, Value> = serde_json::from_str(&stdout)
-        .context("Failed to parse Python config output")?;
+    let variables: Map<String, Value> =
+        serde_json::from_str(&stdout).context("Failed to parse Python config output")?;
 
     Ok(variables)
 }

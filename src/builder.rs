@@ -1,7 +1,10 @@
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use std::fs;
 use std::path::PathBuf;
 use crate::checksum::ChecksumCache;
+use crate::config::Config;
+use crate::linter::Linter;
+use crate::processor::BuildStats;
 use crate::template::TemplateProcessor;
 
 const CACHE_FILE: &str = ".rsb_cache.json";
@@ -10,6 +13,7 @@ pub struct Builder {
     project_root: PathBuf,
     checksum_cache: ChecksumCache,
     cache_file_path: PathBuf,
+    config: Config,
 }
 
 impl Builder {
@@ -20,32 +24,41 @@ impl Builder {
         let checksum_cache = ChecksumCache::load_from_file(&cache_file_path)
             .unwrap_or_else(|_| ChecksumCache::new());
 
+        let config = Config::load(&project_root)?;
+
         Ok(Self {
             project_root,
             checksum_cache,
             cache_file_path,
+            config,
         })
     }
 
     /// Execute an incremental build
-    pub fn build(&mut self, force: bool) -> Result<()> {
-        println!("Starting {} build...", if force { "forced" } else { "incremental" });
+    pub fn build(&mut self, force: bool, verbose: bool) -> Result<()> {
+        let mut stats = BuildStats::default();
 
         // Process templates
         let templates_dir = self.project_root.join("templates");
         let output_dir = self.project_root.clone();
 
         if templates_dir.exists() {
-            let mut processor = TemplateProcessor::new(templates_dir.clone(), output_dir)?;
-            processor.process_all(&mut self.checksum_cache, force)?;
-        } else {
-            println!("No templates directory found, skipping template processing");
+            let processor = TemplateProcessor::new(templates_dir.clone(), output_dir)?;
+            let template_stats = processor.process_all(&mut self.checksum_cache, force, verbose)?;
+            stats.add(template_stats);
         }
+
+        // Lint Python files if applicable
+        let linter = Linter::new(self.project_root.clone(), self.config.lint.clone());
+        let lint_stats = linter.lint_all(&mut self.checksum_cache, force, verbose)?;
+        stats.add(lint_stats);
 
         // Save checksum cache
         self.save_cache()?;
 
-        println!("Build completed successfully!");
+        // Print summary (only in verbose mode)
+        stats.print_summary(verbose);
+
         Ok(())
     }
 
@@ -81,6 +94,10 @@ impl Builder {
                 }
             }
         }
+
+        // Clean lint stub files
+        let linter = Linter::new(self.project_root.clone(), self.config.lint.clone());
+        linter.clean()?;
 
         println!("Clean completed!");
         Ok(())

@@ -40,22 +40,18 @@ impl ChecksumCache {
         Ok(hex::encode(result))
     }
 
-    pub fn has_changed(&mut self, file_path: &Path) -> Result<bool> {
-        let current_checksum = Self::calculate_checksum(file_path)?;
-
-        if let Some(stored_checksum) = self.checksums.get(file_path) {
-            if *stored_checksum == current_checksum {
-                return Ok(false);
-            }
-        }
-
-        self.checksums.insert(file_path.to_path_buf(), current_checksum);
-        Ok(true)
-    }
-
-
     pub fn clear(&mut self) {
         self.checksums.clear();
+    }
+
+    /// Get checksum for a string key (used for lint cache entries)
+    pub fn get_by_key(&self, key: &str) -> Option<&String> {
+        self.checksums.get(&PathBuf::from(key))
+    }
+
+    /// Set checksum for a string key (used for lint cache entries)
+    pub fn set_by_key(&mut self, key: String, checksum: String) {
+        self.checksums.insert(PathBuf::from(key), checksum);
     }
 }
 
@@ -90,18 +86,24 @@ mod tests {
         fs::write(&file_path, "Initial content").unwrap();
 
         let mut cache = ChecksumCache::new();
+        let key = "test:file";
 
-        // First check should report as changed
-        assert!(cache.has_changed(&file_path).unwrap());
+        // First check - no cached checksum
+        assert!(cache.get_by_key(key).is_none());
 
-        // Second check without file modification should report as unchanged
-        assert!(!cache.has_changed(&file_path).unwrap());
+        // Store the checksum
+        let checksum1 = ChecksumCache::calculate_checksum(&file_path).unwrap();
+        cache.set_by_key(key.to_string(), checksum1.clone());
+
+        // Second check - should match
+        assert_eq!(cache.get_by_key(key), Some(&checksum1));
 
         // Modify the file
         fs::write(&file_path, "Modified content").unwrap();
+        let checksum2 = ChecksumCache::calculate_checksum(&file_path).unwrap();
 
-        // Should now report as changed
-        assert!(cache.has_changed(&file_path).unwrap());
+        // Should be different
+        assert_ne!(checksum1, checksum2);
     }
 
     #[test]
@@ -114,14 +116,16 @@ mod tests {
 
         // Create cache and track a file
         let mut cache1 = ChecksumCache::new();
-        cache1.has_changed(&file_path).unwrap();
+        let key = "test:file";
+        let checksum = ChecksumCache::calculate_checksum(&file_path).unwrap();
+        cache1.set_by_key(key.to_string(), checksum.clone());
         cache1.save_to_file(&cache_path).unwrap();
 
         // Load cache from file
-        let mut cache2 = ChecksumCache::load_from_file(&cache_path).unwrap();
+        let cache2 = ChecksumCache::load_from_file(&cache_path).unwrap();
 
-        // Should recognize the file as unchanged
-        assert!(!cache2.has_changed(&file_path).unwrap());
+        // Should have the same checksum
+        assert_eq!(cache2.get_by_key(key), Some(&checksum));
     }
 
     #[test]
@@ -132,18 +136,17 @@ mod tests {
         fs::write(&file_path, "Content").unwrap();
 
         let mut cache = ChecksumCache::new();
-        cache.has_changed(&file_path).unwrap();
+        let key = "test:file";
+        let checksum = ChecksumCache::calculate_checksum(&file_path).unwrap();
+        cache.set_by_key(key.to_string(), checksum);
 
         // Cache should have the file
-        assert!(!cache.checksums.is_empty());
+        assert!(cache.get_by_key(key).is_some());
 
         // Clear the cache
         cache.clear();
 
         // Cache should be empty
-        assert!(cache.checksums.is_empty());
-
-        // File should be detected as changed again
-        assert!(cache.has_changed(&file_path).unwrap());
+        assert!(cache.get_by_key(key).is_none());
     }
 }

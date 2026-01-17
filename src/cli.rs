@@ -15,6 +15,10 @@ pub enum Commands {
         /// Force rebuild even if files haven't changed
         #[arg(short, long)]
         force: bool,
+
+        /// Show verbose output (including skipped files)
+        #[arg(short, long)]
+        verbose: bool,
     },
     /// Clean all build artifacts
     Clean,

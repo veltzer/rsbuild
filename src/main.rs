@@ -1,6 +1,9 @@
 mod builder;
 mod checksum;
 mod cli;
+mod config;
+mod linter;
+mod processor;
 mod template;
 
 use anyhow::Result;
@@ -13,8 +16,8 @@ fn main() -> Result<()> {
     let mut builder = Builder::new()?;
 
     match cli.command {
-        Commands::Build { force } => {
-            builder.build(force)?;
+        Commands::Build { force, verbose } => {
+            builder.build(force, verbose)?;
         }
         Commands::Clean => {
             builder.clean()?;

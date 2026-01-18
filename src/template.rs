@@ -65,11 +65,15 @@ impl Processable for TemplateItem {
     }
 
     fn display_name(&self) -> String {
-        self.source_path
+        let source = self.source_path
             .file_name()
             .and_then(|n| n.to_str())
-            .unwrap_or("unknown")
-            .to_string()
+            .unwrap_or("unknown");
+        let output = self.output_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown");
+        format!("{} -> {}", source, output)
     }
 
     fn process(&self) -> Result<()> {

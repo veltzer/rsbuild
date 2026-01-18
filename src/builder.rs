@@ -101,7 +101,7 @@ impl Builder {
         // Template processor
         let templates_dir = self.project_root.join("templates");
         let output_dir = self.project_root.clone();
-        if let Ok(template_proc) = TemplateProcessor::new(templates_dir, output_dir) {
+        if let Ok(template_proc) = TemplateProcessor::new(templates_dir, output_dir, self.config.template.clone()) {
             processors.insert("template".to_string(), Box::new(template_proc));
         }
 

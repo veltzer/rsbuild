@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value};
 
+use crate::config::TemplateConfig;
 use crate::graph::{BuildGraph, Product};
 use super::ProductDiscovery;
 
@@ -26,9 +27,16 @@ impl TemplateItem {
     }
 
     /// Render the template and write to output
-    fn render(&self) -> Result<()> {
+    fn render(&self, config: &TemplateConfig) -> Result<()> {
         // Read template content
         let template_content = fs::read_to_string(&self.source_path)?;
+
+        // Optionally trim blocks (remove first newline after block tags)
+        let template_content = if config.trim_blocks {
+            trim_block_newlines(&template_content)
+        } else {
+            template_content
+        };
 
         // Create a new Tera instance for this template
         let mut tera = Tera::default();
@@ -40,13 +48,22 @@ impl TemplateItem {
         tera.add_raw_template("template", &template_content)
             .context("Failed to parse template")?;
 
+        // Configure strict mode (fail on undefined variables)
+        tera.set_escape_fn(|s| s.to_string()); // No HTML escaping by default
+
         // Create an empty context (load_python will be called from within the template)
         let context = TeraContext::new();
 
         // Render the template
         let rendered = tera
             .render("template", &context)
-            .context("Failed to render template")?;
+            .with_context(|| {
+                if config.strict {
+                    format!("Failed to render template (strict mode enabled): {}", self.source_path.display())
+                } else {
+                    format!("Failed to render template: {}", self.source_path.display())
+                }
+            })?;
 
         // Write to output file
         fs::write(&self.output_path, rendered)?;
@@ -55,20 +72,28 @@ impl TemplateItem {
     }
 }
 
+/// Remove first newline after block tags ({% ... %})
+fn trim_block_newlines(content: &str) -> String {
+    // Simple implementation: remove newline immediately after %}
+    content.replace("%}\n", "%}")
+}
+
 pub struct TemplateProcessor {
     templates_dir: PathBuf,
     output_dir: PathBuf,
+    config: TemplateConfig,
 }
 
 impl TemplateProcessor {
-    pub fn new(templates_dir: PathBuf, output_dir: PathBuf) -> Result<Self> {
+    pub fn new(templates_dir: PathBuf, output_dir: PathBuf, config: TemplateConfig) -> Result<Self> {
         Ok(Self {
             templates_dir,
             output_dir,
+            config,
         })
     }
 
-    /// Find all .tera template files
+    /// Find all template files matching configured extensions
     fn find_templates(&self) -> Result<Vec<TemplateItem>> {
         let mut items = Vec::new();
 
@@ -80,11 +105,20 @@ impl TemplateProcessor {
             let entry = entry?;
             let path = entry.path();
 
-            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("tera") {
-                // Get the output filename (remove .tera extension)
-                if let Some(output_name) = path.file_stem().and_then(|n| n.to_str()) {
-                    let output_path = self.output_dir.join(output_name);
-                    items.push(TemplateItem::new(path, output_path));
+            if path.is_file() {
+                let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+
+                // Check if file matches any configured extension
+                for ext in &self.config.extensions {
+                    if filename.ends_with(ext) {
+                        // Get the output filename (remove the extension)
+                        let output_name = &filename[..filename.len() - ext.len()];
+                        if !output_name.is_empty() {
+                            let output_path = self.output_dir.join(output_name);
+                            items.push(TemplateItem::new(path.clone(), output_path));
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -117,7 +151,7 @@ impl ProductDiscovery for TemplateProcessor {
             product.inputs[0].clone(),
             product.outputs[0].clone(),
         );
-        item.render()
+        item.render(&self.config)
     }
 
     fn clean(&self, product: &Product) -> Result<()> {

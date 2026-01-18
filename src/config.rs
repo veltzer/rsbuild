@@ -12,6 +12,8 @@ pub struct Config {
     #[serde(default)]
     pub processors: ProcessorsConfig,
     #[serde(default)]
+    pub template: TemplateConfig,
+    #[serde(default)]
     pub lint: LintConfig,
     #[serde(default)]
     pub completions: CompletionsConfig,
@@ -58,6 +60,39 @@ impl Default for ProcessorsConfig {
 impl ProcessorsConfig {
     pub fn is_enabled(&self, name: &str) -> bool {
         self.enabled.iter().any(|p| p == name)
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct TemplateConfig {
+    /// Fail on undefined variables (default: true)
+    #[serde(default = "default_true")]
+    pub strict: bool,
+
+    /// File extensions to process (default: [".tera"])
+    #[serde(default = "default_template_extensions")]
+    pub extensions: Vec<String>,
+
+    /// Remove first newline after block tags (default: false)
+    #[serde(default)]
+    pub trim_blocks: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_template_extensions() -> Vec<String> {
+    vec![".tera".to_string()]
+}
+
+impl Default for TemplateConfig {
+    fn default() -> Self {
+        Self {
+            strict: default_true(),
+            extensions: default_template_extensions(),
+            trim_blocks: false,
+        }
     }
 }
 

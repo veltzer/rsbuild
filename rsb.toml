@@ -1,0 +1,9 @@
+[processors]
+enabled = ["template", "lint"]
+
+[lint]
+linter = "ruff"
+args = []
+
+[completions]
+shells = ["bash"]

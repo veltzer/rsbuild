@@ -8,9 +8,36 @@ const CONFIG_FILE: &str = "rsb.toml";
 #[derive(Debug, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
+    pub processors: ProcessorsConfig,
+    #[serde(default)]
     pub lint: LintConfig,
     #[serde(default)]
     pub completions: CompletionsConfig,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ProcessorsConfig {
+    /// List of enabled processors (e.g., ["template", "lint"])
+    #[serde(default = "default_processors")]
+    pub enabled: Vec<String>,
+}
+
+fn default_processors() -> Vec<String> {
+    vec!["template".to_string(), "lint".to_string()]
+}
+
+impl Default for ProcessorsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_processors(),
+        }
+    }
+}
+
+impl ProcessorsConfig {
+    pub fn is_enabled(&self, name: &str) -> bool {
+        self.enabled.iter().any(|p| p == name)
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]

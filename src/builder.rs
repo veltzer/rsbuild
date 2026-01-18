@@ -36,20 +36,24 @@ impl Builder {
     pub fn build(&mut self, force: bool, verbose: bool) -> Result<()> {
         let mut stats = BuildStats::default();
 
-        // Process templates
-        let templates_dir = self.project_root.join("templates");
-        let output_dir = self.project_root.clone();
+        // Process templates (if enabled)
+        if self.config.processors.is_enabled("template") {
+            let templates_dir = self.project_root.join("templates");
+            let output_dir = self.project_root.clone();
 
-        if templates_dir.exists() {
-            let processor = TemplateProcessor::new(templates_dir.clone(), output_dir)?;
-            let template_stats = processor.process_all(&mut self.checksum_cache, force, verbose)?;
-            stats.add(template_stats);
+            if templates_dir.exists() {
+                let processor = TemplateProcessor::new(templates_dir.clone(), output_dir)?;
+                let template_stats = processor.process_all(&mut self.checksum_cache, force, verbose)?;
+                stats.add(template_stats);
+            }
         }
 
-        // Lint Python files if applicable
-        let linter = Linter::new(self.project_root.clone(), self.config.lint.clone());
-        let lint_stats = linter.lint_all(&mut self.checksum_cache, force, verbose)?;
-        stats.add(lint_stats);
+        // Lint Python files (if enabled)
+        if self.config.processors.is_enabled("lint") {
+            let linter = Linter::new(self.project_root.clone(), self.config.lint.clone());
+            let lint_stats = linter.lint_all(&mut self.checksum_cache, force, verbose)?;
+            stats.add(lint_stats);
+        }
 
         // Save checksum cache
         self.save_cache()?;
@@ -74,28 +78,32 @@ impl Builder {
             println!("Removed cache file: {}", self.cache_file_path.display());
         }
 
-        // Clean generated files from templates
-        let templates_dir = self.project_root.join("templates");
-        if templates_dir.exists() {
-            for entry in fs::read_dir(&templates_dir)? {
-                let entry = entry?;
-                let path = entry.path();
+        // Clean generated files from templates (if enabled)
+        if self.config.processors.is_enabled("template") {
+            let templates_dir = self.project_root.join("templates");
+            if templates_dir.exists() {
+                for entry in fs::read_dir(&templates_dir)? {
+                    let entry = entry?;
+                    let path = entry.path();
 
-                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("tera") {
-                    if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                        let output_file = self.project_root.join(stem);
-                        if output_file.exists() && output_file.is_file() {
-                            fs::remove_file(&output_file)?;
-                            println!("Removed generated file: {}", output_file.display());
+                    if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("tera") {
+                        if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                            let output_file = self.project_root.join(stem);
+                            if output_file.exists() && output_file.is_file() {
+                                fs::remove_file(&output_file)?;
+                                println!("Removed generated file: {}", output_file.display());
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Clean lint stub files
-        let linter = Linter::new(self.project_root.clone(), self.config.lint.clone());
-        linter.clean()?;
+        // Clean lint stub files (if enabled)
+        if self.config.processors.is_enabled("lint") {
+            let linter = Linter::new(self.project_root.clone(), self.config.lint.clone());
+            linter.clean()?;
+        }
 
         println!("Clean completed!");
         Ok(())

@@ -8,7 +8,8 @@ pub use linter::Linter;
 pub use template::TemplateProcessor;
 
 /// Trait for processors that can discover products for the build graph
-pub trait ProductDiscovery {
+/// Must be Sync + Send for parallel execution support
+pub trait ProductDiscovery: Sync + Send {
     /// Discover all products this processor can produce
     fn discover(&self, graph: &mut BuildGraph) -> Result<()>;
 
@@ -20,6 +21,7 @@ pub trait ProductDiscovery {
 }
 
 /// Statistics from processing a category of items
+#[derive(Debug)]
 pub struct ProcessStats {
     pub name: String,
     pub processed: usize,

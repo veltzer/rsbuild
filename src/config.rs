@@ -8,11 +8,32 @@ const CONFIG_FILE: &str = "rsb.toml";
 #[derive(Debug, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
+    pub build: BuildConfig,
+    #[serde(default)]
     pub processors: ProcessorsConfig,
     #[serde(default)]
     pub lint: LintConfig,
     #[serde(default)]
     pub completions: CompletionsConfig,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct BuildConfig {
+    /// Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
+    #[serde(default = "default_parallel")]
+    pub parallel: usize,
+}
+
+fn default_parallel() -> usize {
+    1  // Default to sequential execution
+}
+
+impl Default for BuildConfig {
+    fn default() -> Self {
+        Self {
+            parallel: default_parallel(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]

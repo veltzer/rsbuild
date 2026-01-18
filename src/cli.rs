@@ -46,6 +46,10 @@ pub enum Commands {
         /// Force rebuild even if files haven't changed
         #[arg(short, long)]
         force: bool,
+
+        /// Number of parallel jobs (overrides config file)
+        #[arg(short, long)]
+        jobs: Option<usize>,
     },
     /// Clean all build artifacts
     Clean,

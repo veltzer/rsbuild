@@ -159,6 +159,11 @@ impl BuildGraph {
         &self.products
     }
 
+    /// Get dependencies of a product (products that must be built before this one)
+    pub fn get_dependencies(&self, id: usize) -> &[usize] {
+        self.dependencies.get(&id).map_or(&[], |v| v.as_slice())
+    }
+
     /// Check if a product needs rebuilding based on checksums
     pub fn needs_rebuild(&self, product: &Product, cache: &ChecksumCache, force: bool) -> Result<bool> {
         if force {

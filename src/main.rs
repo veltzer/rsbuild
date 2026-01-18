@@ -2,6 +2,7 @@ mod builder;
 mod checksum;
 mod cli;
 mod config;
+mod executor;
 mod graph;
 mod processors;
 
@@ -16,9 +17,9 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Build { force } => {
+        Commands::Build { force, jobs } => {
             let mut builder = Builder::new()?;
-            builder.build(force, cli.verbose)?;
+            builder.build(force, cli.verbose, jobs)?;
         }
         Commands::Clean => {
             let mut builder = Builder::new()?;

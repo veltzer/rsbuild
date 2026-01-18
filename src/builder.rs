@@ -5,8 +5,9 @@ use std::path::PathBuf;
 use crate::checksum::ChecksumCache;
 use crate::cli::{GraphFormat, GraphViewer};
 use crate::config::Config;
+use crate::executor::Executor;
 use crate::graph::BuildGraph;
-use crate::processors::{BuildStats, Linter, ProcessStats, ProductDiscovery, TemplateProcessor};
+use crate::processors::{Linter, ProductDiscovery, TemplateProcessor};
 
 const CACHE_FILE: &str = ".rsb_cache.json";
 
@@ -36,66 +37,22 @@ impl Builder {
     }
 
     /// Execute an incremental build using the dependency graph
-    pub fn build(&mut self, force: bool, verbose: bool) -> Result<()> {
+    pub fn build(&mut self, force: bool, verbose: bool, jobs: Option<usize>) -> Result<()> {
         // Create processors
         let processors = self.create_processors();
 
         // Build the dependency graph
-        let mut graph = BuildGraph::new();
+        let graph = self.build_graph_with_processors(&processors)?;
 
-        for (name, processor) in &processors {
-            if self.config.processors.is_enabled(name) {
-                processor.discover(&mut graph)?;
-            }
-        }
+        // Create executor with parallelism from command line or config
+        let parallel = jobs.unwrap_or(self.config.build.parallel);
+        let executor = Executor::new(&processors, parallel);
 
-        // Resolve dependencies between products
-        graph.resolve_dependencies();
-
-        // Get execution order
-        let order = graph.topological_sort()?;
-
-        // Execute products in order
-        let mut stats_by_processor: HashMap<String, ProcessStats> = HashMap::new();
-
-        for id in order {
-            let product = graph.get_product(id).unwrap();
-
-            // Check if this product needs rebuilding
-            if !graph.needs_rebuild(product, &self.checksum_cache, force)? {
-                if verbose {
-                    println!("[{}] Skipping (unchanged): {}", product.processor, product.display());
-                }
-                let stats = stats_by_processor
-                    .entry(product.processor.clone())
-                    .or_insert_with(|| ProcessStats::new(&product.processor));
-                stats.skipped += 1;
-                continue;
-            }
-
-            // Find the processor and execute
-            if let Some(processor) = processors.get(&product.processor) {
-                println!("[{}] Processing: {}", product.processor, product.display());
-                processor.execute(product)?;
-
-                // Update cache
-                graph.update_cache(product, &mut self.checksum_cache)?;
-
-                let stats = stats_by_processor
-                    .entry(product.processor.clone())
-                    .or_insert_with(|| ProcessStats::new(&product.processor));
-                stats.processed += 1;
-            }
-        }
+        // Execute the build
+        let stats = executor.execute(&graph, &mut self.checksum_cache, force, verbose)?;
 
         // Save checksum cache
         self.save_cache()?;
-
-        // Build aggregated stats
-        let mut stats = BuildStats::default();
-        for (_, proc_stats) in stats_by_processor {
-            stats.add(proc_stats);
-        }
 
         // Print summary (only in verbose mode)
         stats.print_summary(verbose);
@@ -117,22 +74,13 @@ impl Builder {
             println!("Removed cache file: {}", self.cache_file_path.display());
         }
 
-        // Create processors and discover products
+        // Create processors and build graph
         let processors = self.create_processors();
-        let mut graph = BuildGraph::new();
+        let graph = self.build_graph_with_processors(&processors)?;
 
-        for (name, processor) in &processors {
-            if self.config.processors.is_enabled(name) {
-                processor.discover(&mut graph)?;
-            }
-        }
-
-        // Clean all products
-        for product in graph.products() {
-            if let Some(processor) = processors.get(&product.processor) {
-                processor.clean(product)?;
-            }
-        }
+        // Use executor to clean
+        let executor = Executor::new(&processors, 1);
+        executor.clean(&graph)?;
 
         // Also clean the lint stub directory if it exists
         let lint_stub_dir = self.project_root.join("out/lint");
@@ -243,12 +191,11 @@ impl Builder {
         Ok(())
     }
 
-    /// Build the dependency graph
-    fn build_graph(&self) -> Result<BuildGraph> {
-        let processors = self.create_processors();
+    /// Build the dependency graph using provided processors
+    fn build_graph_with_processors(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>) -> Result<BuildGraph> {
         let mut graph = BuildGraph::new();
 
-        for (name, processor) in &processors {
+        for (name, processor) in processors {
             if self.config.processors.is_enabled(name) {
                 processor.discover(&mut graph)?;
             }
@@ -256,6 +203,12 @@ impl Builder {
 
         graph.resolve_dependencies();
         Ok(graph)
+    }
+
+    /// Build the dependency graph (creates processors internally)
+    fn build_graph(&self) -> Result<BuildGraph> {
+        let processors = self.create_processors();
+        self.build_graph_with_processors(&processors)
     }
 
     /// Open a file with the system default application

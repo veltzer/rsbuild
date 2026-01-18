@@ -1,3 +1,7 @@
+[build]
+# Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
+parallel = 1
+
 [processors]
 enabled = ["template", "lint"]
 

@@ -6,11 +6,10 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value};
 
-use crate::checksum::ChecksumCache;
-use super::{Processable, ProcessStats, Processor};
+use super::{BuildGraph, Product, ProductDiscovery};
 
 /// Represents a single template file to be processed
-pub struct TemplateItem {
+struct TemplateItem {
     /// Path to the .tera template file
     source_path: PathBuf,
     /// Path where the rendered output will be written
@@ -18,7 +17,7 @@ pub struct TemplateItem {
 }
 
 impl TemplateItem {
-    pub fn new(source_path: PathBuf, output_path: PathBuf) -> Self {
+    fn new(source_path: PathBuf, output_path: PathBuf) -> Self {
         Self {
             source_path,
             output_path,
@@ -55,40 +54,9 @@ impl TemplateItem {
     }
 }
 
-impl Processable for TemplateItem {
-    fn source_path(&self) -> &Path {
-        &self.source_path
-    }
-
-    fn cache_key(&self) -> String {
-        format!("template:{}", self.source_path.display())
-    }
-
-    fn input_display(&self) -> String {
-        self.source_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("unknown")
-            .to_string()
-    }
-
-    fn output_display(&self) -> String {
-        self.output_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("unknown")
-            .to_string()
-    }
-
-    fn process(&self) -> Result<()> {
-        self.render()
-    }
-}
-
 pub struct TemplateProcessor {
     templates_dir: PathBuf,
     output_dir: PathBuf,
-    processor: Processor,
 }
 
 impl TemplateProcessor {
@@ -96,36 +64,16 @@ impl TemplateProcessor {
         Ok(Self {
             templates_dir,
             output_dir,
-            processor: Processor::new("template"),
         })
-    }
-
-    /// Process all .tera template files in the templates directory
-    pub fn process_all(
-        &self,
-        checksum_cache: &mut ChecksumCache,
-        force: bool,
-        verbose: bool,
-    ) -> Result<ProcessStats> {
-        if !self.templates_dir.exists() {
-            return Ok(ProcessStats::new("template"));
-        }
-
-        // Create output directory if it doesn't exist
-        if !self.output_dir.exists() {
-            fs::create_dir_all(&self.output_dir)?;
-        }
-
-        // Collect all template items
-        let items = self.find_templates()?;
-
-        // Process all templates using the unified processor
-        self.processor.process_all(&items, checksum_cache, force, verbose)
     }
 
     /// Find all .tera template files
     fn find_templates(&self) -> Result<Vec<TemplateItem>> {
         let mut items = Vec::new();
+
+        if !self.templates_dir.exists() {
+            return Ok(items);
+        }
 
         for entry in fs::read_dir(&self.templates_dir)? {
             let entry = entry?;
@@ -142,7 +90,44 @@ impl TemplateProcessor {
 
         Ok(items)
     }
+}
 
+impl ProductDiscovery for TemplateProcessor {
+    fn discover(&self, graph: &mut BuildGraph) -> Result<()> {
+        let items = self.find_templates()?;
+
+        for item in items {
+            graph.add_product(
+                vec![item.source_path.clone()],
+                vec![item.output_path.clone()],
+                "template",
+            );
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, product: &Product) -> Result<()> {
+        if product.inputs.len() != 1 || product.outputs.len() != 1 {
+            anyhow::bail!("Template product must have exactly one input and one output");
+        }
+
+        let item = TemplateItem::new(
+            product.inputs[0].clone(),
+            product.outputs[0].clone(),
+        );
+        item.render()
+    }
+
+    fn clean(&self, product: &Product) -> Result<()> {
+        for output in &product.outputs {
+            if output.exists() && output.is_file() {
+                fs::remove_file(output)?;
+                println!("Removed generated file: {}", output.display());
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Custom Tera function to load Python configuration files

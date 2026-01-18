@@ -1,9 +1,10 @@
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use crate::checksum::ChecksumCache;
 use crate::config::Config;
-use crate::processors::{BuildStats, Linter, TemplateProcessor};
+use crate::processors::{BuildGraph, BuildStats, Linter, ProcessStats, ProductDiscovery, TemplateProcessor};
 
 const CACHE_FILE: &str = ".rsb_cache.json";
 
@@ -32,31 +33,67 @@ impl Builder {
         })
     }
 
-    /// Execute an incremental build
+    /// Execute an incremental build using the dependency graph
     pub fn build(&mut self, force: bool, verbose: bool) -> Result<()> {
-        let mut stats = BuildStats::default();
+        // Create processors
+        let processors = self.create_processors();
 
-        // Process templates (if enabled)
-        if self.config.processors.is_enabled("template") {
-            let templates_dir = self.project_root.join("templates");
-            let output_dir = self.project_root.clone();
+        // Build the dependency graph
+        let mut graph = BuildGraph::new();
 
-            if templates_dir.exists() {
-                let processor = TemplateProcessor::new(templates_dir.clone(), output_dir)?;
-                let template_stats = processor.process_all(&mut self.checksum_cache, force, verbose)?;
-                stats.add(template_stats);
+        for (name, processor) in &processors {
+            if self.config.processors.is_enabled(name) {
+                processor.discover(&mut graph)?;
             }
         }
 
-        // Lint Python files (if enabled)
-        if self.config.processors.is_enabled("lint") {
-            let linter = Linter::new(self.project_root.clone(), self.config.lint.clone());
-            let lint_stats = linter.lint_all(&mut self.checksum_cache, force, verbose)?;
-            stats.add(lint_stats);
+        // Resolve dependencies between products
+        graph.resolve_dependencies();
+
+        // Get execution order
+        let order = graph.topological_sort()?;
+
+        // Execute products in order
+        let mut stats_by_processor: HashMap<String, ProcessStats> = HashMap::new();
+
+        for id in order {
+            let product = graph.get_product(id).unwrap();
+
+            // Check if this product needs rebuilding
+            if !graph.needs_rebuild(product, &self.checksum_cache, force)? {
+                if verbose {
+                    println!("[{}] Skipping (unchanged): {}", product.processor, product.display());
+                }
+                let stats = stats_by_processor
+                    .entry(product.processor.clone())
+                    .or_insert_with(|| ProcessStats::new(&product.processor));
+                stats.skipped += 1;
+                continue;
+            }
+
+            // Find the processor and execute
+            if let Some(processor) = processors.get(&product.processor) {
+                println!("[{}] Processing: {}", product.processor, product.display());
+                processor.execute(product)?;
+
+                // Update cache
+                graph.update_cache(product, &mut self.checksum_cache)?;
+
+                let stats = stats_by_processor
+                    .entry(product.processor.clone())
+                    .or_insert_with(|| ProcessStats::new(&product.processor));
+                stats.processed += 1;
+            }
         }
 
         // Save checksum cache
         self.save_cache()?;
+
+        // Build aggregated stats
+        let mut stats = BuildStats::default();
+        for (_, proc_stats) in stats_by_processor {
+            stats.add(proc_stats);
+        }
 
         // Print summary (only in verbose mode)
         stats.print_summary(verbose);
@@ -64,7 +101,7 @@ impl Builder {
         Ok(())
     }
 
-    /// Clean all build artifacts
+    /// Clean all build artifacts using the dependency graph
     pub fn clean(&mut self) -> Result<()> {
         println!("Cleaning build artifacts...");
 
@@ -78,35 +115,51 @@ impl Builder {
             println!("Removed cache file: {}", self.cache_file_path.display());
         }
 
-        // Clean generated files from templates (if enabled)
-        if self.config.processors.is_enabled("template") {
-            let templates_dir = self.project_root.join("templates");
-            if templates_dir.exists() {
-                for entry in fs::read_dir(&templates_dir)? {
-                    let entry = entry?;
-                    let path = entry.path();
+        // Create processors and discover products
+        let processors = self.create_processors();
+        let mut graph = BuildGraph::new();
 
-                    if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("tera") {
-                        if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                            let output_file = self.project_root.join(stem);
-                            if output_file.exists() && output_file.is_file() {
-                                fs::remove_file(&output_file)?;
-                                println!("Removed generated file: {}", output_file.display());
-                            }
-                        }
-                    }
-                }
+        for (name, processor) in &processors {
+            if self.config.processors.is_enabled(name) {
+                processor.discover(&mut graph)?;
             }
         }
 
-        // Clean lint stub files (if enabled)
-        if self.config.processors.is_enabled("lint") {
-            let linter = Linter::new(self.project_root.clone(), self.config.lint.clone());
-            linter.clean()?;
+        // Clean all products
+        for product in graph.products() {
+            if let Some(processor) = processors.get(&product.processor) {
+                processor.clean(product)?;
+            }
+        }
+
+        // Also clean the lint stub directory if it exists
+        let lint_stub_dir = self.project_root.join("out/lint");
+        if lint_stub_dir.exists() {
+            fs::remove_dir_all(&lint_stub_dir)
+                .context("Failed to remove lint stub directory")?;
+            println!("Removed lint stub directory: {}", lint_stub_dir.display());
         }
 
         println!("Clean completed!");
         Ok(())
+    }
+
+    /// Create all available processors
+    fn create_processors(&self) -> HashMap<String, Box<dyn ProductDiscovery>> {
+        let mut processors: HashMap<String, Box<dyn ProductDiscovery>> = HashMap::new();
+
+        // Template processor
+        let templates_dir = self.project_root.join("templates");
+        let output_dir = self.project_root.clone();
+        if let Ok(template_proc) = TemplateProcessor::new(templates_dir, output_dir) {
+            processors.insert("template".to_string(), Box::new(template_proc));
+        }
+
+        // Lint processor
+        let linter = Linter::new(self.project_root.clone(), self.config.lint.clone());
+        processors.insert("lint".to_string(), Box::new(linter));
+
+        processors
     }
 
     fn save_cache(&self) -> Result<()> {

@@ -4,149 +4,29 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use walkdir::WalkDir;
 
-use crate::checksum::ChecksumCache;
 use crate::config::LintConfig;
-use super::{Processable, ProcessStats, Processor};
+use super::{BuildGraph, Product, ProductDiscovery};
 
 const LINT_STUB_DIR: &str = "out/lint";
-
-/// Represents a single Python file to be linted
-pub struct LintItem {
-    /// Path to the Python file
-    source_path: PathBuf,
-    /// Path to the stub file marking successful lint
-    stub_path: PathBuf,
-    /// Linter command to use
-    linter: String,
-    /// Additional linter arguments
-    linter_args: Vec<String>,
-    /// Project root for relative path display
-    project_root: PathBuf,
-}
-
-impl LintItem {
-    pub fn new(
-        source_path: PathBuf,
-        stub_dir: &Path,
-        project_root: &Path,
-        linter: &str,
-        linter_args: &[String],
-    ) -> Self {
-        // Create stub path preserving directory structure
-        let relative_path = source_path
-            .strip_prefix(project_root)
-            .unwrap_or(&source_path);
-        let stub_name = format!(
-            "{}.lint",
-            relative_path.display().to_string().replace(['/', '\\'], "_")
-        );
-        let stub_path = stub_dir.join(stub_name);
-
-        Self {
-            source_path,
-            stub_path,
-            linter: linter.to_string(),
-            linter_args: linter_args.to_vec(),
-            project_root: project_root.to_path_buf(),
-        }
-    }
-
-    /// Run the linter on this file
-    fn lint(&self) -> Result<()> {
-        let mut cmd = Command::new(&self.linter);
-
-        // Add check mode for ruff (don't auto-fix)
-        if self.linter == "ruff" {
-            cmd.arg("check");
-        }
-
-        // Add any configured arguments
-        for arg in &self.linter_args {
-            cmd.arg(arg);
-        }
-
-        cmd.arg(&self.source_path);
-        cmd.current_dir(&self.project_root);
-
-        let output = cmd
-            .output()
-            .context(format!("Failed to run linter: {}", self.linter))?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(anyhow::anyhow!(
-                "Linting failed:\n{}{}",
-                stdout,
-                stderr
-            ));
-        }
-
-        // Create stub file on success
-        if let Some(parent) = self.stub_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(&self.stub_path, "linted").context("Failed to create lint stub file")?;
-
-        Ok(())
-    }
-}
-
-impl Processable for LintItem {
-    fn source_path(&self) -> &Path {
-        &self.source_path
-    }
-
-    fn cache_key(&self) -> String {
-        let relative_path = self
-            .source_path
-            .strip_prefix(&self.project_root)
-            .unwrap_or(&self.source_path);
-        format!("lint:{}", relative_path.display())
-    }
-
-    fn input_display(&self) -> String {
-        self.source_path
-            .strip_prefix(&self.project_root)
-            .unwrap_or(&self.source_path)
-            .display()
-            .to_string()
-    }
-
-    fn output_display(&self) -> String {
-        self.stub_path
-            .strip_prefix(&self.project_root)
-            .unwrap_or(&self.stub_path)
-            .display()
-            .to_string()
-    }
-
-    fn process(&self) -> Result<()> {
-        self.lint()
-    }
-}
 
 pub struct Linter {
     project_root: PathBuf,
     lint_config: LintConfig,
     stub_dir: PathBuf,
-    processor: Processor,
 }
 
 impl Linter {
     pub fn new(project_root: PathBuf, lint_config: LintConfig) -> Self {
         let stub_dir = project_root.join(LINT_STUB_DIR);
-        let processor = Processor::new("lint");
         Self {
             project_root,
             lint_config,
             stub_dir,
-            processor,
         }
     }
 
     /// Check if linting should be enabled for this project
-    pub fn should_lint(&self) -> bool {
+    fn should_lint(&self) -> bool {
         let pyproject_exists = self.project_root.join("pyproject.toml").exists();
         let tests_dir = self.project_root.join("tests");
         let tests_has_python = tests_dir.exists() && self.has_python_files(&tests_dir);
@@ -154,33 +34,9 @@ impl Linter {
         pyproject_exists || tests_has_python
     }
 
-    /// Lint all Python files, respecting checksums for incremental builds
-    pub fn lint_all(
-        &self,
-        cache: &mut ChecksumCache,
-        force: bool,
-        verbose: bool,
-    ) -> Result<ProcessStats> {
-        if !self.should_lint() {
-            return Ok(ProcessStats::new("lint"));
-        }
-
-        // Ensure stub directory exists
-        if !self.stub_dir.exists() {
-            fs::create_dir_all(&self.stub_dir)
-                .context("Failed to create lint stub directory")?;
-        }
-
-        // Collect all lint items
-        let items = self.find_python_files();
-
-        // Process all files using the unified processor
-        self.processor.process_all(&items, cache, force, verbose)
-    }
-
     /// Find all Python files that should be linted
-    fn find_python_files(&self) -> Vec<LintItem> {
-        let paths = if self.project_root.join("pyproject.toml").exists() {
+    fn find_python_files(&self) -> Vec<PathBuf> {
+        if self.project_root.join("pyproject.toml").exists() {
             self.find_py_files_in_project()
         } else {
             let tests_dir = self.project_root.join("tests");
@@ -189,30 +45,7 @@ impl Linter {
             } else {
                 Vec::new()
             }
-        };
-
-        paths
-            .into_iter()
-            .map(|path| {
-                LintItem::new(
-                    path,
-                    &self.stub_dir,
-                    &self.project_root,
-                    &self.lint_config.linter,
-                    &self.lint_config.args,
-                )
-            })
-            .collect()
-    }
-
-    /// Clean all lint stub files
-    pub fn clean(&self) -> Result<()> {
-        if self.stub_dir.exists() {
-            fs::remove_dir_all(&self.stub_dir)
-                .context("Failed to remove lint stub directory")?;
-            println!("Removed lint stub directory: {}", self.stub_dir.display());
         }
-        Ok(())
     }
 
     fn has_python_files(&self, dir: &Path) -> bool {
@@ -257,5 +90,102 @@ impl Linter {
             })
             .map(|e| e.path().to_path_buf())
             .collect()
+    }
+
+    /// Get stub path for a Python file
+    fn get_stub_path(&self, py_file: &Path) -> PathBuf {
+        let relative_path = py_file
+            .strip_prefix(&self.project_root)
+            .unwrap_or(py_file);
+        let stub_name = format!(
+            "{}.lint",
+            relative_path.display().to_string().replace(['/', '\\'], "_")
+        );
+        self.stub_dir.join(stub_name)
+    }
+
+    /// Run linter on a single file and create stub
+    fn lint_file(&self, py_file: &Path, stub_path: &Path) -> Result<()> {
+        let mut cmd = Command::new(&self.lint_config.linter);
+
+        // Add check mode for ruff (don't auto-fix)
+        if self.lint_config.linter == "ruff" {
+            cmd.arg("check");
+        }
+
+        // Add any configured arguments
+        for arg in &self.lint_config.args {
+            cmd.arg(arg);
+        }
+
+        cmd.arg(py_file);
+        cmd.current_dir(&self.project_root);
+
+        let output = cmd
+            .output()
+            .context(format!("Failed to run linter: {}", self.lint_config.linter))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            return Err(anyhow::anyhow!(
+                "Linting failed:\n{}{}",
+                stdout,
+                stderr
+            ));
+        }
+
+        // Create stub file on success
+        if let Some(parent) = stub_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(stub_path, "linted").context("Failed to create lint stub file")?;
+
+        Ok(())
+    }
+}
+
+impl ProductDiscovery for Linter {
+    fn discover(&self, graph: &mut BuildGraph) -> Result<()> {
+        if !self.should_lint() {
+            return Ok(());
+        }
+
+        let py_files = self.find_python_files();
+
+        for py_file in py_files {
+            let stub_path = self.get_stub_path(&py_file);
+            graph.add_product(
+                vec![py_file],
+                vec![stub_path],
+                "lint",
+            );
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, product: &Product) -> Result<()> {
+        if product.inputs.len() != 1 || product.outputs.len() != 1 {
+            anyhow::bail!("Lint product must have exactly one input and one output");
+        }
+
+        // Ensure stub directory exists
+        if !self.stub_dir.exists() {
+            fs::create_dir_all(&self.stub_dir)
+                .context("Failed to create lint stub directory")?;
+        }
+
+        self.lint_file(&product.inputs[0], &product.outputs[0])
+    }
+
+    fn clean(&self, product: &Product) -> Result<()> {
+        for output in &product.outputs {
+            if output.exists() {
+                fs::remove_file(output)?;
+                println!("Removed lint stub: {}", output.display());
+            }
+        }
+        Ok(())
     }
 }

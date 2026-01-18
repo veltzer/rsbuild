@@ -1,107 +1,23 @@
+mod graph;
 mod linter;
 mod template;
 
 use anyhow::Result;
-use std::path::Path;
-use crate::checksum::ChecksumCache;
 
+pub use graph::{BuildGraph, Product};
 pub use linter::Linter;
 pub use template::TemplateProcessor;
 
-/// Result of processing a single item
-pub enum ProcessResult {
-    /// Item was processed successfully
-    Processed,
-    /// Item was skipped (unchanged)
-    Skipped,
-}
+/// Trait for processors that can discover products for the build graph
+pub trait ProductDiscovery {
+    /// Discover all products this processor can produce
+    fn discover(&self, graph: &mut BuildGraph) -> Result<()>;
 
-/// Trait for items that can be processed with checksum-based caching
-pub trait Processable {
-    /// Get the source path for checksum calculation
-    fn source_path(&self) -> &Path;
+    /// Execute a single product
+    fn execute(&self, product: &Product) -> Result<()>;
 
-    /// Get a unique cache key for this item
-    fn cache_key(&self) -> String;
-
-    /// Get the input file display name for logging
-    fn input_display(&self) -> String;
-
-    /// Get the output file display name for logging
-    fn output_display(&self) -> String;
-
-    /// Process the item (called only when checksum indicates change)
-    fn process(&self) -> Result<()>;
-}
-
-/// Generic processor that handles checksum caching and logging
-pub struct Processor {
-    name: String,
-}
-
-impl Processor {
-    pub fn new(name: &str) -> Self {
-        Self {
-            name: name.to_string(),
-        }
-    }
-
-    /// Format the display message for an item
-    fn format_display<T: Processable>(item: &T) -> String {
-        format!("input: {}, output: {}", item.input_display(), item.output_display())
-    }
-
-    /// Process a single item with checksum caching
-    fn process_item<T: Processable>(
-        &self,
-        item: &T,
-        cache: &mut ChecksumCache,
-        force: bool,
-        verbose: bool,
-    ) -> Result<ProcessResult> {
-        let source_path = item.source_path();
-        let cache_key = item.cache_key();
-
-        // Calculate current checksum
-        let current_checksum = ChecksumCache::calculate_checksum(source_path)?;
-
-        // Check if item has changed
-        if !force && cache.get_by_key(&cache_key) == Some(&current_checksum) {
-            if verbose {
-                println!("[{}] Skipping (unchanged): {}", self.name, Self::format_display(item));
-            }
-            return Ok(ProcessResult::Skipped);
-        }
-
-        // Process the item
-        println!("[{}] Processing: {}", self.name, Self::format_display(item));
-        item.process()?;
-
-        // Update cache on success
-        cache.set_by_key(cache_key, current_checksum);
-
-        Ok(ProcessResult::Processed)
-    }
-
-    /// Process multiple items and return stats
-    pub fn process_all<T: Processable>(
-        &self,
-        items: &[T],
-        cache: &mut ChecksumCache,
-        force: bool,
-        verbose: bool,
-    ) -> Result<ProcessStats> {
-        let mut stats = ProcessStats::new(&self.name);
-
-        for item in items {
-            match self.process_item(item, cache, force, verbose)? {
-                ProcessResult::Processed => stats.processed += 1,
-                ProcessResult::Skipped => stats.skipped += 1,
-            }
-        }
-
-        Ok(stats)
-    }
+    /// Clean outputs for a product
+    fn clean(&self, product: &Product) -> Result<()>;
 }
 
 /// Statistics from processing a category of items

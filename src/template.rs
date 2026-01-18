@@ -73,7 +73,7 @@ impl Processable for TemplateItem {
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown");
-        format!("{} -> {}", source, output)
+        format!("input: {}, output: {}", source, output)
     }
 
     fn process(&self) -> Result<()> {

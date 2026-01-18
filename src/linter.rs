@@ -106,11 +106,17 @@ impl Processable for LintItem {
     }
 
     fn display_name(&self) -> String {
-        self.source_path
+        let source = self.source_path
             .strip_prefix(&self.project_root)
             .unwrap_or(&self.source_path)
             .display()
-            .to_string()
+            .to_string();
+        let output = self.stub_path
+            .strip_prefix(&self.project_root)
+            .unwrap_or(&self.stub_path)
+            .display()
+            .to_string();
+        format!("input: {}, output: {}", source, output)
     }
 
     fn process(&self) -> Result<()> {

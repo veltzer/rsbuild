@@ -9,6 +9,27 @@ const CONFIG_FILE: &str = "rsb.toml";
 pub struct Config {
     #[serde(default)]
     pub lint: LintConfig,
+    #[serde(default)]
+    pub completions: CompletionsConfig,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CompletionsConfig {
+    /// The shells to generate completions for by default
+    #[serde(default = "default_shells")]
+    pub shells: Vec<String>,
+}
+
+fn default_shells() -> Vec<String> {
+    vec!["bash".to_string()]
+}
+
+impl Default for CompletionsConfig {
+    fn default() -> Self {
+        Self {
+            shells: default_shells(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]

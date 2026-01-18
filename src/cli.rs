@@ -1,6 +1,7 @@
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 use std::io;
+use std::str::FromStr;
 
 #[derive(Parser)]
 #[command(name = "rsb")]
@@ -26,10 +27,15 @@ pub enum Commands {
     Clean,
     /// Generate shell completion scripts
     Complete {
-        /// The shell to generate completions for
+        /// The shells to generate completions for (if none specified, uses config file)
         #[arg(value_enum)]
-        shell: Shell,
+        shells: Vec<Shell>,
     },
+}
+
+/// Parse a shell name string into a Shell enum
+pub fn parse_shell(name: &str) -> Option<Shell> {
+    Shell::from_str(name).ok()
 }
 
 /// Generate shell completions and print to stdout

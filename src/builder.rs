@@ -3,9 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 use crate::checksum::ChecksumCache;
 use crate::config::Config;
-use crate::linter::Linter;
-use crate::processor::BuildStats;
-use crate::template::TemplateProcessor;
+use crate::processors::{BuildStats, Linter, TemplateProcessor};
 
 const CACHE_FILE: &str = ".rsb_cache.json";
 

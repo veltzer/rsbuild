@@ -2,9 +2,7 @@ mod builder;
 mod checksum;
 mod cli;
 mod config;
-mod linter;
-mod processor;
-mod template;
+mod processors;
 
 use anyhow::{bail, Result};
 use clap::Parser;

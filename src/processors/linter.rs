@@ -6,7 +6,7 @@ use walkdir::WalkDir;
 
 use crate::checksum::ChecksumCache;
 use crate::config::LintConfig;
-use crate::processor::{Processable, ProcessStats, Processor};
+use super::{Processable, ProcessStats, Processor};
 
 const LINT_STUB_DIR: &str = "out/lint";
 
@@ -105,18 +105,20 @@ impl Processable for LintItem {
         format!("lint:{}", relative_path.display())
     }
 
-    fn display_name(&self) -> String {
-        let source = self.source_path
+    fn input_display(&self) -> String {
+        self.source_path
             .strip_prefix(&self.project_root)
             .unwrap_or(&self.source_path)
             .display()
-            .to_string();
-        let output = self.stub_path
+            .to_string()
+    }
+
+    fn output_display(&self) -> String {
+        self.stub_path
             .strip_prefix(&self.project_root)
             .unwrap_or(&self.stub_path)
             .display()
-            .to_string();
-        format!("input: {}, output: {}", source, output)
+            .to_string()
     }
 
     fn process(&self) -> Result<()> {

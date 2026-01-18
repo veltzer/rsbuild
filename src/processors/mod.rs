@@ -1,6 +1,12 @@
+mod linter;
+mod template;
+
 use anyhow::Result;
 use std::path::Path;
 use crate::checksum::ChecksumCache;
+
+pub use linter::Linter;
+pub use template::TemplateProcessor;
 
 /// Result of processing a single item
 pub enum ProcessResult {
@@ -18,8 +24,11 @@ pub trait Processable {
     /// Get a unique cache key for this item
     fn cache_key(&self) -> String;
 
-    /// Get a display name for logging
-    fn display_name(&self) -> String;
+    /// Get the input file display name for logging
+    fn input_display(&self) -> String;
+
+    /// Get the output file display name for logging
+    fn output_display(&self) -> String;
 
     /// Process the item (called only when checksum indicates change)
     fn process(&self) -> Result<()>;
@@ -37,6 +46,11 @@ impl Processor {
         }
     }
 
+    /// Format the display message for an item
+    fn format_display<T: Processable>(item: &T) -> String {
+        format!("input: {}, output: {}", item.input_display(), item.output_display())
+    }
+
     /// Process a single item with checksum caching
     fn process_item<T: Processable>(
         &self,
@@ -47,7 +61,6 @@ impl Processor {
     ) -> Result<ProcessResult> {
         let source_path = item.source_path();
         let cache_key = item.cache_key();
-        let display_name = item.display_name();
 
         // Calculate current checksum
         let current_checksum = ChecksumCache::calculate_checksum(source_path)?;
@@ -55,13 +68,13 @@ impl Processor {
         // Check if item has changed
         if !force && cache.get_by_key(&cache_key) == Some(&current_checksum) {
             if verbose {
-                println!("[{}] Skipping (unchanged): {}", self.name, display_name);
+                println!("[{}] Skipping (unchanged): {}", self.name, Self::format_display(item));
             }
             return Ok(ProcessResult::Skipped);
         }
 
         // Process the item
-        println!("[{}] Processing: {}", self.name, display_name);
+        println!("[{}] Processing: {}", self.name, Self::format_display(item));
         item.process()?;
 
         // Update cache on success

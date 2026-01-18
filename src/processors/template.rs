@@ -7,7 +7,7 @@ use std::process::Command;
 use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value};
 
 use crate::checksum::ChecksumCache;
-use crate::processor::{Processable, ProcessStats, Processor};
+use super::{Processable, ProcessStats, Processor};
 
 /// Represents a single template file to be processed
 pub struct TemplateItem {
@@ -64,16 +64,20 @@ impl Processable for TemplateItem {
         format!("template:{}", self.source_path.display())
     }
 
-    fn display_name(&self) -> String {
-        let source = self.source_path
+    fn input_display(&self) -> String {
+        self.source_path
             .file_name()
             .and_then(|n| n.to_str())
-            .unwrap_or("unknown");
-        let output = self.output_path
+            .unwrap_or("unknown")
+            .to_string()
+    }
+
+    fn output_display(&self) -> String {
+        self.output_path
             .file_name()
             .and_then(|n| n.to_str())
-            .unwrap_or("unknown");
-        format!("input: {}, output: {}", source, output)
+            .unwrap_or("unknown")
+            .to_string()
     }
 
     fn process(&self) -> Result<()> {

@@ -1,7 +1,11 @@
 .PHONY: all
 all:
-	./build_dev.sh
-	./build_release.sh
+	@cargo build
+	@cargo build --release
+
+.PHONY: test
+test:
+	@cargo test
 
 .PHONY: clean
 clean:

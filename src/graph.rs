@@ -2,8 +2,6 @@ use anyhow::{bail, Result};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use crate::checksum::ChecksumCache;
-
 /// A single build product with concrete inputs and outputs
 #[derive(Debug, Clone)]
 pub struct Product {
@@ -162,57 +160,6 @@ impl BuildGraph {
     /// Get dependencies of a product (products that must be built before this one)
     pub fn get_dependencies(&self, id: usize) -> &[usize] {
         self.dependencies.get(&id).map_or(&[], |v| v.as_slice())
-    }
-
-    /// Check if a product needs rebuilding based on checksums
-    pub fn needs_rebuild(&self, product: &Product, cache: &ChecksumCache, force: bool) -> Result<bool> {
-        if force {
-            return Ok(true);
-        }
-
-        let cache_key = product.cache_key();
-
-        // Calculate combined checksum of all inputs
-        let mut checksums = Vec::new();
-        for input in &product.inputs {
-            if input.exists() {
-                checksums.push(ChecksumCache::calculate_checksum(input)?);
-            } else {
-                // Input doesn't exist yet, needs rebuild
-                return Ok(true);
-            }
-        }
-        let combined = checksums.join(":");
-
-        // Check if outputs exist
-        for output in &product.outputs {
-            if !output.exists() {
-                return Ok(true);
-            }
-        }
-
-        // Check cache
-        if let Some(cached) = cache.get_by_key(&cache_key) {
-            if cached == &combined {
-                return Ok(false);
-            }
-        }
-
-        Ok(true)
-    }
-
-    /// Update cache after successful build
-    pub fn update_cache(&self, product: &Product, cache: &mut ChecksumCache) -> Result<()> {
-        let cache_key = product.cache_key();
-
-        let mut checksums = Vec::new();
-        for input in &product.inputs {
-            checksums.push(ChecksumCache::calculate_checksum(input)?);
-        }
-        let combined = checksums.join(":");
-
-        cache.set_by_key(cache_key, combined);
-        Ok(())
     }
 }
 

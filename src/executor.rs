@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crate::checksum::ChecksumCache;
 use crate::graph::BuildGraph;
+use crate::object_store::ObjectStore;
 use crate::processors::{BuildStats, ProcessStats, ProductDiscovery};
 
 /// Executor handles running products through their processors
@@ -26,16 +26,16 @@ impl<'a> Executor<'a> {
     pub fn execute(
         &self,
         graph: &BuildGraph,
-        checksum_cache: &mut ChecksumCache,
+        object_store: &mut ObjectStore,
         force: bool,
         verbose: bool,
     ) -> Result<BuildStats> {
         let order = graph.topological_sort()?;
 
         if self.parallel <= 1 {
-            self.execute_sequential(graph, &order, checksum_cache, force, verbose)
+            self.execute_sequential(graph, &order, object_store, force, verbose)
         } else {
-            self.execute_parallel(graph, &order, checksum_cache, force, verbose)
+            self.execute_parallel(graph, &order, object_store, force, verbose)
         }
     }
 
@@ -44,7 +44,7 @@ impl<'a> Executor<'a> {
         &self,
         graph: &BuildGraph,
         order: &[usize],
-        checksum_cache: &mut ChecksumCache,
+        object_store: &mut ObjectStore,
         force: bool,
         verbose: bool,
     ) -> Result<BuildStats> {
@@ -52,11 +52,25 @@ impl<'a> Executor<'a> {
 
         for &id in order {
             let product = graph.get_product(id).unwrap();
+            let cache_key = product.cache_key();
+            let input_checksum = ObjectStore::combined_input_checksum(&product.inputs)?;
 
             // Check if this product needs rebuilding
-            if !graph.needs_rebuild(product, checksum_cache, force)? {
+            if !force && !object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs) {
                 if verbose {
                     println!("[{}] Skipping (unchanged): {}", product.processor, product.display());
+                }
+                let stats = stats_by_processor
+                    .entry(product.processor.clone())
+                    .or_insert_with(|| ProcessStats::new(&product.processor));
+                stats.skipped += 1;
+                continue;
+            }
+
+            // Try to restore from cache if outputs are missing
+            if !force && object_store.restore_from_cache(&cache_key, &input_checksum, &product.outputs)? {
+                if verbose {
+                    println!("[{}] Restored from cache: {}", product.processor, product.display());
                 }
                 let stats = stats_by_processor
                     .entry(product.processor.clone())
@@ -70,8 +84,8 @@ impl<'a> Executor<'a> {
                 println!("[{}] Processing: {}", product.processor, product.display());
                 processor.execute(product)?;
 
-                // Update cache
-                graph.update_cache(product, checksum_cache)?;
+                // Cache outputs
+                object_store.cache_outputs(&cache_key, &input_checksum, &product.outputs)?;
 
                 let stats = stats_by_processor
                     .entry(product.processor.clone())
@@ -94,7 +108,7 @@ impl<'a> Executor<'a> {
         &self,
         graph: &BuildGraph,
         order: &[usize],
-        checksum_cache: &mut ChecksumCache,
+        object_store: &mut ObjectStore,
         force: bool,
         verbose: bool,
     ) -> Result<BuildStats> {
@@ -103,19 +117,29 @@ impl<'a> Executor<'a> {
 
         let stats_by_processor: Arc<Mutex<HashMap<String, ProcessStats>>> =
             Arc::new(Mutex::new(HashMap::new()));
-        let cache = Arc::new(Mutex::new(std::mem::take(checksum_cache)));
+        let store = Arc::new(Mutex::new(std::mem::take(object_store)));
         let errors: Arc<Mutex<Vec<anyhow::Error>>> = Arc::new(Mutex::new(Vec::new()));
 
         for level in levels {
             // Determine which products in this level need work
-            let mut work_items: Vec<(usize, bool)> = Vec::new(); // (id, needs_rebuild)
+            // (id, input_checksum, needs_rebuild, can_restore)
+            let mut work_items: Vec<(usize, String, bool, bool)> = Vec::new();
 
             {
-                let cache_guard = cache.lock().unwrap();
+                let store_guard = store.lock().unwrap();
                 for &id in &level {
                     let product = graph.get_product(id).unwrap();
-                    let needs = graph.needs_rebuild(product, &cache_guard, force)?;
-                    work_items.push((id, needs));
+                    let cache_key = product.cache_key();
+                    let input_checksum = match ObjectStore::combined_input_checksum(&product.inputs) {
+                        Ok(cs) => cs,
+                        Err(e) => {
+                            errors.lock().unwrap().push(e);
+                            continue;
+                        }
+                    };
+
+                    let needs = force || store_guard.needs_rebuild(&cache_key, &input_checksum, &product.outputs);
+                    work_items.push((id, input_checksum, needs, false));
                 }
             }
 
@@ -126,12 +150,13 @@ impl<'a> Executor<'a> {
             thread::scope(|s| {
                 for chunk in chunks {
                     let stats_ref = Arc::clone(&stats_by_processor);
-                    let cache_ref = Arc::clone(&cache);
+                    let store_ref = Arc::clone(&store);
                     let errors_ref = Arc::clone(&errors);
 
                     s.spawn(move || {
-                        for &(id, needs_rebuild) in chunk {
-                            let product = graph.get_product(id).unwrap();
+                        for (id, input_checksum, needs_rebuild, _) in chunk {
+                            let product = graph.get_product(*id).unwrap();
+                            let cache_key = product.cache_key();
 
                             if !needs_rebuild {
                                 if verbose {
@@ -145,6 +170,32 @@ impl<'a> Executor<'a> {
                                 continue;
                             }
 
+                            // Try to restore from cache
+                            if !force {
+                                let restore_result = {
+                                    let store_guard = store_ref.lock().unwrap();
+                                    store_guard.restore_from_cache(&cache_key, input_checksum, &product.outputs)
+                                };
+                                match restore_result {
+                                    Ok(true) => {
+                                        if verbose {
+                                            println!("[{}] Restored from cache: {}", product.processor, product.display());
+                                        }
+                                        let mut stats = stats_ref.lock().unwrap();
+                                        let proc_stats = stats
+                                            .entry(product.processor.clone())
+                                            .or_insert_with(|| ProcessStats::new(&product.processor));
+                                        proc_stats.skipped += 1;
+                                        continue;
+                                    }
+                                    Err(e) => {
+                                        errors_ref.lock().unwrap().push(e);
+                                        continue;
+                                    }
+                                    Ok(false) => {}
+                                }
+                            }
+
                             if let Some(processor) = self.processors.get(&product.processor) {
                                 println!("[{}] Processing: {}", product.processor, product.display());
 
@@ -153,10 +204,10 @@ impl<'a> Executor<'a> {
                                     continue;
                                 }
 
-                                // Update cache
+                                // Cache outputs
                                 {
-                                    let mut cache_guard = cache_ref.lock().unwrap();
-                                    if let Err(e) = graph.update_cache(product, &mut cache_guard) {
+                                    let mut store_guard = store_ref.lock().unwrap();
+                                    if let Err(e) = store_guard.cache_outputs(&cache_key, input_checksum, &product.outputs) {
                                         errors_ref.lock().unwrap().push(e);
                                         continue;
                                     }
@@ -176,14 +227,14 @@ impl<'a> Executor<'a> {
             // Check for errors after each level
             let errs = errors.lock().unwrap();
             if !errs.is_empty() {
-                // Restore cache before returning error
-                *checksum_cache = Arc::try_unwrap(cache).unwrap().into_inner().unwrap();
+                // Restore store before returning error
+                *object_store = Arc::try_unwrap(store).unwrap().into_inner().unwrap();
                 return Err(anyhow::anyhow!("Build failed: {}", errs[0]));
             }
         }
 
-        // Restore the cache
-        *checksum_cache = Arc::try_unwrap(cache).unwrap().into_inner().unwrap();
+        // Restore the store
+        *object_store = Arc::try_unwrap(store).unwrap().into_inner().unwrap();
 
         // Build aggregated stats
         let final_stats = Arc::try_unwrap(stats_by_processor).unwrap().into_inner().unwrap();

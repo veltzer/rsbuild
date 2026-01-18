@@ -10,6 +10,8 @@ pub struct Config {
     #[serde(default)]
     pub build: BuildConfig,
     #[serde(default)]
+    pub cache: CacheConfig,
+    #[serde(default)]
     pub processors: ProcessorsConfig,
     #[serde(default)]
     pub template: TemplateConfig,
@@ -34,6 +36,32 @@ impl Default for BuildConfig {
     fn default() -> Self {
         Self {
             parallel: default_parallel(),
+        }
+    }
+}
+
+/// Method used to restore files from cache
+#[derive(Debug, Deserialize, Clone, Copy, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum RestoreMethod {
+    /// Use hard links (fast, no disk space duplication)
+    #[default]
+    Hardlink,
+    /// Use file copy (works across filesystems, safer)
+    Copy,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CacheConfig {
+    /// Method to restore files from cache: "hardlink" or "copy"
+    #[serde(default)]
+    pub restore_method: RestoreMethod,
+}
+
+impl Default for CacheConfig {
+    fn default() -> Self {
+        Self {
+            restore_method: RestoreMethod::default(),
         }
     }
 }

@@ -2,36 +2,28 @@ use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use crate::checksum::ChecksumCache;
 use crate::cli::{GraphFormat, GraphViewer};
 use crate::config::Config;
 use crate::executor::Executor;
 use crate::graph::BuildGraph;
+use crate::object_store::ObjectStore;
 use crate::processors::{Linter, ProductDiscovery, SleepProcessor, TemplateProcessor};
-
-const CACHE_FILE: &str = ".rsb_cache.json";
 
 pub struct Builder {
     project_root: PathBuf,
-    checksum_cache: ChecksumCache,
-    cache_file_path: PathBuf,
+    object_store: ObjectStore,
     config: Config,
 }
 
 impl Builder {
     pub fn new() -> Result<Self> {
         let project_root = std::env::current_dir()?;
-        let cache_file_path = project_root.join(CACHE_FILE);
-
-        let checksum_cache = ChecksumCache::load_from_file(&cache_file_path)
-            .unwrap_or_else(|_| ChecksumCache::new());
-
         let config = Config::load(&project_root)?;
+        let object_store = ObjectStore::new(project_root.clone(), config.cache.restore_method)?;
 
         Ok(Self {
             project_root,
-            checksum_cache,
-            cache_file_path,
+            object_store,
             config,
         })
     }
@@ -49,10 +41,10 @@ impl Builder {
         let executor = Executor::new(&processors, parallel);
 
         // Execute the build
-        let stats = executor.execute(&graph, &mut self.checksum_cache, force, verbose)?;
+        let stats = executor.execute(&graph, &mut self.object_store, force, verbose)?;
 
-        // Save checksum cache
-        self.save_cache()?;
+        // Save object store index
+        self.object_store.save()?;
 
         // Print summary (only in verbose mode)
         stats.print_summary(verbose);
@@ -63,16 +55,6 @@ impl Builder {
     /// Clean all build artifacts using the dependency graph
     pub fn clean(&mut self) -> Result<()> {
         println!("Cleaning build artifacts...");
-
-        // Clear checksum cache
-        self.checksum_cache.clear();
-
-        // Remove cache file
-        if self.cache_file_path.exists() {
-            fs::remove_file(&self.cache_file_path)
-                .context("Failed to remove cache file")?;
-            println!("Removed cache file: {}", self.cache_file_path.display());
-        }
 
         // Create processors and build graph
         let processors = self.create_processors();
@@ -88,6 +70,14 @@ impl Builder {
             fs::remove_dir_all(&lint_stub_dir)
                 .context("Failed to remove lint stub directory")?;
             println!("Removed lint stub directory: {}", lint_stub_dir.display());
+        }
+
+        // Also clean the sleep stub directory if it exists
+        let sleep_stub_dir = self.project_root.join("out/sleep");
+        if sleep_stub_dir.exists() {
+            fs::remove_dir_all(&sleep_stub_dir)
+                .context("Failed to remove sleep stub directory")?;
+            println!("Removed sleep stub directory: {}", sleep_stub_dir.display());
         }
 
         println!("Clean completed!");
@@ -114,11 +104,6 @@ impl Builder {
         processors.insert("sleep".to_string(), Box::new(sleep_proc));
 
         processors
-    }
-
-    fn save_cache(&self) -> Result<()> {
-        self.checksum_cache.save_to_file(&self.cache_file_path)?;
-        Ok(())
     }
 
     /// Print the dependency graph in the specified format

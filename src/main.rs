@@ -1,16 +1,17 @@
 mod builder;
-mod checksum;
 mod cli;
 mod config;
 mod executor;
 mod graph;
+mod object_store;
 mod processors;
 
 use anyhow::{bail, Result};
 use clap::Parser;
-use cli::{Cli, Commands, parse_shell, print_completions};
+use cli::{CacheAction, Cli, Commands, parse_shell, print_completions};
 use config::Config;
 use builder::Builder;
+use object_store::ObjectStore;
 use std::env;
 
 fn main() -> Result<()> {
@@ -24,6 +25,27 @@ fn main() -> Result<()> {
         Commands::Clean => {
             let mut builder = Builder::new()?;
             builder.clean()?;
+        }
+        Commands::Cache { action } => {
+            let project_root = env::current_dir()?;
+            let config = Config::load(&project_root)?;
+            let mut store = ObjectStore::new(project_root, config.cache.restore_method)?;
+
+            match action {
+                CacheAction::Clear => {
+                    store.clear()?;
+                    println!("Cache cleared.");
+                }
+                CacheAction::Size => {
+                    let (bytes, count) = store.size()?;
+                    println!("Cache size: {} bytes ({} objects)", bytes, count);
+                }
+                CacheAction::Trim => {
+                    let (bytes, count) = store.trim()?;
+                    store.save()?;
+                    println!("Removed {} bytes ({} unreferenced objects)", bytes, count);
+                }
+            }
         }
         Commands::Complete { shells } => {
             let shells_to_generate = if shells.is_empty() {

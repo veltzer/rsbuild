@@ -53,6 +53,11 @@ pub enum Commands {
     },
     /// Clean all build artifacts
     Clean,
+    /// Manage the build cache
+    Cache {
+        #[command(subcommand)]
+        action: CacheAction,
+    },
     /// Generate shell completion scripts
     Complete {
         /// The shells to generate completions for (if none specified, uses config file)
@@ -69,6 +74,16 @@ pub enum Commands {
         #[arg(long, value_enum)]
         view: Option<GraphViewer>,
     },
+}
+
+#[derive(Subcommand)]
+pub enum CacheAction {
+    /// Clear the entire cache
+    Clear,
+    /// Show cache size
+    Size,
+    /// Remove unreferenced objects from cache
+    Trim,
 }
 
 /// Parse a shell name string into a Shell enum

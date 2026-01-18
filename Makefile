@@ -16,6 +16,14 @@ clean_build:
 graph:
 	@target/release/rsb graph --view mermaid
 
+.PHONY: rsb_build
+rsb_build:
+	@target/release/rsb build -v
+
+.PHONY: rsb_clean
+rsb_clean:
+	@target/release/rsb clean -v
+
 .PHONY: clean
 clean:
 	@rm -rf release

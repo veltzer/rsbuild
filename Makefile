@@ -7,13 +7,17 @@ all:
 test:
 	@cargo test
 
-.PHONY: clean_build
-clean_build:
+.PHONY: clean
+clean:
+	@rm -rf release
+
+.PHONY: rsb_clean_build
+rsb_clean_build:
 	@target/release/rsb clean
 	@target/release/rsb build -j 4
 
-.PHONY: graph
-graph:
+.PHONY: rsb_graph
+rsb_graph:
 	@target/release/rsb graph --view mermaid
 
 .PHONY: rsb_build
@@ -23,7 +27,3 @@ rsb_build:
 .PHONY: rsb_clean
 rsb_clean:
 	@target/release/rsb clean -v
-
-.PHONY: clean
-clean:
-	@rm -rf release

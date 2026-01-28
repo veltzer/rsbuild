@@ -94,6 +94,11 @@ pub enum Commands {
         #[arg(short = 'k', long)]
         keep_going: bool,
     },
+    /// Manage processors
+    Processor {
+        #[command(subcommand)]
+        action: ProcessorAction,
+    },
     /// Display the build dependency graph
     Graph {
         /// Output format (ignored if --view is used)
@@ -115,6 +120,12 @@ pub enum CacheAction {
     /// Remove unreferenced objects from cache
     Trim,
     /// List all cache entries and their status
+    List,
+}
+
+#[derive(Subcommand)]
+pub enum ProcessorAction {
+    /// List all available processors and their status
     List,
 }
 

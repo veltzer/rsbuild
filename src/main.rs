@@ -10,7 +10,7 @@ mod watcher;
 
 use anyhow::{bail, Result};
 use clap::Parser;
-use cli::{CacheAction, Cli, Commands, parse_shell, print_completions};
+use cli::{CacheAction, Cli, Commands, ProcessorAction, parse_shell, print_completions};
 use config::Config;
 use builder::Builder;
 use object_store::ObjectStore;
@@ -79,6 +79,24 @@ fn main() -> Result<()> {
                         }
                         println!();
                         println!("{} cache entries.", entries.len());
+                    }
+                }
+            }
+        }
+        Commands::Processor { action } => {
+            let project_root = env::current_dir()?;
+            let config = Config::load(&project_root)?;
+
+            match action {
+                ProcessorAction::List => {
+                    let all_processors = ["template", "lint", "sleep", "cc"];
+                    for name in &all_processors {
+                        let status = if config.processors.is_enabled(name) {
+                            color::green("enabled")
+                        } else {
+                            color::dim("disabled")
+                        };
+                        println!("{} {}", name, status);
                     }
                 }
             }

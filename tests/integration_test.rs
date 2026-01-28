@@ -806,3 +806,193 @@ fn test_watch_rebuilds_on_change() {
     assert!(stdout.contains("Change detected"),
         "Watch should detect and report changes: {}", stdout);
 }
+
+// ========== C/C++ compiler processor tests ==========
+
+/// Helper to set up a C project with the cc processor enabled
+fn setup_cc_project(project_path: &Path) {
+    fs::create_dir_all(project_path.join("src")).unwrap();
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processors]\nenabled = [\"cc\"]\n"
+    ).unwrap();
+}
+
+#[test]
+fn test_cc_compile_single_c_file() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "rsb build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    // Check object file exists
+    assert!(project_path.join("out/cc/main.o").exists(), "Object file should exist");
+
+    // Check binary exists
+    assert!(project_path.join("a.out").exists(), "Binary should exist");
+}
+
+#[test]
+fn test_cc_incremental_skip() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    // First build
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success());
+    let stdout1 = String::from_utf8_lossy(&output1.stdout);
+    assert!(stdout1.contains("[cc] Processing:"), "First build should process: {}", stdout1);
+
+    // Second build - should skip
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success());
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(stdout2.contains("[cc] Skipping (unchanged):"), "Second build should skip: {}", stdout2);
+}
+
+#[test]
+fn test_cc_header_dependency() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Create header and source
+    fs::write(
+        project_path.join("src/utils.h"),
+        "#ifndef UTILS_H\n#define UTILS_H\nint get_value(void);\n#endif\n"
+    ).unwrap();
+
+    fs::write(
+        project_path.join("src/utils.c"),
+        "#include \"utils.h\"\nint get_value(void) { return 42; }\n"
+    ).unwrap();
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "#include \"utils.h\"\nint main() { return get_value() - 42; }\n"
+    ).unwrap();
+
+    // First build
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success(),
+        "First build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output1.stdout),
+        String::from_utf8_lossy(&output1.stderr));
+
+    // Wait a moment so mtime differs
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    // Modify header
+    fs::write(
+        project_path.join("src/utils.h"),
+        "#ifndef UTILS_H\n#define UTILS_H\nint get_value(void);\nint get_other(void);\n#endif\n"
+    ).unwrap();
+
+    // Rebuild - should recompile files that include utils.h
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success(),
+        "Rebuild failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output2.stdout),
+        String::from_utf8_lossy(&output2.stderr));
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(stdout2.contains("[cc] Processing:"),
+        "Should recompile after header change: {}", stdout2);
+}
+
+#[test]
+fn test_cc_mixed_c_and_cpp() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/helper.c"),
+        "int helper(void) { return 1; }\n"
+    ).unwrap();
+
+    fs::write(
+        project_path.join("src/main.cpp"),
+        "extern \"C\" int helper(void);\nint main() { return helper() - 1; }\n"
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Mixed C/C++ build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/helper.o").exists(), "C object file should exist");
+    assert!(project_path.join("out/cc/main.o").exists(), "C++ object file should exist");
+    assert!(project_path.join("a.out").exists(), "Binary should exist");
+}
+
+#[test]
+fn test_cc_clean() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    // Build
+    let build_output = run_rsb(project_path, &["build"]);
+    assert!(build_output.status.success());
+    assert!(project_path.join("out/cc/main.o").exists());
+    assert!(project_path.join("a.out").exists());
+
+    // Clean
+    let clean_output = run_rsb(project_path, &["clean"]);
+    assert!(clean_output.status.success());
+
+    // Verify outputs are removed
+    assert!(!project_path.join("out/cc").exists(), "out/cc/ should be removed after clean");
+    assert!(!project_path.join("a.out").exists(), "Binary should be removed after clean");
+    assert!(!project_path.join(".rsb/deps").exists(), "deps cache should be removed after clean");
+}
+
+#[test]
+fn test_cc_dry_run() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    // Dry run
+    let output = run_rsb_with_env(project_path, &["build", "--dry-run"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("BUILD"), "Dry run should show BUILD for cc products: {}", stdout);
+
+    // Verify nothing was built
+    assert!(!project_path.join("out/cc/main.o").exists(), "Dry run should not compile");
+    assert!(!project_path.join("a.out").exists(), "Dry run should not link");
+}

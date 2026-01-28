@@ -1,3 +1,4 @@
+mod cc;
 mod linter;
 mod sleep;
 mod template;
@@ -8,6 +9,7 @@ use std::time::Duration;
 use crate::color;
 
 pub use crate::graph::{BuildGraph, Product};
+pub use cc::CcProcessor;
 pub use linter::Linter;
 pub use sleep::SleepProcessor;
 pub use template::TemplateProcessor;

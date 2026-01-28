@@ -14,6 +14,7 @@ fn collect_watch_paths(project_root: &Path) -> Vec<PathBuf> {
         "templates",
         "config",
         "sleep",
+        "src",
         "tests",
         "pyproject.toml",
     ];

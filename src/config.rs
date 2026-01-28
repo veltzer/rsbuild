@@ -19,6 +19,8 @@ pub struct Config {
     pub lint: LintConfig,
     #[serde(default)]
     pub completions: CompletionsConfig,
+    #[serde(default)]
+    pub cc: CcConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -163,6 +165,67 @@ impl Default for LintConfig {
         Self {
             linter: default_linter(),
             args: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CcConfig {
+    /// C compiler (default: gcc)
+    #[serde(default = "default_cc")]
+    pub cc: String,
+
+    /// C++ compiler (default: g++)
+    #[serde(default = "default_cxx")]
+    pub cxx: String,
+
+    /// C compiler flags
+    #[serde(default)]
+    pub cflags: Vec<String>,
+
+    /// C++ compiler flags
+    #[serde(default)]
+    pub cxxflags: Vec<String>,
+
+    /// Linker flags
+    #[serde(default)]
+    pub ldflags: Vec<String>,
+
+    /// Output binary name (default: a.out)
+    #[serde(default = "default_target")]
+    pub target: String,
+
+    /// Source directory (default: src)
+    #[serde(default = "default_source_dir")]
+    pub source_dir: String,
+}
+
+fn default_cc() -> String {
+    "gcc".to_string()
+}
+
+fn default_cxx() -> String {
+    "g++".to_string()
+}
+
+fn default_target() -> String {
+    "a.out".to_string()
+}
+
+fn default_source_dir() -> String {
+    "src".to_string()
+}
+
+impl Default for CcConfig {
+    fn default() -> Self {
+        Self {
+            cc: default_cc(),
+            cxx: default_cxx(),
+            cflags: Vec::new(),
+            cxxflags: Vec::new(),
+            ldflags: Vec::new(),
+            target: default_target(),
+            source_dir: default_source_dir(),
         }
     }
 }

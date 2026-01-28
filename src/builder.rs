@@ -8,7 +8,7 @@ use crate::config::Config;
 use crate::executor::Executor;
 use crate::graph::BuildGraph;
 use crate::object_store::ObjectStore;
-use crate::processors::{Linter, ProductDiscovery, SleepProcessor, TemplateProcessor};
+use crate::processors::{CcProcessor, Linter, ProductDiscovery, SleepProcessor, TemplateProcessor};
 
 pub struct Builder {
     project_root: PathBuf,
@@ -180,6 +180,22 @@ impl Builder {
             println!("Removed sleep stub directory: {}", sleep_stub_dir.display());
         }
 
+        // Also clean the cc output directory if it exists
+        let cc_output_dir = self.project_root.join("out/cc");
+        if cc_output_dir.exists() {
+            fs::remove_dir_all(&cc_output_dir)
+                .context("Failed to remove cc output directory")?;
+            println!("Removed cc output directory: {}", cc_output_dir.display());
+        }
+
+        // Also clean the deps cache directory if it exists
+        let deps_dir = self.project_root.join(".rsb/deps");
+        if deps_dir.exists() {
+            fs::remove_dir_all(&deps_dir)
+                .context("Failed to remove deps cache directory")?;
+            println!("Removed deps cache directory: {}", deps_dir.display());
+        }
+
         println!("{}", color::green("Clean completed!"));
         Ok(())
     }
@@ -202,6 +218,10 @@ impl Builder {
         // Sleep processor (for testing parallelism)
         let sleep_proc = SleepProcessor::new(self.project_root.clone());
         processors.insert("sleep".to_string(), Box::new(sleep_proc));
+
+        // C/C++ compiler processor
+        let cc_proc = CcProcessor::new(self.project_root.clone(), self.config.cc.clone());
+        processors.insert("cc".to_string(), Box::new(cc_proc));
 
         processors
     }

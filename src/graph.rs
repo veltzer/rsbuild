@@ -240,6 +240,7 @@ impl BuildGraph {
             let color = match product.processor.as_str() {
                 "template" => "lightblue",
                 "lint" => "lightyellow",
+                "cc" => "lightsalmon",
                 _ => "lightgray",
             };
             lines.push(format!("    {} [label=\"{}\" shape=box style=filled fillcolor={}];",
@@ -339,12 +340,19 @@ impl BuildGraph {
             .filter(|p| p.processor == "lint")
             .map(|p| Self::processor_node_id(p))
             .collect();
+        let cc_procs: Vec<_> = self.products.iter()
+            .filter(|p| p.processor == "cc")
+            .map(|p| Self::processor_node_id(p))
+            .collect();
 
         if !template_procs.is_empty() {
             lines.push(format!("    style {} fill:#add8e6", template_procs.join(",")));
         }
         if !lint_procs.is_empty() {
             lines.push(format!("    style {} fill:#ffffe0", lint_procs.join(",")));
+        }
+        if !cc_procs.is_empty() {
+            lines.push(format!("    style {} fill:#ffa07a", cc_procs.join(",")));
         }
 
         lines.join("\n")

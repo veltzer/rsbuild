@@ -1,6 +1,14 @@
 use anyhow::{bail, Result};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+/// Display a path relative to the current working directory.
+fn relative_to_cwd(path: &Path) -> String {
+    std::env::current_dir()
+        .ok()
+        .and_then(|cwd| path.strip_prefix(&cwd).ok().map(|p| p.display().to_string()))
+        .unwrap_or_else(|| path.display().to_string())
+}
 
 /// A single build product with concrete inputs and outputs
 #[derive(Debug, Clone)]
@@ -27,9 +35,9 @@ impl Product {
 
     /// Display name for logging at the given verbosity level:
     ///   0 — basename of output only
-    ///   1 — full path of output
-    ///   2 — full path of output + full path of source (first input)
-    ///   3 — full path of output + all inputs (source + headers)
+    ///   1 — path of output (relative to cwd)
+    ///   2 — path of output + path of source (first input)
+    ///   3 — path of output + all inputs (source + headers)
     pub fn display(&self, level: u8) -> String {
         let output_part = match level {
             0 => {
@@ -43,7 +51,7 @@ impl Product {
             }
             _ => {
                 let paths: Vec<_> = self.outputs.iter()
-                    .map(|p| p.display().to_string())
+                    .map(|p| relative_to_cwd(p))
                     .collect();
                 paths.join(", ")
             }
@@ -53,12 +61,12 @@ impl Product {
             output_part
         } else if level == 2 {
             let source = self.inputs.first()
-                .map(|p| p.display().to_string())
+                .map(|p| relative_to_cwd(p))
                 .unwrap_or_else(|| "?".to_string());
             format!("{} <- {}", output_part, source)
         } else {
             let inputs: Vec<_> = self.inputs.iter()
-                .map(|p| p.display().to_string())
+                .map(|p| relative_to_cwd(p))
                 .collect();
             format!("{} <- {}", output_part, inputs.join(", "))
         }

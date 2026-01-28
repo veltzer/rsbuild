@@ -26,9 +26,12 @@ struct SourceFlags {
 ///   /* EXTRA_COMPILE_FLAGS_AFTER=-O2 -DNDEBUG */
 ///   // EXTRA_COMPILE_CMD=pkg-config --cflags ACE
 ///   // EXTRA_LINK_CMD=pkg-config --libs ACE
+///   // EXTRA_COMPILE_SHELL=echo -DLEVEL2_CACHE_LINESIZE=$(getconf LEVEL2_CACHE_LINESIZE)
+///   // EXTRA_LINK_SHELL=echo -L$(brew --prefix openssl)/lib
 ///
 /// `EXTRA_*_FLAGS_*` values are literal flags (with backtick expansion).
-/// `EXTRA_*_CMD` values are executed as a subprocess and stdout is used as flags.
+/// `EXTRA_*_CMD` values are executed as a subprocess (no shell) and stdout is used as flags.
+/// `EXTRA_*_SHELL` values are executed via `sh -c` and stdout is used as flags.
 fn parse_source_flags(source: &Path) -> Result<SourceFlags> {
     let content = fs::read_to_string(source)
         .context(format!("Failed to read source file: {}", source.display()))?;
@@ -45,6 +48,11 @@ fn parse_source_flags(source: &Path) -> Result<SourceFlags> {
     let cmd_var_names = [
         "EXTRA_COMPILE_CMD",
         "EXTRA_LINK_CMD",
+    ];
+
+    let shell_var_names = [
+        "EXTRA_COMPILE_SHELL",
+        "EXTRA_LINK_SHELL",
     ];
 
     for line in content.lines() {
@@ -107,6 +115,19 @@ fn parse_source_flags(source: &Path) -> Result<SourceFlags> {
                 }
             }
         }
+
+        for var_name in &shell_var_names {
+            if let Some(rest) = value_part.strip_prefix(var_name) {
+                if let Some(raw_value) = rest.strip_prefix('=') {
+                    let args = run_shell_for_flags(raw_value.trim())?;
+                    match *var_name {
+                        "EXTRA_COMPILE_SHELL" => flags.compile_args_after.extend(args),
+                        "EXTRA_LINK_SHELL" => flags.link_args_after.extend(args),
+                        _ => {}
+                    }
+                }
+            }
+        }
     }
 
     Ok(flags)
@@ -130,6 +151,27 @@ fn run_command_for_flags(cmd_line: &str) -> Result<Vec<String>> {
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!("Command failed: {} — {}", cmd_line, stderr);
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Ok(stdout.split_whitespace().map(String::from).collect())
+}
+
+/// Run a command via `sh -c` and return stdout split into flags.
+fn run_shell_for_flags(cmd_line: &str) -> Result<Vec<String>> {
+    if cmd_line.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(cmd_line)
+        .output()
+        .context(format!("Failed to execute shell command: {}", cmd_line))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("Shell command failed: {} — {}", cmd_line, stderr);
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();

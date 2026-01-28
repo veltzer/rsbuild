@@ -89,6 +89,8 @@ Per-file compile and link flags can be set via comments in source files:
 // EXTRA_LINK_FLAGS_AFTER=-lX11
 // EXTRA_COMPILE_CMD=pkg-config --cflags gtk+-3.0
 // EXTRA_LINK_CMD=pkg-config --libs gtk+-3.0
+// EXTRA_COMPILE_SHELL=echo -DLEVEL2_CACHE_LINESIZE=$(getconf LEVEL2_CACHE_LINESIZE)
+// EXTRA_LINK_SHELL=echo -L$(brew --prefix openssl)/lib
 ```
 
 Supported comment styles: `//`, `/* ... */` (single-line), and `*`-prefixed block comment continuation lines:
@@ -100,7 +102,8 @@ Supported comment styles: `//`, `/* ... */` (single-line), and `*`-prefixed bloc
 ```
 
 `EXTRA_*_FLAGS_*` values are literal flags (with backtick expansion for command substitution).
-`EXTRA_*_CMD` values are executed as subprocesses and stdout is used as flags.
+`EXTRA_*_CMD` values are executed as subprocesses (no shell) and stdout is used as flags.
+`EXTRA_*_SHELL` values are executed via `sh -c` (full shell syntax) and stdout is used as flags.
 
 ### Command line ordering
 
@@ -115,8 +118,8 @@ Link flags come after the source file so the linker can resolve symbols correctl
 ### Processor verbosity levels (`--processor-verbose N`)
 
 - **0** (default) — target basename only: `main.elf`
-- **1** — target full path: `/home/user/project/out/cc/main.elf`; cc processor also prints compiler commands
-- **2** — adds source file path: `/home/user/project/out/cc/main.elf <- /home/user/project/src/main.c`
+- **1** — target path (relative to cwd): `out/cc/main.elf`; cc processor also prints compiler commands
+- **2** — adds source file path: `out/cc/main.elf <- src/main.c`
 - **3** — adds all inputs including headers: `out/cc/main.elf <- src/main.c, src/utils.h`
 
 ## Architecture

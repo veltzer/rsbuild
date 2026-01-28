@@ -1524,3 +1524,76 @@ int main() {
     assert!(stdout.trim() == "12",
         "Executable should output 12, got: {}", stdout.trim());
 }
+
+#[test]
+fn test_cc_per_file_compile_shell() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Use EXTRA_COMPILE_SHELL to define a macro via shell command
+    fs::write(
+        project_path.join("src/compileshell.c"),
+        r#"// EXTRA_COMPILE_SHELL=echo -DSHELL_VALUE=$(echo 77)
+#include <stdio.h>
+int main() {
+    printf("%d\n", SHELL_VALUE);
+    return 0;
+}
+"#
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build with EXTRA_COMPILE_SHELL failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/compileshell.elf").exists(),
+        "Executable with EXTRA_COMPILE_SHELL should exist");
+
+    let run_output = Command::new(project_path.join("out/cc/compileshell.elf"))
+        .output()
+        .expect("Failed to run compileshell");
+    let stdout = String::from_utf8_lossy(&run_output.stdout);
+    assert!(stdout.trim() == "77",
+        "Executable should output 77, got: {}", stdout.trim());
+}
+
+#[test]
+fn test_cc_per_file_link_shell() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Use EXTRA_LINK_SHELL to add -lm via shell
+    fs::write(
+        project_path.join("src/linkshell.c"),
+        r#"// EXTRA_LINK_SHELL=echo -lm
+#include <stdio.h>
+#include <math.h>
+int main() {
+    printf("%.0f\n", sqrt(49.0));
+    return 0;
+}
+"#
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build with EXTRA_LINK_SHELL failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/linkshell.elf").exists(),
+        "Executable with EXTRA_LINK_SHELL should exist");
+
+    let run_output = Command::new(project_path.join("out/cc/linkshell.elf"))
+        .output()
+        .expect("Failed to run linkshell");
+    let stdout = String::from_utf8_lossy(&run_output.stdout);
+    assert!(stdout.trim() == "7",
+        "Executable should output 7, got: {}", stdout.trim());
+}

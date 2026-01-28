@@ -836,11 +836,8 @@ fn test_cc_compile_single_c_file() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr));
 
-    // Check object file exists
-    assert!(project_path.join("out/cc/main.o").exists(), "Object file should exist");
-
-    // Check binary exists
-    assert!(project_path.join("a.out").exists(), "Binary should exist");
+    // Check executable exists
+    assert!(project_path.join("out/cc/main").exists(), "Executable should exist");
 }
 
 #[test]
@@ -878,17 +875,12 @@ fn test_cc_header_dependency() {
     // Create header and source
     fs::write(
         project_path.join("src/utils.h"),
-        "#ifndef UTILS_H\n#define UTILS_H\nint get_value(void);\n#endif\n"
-    ).unwrap();
-
-    fs::write(
-        project_path.join("src/utils.c"),
-        "#include \"utils.h\"\nint get_value(void) { return 42; }\n"
+        "#ifndef UTILS_H\n#define UTILS_H\n#define VALUE 42\n#endif\n"
     ).unwrap();
 
     fs::write(
         project_path.join("src/main.c"),
-        "#include \"utils.h\"\nint main() { return get_value() - 42; }\n"
+        "#include \"utils.h\"\nint main() { return VALUE - 42; }\n"
     ).unwrap();
 
     // First build
@@ -901,10 +893,10 @@ fn test_cc_header_dependency() {
     // Wait a moment so mtime differs
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    // Modify header
+    // Modify header (keep VALUE defined so compilation still succeeds)
     fs::write(
         project_path.join("src/utils.h"),
-        "#ifndef UTILS_H\n#define UTILS_H\nint get_value(void);\nint get_other(void);\n#endif\n"
+        "#ifndef UTILS_H\n#define UTILS_H\n#define VALUE 42\n#define OTHER 10\n#endif\n"
     ).unwrap();
 
     // Rebuild - should recompile files that include utils.h
@@ -927,12 +919,12 @@ fn test_cc_mixed_c_and_cpp() {
 
     fs::write(
         project_path.join("src/helper.c"),
-        "int helper(void) { return 1; }\n"
+        "int main() { return 0; }\n"
     ).unwrap();
 
     fs::write(
-        project_path.join("src/main.cpp"),
-        "extern \"C\" int helper(void);\nint main() { return helper() - 1; }\n"
+        project_path.join("src/main.cc"),
+        "int main() { return 0; }\n"
     ).unwrap();
 
     let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
@@ -941,9 +933,8 @@ fn test_cc_mixed_c_and_cpp() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr));
 
-    assert!(project_path.join("out/cc/helper.o").exists(), "C object file should exist");
-    assert!(project_path.join("out/cc/main.o").exists(), "C++ object file should exist");
-    assert!(project_path.join("a.out").exists(), "Binary should exist");
+    assert!(project_path.join("out/cc/helper").exists(), "C executable should exist");
+    assert!(project_path.join("out/cc/main").exists(), "C++ executable should exist");
 }
 
 #[test]
@@ -961,8 +952,7 @@ fn test_cc_clean() {
     // Build
     let build_output = run_rsb(project_path, &["build"]);
     assert!(build_output.status.success());
-    assert!(project_path.join("out/cc/main.o").exists());
-    assert!(project_path.join("a.out").exists());
+    assert!(project_path.join("out/cc/main").exists());
 
     // Clean
     let clean_output = run_rsb(project_path, &["clean"]);
@@ -970,7 +960,6 @@ fn test_cc_clean() {
 
     // Verify outputs are removed
     assert!(!project_path.join("out/cc").exists(), "out/cc/ should be removed after clean");
-    assert!(!project_path.join("a.out").exists(), "Binary should be removed after clean");
     assert!(!project_path.join(".rsb/deps").exists(), "deps cache should be removed after clean");
 }
 
@@ -993,6 +982,5 @@ fn test_cc_dry_run() {
     assert!(stdout.contains("BUILD"), "Dry run should show BUILD for cc products: {}", stdout);
 
     // Verify nothing was built
-    assert!(!project_path.join("out/cc/main.o").exists(), "Dry run should not compile");
-    assert!(!project_path.join("a.out").exists(), "Dry run should not link");
+    assert!(!project_path.join("out/cc/main").exists(), "Dry run should not compile");
 }

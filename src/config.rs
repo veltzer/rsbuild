@@ -191,10 +191,6 @@ pub struct CcConfig {
     #[serde(default)]
     pub ldflags: Vec<String>,
 
-    /// Output binary name (default: a.out)
-    #[serde(default = "default_target")]
-    pub target: String,
-
     /// Source directory (default: src)
     #[serde(default = "default_source_dir")]
     pub source_dir: String,
@@ -206,10 +202,6 @@ fn default_cc() -> String {
 
 fn default_cxx() -> String {
     "g++".to_string()
-}
-
-fn default_target() -> String {
-    "a.out".to_string()
 }
 
 fn default_source_dir() -> String {
@@ -224,7 +216,6 @@ impl Default for CcConfig {
             cflags: Vec::new(),
             cxxflags: Vec::new(),
             ldflags: Vec::new(),
-            target: default_target(),
             source_dir: default_source_dir(),
         }
     }

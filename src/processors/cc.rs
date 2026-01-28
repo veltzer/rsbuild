@@ -2,7 +2,6 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Mutex;
 use walkdir::WalkDir;
 
 use crate::config::CcConfig;
@@ -15,7 +14,6 @@ pub struct CcProcessor {
     source_dir: PathBuf,
     output_dir: PathBuf,
     deps_dir: PathBuf,
-    use_cxx_linker: Mutex<bool>,
 }
 
 impl CcProcessor {
@@ -29,7 +27,6 @@ impl CcProcessor {
             source_dir,
             output_dir,
             deps_dir,
-            use_cxx_linker: Mutex::new(false),
         }
     }
 
@@ -51,21 +48,21 @@ impl CcProcessor {
                 let path = e.path().to_path_buf();
                 match path.extension().and_then(|s| s.to_str()) {
                     Some("c") => Some((path, false)),
-                    Some("cc") | Some("cpp") => Some((path, true)),
+                    Some("cc") => Some((path, true)),
                     _ => None,
                 }
             })
             .collect()
     }
 
-    /// Get object file path for a source file.
-    /// Mirrors directory structure: src/a/b.c -> out/cc/a/b.o
-    fn get_object_path(&self, source: &Path) -> PathBuf {
+    /// Get executable path for a source file.
+    /// Mirrors directory structure: src/a/b.c -> out/cc/a/b
+    fn get_executable_path(&self, source: &Path) -> PathBuf {
         let relative = source
             .strip_prefix(&self.source_dir)
             .unwrap_or(source);
-        let obj_name = relative.with_extension("o");
-        self.output_dir.join(obj_name)
+        let exe_name = relative.with_extension("");
+        self.output_dir.join(exe_name)
     }
 
     /// Get deps file path for a source file.
@@ -120,6 +117,7 @@ impl CcProcessor {
 
         let mut cmd = Command::new(compiler);
         cmd.arg("-MM");
+        cmd.arg(format!("-I{}", self.source_dir.display()));
         for flag in flags {
             cmd.arg(flag);
         }
@@ -191,15 +189,15 @@ impl CcProcessor {
             .collect()
     }
 
-    /// Compile a single source file to an object file.
-    fn compile_source(&self, source: &Path, object: &Path, deps_file: &Path, is_cpp: bool) -> Result<()> {
+    /// Compile a single source file directly to an executable.
+    fn compile_source(&self, source: &Path, executable: &Path, deps_file: &Path, is_cpp: bool) -> Result<()> {
         let compiler = if is_cpp { &self.config.cxx } else { &self.config.cc };
         let flags = if is_cpp { &self.config.cxxflags } else { &self.config.cflags };
 
         // Ensure output directory exists
-        if let Some(parent) = object.parent() {
+        if let Some(parent) = executable.parent() {
             fs::create_dir_all(parent)
-                .context("Failed to create object output directory")?;
+                .context("Failed to create output directory")?;
         }
 
         // Ensure deps directory exists
@@ -209,15 +207,18 @@ impl CcProcessor {
         }
 
         let mut cmd = Command::new(compiler);
-        cmd.arg("-c");
         cmd.arg("-MMD");
         cmd.arg("-MF");
         cmd.arg(deps_file);
+        cmd.arg(format!("-I{}", self.source_dir.display()));
         for flag in flags {
             cmd.arg(flag);
         }
+        for flag in &self.config.ldflags {
+            cmd.arg(flag);
+        }
         cmd.arg("-o");
-        cmd.arg(object);
+        cmd.arg(executable);
         cmd.arg(source);
         cmd.current_dir(&self.project_root);
 
@@ -228,33 +229,6 @@ impl CcProcessor {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             anyhow::bail!("Compilation failed for {}: {}", source.display(), stderr);
-        }
-
-        Ok(())
-    }
-
-    /// Link object files into the target binary.
-    fn link_objects(&self, objects: &[PathBuf], target: &Path, use_cxx: bool) -> Result<()> {
-        let linker = if use_cxx { &self.config.cxx } else { &self.config.cc };
-
-        let mut cmd = Command::new(linker);
-        cmd.arg("-o");
-        cmd.arg(target);
-        for obj in objects {
-            cmd.arg(obj);
-        }
-        for flag in &self.config.ldflags {
-            cmd.arg(flag);
-        }
-        cmd.current_dir(&self.project_root);
-
-        let output = cmd
-            .output()
-            .context(format!("Failed to run linker {}", linker))?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            anyhow::bail!("Linking failed: {}", stderr);
         }
 
         Ok(())
@@ -272,15 +246,8 @@ impl ProductDiscovery for CcProcessor {
             return Ok(());
         }
 
-        let mut object_files: Vec<PathBuf> = Vec::new();
-        let mut has_cpp = false;
-
         for (source, is_cpp) in &source_files {
-            if *is_cpp {
-                has_cpp = true;
-            }
-
-            let object = self.get_object_path(source);
+            let executable = self.get_executable_path(source);
 
             // Resolve header dependencies
             let headers = match self.read_cached_deps(source) {
@@ -295,46 +262,20 @@ impl ProductDiscovery for CcProcessor {
 
             graph.add_product(
                 inputs,
-                vec![object.clone()],
+                vec![executable],
                 "cc",
             );
-
-            object_files.push(object);
         }
-
-        // Store whether we need C++ linker
-        *self.use_cxx_linker.lock().unwrap() = has_cpp;
-
-        // Add link product: all .o files -> target binary
-        let target = self.project_root.join(&self.config.target);
-        graph.add_product(
-            object_files,
-            vec![target],
-            "cc",
-        );
 
         Ok(())
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        // Distinguish compile vs link by checking if output ends in .o
-        let output = &product.outputs[0];
-        let is_object = output.extension().and_then(|s| s.to_str()) == Some("o");
-
-        if is_object {
-            // Compile product: first input is the source file
-            let source = &product.inputs[0];
-            let is_cpp = match source.extension().and_then(|s| s.to_str()) {
-                Some("cc") | Some("cpp") => true,
-                _ => false,
-            };
-            let deps_file = self.get_deps_path(source);
-            self.compile_source(source, output, &deps_file, is_cpp)
-        } else {
-            // Link product: all inputs are .o files
-            let use_cxx = *self.use_cxx_linker.lock().unwrap();
-            self.link_objects(&product.inputs, output, use_cxx)
-        }
+        let source = &product.inputs[0];
+        let executable = &product.outputs[0];
+        let is_cpp = source.extension().and_then(|s| s.to_str()) == Some("cc");
+        let deps_file = self.get_deps_path(source);
+        self.compile_source(source, executable, &deps_file, is_cpp)
     }
 
     fn clean(&self, product: &Product) -> Result<()> {

@@ -1,14 +1,17 @@
 # RSB - Rust Build Tool
 
-A fast, incremental build tool written in Rust with template support and Python-based configuration.
+A fast, incremental build tool written in Rust with C/C++ compilation, template support, Python linting, and parallel execution.
 
 ## Features
 
-- **Incremental Builds**: Uses SHA-256 checksums to detect file changes and only rebuild what's necessary
-- **Template Processing**: Uses Tera templating engine for generating files from templates
-- **Python Configuration**: Load configuration from Python files via the `load_python()` Tera function
-- **Simple CLI**: Clean and intuitive command-line interface built with clap
-- **Convention over Configuration**: Simple naming convention for templates
+- **Incremental builds** using SHA-256 checksums to detect changes
+- **C/C++ compilation** with automatic header dependency tracking
+- **Parallel execution** of independent build products with `-j` flag
+- **Template processing** via the Tera templating engine
+- **Python linting** with ruff (configurable)
+- **Deterministic builds** — same input always produces same build order
+- **Graceful interrupt** — Ctrl+C saves progress, next build resumes where it left off
+- **Convention over configuration** — simple naming conventions, minimal config needed
 
 ## Installation
 
@@ -18,85 +21,137 @@ cargo build --release
 
 ## Usage
 
-### Build Command
-Executes an incremental build, processing templates only if they've changed:
-
 ```bash
-rsb build
+rsb build                    # Incremental build
+rsb build --force            # Force full rebuild
+rsb build -j4                # Build with 4 parallel jobs
+rsb build --processor-verbose 2  # Show source paths in output
+rsb clean                    # Remove build artifacts and cache
+rsb status                   # Show what needs rebuilding
+rsb graph                    # Print dependency graph (formats: dot, mermaid, json, text)
+rsb graph --view             # Open graph in browser (mermaid) or as SVG (dot)
+rsb watch                    # Watch for changes and rebuild automatically
+rsb init                     # Create a new project
+rsb complete [shell]         # Generate shell completions
 ```
 
-Force a full rebuild:
+## Configuration (rsb.toml)
 
-```bash
-rsb build --force
-```
+```toml
+[build]
+parallel = 1  # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
 
-### Clean Command
-Remove all build artifacts and cache files:
+[processors]
+enabled = ["cc", "template", "lint", "sleep"]
 
-```bash
-rsb clean
+[cache]
+restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
+
+[cc]
+cc = "gcc"              # C compiler (default: gcc)
+cxx = "g++"             # C++ compiler (default: g++)
+cflags = ["-Wall"]      # C compiler flags
+cxxflags = ["-Wall"]    # C++ compiler flags
+ldflags = []            # Linker flags
+include_paths = ["src/include"]  # Additional -I paths (passed as-is)
+source_dir = "src"      # Source directory (default: src)
+output_suffix = ".elf"  # Suffix for output executables (default: .elf)
+
+[template]
+strict = true           # Fail on undefined variables (default: true)
+extensions = [".tera"]  # File extensions to process
+trim_blocks = false     # Remove newline after block tags
+
+[lint]
+linter = "ruff"
+args = []
+
+[completions]
+shells = ["bash"]
 ```
 
 ## Project Structure
 
 ```
 project/
-├── config/              # Python configuration files (convention)
-│   └── *.py            # Python files with configuration variables
-├── templates/           # Template files
-│   └── {name}.tera     # Each .tera file creates an output file named {name}
-└── .rsb_cache.json     # Cache file for tracking checksums (auto-generated)
+├── rsb.toml          # Configuration file
+├── config/           # Python config files
+├── templates/        # .tera template files
+├── src/              # C/C++ source files
+├── sleep/            # .sleep files (for parallel testing)
+├── out/
+│   ├── cc/           # Compiled executables
+│   ├── lint/         # Lint stub files
+│   └── sleep/        # Sleep stub files
+└── .rsb/             # Cache (index.json, objects/, deps/)
 ```
 
-## How It Works
+## C/C++ Processor
 
-1. **Template Processing**: RSB scans the `templates/` directory for `.tera` files
-2. **Configuration Loading**: Templates use the `load_python()` function to load Python config files
-3. **File Generation**: Each `templates/{name}.tera` file generates a file named `{name}` in the project root
-4. **Incremental Building**: Uses checksums to skip unchanged templates
+The cc processor compiles C (`.c`) and C++ (`.cc`) source files into executables under `out/cc/`, mirroring the source directory structure: `src/a/b.c` → `out/cc/a/b.elf`.
 
-## Template Function: load_python()
+Header dependencies are automatically tracked via `gcc -MM`, so changes to included headers trigger recompilation.
 
-Templates can load Python configuration files using the built-in `load_python()` function:
+### Per-file flags
 
-```jinja2
-{% set config = load_python(path="config/settings.py") %}
+Per-file compile and link flags can be set via comments in source files:
+
+```c
+// EXTRA_COMPILE_FLAGS_BEFORE=-pthread
+// EXTRA_COMPILE_FLAGS_AFTER=-O2 -DNDEBUG
+// EXTRA_LINK_FLAGS_BEFORE=-L/usr/local/lib
+// EXTRA_LINK_FLAGS_AFTER=-lX11
+// EXTRA_COMPILE_CMD=pkg-config --cflags gtk+-3.0
+// EXTRA_LINK_CMD=pkg-config --libs gtk+-3.0
+// EXTRA_COMPILE_SHELL=echo -DLEVEL2_CACHE_LINESIZE=$(getconf LEVEL2_CACHE_LINESIZE)
+// EXTRA_LINK_SHELL=echo -L$(brew --prefix openssl)/lib
 ```
 
-This executes the Python file and makes all its variables available in the template.
+Supported comment styles: `//`, `/* ... */` (single-line), and `*`-prefixed block comment continuation lines:
 
-## Example
-
-1. Create a configuration file `config/settings.py`:
-```python
-project_name = "MyProject"
-version = "1.0.0"
-debug_mode = True
-optimization_level = 2
+```c
+/*
+ * EXTRA_LINK_FLAGS_AFTER=-lX11
+ */
 ```
 
-2. Create a template `templates/app.conf.tera`:
+- `EXTRA_*_FLAGS_*` — literal flags (with backtick expansion for command substitution)
+- `EXTRA_*_CMD` — executed as subprocess (no shell), stdout used as flags
+- `EXTRA_*_SHELL` — executed via `sh -c` (full shell syntax), stdout used as flags
+
+### Command line ordering
+
+```
+compiler -MMD -MF deps -I... [compile_before] [cflags/cxxflags] [compile_after] -o output source [link_before] [ldflags] [link_after]
+```
+
+Link flags come after the source file so the linker can resolve symbols correctly.
+
+## Templates
+
+Files matching configured extensions in `templates/` generate output files in the project root. Default: `templates/{X}.tera` → `{X}`.
+
+Templates can load Python configuration using the built-in `load_python()` function:
+
 ```jinja2
 {% set config = load_python(path="config/settings.py") %}
 [app]
 name = "{{ config.project_name }}"
 version = "{{ config.version }}"
-debug = {{ config.debug_mode }}
-optimization = {{ config.optimization_level }}
 ```
 
-3. Run the build:
-```bash
-rsb build
+## Verbosity Levels (`--processor-verbose N`)
+
+- **0** (default) — target basename only: `main.elf`
+- **1** — target path (relative to cwd): `out/cc/main.elf`; cc processor also prints compiler commands
+- **2** — adds source file path: `out/cc/main.elf <- src/main.c`
+- **3** — adds all inputs including headers: `out/cc/main.elf <- src/main.c, src/utils.h`
+
+## Ignoring Files
+
+Create a `.rsbignore` file in the project root with glob patterns (one per line) to exclude files from processing:
+
 ```
-
-This generates a file `app.conf` in your project root with the rendered template.
-
-## Design Philosophy
-
-RSB follows the principle of "convention over configuration":
-- Templates named `{X}.tera` automatically generate files named `{X}`
-- Configuration loading is explicit via the `load_python()` function
-- Incremental builds are the default behavior
-- No complex configuration files needed
+/src/experiments/**
+*.bak
+```

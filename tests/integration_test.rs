@@ -1246,21 +1246,16 @@ fn test_deterministic_build_order() {
             "Build failed: {}",
             String::from_utf8_lossy(&output.stderr));
 
-        // Extract only the sleep file basenames from "[sleep] Processing:" lines
+        // Extract the target name from "[sleep] Processing: <name>" lines
         let stdout = String::from_utf8_lossy(&output.stdout);
         let processing_names: Vec<String> = stdout
             .lines()
             .filter(|l| l.contains("[sleep] Processing:"))
             .filter_map(|l| {
-                // Extract the sleep filename from the input path
-                l.split("input: ")
-                    .nth(1)
-                    .and_then(|s| s.split(',').next())
-                    .and_then(|s| s.rsplit('/').next())
-                    .map(|s| s.to_string())
+                l.split("Processing:").nth(1).map(|s| s.trim().to_string())
             })
             .collect();
-        assert_eq!(processing_names.len(), 5, "Should process all 5 sleep files");
+        assert_eq!(processing_names.len(), 5, "Should process all 5 sleep files: {}", stdout);
         processing_names
     }).collect();
 

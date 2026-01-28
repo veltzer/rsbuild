@@ -18,9 +18,20 @@ use object_store::ObjectStore;
 use std::env;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    // Set up Ctrl+C handler: sets a flag so the executor can stop gracefully
+    let interrupted = Arc::new(AtomicBool::new(false));
+    {
+        let interrupted = Arc::clone(&interrupted);
+        ctrlc::set_handler(move || {
+            interrupted.store(true, std::sync::atomic::Ordering::SeqCst);
+        })?;
+    }
 
     match cli.command {
         Commands::Build { force, jobs, timings, keep_going, dry_run, processor_verbose } => {
@@ -29,7 +40,7 @@ fn main() -> Result<()> {
                 builder.dry_run(force)?;
             } else {
                 let mut builder = Builder::new()?;
-                builder.build(force, cli.verbose, jobs, timings, keep_going, processor_verbose)?;
+                builder.build(force, cli.verbose, jobs, timings, keep_going, processor_verbose, Arc::clone(&interrupted))?;
             }
         }
         Commands::Clean => {
@@ -123,7 +134,7 @@ fn main() -> Result<()> {
             }
         }
         Commands::Watch { jobs, timings, keep_going } => {
-            watcher::watch(cli.verbose, jobs, timings, keep_going)?;
+            watcher::watch(cli.verbose, jobs, timings, keep_going, Arc::clone(&interrupted))?;
         }
         Commands::Graph { format, view } => {
             let builder = Builder::new()?;

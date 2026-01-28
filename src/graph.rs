@@ -25,26 +25,43 @@ impl Product {
         }
     }
 
-    /// Display name for logging (all inputs)
-    pub fn display(&self) -> String {
-        let inputs: Vec<_> = self.inputs.iter()
-            .map(|p| p.display().to_string())
-            .collect();
-        let outputs: Vec<_> = self.outputs.iter()
-            .map(|p| p.display().to_string())
-            .collect();
-        format!("input: {}, output: {}", inputs.join(", "), outputs.join(", "))
-    }
+    /// Display name for logging at the given verbosity level:
+    ///   0 — basename of output only
+    ///   1 — full path of output
+    ///   2 — full path of output + full path of source (first input)
+    ///   3 — full path of output + all inputs (source + headers)
+    pub fn display(&self, level: u8) -> String {
+        let output_part = match level {
+            0 => {
+                let names: Vec<_> = self.outputs.iter()
+                    .map(|p| p.file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("?")
+                        .to_string())
+                    .collect();
+                names.join(", ")
+            }
+            _ => {
+                let paths: Vec<_> = self.outputs.iter()
+                    .map(|p| p.display().to_string())
+                    .collect();
+                paths.join(", ")
+            }
+        };
 
-    /// Compact display: only shows the first input (e.g. source file, not headers)
-    pub fn display_compact(&self) -> String {
-        let first_input = self.inputs.first()
-            .map(|p| p.display().to_string())
-            .unwrap_or_else(|| "?".to_string());
-        let outputs: Vec<_> = self.outputs.iter()
-            .map(|p| p.display().to_string())
-            .collect();
-        format!("input: {}, output: {}", first_input, outputs.join(", "))
+        if level <= 1 {
+            output_part
+        } else if level == 2 {
+            let source = self.inputs.first()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "?".to_string());
+            format!("{} <- {}", output_part, source)
+        } else {
+            let inputs: Vec<_> = self.inputs.iter()
+                .map(|p| p.display().to_string())
+                .collect();
+            format!("{} <- {}", output_part, inputs.join(", "))
+        }
     }
 
     /// Cache key for checksum tracking

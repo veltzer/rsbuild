@@ -63,7 +63,8 @@ pub enum Commands {
         #[arg(short = 'n', long)]
         dry_run: bool,
 
-        /// Processor verbosity level: 1 = print commands, 2 = also show all inputs (e.g. headers)
+        /// Processor verbosity level (0=target basename, 1=target full path,
+        /// 2=add source path, 3=add all inputs including headers)
         #[arg(long, default_value = "0")]
         processor_verbose: u8,
     },

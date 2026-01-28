@@ -304,7 +304,6 @@ impl CcProcessor {
 
         let mut cmd = Command::new(compiler);
         cmd.arg("-MM");
-        cmd.arg(format!("-I{}", self.source_dir.display()));
         for inc in &self.config.include_paths {
             cmd.arg(format!("-I{}", self.project_root.join(inc).display()));
         }
@@ -411,7 +410,6 @@ impl CcProcessor {
         cmd.arg("-MMD");
         cmd.arg("-MF");
         cmd.arg(deps_file);
-        cmd.arg(format!("-I{}", self.source_dir.display()));
         for inc in &self.config.include_paths {
             cmd.arg(format!("-I{}", self.project_root.join(inc).display()));
         }

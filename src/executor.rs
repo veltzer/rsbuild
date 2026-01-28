@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
@@ -15,25 +16,22 @@ pub struct Executor<'a> {
     processors: &'a HashMap<String, Box<dyn ProductDiscovery>>,
     parallel: usize,
     processor_verbose: u8,
+    interrupted: Arc<AtomicBool>,
 }
 
 impl<'a> Executor<'a> {
-    pub fn new(processors: &'a HashMap<String, Box<dyn ProductDiscovery>>, parallel: usize, processor_verbose: u8) -> Self {
+    pub fn new(processors: &'a HashMap<String, Box<dyn ProductDiscovery>>, parallel: usize, processor_verbose: u8, interrupted: Arc<AtomicBool>) -> Self {
         Self {
             processors,
             parallel,
             processor_verbose,
+            interrupted,
         }
     }
 
-    /// Display a product's inputs — compact (first input only) by default,
-    /// full (all inputs including headers) at processor_verbose >= 2.
+    /// Display a product at the current processor verbosity level.
     fn product_display(&self, product: &crate::graph::Product) -> String {
-        if self.processor_verbose >= 2 {
-            product.display()
-        } else {
-            product.display_compact()
-        }
+        product.display(self.processor_verbose)
     }
 
     /// Execute all products in the graph that need rebuilding
@@ -80,6 +78,12 @@ impl<'a> Executor<'a> {
         let mut failed_messages: Vec<String> = Vec::new();
 
         for &id in order {
+            // Check for Ctrl+C before starting next product
+            if self.interrupted.load(Ordering::SeqCst) {
+                println!("{}", color::yellow("Interrupted, saving progress..."));
+                break;
+            }
+
             let product = graph.get_product(id).unwrap();
 
             // If keep_going, skip products whose dependencies have failed
@@ -198,6 +202,11 @@ impl<'a> Executor<'a> {
         let failed_messages: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
 
         for level in levels {
+            // Check for Ctrl+C before starting next level
+            if self.interrupted.load(Ordering::SeqCst) {
+                break;
+            }
+
             // Determine which products in this level need work
             let mut work_items: Vec<(usize, String, bool)> = Vec::new();
 
@@ -266,8 +275,14 @@ impl<'a> Executor<'a> {
                     let failed_ref = Arc::clone(&failed_products);
                     let failed_msgs_ref = Arc::clone(&failed_messages);
 
+                    let interrupted_ref = &self.interrupted;
                     s.spawn(move || {
                         for (id, input_checksum, needs_rebuild) in chunk {
+                            // Check for Ctrl+C before starting next product
+                            if interrupted_ref.load(Ordering::SeqCst) {
+                                break;
+                            }
+
                             let product = graph.get_product(*id).unwrap();
                             let cache_key = product.cache_key();
 
@@ -378,6 +393,12 @@ impl<'a> Executor<'a> {
                 }
             });
 
+            // If interrupted, stop processing further levels
+            if self.interrupted.load(Ordering::SeqCst) {
+                println!("{}", color::yellow("Interrupted, saving progress..."));
+                break;
+            }
+
             // Check for errors after each level (only in non-keep-going mode)
             if !keep_going {
                 let errs = errors.lock().unwrap();
@@ -404,8 +425,8 @@ impl<'a> Executor<'a> {
         stats.failed_count = final_failed.len();
         stats.failed_messages = final_msgs;
 
-        // In non-keep-going mode, check remaining errors
-        if !keep_going {
+        // In non-keep-going mode, check remaining errors (but not if interrupted)
+        if !keep_going && !self.interrupted.load(Ordering::SeqCst) {
             let errs = Arc::try_unwrap(errors).unwrap().into_inner().unwrap();
             if !errs.is_empty() {
                 return Err(anyhow::anyhow!("Build failed: {}", errs[0]));

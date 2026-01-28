@@ -35,7 +35,7 @@ impl Builder {
     }
 
     /// Execute an incremental build using the dependency graph
-    pub fn build(&mut self, force: bool, verbose: bool, jobs: Option<usize>, timings: bool, keep_going: bool, processor_verbose: u8) -> Result<()> {
+    pub fn build(&mut self, force: bool, verbose: bool, jobs: Option<usize>, timings: bool, keep_going: bool, processor_verbose: u8, interrupted: Arc<std::sync::atomic::AtomicBool>) -> Result<()> {
         // Create processors
         let processors = self.create_processors(processor_verbose);
 
@@ -44,13 +44,20 @@ impl Builder {
 
         // Create executor with parallelism from command line or config
         let parallel = jobs.unwrap_or(self.config.build.parallel);
-        let executor = Executor::new(&processors, parallel, processor_verbose);
+        let executor = Executor::new(&processors, parallel, processor_verbose, Arc::clone(&interrupted));
 
         // Execute the build
-        let stats = executor.execute(&graph, &mut self.object_store, force, verbose, timings, keep_going)?;
+        let result = executor.execute(&graph, &mut self.object_store, force, verbose, timings, keep_going);
 
-        // Save object store index
+        // Always save object store index, even after errors or interrupt
         self.object_store.save()?;
+
+        // Exit after saving if interrupted
+        if interrupted.load(std::sync::atomic::Ordering::SeqCst) {
+            std::process::exit(130);
+        }
+
+        let stats = result?;
 
         // Print summary (in verbose mode or when timings requested)
         stats.print_summary(verbose, timings);
@@ -84,20 +91,20 @@ impl Builder {
             let input_checksum = match ObjectStore::combined_input_checksum(&product.inputs) {
                 Ok(cs) => cs,
                 Err(_) => {
-                    println!("  {} [{}] {}", color::yellow("BUILD"), product.processor, product.display_compact());
+                    println!("  {} [{}] {}", color::yellow("BUILD"), product.processor, product.display(0));
                     build_count += 1;
                     continue;
                 }
             };
 
             if !force && !self.object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs) {
-                println!("  {} [{}] {}", color::dim("SKIP"), product.processor, product.display_compact());
+                println!("  {} [{}] {}", color::dim("SKIP"), product.processor, product.display(0));
                 skip_count += 1;
             } else if !force && self.object_store.can_restore(&cache_key, &input_checksum, &product.outputs) {
-                println!("  {} [{}] {}", color::cyan("RESTORE"), product.processor, product.display_compact());
+                println!("  {} [{}] {}", color::cyan("RESTORE"), product.processor, product.display(0));
                 restore_count += 1;
             } else {
-                println!("  {} [{}] {}", color::yellow("BUILD"), product.processor, product.display_compact());
+                println!("  {} [{}] {}", color::yellow("BUILD"), product.processor, product.display(0));
                 build_count += 1;
             }
         }
@@ -129,20 +136,20 @@ impl Builder {
             let input_checksum = match ObjectStore::combined_input_checksum(&product.inputs) {
                 Ok(cs) => cs,
                 Err(_) => {
-                    println!("  {} [{}] {}", color::yellow("STALE"), product.processor, product.display_compact());
+                    println!("  {} [{}] {}", color::yellow("STALE"), product.processor, product.display(0));
                     stale += 1;
                     continue;
                 }
             };
 
             if !self.object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs) {
-                println!("  {} [{}] {}", color::green("UP-TO-DATE"), product.processor, product.display_compact());
+                println!("  {} [{}] {}", color::green("UP-TO-DATE"), product.processor, product.display(0));
                 up_to_date += 1;
             } else if self.object_store.can_restore(&cache_key, &input_checksum, &product.outputs) {
-                println!("  {} [{}] {}", color::cyan("RESTORABLE"), product.processor, product.display_compact());
+                println!("  {} [{}] {}", color::cyan("RESTORABLE"), product.processor, product.display(0));
                 restorable += 1;
             } else {
-                println!("  {} [{}] {}", color::yellow("STALE"), product.processor, product.display_compact());
+                println!("  {} [{}] {}", color::yellow("STALE"), product.processor, product.display(0));
                 stale += 1;
             }
         }
@@ -163,7 +170,7 @@ impl Builder {
         let graph = self.build_graph_with_processors(&processors)?;
 
         // Use executor to clean
-        let executor = Executor::new(&processors, 1, 0);
+        let executor = Executor::new(&processors, 1, 0, Arc::new(std::sync::atomic::AtomicBool::new(false)));
         executor.clean(&graph)?;
 
         // Clear the object store cache

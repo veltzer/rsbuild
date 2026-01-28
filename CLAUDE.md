@@ -17,6 +17,7 @@ A fast, incremental build tool written in Rust with template support, Python lin
 - `rsb build` - Incremental build (only rebuilds changed files)
 - `rsb build --force` - Force full rebuild
 - `rsb build -j4` - Build with 4 parallel jobs
+- `rsb build --processor-verbose 2` - Show source paths in build output
 - `rsb clean` - Remove build artifacts and cache
 - `rsb graph` - Print dependency graph (formats: dot, mermaid, json, text)
 - `rsb graph --view` - Open graph in browser (mermaid) or as SVG (dot)
@@ -110,6 +111,13 @@ compiler -MMD -MF deps -I... [compile_before] [cflags/cxxflags] [compile_after] 
 ```
 
 Link flags come after the source file so the linker can resolve symbols correctly.
+
+### Processor verbosity levels (`--processor-verbose N`)
+
+- **0** (default) — target basename only: `main.elf`
+- **1** — target full path: `/home/user/project/out/cc/main.elf`; cc processor also prints compiler commands
+- **2** — adds source file path: `/home/user/project/out/cc/main.elf <- /home/user/project/src/main.c`
+- **3** — adds all inputs including headers: `out/cc/main.elf <- src/main.c, src/utils.h`
 
 ## Architecture
 

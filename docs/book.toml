@@ -1,0 +1,15 @@
+[book]
+authors = ["veltzer"]
+language = "en"
+multilingual = false
+src = "src"
+title = "RSB - Rust Build Tool"
+
+[build]
+build-dir = "book"
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "ayu"
+git-repository-url = "https://github.com/veltzer/rsb"
+edit-url-template = "https://github.com/veltzer/rsb/edit/master/docs/{path}"

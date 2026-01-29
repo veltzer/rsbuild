@@ -29,3 +29,6 @@ target
 /target/
 
 /.rsb_cache.json
+
+# mdBook build output
+/docs/book/

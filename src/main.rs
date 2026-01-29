@@ -186,7 +186,7 @@ fn init_project() -> Result<()> {
 
 [processor.cpplint]
 # checker = "cppcheck"
-# args = []
+# args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
 
 [completions]
 # shells = ["bash"]

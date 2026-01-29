@@ -68,7 +68,7 @@ args = []
 
 [processor.cpplint]
 checker = "cppcheck"  # C/C++ static checker (default: cppcheck)
-args = []
+args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
 
 [completions]
 shells = ["bash"]

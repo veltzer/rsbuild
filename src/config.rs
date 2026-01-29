@@ -183,8 +183,8 @@ pub struct CpplintConfig {
     #[serde(default = "default_cpplint_checker")]
     pub checker: String,
 
-    /// Additional arguments to pass to the checker
-    #[serde(default)]
+    /// Arguments to pass to the checker
+    #[serde(default = "default_cpplint_args")]
     pub args: Vec<String>,
 }
 
@@ -192,11 +192,18 @@ fn default_cpplint_checker() -> String {
     "cppcheck".to_string()
 }
 
+fn default_cpplint_args() -> Vec<String> {
+    vec![
+        "--error-exitcode=1".to_string(),
+        "--enable=warning,style,performance,portability".to_string(),
+    ]
+}
+
 impl Default for CpplintConfig {
     fn default() -> Self {
         Self {
             checker: default_cpplint_checker(),
-            args: Vec::new(),
+            args: default_cpplint_args(),
         }
     }
 }

@@ -11,6 +11,7 @@ A fast, incremental build tool written in Rust with C/C++ compilation, template 
 - **Python linting** with ruff (configurable)
 - **Deterministic builds** — same input always produces same build order
 - **Graceful interrupt** — Ctrl+C saves progress, next build resumes where it left off
+- **Config-aware caching** — changing compiler flags or linter config triggers rebuilds
 - **Convention over configuration** — simple naming conventions, minimal config needed
 
 ## Installation
@@ -26,13 +27,23 @@ rsb build                    # Incremental build
 rsb build --force            # Force full rebuild
 rsb build -j4                # Build with 4 parallel jobs
 rsb build --processor-verbose 2  # Show source paths in output
-rsb clean                    # Remove build artifacts and cache
+rsb build --dry-run          # Show what would be built without executing
+rsb build --keep-going       # Continue after errors
+rsb build --timings          # Show per-product and total timing info
+rsb clean                    # Remove build artifacts (preserves cache)
+rsb distclean                # Remove all build and cache directories
 rsb status                   # Show what needs rebuilding
+rsb init                     # Create a new project
+rsb watch                    # Watch for changes and rebuild automatically
 rsb graph                    # Print dependency graph (formats: dot, mermaid, json, text)
 rsb graph --view             # Open graph in browser (mermaid) or as SVG (dot)
-rsb watch                    # Watch for changes and rebuild automatically
-rsb init                     # Create a new project
+rsb cache clear              # Clear the entire cache
+rsb cache size               # Show cache size
+rsb cache trim               # Remove unreferenced objects
+rsb cache list               # List all cache entries
+rsb processor list           # List available processors
 rsb complete [shell]         # Generate shell completions
+rsb version                  # Print version information
 ```
 
 ## Configuration (rsb.toml)
@@ -42,7 +53,7 @@ rsb complete [shell]         # Generate shell completions
 parallel = 1  # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
 
 [processor]
-enabled = ["cc", "template", "pylint", "sleep", "cpplint"]
+enabled = ["template", "pylint", "sleep", "cc", "cpplint"]
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
@@ -70,6 +81,9 @@ args = []
 checker = "cppcheck"  # C/C++ static checker (default: cppcheck)
 args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
 # To use a suppressions file: add "--suppressions-list=.cppcheck-suppressions" to args
+
+[graph]
+viewer = "google-chrome"  # Command to open graph files (default: platform-specific)
 
 [completions]
 shells = ["bash"]

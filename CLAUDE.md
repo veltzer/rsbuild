@@ -18,11 +18,23 @@ A fast, incremental build tool written in Rust with template support, Python lin
 - `rsb build --force` - Force full rebuild
 - `rsb build -j4` - Build with 4 parallel jobs
 - `rsb build --processor-verbose 2` - Show source paths in build output
+- `rsb build --dry-run` - Show what would be built without executing
+- `rsb build --keep-going` - Continue after errors
+- `rsb build --timings` - Show per-product and total timing info
 - `rsb clean` - Remove build artifacts (preserves cache)
 - `rsb distclean` - Remove all build directories (.rsb/ and out/) in one shot
+- `rsb status` - Show product status (up-to-date, stale, or restorable)
+- `rsb init` - Initialize a new rsb project in the current directory
+- `rsb watch` - Watch source files and auto-rebuild on changes
 - `rsb graph` - Print dependency graph (formats: dot, mermaid, json, text)
 - `rsb graph --view` - Open graph in browser (mermaid) or as SVG (dot)
+- `rsb cache clear` - Clear the entire cache
+- `rsb cache size` - Show cache size
+- `rsb cache trim` - Remove unreferenced objects from cache
+- `rsb cache list` - List all cache entries and their status
+- `rsb processor list` - List available processors and their status
 - `rsb complete [shell]` - Generate shell completions
+- `rsb version` - Print version information
 
 ## Configuration (rsb.toml)
 
@@ -31,7 +43,7 @@ A fast, incremental build tool written in Rust with template support, Python lin
 parallel = 1  # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
 
 [processor]
-enabled = ["template", "pylint", "sleep", "cpplint"]
+enabled = ["template", "pylint", "sleep", "cc", "cpplint"]
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
@@ -139,6 +151,7 @@ Link flags come after the source file so the linker can resolve symbols correctl
 - **BuildGraph** manages dependencies between products
 - **Executor** runs products in dependency order, with optional parallelism
 - **Build order** is deterministic — file discovery, processor iteration, and topological sort are all sorted
+- **Config-aware caching** — processor config (compiler flags, linter args, etc.) is hashed into cache keys so config changes trigger rebuilds
 
 ## How Templates Work
 

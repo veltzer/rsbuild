@@ -182,7 +182,7 @@ fn init_project() -> Result<()> {
 # parallel = 1
 
 [processor]
-# enabled = ["template", "pylint", "sleep", "cpplint"]
+# enabled = ["template", "pylint", "sleep", "cc", "cpplint"]
 
 [cache]
 # restore_method = "hardlink"  # or "copy"
@@ -196,9 +196,22 @@ fn init_project() -> Result<()> {
 # linter = "ruff"
 # args = []
 
+[processor.cc]
+# cc = "gcc"
+# cxx = "g++"
+# cflags = []
+# cxxflags = []
+# ldflags = []
+# include_paths = []
+# source_dir = "src"
+# output_suffix = ".elf"
+
 [processor.cpplint]
 # checker = "cppcheck"
 # args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
+
+[graph]
+# viewer = "google-chrome"
 
 [completions]
 # shells = ["bash"]

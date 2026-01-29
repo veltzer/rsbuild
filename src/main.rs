@@ -149,6 +149,9 @@ fn main() -> Result<()> {
         Commands::Watch { jobs, timings, keep_going } => {
             watcher::watch(cli.verbose, jobs, timings, keep_going, Arc::clone(&interrupted))?;
         }
+        Commands::Version => {
+            println!("rsb {}", env!("CARGO_PKG_VERSION"));
+        }
         Commands::Graph { format, view } => {
             let builder = Builder::new()?;
             if let Some(viewer) = view {

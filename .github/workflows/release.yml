@@ -1,0 +1,42 @@
+name: Release latest
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Run tests
+        run: cargo test --release
+
+      - name: Delete old latest release
+        run: gh release delete latest --yes || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete old latest tag
+        run: git push origin :refs/tags/latest || true
+
+      - name: Create latest release
+        run: |
+          gh release create latest ./target/release/rsb \
+            --target master \
+            --title "Latest build" \
+            --notes "Rolling release built from master ($(git rev-parse --short HEAD))" \
+            --prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

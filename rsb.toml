@@ -9,10 +9,10 @@ shells = ["bash"]
 restore_method = "hardlink"  # or "copy"
 
 [processor]
-enabled = ["template", "lint"]
+enabled = ["template", "pylint"]
 
 [processor.template]
 
-[processor.lint]
+[processor.pylint]
 linter = "ruff"
 args = []

@@ -66,19 +66,21 @@ impl Default for CacheConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct ProcessorConfig {
-    /// List of enabled processors (e.g., ["template", "lint"])
+    /// List of enabled processors (e.g., ["template", "pylint"])
     #[serde(default = "default_processors")]
     pub enabled: Vec<String>,
     #[serde(default)]
     pub template: TemplateConfig,
     #[serde(default)]
-    pub lint: LintConfig,
+    pub pylint: PylintConfig,
     #[serde(default)]
     pub cc: CcConfig,
+    #[serde(default)]
+    pub cpplint: CpplintConfig,
 }
 
 fn default_processors() -> Vec<String> {
-    vec!["template".to_string(), "lint".to_string(), "sleep".to_string(), "cc".to_string()]
+    vec!["template".to_string(), "pylint".to_string(), "sleep".to_string(), "cc".to_string(), "cpplint".to_string()]
 }
 
 impl Default for ProcessorConfig {
@@ -86,8 +88,9 @@ impl Default for ProcessorConfig {
         Self {
             enabled: default_processors(),
             template: TemplateConfig::default(),
-            lint: LintConfig::default(),
+            pylint: PylintConfig::default(),
             cc: CcConfig::default(),
+            cpplint: CpplintConfig::default(),
         }
     }
 }
@@ -151,9 +154,9 @@ impl Default for CompletionsConfig {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct LintConfig {
+pub struct PylintConfig {
     /// The Python linter to use (ruff, pylint, flake8, etc.)
-    #[serde(default = "default_linter")]
+    #[serde(default = "default_pylinter")]
     pub linter: String,
 
     /// Additional arguments to pass to the linter
@@ -161,14 +164,38 @@ pub struct LintConfig {
     pub args: Vec<String>,
 }
 
-fn default_linter() -> String {
+fn default_pylinter() -> String {
     "ruff".to_string()
 }
 
-impl Default for LintConfig {
+impl Default for PylintConfig {
     fn default() -> Self {
         Self {
-            linter: default_linter(),
+            linter: default_pylinter(),
+            args: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CpplintConfig {
+    /// The C/C++ static checker to use (default: cppcheck)
+    #[serde(default = "default_cpplint_checker")]
+    pub checker: String,
+
+    /// Additional arguments to pass to the checker
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
+fn default_cpplint_checker() -> String {
+    "cppcheck".to_string()
+}
+
+impl Default for CpplintConfig {
+    fn default() -> Self {
+        Self {
+            checker: default_cpplint_checker(),
             args: Vec::new(),
         }
     }

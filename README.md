@@ -42,7 +42,7 @@ rsb complete [shell]         # Generate shell completions
 parallel = 1  # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
 
 [processor]
-enabled = ["cc", "template", "lint", "sleep"]
+enabled = ["cc", "template", "pylint", "sleep", "cpplint"]
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
@@ -62,8 +62,12 @@ strict = true           # Fail on undefined variables (default: true)
 extensions = [".tera"]  # File extensions to process
 trim_blocks = false     # Remove newline after block tags
 
-[processor.lint]
+[processor.pylint]
 linter = "ruff"
+args = []
+
+[processor.cpplint]
+checker = "cppcheck"  # C/C++ static checker (default: cppcheck)
 args = []
 
 [completions]
@@ -81,7 +85,8 @@ project/
 ├── sleep/            # .sleep files (for parallel testing)
 ├── out/
 │   ├── cc/           # Compiled executables
-│   ├── lint/         # Lint stub files
+│   ├── pylint/       # Python lint stub files
+│   ├── cpplint/      # C/C++ lint stub files
 │   └── sleep/        # Sleep stub files
 └── .rsb/             # Cache (index.json, objects/, deps/)
 ```

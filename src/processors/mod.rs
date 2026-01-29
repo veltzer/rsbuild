@@ -1,5 +1,6 @@
 mod cc;
-mod linter;
+mod cpplint;
+mod pylint;
 mod sleep;
 mod template;
 
@@ -10,7 +11,8 @@ use crate::color;
 
 pub use crate::graph::{BuildGraph, Product};
 pub use cc::CcProcessor;
-pub use linter::Linter;
+pub use cpplint::Cpplinter;
+pub use pylint::Pylinter;
 pub use sleep::SleepProcessor;
 pub use template::TemplateProcessor;
 

@@ -5,26 +5,26 @@ use std::process::Command;
 use std::sync::Arc;
 use walkdir::WalkDir;
 
-use crate::config::LintConfig;
+use crate::config::PylintConfig;
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
 use super::ProductDiscovery;
 
-const LINT_STUB_DIR: &str = "out/lint";
+const PYLINT_STUB_DIR: &str = "out/pylint";
 
-pub struct Linter {
+pub struct Pylinter {
     project_root: PathBuf,
-    lint_config: LintConfig,
+    pylint_config: PylintConfig,
     stub_dir: PathBuf,
     ignore_rules: Arc<IgnoreRules>,
 }
 
-impl Linter {
-    pub fn new(project_root: PathBuf, lint_config: LintConfig, ignore_rules: Arc<IgnoreRules>) -> Self {
-        let stub_dir = project_root.join(LINT_STUB_DIR);
+impl Pylinter {
+    pub fn new(project_root: PathBuf, pylint_config: PylintConfig, ignore_rules: Arc<IgnoreRules>) -> Self {
+        let stub_dir = project_root.join(PYLINT_STUB_DIR);
         Self {
             project_root,
-            lint_config,
+            pylint_config,
             stub_dir,
             ignore_rules,
         }
@@ -109,7 +109,7 @@ impl Linter {
             .strip_prefix(&self.project_root)
             .unwrap_or(py_file);
         let stub_name = format!(
-            "{}.lint",
+            "{}.pylint",
             relative_path.display().to_string().replace(['/', '\\'], "_")
         );
         self.stub_dir.join(stub_name)
@@ -117,15 +117,15 @@ impl Linter {
 
     /// Run linter on a single file and create stub
     fn lint_file(&self, py_file: &Path, stub_path: &Path) -> Result<()> {
-        let mut cmd = Command::new(&self.lint_config.linter);
+        let mut cmd = Command::new(&self.pylint_config.linter);
 
         // Add check mode for ruff (don't auto-fix)
-        if self.lint_config.linter == "ruff" {
+        if self.pylint_config.linter == "ruff" {
             cmd.arg("check");
         }
 
         // Add any configured arguments
-        for arg in &self.lint_config.args {
+        for arg in &self.pylint_config.args {
             cmd.arg(arg);
         }
 
@@ -134,13 +134,13 @@ impl Linter {
 
         let output = cmd
             .output()
-            .context(format!("Failed to run linter: {}", self.lint_config.linter))?;
+            .context(format!("Failed to run linter: {}", self.pylint_config.linter))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
             return Err(anyhow::anyhow!(
-                "Linting failed:\n{}{}",
+                "Python linting failed:\n{}{}",
                 stdout,
                 stderr
             ));
@@ -150,13 +150,13 @@ impl Linter {
         if let Some(parent) = stub_path.parent() {
             fs::create_dir_all(parent)?;
         }
-        fs::write(stub_path, "linted").context("Failed to create lint stub file")?;
+        fs::write(stub_path, "linted").context("Failed to create pylint stub file")?;
 
         Ok(())
     }
 }
 
-impl ProductDiscovery for Linter {
+impl ProductDiscovery for Pylinter {
     fn discover(&self, graph: &mut BuildGraph) -> Result<()> {
         if !self.should_lint() {
             return Ok(());
@@ -169,7 +169,7 @@ impl ProductDiscovery for Linter {
             graph.add_product(
                 vec![py_file],
                 vec![stub_path],
-                "lint",
+                "pylint",
             );
         }
 
@@ -178,13 +178,13 @@ impl ProductDiscovery for Linter {
 
     fn execute(&self, product: &Product) -> Result<()> {
         if product.inputs.len() != 1 || product.outputs.len() != 1 {
-            anyhow::bail!("Lint product must have exactly one input and one output");
+            anyhow::bail!("Pylint product must have exactly one input and one output");
         }
 
         // Ensure stub directory exists
         if !self.stub_dir.exists() {
             fs::create_dir_all(&self.stub_dir)
-                .context("Failed to create lint stub directory")?;
+                .context("Failed to create pylint stub directory")?;
         }
 
         self.lint_file(&product.inputs[0], &product.outputs[0])
@@ -194,7 +194,7 @@ impl ProductDiscovery for Linter {
         for output in &product.outputs {
             if output.exists() {
                 fs::remove_file(output)?;
-                println!("Removed lint stub: {}", output.display());
+                println!("Removed pylint stub: {}", output.display());
             }
         }
         Ok(())

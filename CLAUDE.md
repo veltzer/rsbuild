@@ -31,7 +31,7 @@ A fast, incremental build tool written in Rust with template support, Python lin
 parallel = 1  # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
 
 [processor]
-enabled = ["template", "lint", "sleep"]
+enabled = ["template", "pylint", "sleep", "cpplint"]
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
@@ -41,9 +41,13 @@ strict = true           # Fail on undefined variables (default: true)
 extensions = [".tera"]  # File extensions to process
 trim_blocks = false     # Remove newline after block tags
 
-[processor.lint]
+[processor.pylint]
 linter = "ruff"
 args = []
+
+[processor.cpplint]
+checker = "cppcheck"  # C/C++ static checker (default: cppcheck)
+args = []             # Additional arguments
 
 [processor.cc]
 cc = "gcc"              # C compiler (default: gcc)
@@ -73,7 +77,8 @@ project/
 ├── sleep/            # .sleep files (for parallel testing)
 ├── out/
 │   ├── cc/           # Compiled executables
-│   ├── lint/         # Lint stub files
+│   ├── pylint/       # Python lint stub files
+│   ├── cpplint/      # C/C++ lint stub files
 │   └── sleep/        # Sleep stub files
 └── .rsb/             # Cache (index.json, objects/, deps/)
 ```
@@ -128,7 +133,7 @@ Link flags come after the source file so the linker can resolve symbols correctl
 
 ## Architecture
 
-- **Processors** implement `ProductDiscovery` trait (template, lint, sleep, cc)
+- **Processors** implement `ProductDiscovery` trait (template, pylint, sleep, cc, cpplint)
 - **Products** have inputs (source files) and outputs (generated files)
 - **BuildGraph** manages dependencies between products
 - **Executor** runs products in dependency order, with optional parallelism

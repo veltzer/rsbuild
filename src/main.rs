@@ -105,7 +105,7 @@ fn main() -> Result<()> {
 
             match action {
                 ProcessorAction::List => {
-                    let all_processors = ["template", "lint", "sleep", "cc"];
+                    let all_processors = ["template", "pylint", "sleep", "cc", "cpplint"];
                     for name in &all_processors {
                         let status = if config.processor.is_enabled(name) {
                             color::green("enabled")
@@ -170,7 +170,7 @@ fn init_project() -> Result<()> {
 # parallel = 1
 
 [processor]
-# enabled = ["template", "lint", "sleep"]
+# enabled = ["template", "pylint", "sleep", "cpplint"]
 
 [cache]
 # restore_method = "hardlink"  # or "copy"
@@ -180,8 +180,12 @@ fn init_project() -> Result<()> {
 # extensions = [".tera"]
 # trim_blocks = false
 
-[processor.lint]
+[processor.pylint]
 # linter = "ruff"
+# args = []
+
+[processor.cpplint]
+# checker = "cppcheck"
 # args = []
 
 [completions]

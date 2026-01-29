@@ -10,7 +10,7 @@ use crate::executor::Executor;
 use crate::graph::BuildGraph;
 use crate::ignore::IgnoreRules;
 use crate::object_store::ObjectStore;
-use crate::processors::{CcProcessor, Linter, ProductDiscovery, SleepProcessor, TemplateProcessor};
+use crate::processors::{CcProcessor, Cpplinter, Pylinter, ProductDiscovery, SleepProcessor, TemplateProcessor};
 
 pub struct Builder {
     project_root: PathBuf,
@@ -173,12 +173,20 @@ impl Builder {
         let executor = Executor::new(&processors, 1, 0, Arc::new(std::sync::atomic::AtomicBool::new(false)));
         executor.clean(&graph)?;
 
-        // Also clean the lint stub directory if it exists
-        let lint_stub_dir = self.project_root.join("out/lint");
-        if lint_stub_dir.exists() {
-            fs::remove_dir_all(&lint_stub_dir)
-                .context("Failed to remove lint stub directory")?;
-            println!("Removed lint stub directory: {}", lint_stub_dir.display());
+        // Also clean the pylint stub directory if it exists
+        let pylint_stub_dir = self.project_root.join("out/pylint");
+        if pylint_stub_dir.exists() {
+            fs::remove_dir_all(&pylint_stub_dir)
+                .context("Failed to remove pylint stub directory")?;
+            println!("Removed pylint stub directory: {}", pylint_stub_dir.display());
+        }
+
+        // Also clean the cpplint stub directory if it exists
+        let cpplint_stub_dir = self.project_root.join("out/cpplint");
+        if cpplint_stub_dir.exists() {
+            fs::remove_dir_all(&cpplint_stub_dir)
+                .context("Failed to remove cpplint stub directory")?;
+            println!("Removed cpplint stub directory: {}", cpplint_stub_dir.display());
         }
 
         // Also clean the sleep stub directory if it exists
@@ -234,9 +242,9 @@ impl Builder {
             processors.insert("template".to_string(), Box::new(template_proc));
         }
 
-        // Lint processor
-        let linter = Linter::new(self.project_root.clone(), self.config.processor.lint.clone(), Arc::clone(&self.ignore_rules));
-        processors.insert("lint".to_string(), Box::new(linter));
+        // Python lint processor
+        let pylinter = Pylinter::new(self.project_root.clone(), self.config.processor.pylint.clone(), Arc::clone(&self.ignore_rules));
+        processors.insert("pylint".to_string(), Box::new(pylinter));
 
         // Sleep processor (for testing parallelism)
         let sleep_proc = SleepProcessor::new(self.project_root.clone(), Arc::clone(&self.ignore_rules));
@@ -245,6 +253,10 @@ impl Builder {
         // C/C++ compiler processor
         let cc_proc = CcProcessor::new(self.project_root.clone(), self.config.processor.cc.clone(), Arc::clone(&self.ignore_rules), processor_verbose);
         processors.insert("cc".to_string(), Box::new(cc_proc));
+
+        // C/C++ lint processor
+        let cpplinter = Cpplinter::new(self.project_root.clone(), self.config.processor.cpplint.clone(), self.config.processor.cc.clone(), Arc::clone(&self.ignore_rules));
+        processors.insert("cpplint".to_string(), Box::new(cpplinter));
 
         processors
     }

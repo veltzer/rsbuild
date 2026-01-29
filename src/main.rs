@@ -47,6 +47,10 @@ fn main() -> Result<()> {
             let mut builder = Builder::new()?;
             builder.clean()?;
         }
+        Commands::Distclean => {
+            let builder = Builder::new()?;
+            builder.distclean()?;
+        }
         Commands::Status => {
             let builder = Builder::new()?;
             builder.status()?;

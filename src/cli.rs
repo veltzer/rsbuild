@@ -72,6 +72,8 @@ pub enum Commands {
     },
     /// Clean all build artifacts
     Clean,
+    /// Remove all build outputs and cache directories (.rsb/ and out/)
+    Distclean,
     /// Show the status of each product (up-to-date, stale, or restorable)
     Status,
     /// Initialize a new rsb project in the current directory

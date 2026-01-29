@@ -212,6 +212,28 @@ impl Builder {
         Ok(())
     }
 
+    /// Remove all build outputs and cache directories (.rsb/ and out/)
+    pub fn distclean(&self) -> Result<()> {
+        println!("{}", color::bold("Removing build directories..."));
+
+        let rsb_dir = self.project_root.join(".rsb");
+        if rsb_dir.exists() {
+            fs::remove_dir_all(&rsb_dir)
+                .context("Failed to remove .rsb/ directory")?;
+            println!("Removed {}", rsb_dir.display());
+        }
+
+        let out_dir = self.project_root.join("out");
+        if out_dir.exists() {
+            fs::remove_dir_all(&out_dir)
+                .context("Failed to remove out/ directory")?;
+            println!("Removed {}", out_dir.display());
+        }
+
+        println!("{}", color::green("Distclean completed!"));
+        Ok(())
+    }
+
     /// Create all available processors
     fn create_processors(&self, processor_verbose: u8) -> HashMap<String, Box<dyn ProductDiscovery>> {
         let mut processors: HashMap<String, Box<dyn ProductDiscovery>> = HashMap::new();

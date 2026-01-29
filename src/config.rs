@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
 
@@ -177,6 +178,19 @@ impl Default for PylintConfig {
     }
 }
 
+impl PylintConfig {
+    /// Compute a SHA-256 hash of all build-affecting config fields.
+    pub fn config_hash(&self) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(self.linter.as_bytes());
+        for arg in &self.args {
+            hasher.update(b"\0");
+            hasher.update(arg.as_bytes());
+        }
+        hex::encode(hasher.finalize())
+    }
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct CpplintConfig {
     /// The C/C++ static checker to use (default: cppcheck)
@@ -205,6 +219,19 @@ impl Default for CpplintConfig {
             checker: default_cpplint_checker(),
             args: default_cpplint_args(),
         }
+    }
+}
+
+impl CpplintConfig {
+    /// Compute a SHA-256 hash of all build-affecting config fields.
+    pub fn config_hash(&self) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(self.checker.as_bytes());
+        for arg in &self.args {
+            hasher.update(b"\0");
+            hasher.update(arg.as_bytes());
+        }
+        hex::encode(hasher.finalize())
     }
 }
 
@@ -271,6 +298,39 @@ impl Default for CcConfig {
             source_dir: default_source_dir(),
             output_suffix: default_output_suffix(),
         }
+    }
+}
+
+impl CcConfig {
+    /// Compute a SHA-256 hash of all build-affecting config fields.
+    pub fn config_hash(&self) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(self.cc.as_bytes());
+        hasher.update(b"\x01");
+        hasher.update(self.cxx.as_bytes());
+        hasher.update(b"\x01");
+        for flag in &self.cflags {
+            hasher.update(flag.as_bytes());
+            hasher.update(b"\0");
+        }
+        hasher.update(b"\x01");
+        for flag in &self.cxxflags {
+            hasher.update(flag.as_bytes());
+            hasher.update(b"\0");
+        }
+        hasher.update(b"\x01");
+        for flag in &self.ldflags {
+            hasher.update(flag.as_bytes());
+            hasher.update(b"\0");
+        }
+        hasher.update(b"\x01");
+        for path in &self.include_paths {
+            hasher.update(path.as_bytes());
+            hasher.update(b"\0");
+        }
+        hasher.update(b"\x01");
+        hasher.update(self.output_suffix.as_bytes());
+        hex::encode(hasher.finalize())
     }
 }
 

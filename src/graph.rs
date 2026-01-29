@@ -21,15 +21,18 @@ pub struct Product {
     pub processor: String,
     /// Unique identifier for this product
     pub id: usize,
+    /// Optional hash of processor config (compiler flags, etc.)
+    pub config_hash: Option<String>,
 }
 
 impl Product {
-    pub fn new(inputs: Vec<PathBuf>, outputs: Vec<PathBuf>, processor: &str, id: usize) -> Self {
+    pub fn new(inputs: Vec<PathBuf>, outputs: Vec<PathBuf>, processor: &str, id: usize, config_hash: Option<String>) -> Self {
         Self {
             inputs,
             outputs,
             processor: processor.to_string(),
             id,
+            config_hash,
         }
     }
 
@@ -77,7 +80,10 @@ impl Product {
         let inputs: Vec<_> = self.inputs.iter()
             .map(|p| p.display().to_string())
             .collect();
-        format!("{}:{}", self.processor, inputs.join(":"))
+        match &self.config_hash {
+            Some(hash) => format!("{}:{}:{}", self.processor, hash, inputs.join(":")),
+            None => format!("{}:{}", self.processor, inputs.join(":")),
+        }
     }
 }
 
@@ -103,9 +109,9 @@ impl BuildGraph {
     }
 
     /// Add a product to the graph
-    pub fn add_product(&mut self, inputs: Vec<PathBuf>, outputs: Vec<PathBuf>, processor: &str) -> usize {
+    pub fn add_product(&mut self, inputs: Vec<PathBuf>, outputs: Vec<PathBuf>, processor: &str, config_hash: Option<String>) -> usize {
         let id = self.products.len();
-        let product = Product::new(inputs, outputs.clone(), processor, id);
+        let product = Product::new(inputs, outputs.clone(), processor, id, config_hash);
 
         // Register outputs
         for output in &outputs {

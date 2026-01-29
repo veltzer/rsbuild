@@ -1597,3 +1597,49 @@ int main() {
     assert!(stdout.trim() == "7",
         "Executable should output 7, got: {}", stdout.trim());
 }
+
+// ========== Config change triggers rebuild tests ==========
+
+#[test]
+fn test_cc_config_change_triggers_rebuild() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    // First build — should process
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success(),
+        "First build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output1.stdout),
+        String::from_utf8_lossy(&output1.stderr));
+    let stdout1 = String::from_utf8_lossy(&output1.stdout);
+    assert!(stdout1.contains("[cc] Processing:"), "First build should process: {}", stdout1);
+
+    // Second build — should skip (nothing changed)
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success());
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(stdout2.contains("[cc] Skipping (unchanged):"), "Second build should skip: {}", stdout2);
+
+    // Change cflags in rsb.toml
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"cc\"]\n\n[processor.cc]\ncflags = [\"-O2\"]\n"
+    ).unwrap();
+
+    // Third build — should rebuild because config changed
+    let output3 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output3.status.success(),
+        "Third build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output3.stdout),
+        String::from_utf8_lossy(&output3.stderr));
+    let stdout3 = String::from_utf8_lossy(&output3.stdout);
+    assert!(stdout3.contains("[cc] Processing:"),
+        "Build after config change should reprocess, not skip: {}", stdout3);
+}

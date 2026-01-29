@@ -101,6 +101,7 @@ impl ProductDiscovery for SleepProcessor {
                 vec![sleep_file],
                 vec![stub_path],
                 "sleep",
+                None,
             );
         }
 

@@ -127,6 +127,7 @@ impl ProductDiscovery for Cpplinter {
         }
 
         let source_files = self.find_source_files();
+        let config_hash = Some(self.cpplint_config.config_hash());
 
         for source_file in source_files {
             let stub_path = self.get_stub_path(&source_file);
@@ -134,6 +135,7 @@ impl ProductDiscovery for Cpplinter {
                 vec![source_file],
                 vec![stub_path],
                 "cpplint",
+                config_hash.clone(),
             );
         }
 

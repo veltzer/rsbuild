@@ -163,6 +163,7 @@ impl ProductDiscovery for Pylinter {
         }
 
         let py_files = self.find_python_files();
+        let config_hash = Some(self.pylint_config.config_hash());
 
         for py_file in py_files {
             let stub_path = self.get_stub_path(&py_file);
@@ -170,6 +171,7 @@ impl ProductDiscovery for Pylinter {
                 vec![py_file],
                 vec![stub_path],
                 "pylint",
+                config_hash.clone(),
             );
         }
 

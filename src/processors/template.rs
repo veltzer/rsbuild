@@ -145,6 +145,7 @@ impl ProductDiscovery for TemplateProcessor {
                 vec![item.source_path.clone()],
                 vec![item.output_path.clone()],
                 "template",
+                None,
             );
         }
 

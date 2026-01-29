@@ -506,6 +506,8 @@ impl ProductDiscovery for CcProcessor {
             return Ok(());
         }
 
+        let config_hash = Some(self.config.config_hash());
+
         for (source, is_cpp) in &source_files {
             let executable = self.get_executable_path(source);
 
@@ -524,6 +526,7 @@ impl ProductDiscovery for CcProcessor {
                 inputs,
                 vec![executable],
                 "cc",
+                config_hash.clone(),
             );
         }
 

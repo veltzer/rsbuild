@@ -41,13 +41,13 @@ rsb complete [shell]         # Generate shell completions
 [build]
 parallel = 1  # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
 
-[processors]
+[processor]
 enabled = ["cc", "template", "lint", "sleep"]
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
 
-[cc]
+[processor.cc]
 cc = "gcc"              # C compiler (default: gcc)
 cxx = "g++"             # C++ compiler (default: g++)
 cflags = ["-Wall"]      # C compiler flags
@@ -57,12 +57,12 @@ include_paths = ["src/include"]  # Additional -I paths (passed as-is)
 source_dir = "src"      # Source directory (default: src)
 output_suffix = ".elf"  # Suffix for output executables (default: .elf)
 
-[template]
+[processor.template]
 strict = true           # Fail on undefined variables (default: true)
 extensions = [".tera"]  # File extensions to process
 trim_blocks = false     # Remove newline after block tags
 
-[lint]
+[processor.lint]
 linter = "ruff"
 args = []
 

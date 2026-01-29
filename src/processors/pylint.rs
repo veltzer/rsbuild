@@ -5,7 +5,7 @@ use std::process::Command;
 use std::sync::Arc;
 use walkdir::WalkDir;
 
-use crate::config::{PylintConfig, config_hash};
+use crate::config::{PylintConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
 use super::ProductDiscovery;
@@ -164,11 +164,14 @@ impl ProductDiscovery for Pylinter {
 
         let py_files = self.find_python_files();
         let config_hash = Some(config_hash(&self.pylint_config));
+        let extra = resolve_extra_inputs(&self.project_root, &self.pylint_config.extra_inputs);
 
         for py_file in py_files {
             let stub_path = self.get_stub_path(&py_file);
+            let mut inputs = vec![py_file];
+            inputs.extend(extra.clone());
             graph.add_product(
-                vec![py_file],
+                inputs,
                 vec![stub_path],
                 "pylint",
                 config_hash.clone(),
@@ -179,8 +182,8 @@ impl ProductDiscovery for Pylinter {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        if product.inputs.len() != 1 || product.outputs.len() != 1 {
-            anyhow::bail!("Pylint product must have exactly one input and one output");
+        if product.inputs.is_empty() || product.outputs.len() != 1 {
+            anyhow::bail!("Pylint product must have at least one input and exactly one output");
         }
 
         // Ensure stub directory exists

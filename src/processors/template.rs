@@ -7,7 +7,7 @@ use std::process::Command;
 use std::sync::Arc;
 use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value};
 
-use crate::config::{TemplateConfig, config_hash};
+use crate::config::{TemplateConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
 use super::ProductDiscovery;
@@ -139,10 +139,13 @@ impl TemplateProcessor {
 impl ProductDiscovery for TemplateProcessor {
     fn discover(&self, graph: &mut BuildGraph) -> Result<()> {
         let items = self.find_templates()?;
+        let extra = resolve_extra_inputs(&self.output_dir, &self.config.extra_inputs);
 
         for item in items {
+            let mut inputs = vec![item.source_path.clone()];
+            inputs.extend(extra.clone());
             graph.add_product(
-                vec![item.source_path.clone()],
+                inputs,
                 vec![item.output_path.clone()],
                 "template",
                 Some(config_hash(&self.config)),
@@ -153,8 +156,8 @@ impl ProductDiscovery for TemplateProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        if product.inputs.len() != 1 || product.outputs.len() != 1 {
-            anyhow::bail!("Template product must have exactly one input and one output");
+        if product.inputs.is_empty() || product.outputs.len() != 1 {
+            anyhow::bail!("Template product must have at least one input and exactly one output");
         }
 
         let item = TemplateItem::new(

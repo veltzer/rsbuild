@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use walkdir::WalkDir;
 
-use crate::config::{SpellcheckConfig, config_hash};
+use crate::config::{SpellcheckConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
 use super::ProductDiscovery;
@@ -262,6 +262,7 @@ impl ProductDiscovery for SpellcheckProcessor {
         let config_hash = Some(config_hash(&self.spellcheck_config));
         let words_file = self.words_file_path();
         let words_file_exists = words_file.exists();
+        let extra = resolve_extra_inputs(&self.project_root, &self.spellcheck_config.extra_inputs);
 
         for doc_file in doc_files {
             let stub_path = self.get_stub_path(&doc_file);
@@ -269,6 +270,7 @@ impl ProductDiscovery for SpellcheckProcessor {
             if words_file_exists {
                 inputs.push(words_file.clone());
             }
+            inputs.extend(extra.clone());
             graph.add_product(
                 inputs,
                 vec![stub_path],

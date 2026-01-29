@@ -18,6 +18,7 @@ ldflags = []            # Linker flags
 include_paths = ["src/include"]  # Additional -I paths (passed as-is)
 source_dir = "src"      # Source directory (default: src)
 output_suffix = ".elf"  # Suffix for output executables (default: .elf)
+extra_inputs = []       # Additional files that trigger rebuilds when changed
 ```
 
 ## Per-file flags

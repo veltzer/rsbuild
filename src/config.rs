@@ -2,9 +2,18 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const CONFIG_FILE: &str = "rsb.toml";
+
+/// Resolve extra_inputs paths relative to project root, returning only those that exist.
+pub fn resolve_extra_inputs(project_root: &Path, extra_inputs: &[String]) -> Vec<PathBuf> {
+    extra_inputs
+        .iter()
+        .map(|p| project_root.join(p))
+        .filter(|p| p.exists())
+        .collect()
+}
 
 /// Compute a SHA-256 hash of any serializable config value.
 /// Uses JSON serialization (deterministic for structs) to produce the hash input.
@@ -126,6 +135,10 @@ pub struct TemplateConfig {
     /// Remove first newline after block tags (default: false)
     #[serde(default)]
     pub trim_blocks: bool,
+
+    /// Additional input files that trigger rebuilds when changed
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -142,6 +155,7 @@ impl Default for TemplateConfig {
             strict: default_true(),
             extensions: default_template_extensions(),
             trim_blocks: false,
+            extra_inputs: Vec::new(),
         }
     }
 }
@@ -174,6 +188,10 @@ pub struct PylintConfig {
     /// Additional arguments to pass to the linter
     #[serde(default)]
     pub args: Vec<String>,
+
+    /// Additional input files that trigger rebuilds when changed
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
 }
 
 fn default_pylinter() -> String {
@@ -185,6 +203,7 @@ impl Default for PylintConfig {
         Self {
             linter: default_pylinter(),
             args: Vec::new(),
+            extra_inputs: Vec::new(),
         }
     }
 }
@@ -198,6 +217,10 @@ pub struct CpplintConfig {
     /// Arguments to pass to the checker
     #[serde(default = "default_cpplint_args")]
     pub args: Vec<String>,
+
+    /// Additional input files that trigger rebuilds when changed
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
 }
 
 fn default_cpplint_checker() -> String {
@@ -216,6 +239,7 @@ impl Default for CpplintConfig {
         Self {
             checker: default_cpplint_checker(),
             args: default_cpplint_args(),
+            extra_inputs: Vec::new(),
         }
     }
 }
@@ -253,6 +277,10 @@ pub struct CcConfig {
     /// Suffix for output executables (default: .elf)
     #[serde(default = "default_output_suffix")]
     pub output_suffix: String,
+
+    /// Additional input files that trigger rebuilds when changed
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
 }
 
 fn default_cc() -> String {
@@ -282,6 +310,7 @@ impl Default for CcConfig {
             include_paths: Vec::new(),
             source_dir: default_source_dir(),
             output_suffix: default_output_suffix(),
+            extra_inputs: Vec::new(),
         }
     }
 }
@@ -299,6 +328,10 @@ pub struct SpellcheckConfig {
     /// Path to custom words file (default: ".spellcheck-words")
     #[serde(default = "default_spellcheck_words_file")]
     pub words_file: String,
+
+    /// Additional input files that trigger rebuilds when changed
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
 }
 
 fn default_spellcheck_extensions() -> Vec<String> {
@@ -319,6 +352,7 @@ impl Default for SpellcheckConfig {
             extensions: default_spellcheck_extensions(),
             language: default_spellcheck_language(),
             words_file: default_spellcheck_words_file(),
+            extra_inputs: Vec::new(),
         }
     }
 }

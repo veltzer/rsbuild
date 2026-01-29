@@ -52,20 +52,24 @@ restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across 
 strict = true           # Fail on undefined variables (default: true)
 extensions = [".tera"]  # File extensions to process
 trim_blocks = false     # Remove newline after block tags
+extra_inputs = ["config/settings.py"]  # Additional files that trigger rebuilds when changed
 
 [processor.pylint]
 linter = "ruff"
 args = []
+extra_inputs = ["pyproject.toml"]  # Additional files that trigger rebuilds when changed
 
 [processor.cpplint]
 checker = "cppcheck"  # C/C++ static checker (default: cppcheck)
 args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
 # To use a suppressions file: add "--suppressions-list=.cppcheck-suppressions" to args
+extra_inputs = [".cppcheck-suppressions"]  # Additional files that trigger rebuilds when changed
 
 [processor.spellcheck]
 extensions = [".md"]                    # File extensions to check
 language = "en_US"                      # Hunspell dictionary language
 words_file = ".spellcheck-words"        # Path to custom words file (relative to project root)
+extra_inputs = []                       # Additional files that trigger rebuilds when changed
 
 [processor.cc]
 cc = "gcc"              # C compiler (default: gcc)
@@ -76,6 +80,7 @@ ldflags = []            # Linker flags
 include_paths = []      # Additional -I paths (relative to project root)
 source_dir = "src"      # Source directory (default: src)
 output_suffix = ".elf"  # Suffix for output executables (default: .elf)
+extra_inputs = []       # Additional files that trigger rebuilds when changed
 
 [graph]
 viewer = "google-chrome"  # Command to open graph files (default: platform-specific)

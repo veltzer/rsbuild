@@ -5,7 +5,7 @@ use std::process::Command;
 use std::sync::Arc;
 use walkdir::WalkDir;
 
-use crate::config::{CcConfig, config_hash};
+use crate::config::{CcConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
 use super::ProductDiscovery;
@@ -507,6 +507,7 @@ impl ProductDiscovery for CcProcessor {
         }
 
         let config_hash = Some(config_hash(&self.config));
+        let extra = resolve_extra_inputs(&self.project_root, &self.config.extra_inputs);
 
         for (source, is_cpp) in &source_files {
             let executable = self.get_executable_path(source);
@@ -518,9 +519,10 @@ impl ProductDiscovery for CcProcessor {
                     .unwrap_or_default(),
             };
 
-            // Build inputs: source file + all headers
+            // Build inputs: source file + all headers + extra inputs
             let mut inputs = vec![source.clone()];
             inputs.extend(headers);
+            inputs.extend(extra.clone());
 
             graph.add_product(
                 inputs,

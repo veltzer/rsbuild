@@ -24,6 +24,7 @@ The template processor renders [Tera](https://keats.github.io/tera/) templates i
 strict = true           # Fail on undefined variables (default: true)
 extensions = [".tera"]  # File extensions to process
 trim_blocks = false     # Remove newline after block tags
+extra_inputs = ["config/settings.py"]  # Additional files that trigger rebuilds when changed
 ```
 
 ### Loading Python config
@@ -49,6 +50,7 @@ The pylint processor runs a Python linter on Python source files and produces st
 [processor.pylint]
 linter = "ruff"   # Python linter command (default: ruff)
 args = []          # Extra arguments passed to the linter
+extra_inputs = ["pyproject.toml"]  # Additional files that trigger rebuilds when changed
 ```
 
 ## Cpplint processor
@@ -63,6 +65,7 @@ The cpplint processor runs a C/C++ static analysis tool on source files.
 [processor.cpplint]
 checker = "cppcheck"  # Static analysis tool (default: cppcheck)
 args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
+extra_inputs = [".cppcheck-suppressions"]  # Additional files that trigger rebuilds when changed
 ```
 
 To use a suppressions file, add to args:

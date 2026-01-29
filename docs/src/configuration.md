@@ -23,20 +23,30 @@ ldflags = []            # Linker flags
 include_paths = ["src/include"]  # Additional -I paths (passed as-is)
 source_dir = "src"      # Source directory (default: src)
 output_suffix = ".elf"  # Suffix for output executables (default: .elf)
+extra_inputs = []       # Additional files that trigger rebuilds when changed
 
 [processor.template]
 strict = true           # Fail on undefined variables (default: true)
 extensions = [".tera"]  # File extensions to process
 trim_blocks = false     # Remove newline after block tags
+extra_inputs = ["config/settings.py"]  # Additional files that trigger rebuilds when changed
 
 [processor.pylint]
 linter = "ruff"         # Python linter to use
 args = []               # Extra arguments passed to the linter
+extra_inputs = ["pyproject.toml"]  # Additional files that trigger rebuilds when changed
 
 [processor.cpplint]
 checker = "cppcheck"  # C/C++ static checker (default: cppcheck)
 args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
 # To use a suppressions file: add "--suppressions-list=.cppcheck-suppressions" to args
+extra_inputs = [".cppcheck-suppressions"]  # Additional files that trigger rebuilds when changed
+
+[processor.spellcheck]
+extensions = [".md"]                    # File extensions to check
+language = "en_US"                      # Hunspell dictionary language
+words_file = ".spellcheck-words"        # Path to custom words file (relative to project root)
+extra_inputs = []                       # Additional files that trigger rebuilds when changed
 
 [graph]
 viewer = "google-chrome"  # Command to open graph files (default: platform-specific)
@@ -79,6 +89,7 @@ See [C/C++ Processor Details](cc-details.md) for full documentation.
 | `include_paths` | array | `[]` | Additional `-I` paths (passed as-is) |
 | `source_dir` | string | `"src"` | Source directory |
 | `output_suffix` | string | `".elf"` | Suffix for output executables |
+| `extra_inputs` | array | `[]` | Additional files that trigger rebuilds when changed |
 
 ### `[processor.template]`
 
@@ -87,6 +98,7 @@ See [C/C++ Processor Details](cc-details.md) for full documentation.
 | `strict` | bool | `true` | Fail on undefined variables |
 | `extensions` | array | `[".tera"]` | File extensions to process |
 | `trim_blocks` | bool | `false` | Remove newline after block tags |
+| `extra_inputs` | array | `[]` | Additional files that trigger rebuilds when changed |
 
 ### `[processor.pylint]`
 
@@ -94,6 +106,7 @@ See [C/C++ Processor Details](cc-details.md) for full documentation.
 |---|---|---|---|
 | `linter` | string | `"ruff"` | Python linter command |
 | `args` | array | `[]` | Extra arguments |
+| `extra_inputs` | array | `[]` | Additional files that trigger rebuilds when changed |
 
 ### `[processor.cpplint]`
 
@@ -101,6 +114,16 @@ See [C/C++ Processor Details](cc-details.md) for full documentation.
 |---|---|---|---|
 | `checker` | string | `"cppcheck"` | C/C++ static analysis tool |
 | `args` | array | see above | Arguments passed to the checker |
+| `extra_inputs` | array | `[]` | Additional files that trigger rebuilds when changed |
+
+### `[processor.spellcheck]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `extensions` | array | `[".md"]` | File extensions to check |
+| `language` | string | `"en_US"` | Hunspell dictionary language |
+| `words_file` | string | `".spellcheck-words"` | Path to custom words file (relative to project root) |
+| `extra_inputs` | array | `[]` | Additional files that trigger rebuilds when changed |
 
 ### `[graph]`
 

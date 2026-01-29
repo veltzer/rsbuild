@@ -1813,3 +1813,100 @@ fn test_spellcheck_ignores_code_blocks() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr));
 }
+
+// ========== Extra inputs tests ==========
+
+#[test]
+fn test_extra_inputs_triggers_rebuild() {
+    let temp_dir = setup_test_project();
+    let project_path = temp_dir.path();
+
+    // Create a Python config file used as extra_input
+    fs::write(
+        project_path.join("config/settings.py"),
+        "name = 'Original'"
+    ).unwrap();
+
+    // Create a template
+    fs::write(
+        project_path.join("templates/output.txt.tera"),
+        "{% set c = load_python(path='config/settings.py') %}Name: {{ c.name }}"
+    ).unwrap();
+
+    // Configure template processor with extra_inputs pointing to the config file
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"template\"]\n\n[processor.template]\nextra_inputs = [\"config/settings.py\"]\n"
+    ).unwrap();
+
+    // First build
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success(),
+        "First build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output1.stdout),
+        String::from_utf8_lossy(&output1.stderr));
+    let stdout1 = String::from_utf8_lossy(&output1.stdout);
+    assert!(stdout1.contains("[template] Processing:"), "First build should process: {}", stdout1);
+
+    // Second build — should skip (nothing changed)
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success());
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(stdout2.contains("[template] Skipping (unchanged):"), "Second build should skip: {}", stdout2);
+
+    // Wait so mtime differs
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    // Modify the extra input file (but not the template itself)
+    fs::write(
+        project_path.join("config/settings.py"),
+        "name = 'Modified'"
+    ).unwrap();
+
+    // Third build — should rebuild because extra input changed
+    let output3 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output3.status.success(),
+        "Third build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output3.stdout),
+        String::from_utf8_lossy(&output3.stderr));
+    let stdout3 = String::from_utf8_lossy(&output3.stdout);
+    assert!(stdout3.contains("[template] Processing:"),
+        "Build after extra_input change should reprocess, not skip: {}", stdout3);
+
+    // Verify the output reflects the new config
+    let content = fs::read_to_string(project_path.join("output.txt")).unwrap();
+    assert!(content.contains("Modified"),
+        "Output should reflect the modified config: {}", content);
+}
+
+#[test]
+fn test_extra_inputs_nonexistent_file_ignored() {
+    let temp_dir = setup_test_project();
+    let project_path = temp_dir.path();
+
+    // Create a template
+    fs::write(
+        project_path.join("config/simple.py"),
+        "val = 'test'"
+    ).unwrap();
+
+    fs::write(
+        project_path.join("templates/simple.txt.tera"),
+        "{% set c = load_python(path='config/simple.py') %}{{ c.val }}"
+    ).unwrap();
+
+    // Configure with a nonexistent extra_input — should not cause errors
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"template\"]\n\n[processor.template]\nextra_inputs = [\"nonexistent_file.txt\"]\n"
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build should succeed with nonexistent extra_input: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("simple.txt").exists(),
+        "Output file should be created despite nonexistent extra_input");
+}

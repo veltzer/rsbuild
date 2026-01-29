@@ -108,6 +108,35 @@ Configure which shells to generate completions for:
 shells = ["bash"]
 ```
 
+## Extra inputs
+
+By default, each processor only tracks its primary source files as inputs. If a product depends on additional files that aren't automatically discovered (e.g., a config file read by a linter, a suppressions file used by a static analyzer, or a Python settings file loaded by a template), you can declare them with `extra_inputs`.
+
+When any file listed in `extra_inputs` changes, all products from that processor are rebuilt.
+
+```toml
+[processor.template]
+extra_inputs = ["config/settings.py", "config/database.py"]
+
+[processor.pylint]
+extra_inputs = ["pyproject.toml"]
+
+[processor.cpplint]
+extra_inputs = [".cppcheck-suppressions"]
+
+[processor.cc]
+extra_inputs = ["Makefile.inc"]
+
+[processor.spellcheck]
+extra_inputs = ["custom-dictionary.txt"]
+```
+
+Paths are relative to the project root. Files that don't exist are silently ignored, so you can list optional files without causing errors.
+
+The `extra_inputs` paths are included in the processor's config hash, so adding or removing entries triggers a rebuild even if the files themselves haven't changed. The file contents are also checksummed as part of the product's input set, so any content change is detected by the incremental build system.
+
+All five configurable processors support `extra_inputs`: template, pylint, cpplint, cc, and spellcheck. The sleep processor (used for testing) does not.
+
 ## Graceful interrupt
 
 Pressing Ctrl+C during a build saves progress. The next build will resume from where it left off rather than starting over.

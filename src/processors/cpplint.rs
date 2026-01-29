@@ -5,7 +5,7 @@ use std::process::Command;
 use std::sync::Arc;
 use walkdir::WalkDir;
 
-use crate::config::{CcConfig, CpplintConfig, config_hash};
+use crate::config::{CcConfig, CpplintConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
 use super::ProductDiscovery;
@@ -128,11 +128,14 @@ impl ProductDiscovery for Cpplinter {
 
         let source_files = self.find_source_files();
         let config_hash = Some(config_hash(&self.cpplint_config));
+        let extra = resolve_extra_inputs(&self.project_root, &self.cpplint_config.extra_inputs);
 
         for source_file in source_files {
             let stub_path = self.get_stub_path(&source_file);
+            let mut inputs = vec![source_file];
+            inputs.extend(extra.clone());
             graph.add_product(
-                vec![source_file],
+                inputs,
                 vec![stub_path],
                 "cpplint",
                 config_hash.clone(),
@@ -143,8 +146,8 @@ impl ProductDiscovery for Cpplinter {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        if product.inputs.len() != 1 || product.outputs.len() != 1 {
-            anyhow::bail!("Cpplint product must have exactly one input and one output");
+        if product.inputs.is_empty() || product.outputs.len() != 1 {
+            anyhow::bail!("Cpplint product must have at least one input and exactly one output");
         }
 
         // Ensure stub directory exists

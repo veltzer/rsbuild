@@ -212,11 +212,9 @@ impl Default for BuildGraph {
 impl BuildGraph {
     /// Generate a safe node ID from a path
     fn path_node_id(path: &PathBuf) -> String {
-        let name = path.file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("unknown");
+        let s = path.display().to_string();
         // Make safe for DOT/Mermaid: replace special chars
-        format!("f_{}", name.replace('.', "_").replace('-', "_").replace('/', "_"))
+        format!("f_{}", s.replace('.', "_").replace('-', "_").replace('/', "_").replace(' ', "_"))
     }
 
     /// Generate a node ID for a processor
@@ -310,19 +308,21 @@ impl BuildGraph {
     }
 
     /// Format graph as Mermaid
+    /// Only shows primary source files (first input per product), not headers,
+    /// to keep the diagram manageable for large projects.
     pub fn to_mermaid(&self) -> String {
         use std::collections::HashSet;
 
         let mut lines = Vec::new();
         lines.push("graph LR".to_string());
 
-        // Collect all unique input and output files
-        let mut input_files: HashSet<PathBuf> = HashSet::new();
+        // Collect primary source files (first input only) and output files
+        let mut source_files: HashSet<PathBuf> = HashSet::new();
         let mut output_files: HashSet<PathBuf> = HashSet::new();
 
         for product in &self.products {
-            for input in &product.inputs {
-                input_files.insert(input.clone());
+            if let Some(first_input) = product.inputs.first() {
+                source_files.insert(first_input.clone());
             }
             for output in &product.outputs {
                 output_files.insert(output.clone());
@@ -331,7 +331,7 @@ impl BuildGraph {
 
         lines.push("".to_string());
         lines.push("    %% Source files".to_string());
-        for file in &input_files {
+        for file in &source_files {
             if !output_files.contains(file) {
                 let node_id = Self::path_node_id(file);
                 let label = Self::file_label(file);
@@ -359,8 +359,9 @@ impl BuildGraph {
         for product in &self.products {
             let proc_id = Self::processor_node_id(product);
 
-            for input in &product.inputs {
-                let input_id = Self::path_node_id(input);
+            // Only connect primary source file (first input), skip headers
+            if let Some(first_input) = product.inputs.first() {
+                let input_id = Self::path_node_id(first_input);
                 lines.push(format!("    {} --> {}", input_id, proc_id));
             }
 
@@ -484,6 +485,32 @@ impl BuildGraph {
         lines.join("\n")
     }
 
+    /// Generate SVG by piping DOT through the `dot` command
+    pub fn to_svg(&self) -> Result<String> {
+        use std::process::{Command, Stdio};
+        use std::io::Write;
+
+        let dot_content = self.to_dot();
+
+        let mut child = Command::new("dot")
+            .arg("-Tsvg")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|_| anyhow::anyhow!("Graphviz 'dot' command not found. Install Graphviz to use SVG format"))?;
+
+        child.stdin.take().unwrap().write_all(dot_content.as_bytes())?;
+
+        let output = child.wait_with_output()?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            bail!("dot command failed: {}", stderr);
+        }
+
+        Ok(String::from_utf8(output.stdout)?)
+    }
+
     /// Generate a self-contained HTML file with Mermaid diagram
     pub fn to_html(&self) -> String {
         let mermaid_content = self.to_mermaid();
@@ -516,7 +543,7 @@ impl BuildGraph {
 {mermaid_content}
     </div>
     <script>
-        mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
+        mermaid.initialize({{ startOnLoad: true, theme: 'default', maxTextSize: 500000 }});
     </script>
 </body>
 </html>

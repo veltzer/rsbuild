@@ -248,6 +248,7 @@ impl Builder {
             GraphFormat::Mermaid => graph.to_mermaid(),
             GraphFormat::Json => graph.to_json(),
             GraphFormat::Text => graph.to_text(),
+            GraphFormat::Svg => graph.to_svg()?,
         };
 
         println!("{}", output);
@@ -334,18 +335,22 @@ impl Builder {
         self.build_graph_with_processors(&processors)
     }
 
-    /// Open a file with the system default application
+    /// Open a file with the configured viewer or the system default application
     fn open_file(&self, path: &std::path::Path) -> Result<()> {
         use std::process::Command;
 
-        #[cfg(target_os = "linux")]
-        let cmd = "xdg-open";
+        let cmd = if let Some(ref viewer) = self.config.graph.viewer {
+            viewer.as_str()
+        } else {
+            #[cfg(target_os = "linux")]
+            { "xdg-open" }
 
-        #[cfg(target_os = "macos")]
-        let cmd = "open";
+            #[cfg(target_os = "macos")]
+            { "open" }
 
-        #[cfg(target_os = "windows")]
-        let cmd = "start";
+            #[cfg(target_os = "windows")]
+            { "start" }
+        };
 
         Command::new(cmd)
             .arg(path)

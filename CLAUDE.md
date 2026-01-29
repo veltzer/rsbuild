@@ -54,6 +54,9 @@ include_paths = []      # Additional -I paths (relative to project root)
 source_dir = "src"      # Source directory (default: src)
 output_suffix = ".elf"  # Suffix for output executables (default: .elf)
 
+[graph]
+viewer = "google-chrome"  # Command to open graph files (default: platform-specific)
+
 [completions]
 shells = ["bash"]
 ```

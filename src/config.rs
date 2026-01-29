@@ -21,6 +21,8 @@ pub struct Config {
     pub completions: CompletionsConfig,
     #[serde(default)]
     pub cc: CcConfig,
+    #[serde(default)]
+    pub graph: GraphConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -233,6 +235,13 @@ impl Default for CcConfig {
             output_suffix: default_output_suffix(),
         }
     }
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct GraphConfig {
+    /// Command to open graph files (default: platform-specific)
+    #[serde(default)]
+    pub viewer: Option<String>,
 }
 
 impl Config {

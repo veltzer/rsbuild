@@ -16,6 +16,24 @@ A fast, incremental build tool written in Rust with C/C++ compilation, template 
 
 ## Installation
 
+### Download pre-built binary (x86_64 Linux)
+
+```bash
+gh release download latest --repo veltzer/rsb --pattern 'rsb' --output rsb --clobber
+chmod +x rsb
+sudo mv rsb /usr/local/bin/
+```
+
+Or without the GitHub CLI:
+
+```bash
+curl -Lo rsb https://github.com/veltzer/rsb/releases/download/latest/rsb
+chmod +x rsb
+sudo mv rsb /usr/local/bin/
+```
+
+### Build from source
+
 ```bash
 cargo build --release
 ```

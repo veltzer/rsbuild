@@ -36,7 +36,7 @@ fn run_rsb_with_env(dir: &Path, args: &[&str], env_vars: &[(&str, &str)]) -> std
 }
 
 #[test]
-fn test_template_to_file_translation() {
+fn template_to_file_translation() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -113,7 +113,7 @@ optimization = 3
 }
 
 #[test]
-fn test_incremental_build() {
+fn incremental_build() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -145,7 +145,7 @@ fn test_incremental_build() {
 }
 
 #[test]
-fn test_clean_command() {
+fn clean_command() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -178,7 +178,7 @@ fn test_clean_command() {
 }
 
 #[test]
-fn test_force_rebuild() {
+fn force_rebuild() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -205,7 +205,7 @@ fn test_force_rebuild() {
 }
 
 #[test]
-fn test_multiple_templates() {
+fn multiple_templates() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -248,7 +248,7 @@ fn test_multiple_templates() {
 }
 
 #[test]
-fn test_cache_operations() {
+fn cache_operations() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -313,7 +313,7 @@ fn test_cache_operations() {
 }
 
 #[test]
-fn test_sleep_processor() {
+fn sleep_processor() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -354,7 +354,7 @@ fn test_sleep_processor() {
 // ========== New tests for developer experience features ==========
 
 #[test]
-fn test_no_color_env() {
+fn no_color_env() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -376,7 +376,7 @@ fn test_no_color_env() {
 }
 
 #[test]
-fn test_timings_flag() {
+fn timings_flag() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -399,7 +399,7 @@ fn test_timings_flag() {
 }
 
 #[test]
-fn test_no_timings_by_default() {
+fn no_timings_by_default() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -422,7 +422,7 @@ fn test_no_timings_by_default() {
 }
 
 #[test]
-fn test_keep_going_continues_after_failure() {
+fn keep_going_continues_after_failure() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -447,7 +447,7 @@ fn test_keep_going_continues_after_failure() {
 }
 
 #[test]
-fn test_keep_going_short_flag() {
+fn keep_going_short_flag() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -474,7 +474,7 @@ fn test_keep_going_short_flag() {
 }
 
 #[test]
-fn test_status_command() {
+fn status_command() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -514,7 +514,7 @@ fn test_status_command() {
 }
 
 #[test]
-fn test_status_empty_project() {
+fn status_empty_project() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -531,7 +531,7 @@ fn test_status_empty_project() {
 }
 
 #[test]
-fn test_init_creates_project() {
+fn init_creates_project() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -553,7 +553,7 @@ fn test_init_creates_project() {
 }
 
 #[test]
-fn test_init_fails_if_exists() {
+fn init_fails_if_exists() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -567,7 +567,7 @@ fn test_init_fails_if_exists() {
 }
 
 #[test]
-fn test_init_preserves_existing_dirs() {
+fn init_preserves_existing_dirs() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -591,7 +591,7 @@ fn test_init_preserves_existing_dirs() {
 // ========== Dry-run tests ==========
 
 #[test]
-fn test_dry_run_shows_build_actions() {
+fn dry_run_shows_build_actions() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -636,7 +636,7 @@ fn test_dry_run_shows_build_actions() {
 }
 
 #[test]
-fn test_dry_run_short_flag() {
+fn dry_run_short_flag() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -655,7 +655,7 @@ fn test_dry_run_short_flag() {
 }
 
 #[test]
-fn test_dry_run_with_force() {
+fn dry_run_with_force() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -681,7 +681,7 @@ fn test_dry_run_with_force() {
 // ========== Cache list tests ==========
 
 #[test]
-fn test_cache_list_shows_entries() {
+fn cache_list_shows_entries() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -706,7 +706,7 @@ fn test_cache_list_shows_entries() {
 }
 
 #[test]
-fn test_cache_list_empty() {
+fn cache_list_empty() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -724,7 +724,7 @@ fn test_cache_list_empty() {
 // ========== Watch mode tests ==========
 
 #[test]
-fn test_watch_does_initial_build() {
+fn watch_does_initial_build() {
     use std::process::Command;
     use std::time::Duration;
 
@@ -765,7 +765,7 @@ fn test_watch_does_initial_build() {
 }
 
 #[test]
-fn test_watch_rebuilds_on_change() {
+fn watch_rebuilds_on_change() {
     use std::process::Command;
     use std::time::Duration;
 
@@ -819,7 +819,7 @@ fn setup_cc_project(project_path: &Path) {
 }
 
 #[test]
-fn test_cc_compile_single_c_file() {
+fn cc_compile_single_c_file() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -841,7 +841,7 @@ fn test_cc_compile_single_c_file() {
 }
 
 #[test]
-fn test_cc_incremental_skip() {
+fn cc_incremental_skip() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -866,7 +866,7 @@ fn test_cc_incremental_skip() {
 }
 
 #[test]
-fn test_cc_header_dependency() {
+fn cc_header_dependency() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -911,7 +911,7 @@ fn test_cc_header_dependency() {
 }
 
 #[test]
-fn test_cc_mixed_c_and_cpp() {
+fn cc_mixed_c_and_cpp() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -938,7 +938,7 @@ fn test_cc_mixed_c_and_cpp() {
 }
 
 #[test]
-fn test_cc_clean() {
+fn cc_clean() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -964,7 +964,7 @@ fn test_cc_clean() {
 }
 
 #[test]
-fn test_cc_dry_run() {
+fn cc_dry_run() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -988,7 +988,7 @@ fn test_cc_dry_run() {
 // ========== .rsbignore tests ==========
 
 #[test]
-fn test_rsbignore_excludes_sleep_files() {
+fn rsbignore_excludes_sleep_files() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -1022,7 +1022,7 @@ fn test_rsbignore_excludes_sleep_files() {
 }
 
 #[test]
-fn test_rsbignore_glob_pattern() {
+fn rsbignore_glob_pattern() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -1059,7 +1059,7 @@ fn test_rsbignore_glob_pattern() {
 }
 
 #[test]
-fn test_rsbignore_no_file() {
+fn rsbignore_no_file() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -1082,7 +1082,7 @@ fn test_rsbignore_no_file() {
 }
 
 #[test]
-fn test_rsbignore_comments_and_blank_lines() {
+fn rsbignore_comments_and_blank_lines() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -1109,7 +1109,7 @@ fn test_rsbignore_comments_and_blank_lines() {
 }
 
 #[test]
-fn test_rsbignore_cc_processor() {
+fn rsbignore_cc_processor() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1146,7 +1146,7 @@ fn test_rsbignore_cc_processor() {
 }
 
 #[test]
-fn test_rsbignore_leading_slash() {
+fn rsbignore_leading_slash() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1182,7 +1182,7 @@ fn test_rsbignore_leading_slash() {
 }
 
 #[test]
-fn test_rsbignore_trailing_slash() {
+fn rsbignore_trailing_slash() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1220,7 +1220,7 @@ fn test_rsbignore_trailing_slash() {
 // ========== Deterministic build order tests ==========
 
 #[test]
-fn test_deterministic_build_order() {
+fn deterministic_build_order() {
     // Run two separate builds with multiple sleep files and verify
     // that the processing order is identical both times.
     let outputs: Vec<Vec<String>> = (0..2).map(|_| {
@@ -1267,7 +1267,7 @@ fn test_deterministic_build_order() {
 // ========== Per-file compile/link flags tests ==========
 
 #[test]
-fn test_cc_per_file_compile_flags() {
+fn cc_per_file_compile_flags() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1304,7 +1304,7 @@ int main() {
 }
 
 #[test]
-fn test_cc_per_file_link_flags() {
+fn cc_per_file_link_flags() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1342,7 +1342,7 @@ int main() {
 }
 
 #[test]
-fn test_cc_per_file_backtick_substitution() {
+fn cc_per_file_backtick_substitution() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1379,7 +1379,7 @@ int main() {
 }
 
 #[test]
-fn test_cc_per_file_no_flags() {
+fn cc_per_file_no_flags() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1414,7 +1414,7 @@ int main() {
 }
 
 #[test]
-fn test_cc_per_file_compile_cmd() {
+fn cc_per_file_compile_cmd() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1450,7 +1450,7 @@ int main() {
 }
 
 #[test]
-fn test_cc_per_file_link_cmd() {
+fn cc_per_file_link_cmd() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1487,7 +1487,7 @@ int main() {
 }
 
 #[test]
-fn test_cc_per_file_block_comment_star_prefix() {
+fn cc_per_file_block_comment_star_prefix() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1526,7 +1526,7 @@ int main() {
 }
 
 #[test]
-fn test_cc_per_file_compile_shell() {
+fn cc_per_file_compile_shell() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1562,7 +1562,7 @@ int main() {
 }
 
 #[test]
-fn test_cc_per_file_link_shell() {
+fn cc_per_file_link_shell() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1601,7 +1601,7 @@ int main() {
 // ========== Config change triggers rebuild tests ==========
 
 #[test]
-fn test_cc_config_change_triggers_rebuild() {
+fn cc_config_change_triggers_rebuild() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
@@ -1647,7 +1647,7 @@ fn test_cc_config_change_triggers_rebuild() {
 // ========== Spellcheck processor tests ==========
 
 #[test]
-fn test_spellcheck_correct_spelling() {
+fn spellcheck_correct_spelling() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -1678,7 +1678,7 @@ fn test_spellcheck_correct_spelling() {
 }
 
 #[test]
-fn test_spellcheck_misspelled_word() {
+fn spellcheck_misspelled_word() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -1705,7 +1705,7 @@ fn test_spellcheck_misspelled_word() {
 }
 
 #[test]
-fn test_spellcheck_custom_words_file() {
+fn spellcheck_custom_words_file() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -1734,7 +1734,7 @@ fn test_spellcheck_custom_words_file() {
 }
 
 #[test]
-fn test_spellcheck_incremental_skip() {
+fn spellcheck_incremental_skip() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -1764,7 +1764,7 @@ fn test_spellcheck_incremental_skip() {
 }
 
 #[test]
-fn test_spellcheck_clean() {
+fn spellcheck_clean() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -1792,7 +1792,7 @@ fn test_spellcheck_clean() {
 }
 
 #[test]
-fn test_spellcheck_ignores_code_blocks() {
+fn spellcheck_ignores_code_blocks() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -1814,10 +1814,97 @@ fn test_spellcheck_ignores_code_blocks() {
         String::from_utf8_lossy(&output.stderr));
 }
 
+// ========== Independent products cached after failure tests ==========
+
+#[test]
+fn independent_products_cached_after_failure() {
+    // When one product fails (without --keep-going), independent products
+    // should still be processed and cached, so the next build only needs
+    // to re-process the previously-failing product.
+    let temp_dir = setup_test_project();
+    let project_path = temp_dir.path();
+
+    fs::create_dir_all(project_path.join("sleep")).unwrap();
+    // "bad" sorts before "good" alphabetically, so it will be processed first
+    fs::write(project_path.join("sleep/bad.sleep"), "not_a_number").unwrap();
+    fs::write(project_path.join("sleep/good.sleep"), "0.01").unwrap();
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"sleep\"]\n"
+    ).unwrap();
+
+    // First build — should fail because of bad.sleep
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(!output1.status.success(), "Build should fail with bad sleep file");
+
+    // But the good.sleep file should have been processed and cached
+    let good_stub = project_path.join("out/sleep/good.done");
+    assert!(good_stub.exists(),
+        "Good sleep file should still be processed even without --keep-going");
+
+    // Now fix the bad file
+    fs::write(project_path.join("sleep/bad.sleep"), "0.01").unwrap();
+
+    // Second build — good.sleep should be skipped (cached), only bad.sleep processed
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success(),
+        "Second build should succeed after fixing bad file: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output2.stdout),
+        String::from_utf8_lossy(&output2.stderr));
+
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    // good.sleep should be skipped (unchanged/cached from first build)
+    assert!(stdout2.contains("Skipping (unchanged):") || stdout2.contains("Restored from cache:"),
+        "Good sleep file should be skipped on second build: {}", stdout2);
+    // bad.sleep should be re-processed
+    assert!(stdout2.contains("[sleep] Processing:"),
+        "Fixed bad sleep file should be processed on second build: {}", stdout2);
+}
+
+#[test]
+fn independent_products_cached_after_failure_parallel() {
+    // Same test as above but with parallel execution
+    let temp_dir = setup_test_project();
+    let project_path = temp_dir.path();
+
+    fs::create_dir_all(project_path.join("sleep")).unwrap();
+    fs::write(project_path.join("sleep/bad.sleep"), "not_a_number").unwrap();
+    fs::write(project_path.join("sleep/good.sleep"), "0.01").unwrap();
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"sleep\"]\n\n[build]\nparallel = 2\n"
+    ).unwrap();
+
+    // First build — should fail
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(!output1.status.success(), "Build should fail with bad sleep file");
+
+    // Good file should still be processed
+    let good_stub = project_path.join("out/sleep/good.done");
+    assert!(good_stub.exists(),
+        "Good sleep file should still be processed in parallel mode even without --keep-going");
+
+    // Fix the bad file
+    fs::write(project_path.join("sleep/bad.sleep"), "0.01").unwrap();
+
+    // Second build — good.sleep should be skipped
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success(),
+        "Second build should succeed after fixing bad file: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output2.stdout),
+        String::from_utf8_lossy(&output2.stderr));
+
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(stdout2.contains("Skipping (unchanged):") || stdout2.contains("Restored from cache:"),
+        "Good sleep file should be skipped on second build (parallel): {}", stdout2);
+    assert!(stdout2.contains("[sleep] Processing:"),
+        "Fixed bad sleep file should be processed on second build (parallel): {}", stdout2);
+}
+
 // ========== Extra inputs tests ==========
 
 #[test]
-fn test_extra_inputs_triggers_rebuild() {
+fn extra_inputs_triggers_rebuild() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -1880,7 +1967,7 @@ fn test_extra_inputs_triggers_rebuild() {
 }
 
 #[test]
-fn test_extra_inputs_nonexistent_file_ignored() {
+fn extra_inputs_nonexistent_file_ignored() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 

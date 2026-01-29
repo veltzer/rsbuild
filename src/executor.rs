@@ -76,6 +76,7 @@ impl<'a> Executor<'a> {
         let mut stats_by_processor: HashMap<String, ProcessStats> = HashMap::new();
         let mut failed_products: HashSet<usize> = HashSet::new();
         let mut failed_messages: Vec<String> = Vec::new();
+        let mut first_error: Option<anyhow::Error> = None;
 
         for &id in order {
             // Check for Ctrl+C before starting next product
@@ -86,8 +87,8 @@ impl<'a> Executor<'a> {
 
             let product = graph.get_product(id).unwrap();
 
-            // If keep_going, skip products whose dependencies have failed
-            if keep_going && self.has_failed_dependency(graph, id, &failed_products) {
+            // Skip products whose dependencies have failed
+            if self.has_failed_dependency(graph, id, &failed_products) {
                 if verbose {
                     println!("[{}] {} {}", product.processor,
                         color::yellow("Skipping (dependency failed):"),
@@ -162,11 +163,22 @@ impl<'a> Executor<'a> {
                             failed_products.insert(id);
                             failed_messages.push(msg);
                         } else {
-                            return Err(e);
+                            // Record first error but continue processing
+                            // independent products so they get cached
+                            if first_error.is_none() {
+                                first_error = Some(e);
+                            }
+                            failed_products.insert(id);
                         }
                     }
                 }
             }
+        }
+
+        // In non-keep-going mode, return the first error after giving
+        // independent products a chance to execute and be cached
+        if let Some(e) = first_error {
+            return Err(e);
         }
 
         // Build aggregated stats
@@ -212,7 +224,7 @@ impl<'a> Executor<'a> {
 
             // First pass: identify products with failed dependencies
             let mut skipped_ids: Vec<usize> = Vec::new();
-            if keep_going {
+            {
                 let failed_guard = failed_products.lock().unwrap();
                 for &id in &level {
                     if self.has_failed_dependency(graph, id, &failed_guard) {
@@ -252,6 +264,7 @@ impl<'a> Executor<'a> {
                                 failed_products.lock().unwrap().insert(id);
                                 failed_messages.lock().unwrap().push(msg);
                             } else {
+                                failed_products.lock().unwrap().insert(id);
                                 errors.lock().unwrap().push(e);
                             }
                             continue;
@@ -327,6 +340,7 @@ impl<'a> Executor<'a> {
                                             failed_ref.lock().unwrap().insert(*id);
                                             failed_msgs_ref.lock().unwrap().push(msg);
                                         } else {
+                                            failed_ref.lock().unwrap().insert(*id);
                                             errors_ref.lock().unwrap().push(e);
                                         }
                                         continue;
@@ -355,6 +369,7 @@ impl<'a> Executor<'a> {
                                                     failed_ref.lock().unwrap().insert(*id);
                                                     failed_msgs_ref.lock().unwrap().push(msg);
                                                 } else {
+                                                    failed_ref.lock().unwrap().insert(*id);
                                                     errors_ref.lock().unwrap().push(e);
                                                 }
                                                 continue;
@@ -382,6 +397,7 @@ impl<'a> Executor<'a> {
                                             failed_ref.lock().unwrap().insert(*id);
                                             failed_msgs_ref.lock().unwrap().push(msg);
                                         } else {
+                                            failed_ref.lock().unwrap().insert(*id);
                                             errors_ref.lock().unwrap().push(e);
                                         }
                                         continue;
@@ -397,16 +413,6 @@ impl<'a> Executor<'a> {
             if self.interrupted.load(Ordering::SeqCst) {
                 println!("{}", color::yellow("Interrupted, saving progress..."));
                 break;
-            }
-
-            // Check for errors after each level (only in non-keep-going mode)
-            if !keep_going {
-                let errs = errors.lock().unwrap();
-                if !errs.is_empty() {
-                    // Restore store before returning error
-                    *object_store = Arc::try_unwrap(store).unwrap().into_inner().unwrap();
-                    return Err(anyhow::anyhow!("Build failed: {}", errs[0]));
-                }
             }
         }
 
@@ -425,11 +431,12 @@ impl<'a> Executor<'a> {
         stats.failed_count = final_failed.len();
         stats.failed_messages = final_msgs;
 
-        // In non-keep-going mode, check remaining errors (but not if interrupted)
+        // In non-keep-going mode, return the first error after giving
+        // independent products a chance to execute and be cached
         if !keep_going && !self.interrupted.load(Ordering::SeqCst) {
             let errs = Arc::try_unwrap(errors).unwrap().into_inner().unwrap();
-            if !errs.is_empty() {
-                return Err(anyhow::anyhow!("Build failed: {}", errs[0]));
+            if let Some(first_err) = errs.into_iter().next() {
+                return Err(first_err);
             }
         }
 

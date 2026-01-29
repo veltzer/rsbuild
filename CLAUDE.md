@@ -30,22 +30,22 @@ A fast, incremental build tool written in Rust with template support, Python lin
 [build]
 parallel = 1  # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
 
-[processors]
+[processor]
 enabled = ["template", "lint", "sleep"]
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
 
-[template]
+[processor.template]
 strict = true           # Fail on undefined variables (default: true)
 extensions = [".tera"]  # File extensions to process
 trim_blocks = false     # Remove newline after block tags
 
-[lint]
+[processor.lint]
 linter = "ruff"
 args = []
 
-[cc]
+[processor.cc]
 cc = "gcc"              # C compiler (default: gcc)
 cxx = "g++"             # C++ compiler (default: g++)
 cflags = []             # C compiler flags

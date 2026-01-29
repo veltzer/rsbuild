@@ -230,12 +230,12 @@ impl Builder {
         // Template processor
         let templates_dir = self.project_root.join("templates");
         let output_dir = self.project_root.clone();
-        if let Ok(template_proc) = TemplateProcessor::new(templates_dir, output_dir, self.config.template.clone(), Arc::clone(&self.ignore_rules)) {
+        if let Ok(template_proc) = TemplateProcessor::new(templates_dir, output_dir, self.config.processor.template.clone(), Arc::clone(&self.ignore_rules)) {
             processors.insert("template".to_string(), Box::new(template_proc));
         }
 
         // Lint processor
-        let linter = Linter::new(self.project_root.clone(), self.config.lint.clone(), Arc::clone(&self.ignore_rules));
+        let linter = Linter::new(self.project_root.clone(), self.config.processor.lint.clone(), Arc::clone(&self.ignore_rules));
         processors.insert("lint".to_string(), Box::new(linter));
 
         // Sleep processor (for testing parallelism)
@@ -243,7 +243,7 @@ impl Builder {
         processors.insert("sleep".to_string(), Box::new(sleep_proc));
 
         // C/C++ compiler processor
-        let cc_proc = CcProcessor::new(self.project_root.clone(), self.config.cc.clone(), Arc::clone(&self.ignore_rules), processor_verbose);
+        let cc_proc = CcProcessor::new(self.project_root.clone(), self.config.processor.cc.clone(), Arc::clone(&self.ignore_rules), processor_verbose);
         processors.insert("cc".to_string(), Box::new(cc_proc));
 
         processors
@@ -331,7 +331,7 @@ impl Builder {
         let mut names: Vec<&String> = processors.keys().collect();
         names.sort();
         for name in names {
-            if self.config.processors.is_enabled(name) {
+            if self.config.processor.is_enabled(name) {
                 processors[name].discover(&mut graph)?;
             }
         }

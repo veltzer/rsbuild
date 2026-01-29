@@ -2,17 +2,17 @@
 # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
 parallel = 1
 
-[processors]
-enabled = ["template", "lint", "cc"]
-
-[lint]
-linter = "ruff"
-args = []
-
-[template]
-
 [completions]
 shells = ["bash"]
 
 [cache]
 restore_method = "hardlink"  # or "copy"
+
+[processor]
+enabled = ["template", "lint"]
+
+[processor.template]
+
+[processor.lint]
+linter = "ruff"
+args = []

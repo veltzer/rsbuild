@@ -12,15 +12,9 @@ pub struct Config {
     #[serde(default)]
     pub cache: CacheConfig,
     #[serde(default)]
-    pub processors: ProcessorsConfig,
-    #[serde(default)]
-    pub template: TemplateConfig,
-    #[serde(default)]
-    pub lint: LintConfig,
+    pub processor: ProcessorConfig,
     #[serde(default)]
     pub completions: CompletionsConfig,
-    #[serde(default)]
-    pub cc: CcConfig,
     #[serde(default)]
     pub graph: GraphConfig,
 }
@@ -70,26 +64,35 @@ impl Default for CacheConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct ProcessorsConfig {
+#[derive(Debug, Deserialize)]
+pub struct ProcessorConfig {
     /// List of enabled processors (e.g., ["template", "lint"])
     #[serde(default = "default_processors")]
     pub enabled: Vec<String>,
+    #[serde(default)]
+    pub template: TemplateConfig,
+    #[serde(default)]
+    pub lint: LintConfig,
+    #[serde(default)]
+    pub cc: CcConfig,
 }
 
 fn default_processors() -> Vec<String> {
     vec!["template".to_string(), "lint".to_string(), "sleep".to_string(), "cc".to_string()]
 }
 
-impl Default for ProcessorsConfig {
+impl Default for ProcessorConfig {
     fn default() -> Self {
         Self {
             enabled: default_processors(),
+            template: TemplateConfig::default(),
+            lint: LintConfig::default(),
+            cc: CcConfig::default(),
         }
     }
 }
 
-impl ProcessorsConfig {
+impl ProcessorConfig {
     pub fn is_enabled(&self, name: &str) -> bool {
         self.enabled.iter().any(|p| p == name)
     }

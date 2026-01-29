@@ -107,7 +107,7 @@ fn main() -> Result<()> {
                 ProcessorAction::List => {
                     let all_processors = ["template", "lint", "sleep", "cc"];
                     for name in &all_processors {
-                        let status = if config.processors.is_enabled(name) {
+                        let status = if config.processor.is_enabled(name) {
                             color::green("enabled")
                         } else {
                             color::dim("disabled")
@@ -169,18 +169,18 @@ fn init_project() -> Result<()> {
 # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
 # parallel = 1
 
-[processors]
+[processor]
 # enabled = ["template", "lint", "sleep"]
 
 [cache]
 # restore_method = "hardlink"  # or "copy"
 
-[template]
+[processor.template]
 # strict = true
 # extensions = [".tera"]
 # trim_blocks = false
 
-[lint]
+[processor.lint]
 # linter = "ruff"
 # args = []
 

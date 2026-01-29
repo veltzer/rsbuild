@@ -324,7 +324,7 @@ fn test_sleep_processor() {
     // Enable only sleep processor (disable template and lint to avoid needing their dirs)
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Build
@@ -363,7 +363,7 @@ fn test_no_color_env() {
     fs::write(project_path.join("sleep/color_test.sleep"), "0.01").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Run with NO_COLOR set
@@ -385,7 +385,7 @@ fn test_timings_flag() {
     fs::write(project_path.join("sleep/timing_test.sleep"), "0.01").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Run with --timings
@@ -408,7 +408,7 @@ fn test_no_timings_by_default() {
     fs::write(project_path.join("sleep/no_timing.sleep"), "0.01").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Run without --timings (and without --verbose)
@@ -432,7 +432,7 @@ fn test_keep_going_continues_after_failure() {
     fs::write(project_path.join("sleep/good.sleep"), "0.01").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Run with --keep-going
@@ -456,7 +456,7 @@ fn test_keep_going_short_flag() {
     fs::write(project_path.join("sleep/bad_k.sleep"), "invalid").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Run with -k (short form)
@@ -483,7 +483,7 @@ fn test_status_command() {
     fs::write(project_path.join("sleep/status_test.sleep"), "0.01").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Before building, should be STALE
@@ -521,7 +521,7 @@ fn test_status_empty_project() {
     // No sleep dir, no templates to process — disable all processors
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = []\n"
+        "[processor]\nenabled = []\n"
     ).unwrap();
 
     let output = run_rsb(project_path, &["status"]);
@@ -547,7 +547,7 @@ fn test_init_creates_project() {
     // Verify rsb.toml has content
     let toml_content = fs::read_to_string(project_path.join("rsb.toml")).unwrap();
     assert!(toml_content.contains("[build]"), "rsb.toml should contain [build] section");
-    assert!(toml_content.contains("[processors]"), "rsb.toml should contain [processors] section");
+    assert!(toml_content.contains("[processor]"), "rsb.toml should contain [processor] section");
 
     assert!(stdout.contains("Created"), "Output should mention Created");
 }
@@ -600,7 +600,7 @@ fn test_dry_run_shows_build_actions() {
     fs::write(project_path.join("sleep/dry.sleep"), "0.01").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Dry run before any build — should show BUILD
@@ -644,7 +644,7 @@ fn test_dry_run_short_flag() {
     fs::write(project_path.join("sleep/short.sleep"), "0.01").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     let output = run_rsb_with_env(project_path, &["build", "-n"], &[("NO_COLOR", "1")]);
@@ -663,7 +663,7 @@ fn test_dry_run_with_force() {
     fs::write(project_path.join("sleep/force_dry.sleep"), "0.01").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Build first
@@ -689,7 +689,7 @@ fn test_cache_list_shows_entries() {
     fs::write(project_path.join("sleep/list_test.sleep"), "0.01").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Build to populate cache
@@ -712,7 +712,7 @@ fn test_cache_list_empty() {
 
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = []\n"
+        "[processor]\nenabled = []\n"
     ).unwrap();
 
     let output = run_rsb_with_env(project_path, &["cache", "list"], &[("NO_COLOR", "1")]);
@@ -735,7 +735,7 @@ fn test_watch_does_initial_build() {
     fs::write(project_path.join("sleep/watch_init.sleep"), "0.01").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     let rsb_path = env!("CARGO_BIN_EXE_rsb");
@@ -776,7 +776,7 @@ fn test_watch_rebuilds_on_change() {
     fs::write(project_path.join("sleep/watch_change.sleep"), "0.01").unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     let rsb_path = env!("CARGO_BIN_EXE_rsb");
@@ -814,7 +814,7 @@ fn setup_cc_project(project_path: &Path) {
     fs::create_dir_all(project_path.join("src")).unwrap();
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"cc\"]\n"
+        "[processor]\nenabled = [\"cc\"]\n"
     ).unwrap();
 }
 
@@ -999,7 +999,7 @@ fn test_rsbignore_excludes_sleep_files() {
 
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Create .rsbignore that excludes one file
@@ -1034,7 +1034,7 @@ fn test_rsbignore_glob_pattern() {
 
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Use a glob pattern to exclude the entire subdirectory
@@ -1069,7 +1069,7 @@ fn test_rsbignore_no_file() {
 
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // Build should work fine without .rsbignore
@@ -1092,7 +1092,7 @@ fn test_rsbignore_comments_and_blank_lines() {
 
     fs::write(
         project_path.join("rsb.toml"),
-        "[processors]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
     // .rsbignore with comments, blank lines, and one real pattern
@@ -1238,7 +1238,7 @@ fn test_deterministic_build_order() {
 
         fs::write(
             project_path.join("rsb.toml"),
-            "[processors]\nenabled = [\"sleep\"]\n"
+            "[processor]\nenabled = [\"sleep\"]\n"
         ).unwrap();
 
         let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);

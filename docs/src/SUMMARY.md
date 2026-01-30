@@ -14,3 +14,4 @@
     - [Sleep](processors/sleep.md)
 - [Advanced Usage](advanced.md)
 - [Architecture](architecture.md)
+- [Processor Contract](processor-contract.md)

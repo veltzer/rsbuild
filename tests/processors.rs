@@ -1,7 +1,7 @@
 mod common;
 mod processors {
-    pub mod cc_test;
-    pub mod sleep_test;
-    pub mod spellcheck_test;
-    pub mod template_test;
+    pub mod cc;
+    pub mod sleep;
+    pub mod spellcheck;
+    pub mod template;
 }

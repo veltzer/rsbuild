@@ -282,16 +282,11 @@ impl ProductDiscovery for SpellcheckProcessor {
 
         let doc_files = self.find_doc_files();
         let config_hash = Some(config_hash(&self.spellcheck_config));
-        let words_file = self.words_file_path();
-        let words_file_exists = words_file.exists();
         let extra = resolve_extra_inputs(&self.project_root, &self.spellcheck_config.extra_inputs)?;
 
         for doc_file in doc_files {
             let stub_path = self.get_stub_path(&doc_file);
             let mut inputs = vec![doc_file];
-            if words_file_exists {
-                inputs.push(words_file.clone());
-            }
             inputs.extend(extra.clone());
             graph.add_product(
                 inputs,

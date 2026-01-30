@@ -10,7 +10,7 @@ use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value}
 use crate::config::{TemplateConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
-use super::ProductDiscovery;
+use super::{ProductDiscovery, find_files};
 
 /// Represents a single template file to be processed
 struct TemplateItem {
@@ -99,39 +99,24 @@ impl TemplateProcessor {
 
     /// Find all template files matching configured extensions
     fn find_templates(&self) -> Result<Vec<TemplateItem>> {
+        let ext_refs: Vec<&str> = self.config.extensions.iter().map(|s| s.as_str()).collect();
+        let paths = find_files(&self.templates_dir, &ext_refs, &[], &self.ignore_rules, false);
+
         let mut items = Vec::new();
-
-        if !self.templates_dir.exists() {
-            return Ok(items);
-        }
-
-        for entry in fs::read_dir(&self.templates_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-
-            if path.is_file() {
-                if self.ignore_rules.is_ignored(&path) {
-                    continue;
-                }
-
-                let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-
-                // Check if file matches any configured extension
-                for ext in &self.config.extensions {
-                    if filename.ends_with(ext) {
-                        // Get the output filename (remove the extension)
-                        let output_name = &filename[..filename.len() - ext.len()];
-                        if !output_name.is_empty() {
-                            let output_path = self.output_dir.join(output_name);
-                            items.push(TemplateItem::new(path.clone(), output_path));
-                            break;
-                        }
+        for path in paths {
+            let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            for ext in &self.config.extensions {
+                if filename.ends_with(ext.as_str()) {
+                    let output_name = &filename[..filename.len() - ext.len()];
+                    if !output_name.is_empty() {
+                        let output_path = self.output_dir.join(output_name);
+                        items.push(TemplateItem::new(path.clone(), output_path));
+                        break;
                     }
                 }
             }
         }
 
-        items.sort_by(|a, b| a.source_path.cmp(&b.source_path));
         Ok(items)
     }
 }

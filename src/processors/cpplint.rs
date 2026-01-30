@@ -3,12 +3,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
-use walkdir::WalkDir;
 
 use crate::config::{CcConfig, CpplintConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
-use super::ProductDiscovery;
+use super::{ProductDiscovery, find_files, CC_EXCLUDE_DIRS};
 
 const CPPLINT_STUB_DIR: &str = "out/cpplint";
 
@@ -41,36 +40,7 @@ impl Cpplinter {
     /// Find all C/C++ source files that should be checked
     fn find_source_files(&self) -> Vec<PathBuf> {
         let source_dir = self.project_root.join(&self.cc_config.source_dir);
-        if !source_dir.exists() {
-            return Vec::new();
-        }
-
-        let mut files: Vec<PathBuf> = WalkDir::new(&source_dir)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| {
-                let path = e.path();
-
-                // Skip common non-source directories
-                let path_str = path.to_string_lossy();
-                if path_str.contains("/.git/")
-                    || path_str.contains("/out/")
-                    || path_str.contains("/build/")
-                    || path_str.contains("/dist/")
-                {
-                    return false;
-                }
-
-                matches!(
-                    path.extension().and_then(|s| s.to_str()),
-                    Some("c") | Some("cc")
-                )
-            })
-            .map(|e| e.path().to_path_buf())
-            .filter(|p| !self.ignore_rules.is_ignored(p))
-            .collect();
-        files.sort();
-        files
+        find_files(&source_dir, &[".c", ".cc"], CC_EXCLUDE_DIRS, &self.ignore_rules, true)
     }
 
     /// Get stub path for a C/C++ source file

@@ -3,12 +3,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
-use walkdir::WalkDir;
 
 use crate::config::{PylintConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
-use super::ProductDiscovery;
+use super::{ProductDiscovery, find_files, PYTHON_EXCLUDE_DIRS};
 
 const PYLINT_STUB_DIR: &str = "out/pylint";
 
@@ -34,7 +33,8 @@ impl PylintProcessor {
     fn should_lint(&self) -> bool {
         let pyproject_exists = self.project_root.join("pyproject.toml").exists();
         let tests_dir = self.project_root.join("tests");
-        let tests_has_python = tests_dir.exists() && self.has_python_files(&tests_dir);
+        let tests_has_python = tests_dir.exists()
+            && !find_files(&tests_dir, &[".py"], &[], &self.ignore_rules, true).is_empty();
 
         pyproject_exists || tests_has_python
     }
@@ -42,65 +42,11 @@ impl PylintProcessor {
     /// Find all Python files that should be linted
     fn find_python_files(&self) -> Vec<PathBuf> {
         if self.project_root.join("pyproject.toml").exists() {
-            self.find_py_files_in_project()
+            find_files(&self.project_root, &[".py"], PYTHON_EXCLUDE_DIRS, &self.ignore_rules, true)
         } else {
             let tests_dir = self.project_root.join("tests");
-            if tests_dir.exists() {
-                self.find_py_files_in_dir(&tests_dir)
-            } else {
-                Vec::new()
-            }
+            find_files(&tests_dir, &[".py"], &[], &self.ignore_rules, true)
         }
-    }
-
-    fn has_python_files(&self, dir: &Path) -> bool {
-        WalkDir::new(dir)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .any(|e| e.path().extension().and_then(|s| s.to_str()) == Some("py"))
-    }
-
-    fn find_py_files_in_dir(&self, dir: &Path) -> Vec<PathBuf> {
-        let mut files: Vec<PathBuf> = WalkDir::new(dir)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("py"))
-            .map(|e| e.path().to_path_buf())
-            .filter(|p| !self.ignore_rules.is_ignored(p))
-            .collect();
-        files.sort();
-        files
-    }
-
-    fn find_py_files_in_project(&self) -> Vec<PathBuf> {
-        let mut files: Vec<PathBuf> = WalkDir::new(&self.project_root)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| {
-                let path = e.path();
-
-                // Skip common non-source directories
-                let path_str = path.to_string_lossy();
-                if path_str.contains("/.venv/")
-                    || path_str.contains("/__pycache__/")
-                    || path_str.contains("/.git/")
-                    || path_str.contains("/out/")
-                    || path_str.contains("/node_modules/")
-                    || path_str.contains("/.tox/")
-                    || path_str.contains("/build/")
-                    || path_str.contains("/dist/")
-                    || path_str.contains("/.eggs/")
-                {
-                    return false;
-                }
-
-                path.extension().and_then(|s| s.to_str()) == Some("py")
-            })
-            .map(|e| e.path().to_path_buf())
-            .filter(|p| !self.ignore_rules.is_ignored(p))
-            .collect();
-        files.sort();
-        files
     }
 
     /// Get stub path for a Python file

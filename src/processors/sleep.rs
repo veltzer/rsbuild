@@ -4,12 +4,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use walkdir::WalkDir;
 
 use crate::config::{SleepConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
-use super::ProductDiscovery;
+use super::{ProductDiscovery, find_files};
 
 const SLEEP_DIR: &str = "sleep";
 const SLEEP_STUB_DIR: &str = "out/sleep";
@@ -42,19 +41,7 @@ impl SleepProcessor {
 
     /// Find all .sleep files
     fn find_sleep_files(&self) -> Vec<PathBuf> {
-        if !self.sleep_dir.exists() {
-            return Vec::new();
-        }
-
-        let mut files: Vec<PathBuf> = WalkDir::new(&self.sleep_dir)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("sleep"))
-            .map(|e| e.path().to_path_buf())
-            .filter(|p| !self.ignore_rules.is_ignored(p))
-            .collect();
-        files.sort();
-        files
+        find_files(&self.sleep_dir, &[".sleep"], &[], &self.ignore_rules, true)
     }
 
     /// Get stub path for a sleep file

@@ -3,12 +3,11 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
-use walkdir::WalkDir;
 
 use crate::config::{SpellcheckConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
-use super::ProductDiscovery;
+use super::{ProductDiscovery, find_files, SPELLCHECK_EXCLUDE_DIRS};
 
 const SPELLCHECK_STUB_DIR: &str = "out/spellcheck";
 const DICT_DIR: &str = "/usr/share/hunspell";
@@ -51,34 +50,8 @@ impl SpellcheckProcessor {
 
     /// Find all document files matching configured extensions
     fn find_doc_files(&self) -> Vec<PathBuf> {
-        let mut files: Vec<PathBuf> = WalkDir::new(&self.project_root)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| {
-                let path = e.path();
-
-                // Skip common non-source directories
-                let path_str = path.to_string_lossy();
-                if path_str.contains("/.git/")
-                    || path_str.contains("/out/")
-                    || path_str.contains("/.rsb/")
-                    || path_str.contains("/node_modules/")
-                    || path_str.contains("/build/")
-                    || path_str.contains("/dist/")
-                    || path_str.contains("/target/")
-                {
-                    return false;
-                }
-
-                // Check if file matches any configured extension
-                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                self.spellcheck_config.extensions.iter().any(|ext| name.ends_with(ext.as_str()))
-            })
-            .map(|e| e.path().to_path_buf())
-            .filter(|p| !self.ignore_rules.is_ignored(p))
-            .collect();
-        files.sort();
-        files
+        let ext_refs: Vec<&str> = self.spellcheck_config.extensions.iter().map(|s| s.as_str()).collect();
+        find_files(&self.project_root, &ext_refs, SPELLCHECK_EXCLUDE_DIRS, &self.ignore_rules, true)
     }
 
     /// Get stub path for a document file

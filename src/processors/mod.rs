@@ -7,11 +7,88 @@ mod spellcheck;
 mod template;
 
 use anyhow::Result;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
+use walkdir::WalkDir;
 
 use crate::color;
+use crate::ignore::IgnoreRules;
 
 pub use crate::graph::{BuildGraph, Product};
+
+/// Directories to exclude when scanning Python projects
+pub const PYTHON_EXCLUDE_DIRS: &[&str] = &[
+    "/.venv/", "/__pycache__/", "/.git/", "/out/",
+    "/node_modules/", "/.tox/", "/build/", "/dist/", "/.eggs/",
+];
+
+/// Directories to exclude when scanning C/C++ projects
+pub const CC_EXCLUDE_DIRS: &[&str] = &["/.git/", "/out/", "/build/", "/dist/"];
+
+/// Directories to exclude when scanning for spellcheck
+pub const SPELLCHECK_EXCLUDE_DIRS: &[&str] = &[
+    "/.git/", "/out/", "/.rsb/", "/node_modules/", "/build/", "/dist/", "/target/",
+];
+
+/// Find files matching given extensions in a directory.
+///
+/// - `root`: directory to walk
+/// - `extensions`: file extensions to match (e.g., &[".py", ".pyi"])
+/// - `exclude_dirs`: directory path segments to skip (e.g., &["/.git/", "/out/"])
+/// - `ignore_rules`: project ignore rules
+/// - `recursive`: if false, only scan the top-level directory
+///
+/// Returns sorted list of matching paths.
+pub fn find_files(
+    root: &Path,
+    extensions: &[&str],
+    exclude_dirs: &[&str],
+    ignore_rules: &Arc<IgnoreRules>,
+    recursive: bool,
+) -> Vec<PathBuf> {
+    if !root.exists() {
+        return Vec::new();
+    }
+
+    let walker = if recursive {
+        WalkDir::new(root)
+    } else {
+        WalkDir::new(root).max_depth(1)
+    };
+
+    let mut files: Vec<PathBuf> = walker
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let path = e.path();
+            if !path.is_file() {
+                return false;
+            }
+
+            // Check exclude dirs
+            if !exclude_dirs.is_empty() {
+                let path_str = path.to_string_lossy();
+                if exclude_dirs.iter().any(|dir| path_str.contains(dir)) {
+                    return false;
+                }
+            }
+
+            // Check extension match
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if !extensions.iter().any(|ext| name.ends_with(ext)) {
+                return false;
+            }
+
+            // Check ignore rules
+            !ignore_rules.is_ignored(path)
+        })
+        .map(|e| e.path().to_path_buf())
+        .collect();
+
+    files.sort();
+    files
+}
 pub use cc::CcProcessor;
 pub use cpplint::Cpplinter;
 pub use pylint::PylintProcessor;

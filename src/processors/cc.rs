@@ -3,12 +3,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
-use walkdir::WalkDir;
 
 use crate::config::{CcConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
-use super::ProductDiscovery;
+use super::{ProductDiscovery, find_files};
 
 /// Per-file compile/link flags extracted from source comments.
 #[derive(Default)]
@@ -259,27 +258,13 @@ impl CcProcessor {
 
     /// Find all C/C++ source files. Returns (path, is_cpp) pairs.
     fn find_source_files(&self) -> Vec<(PathBuf, bool)> {
-        if !self.source_dir.exists() {
-            return Vec::new();
-        }
-
-        let mut files: Vec<(PathBuf, bool)> = WalkDir::new(&self.source_dir)
+        find_files(&self.source_dir, &[".c", ".cc"], &[], &self.ignore_rules, true)
             .into_iter()
-            .filter_map(|e| e.ok())
-            .filter_map(|e| {
-                let path = e.path().to_path_buf();
-                if self.ignore_rules.is_ignored(&path) {
-                    return None;
-                }
-                match path.extension().and_then(|s| s.to_str()) {
-                    Some("c") => Some((path, false)),
-                    Some("cc") => Some((path, true)),
-                    _ => None,
-                }
+            .map(|p| {
+                let is_cpp = p.extension().and_then(|s| s.to_str()) == Some("cc");
+                (p, is_cpp)
             })
-            .collect();
-        files.sort_by(|a, b| a.0.cmp(&b.0));
-        files
+            .collect()
     }
 
     /// Get executable path for a source file.

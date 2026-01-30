@@ -20,21 +20,28 @@ pub struct SpellcheckProcessor {
     ignore_rules: Arc<IgnoreRules>,
     /// Cached dictionary, built once on first use and reused across all execute() calls
     cached_dict: OnceLock<Result<zspell::Dictionary, String>>,
-    /// Cached custom words, loaded once on first use
-    cached_words: OnceLock<HashSet<String>>,
+    /// Custom words, loaded once at initialization
+    custom_words: HashSet<String>,
 }
 
 impl SpellcheckProcessor {
-    pub fn new(project_root: PathBuf, spellcheck_config: SpellcheckConfig, ignore_rules: Arc<IgnoreRules>) -> Self {
+    pub fn new(project_root: PathBuf, spellcheck_config: SpellcheckConfig, ignore_rules: Arc<IgnoreRules>) -> Result<Self> {
         let stub_dir = project_root.join(SPELLCHECK_STUB_DIR);
-        Self {
+        let custom_words = if spellcheck_config.use_words_file {
+            let words_path = project_root.join(&spellcheck_config.words_file);
+            Self::load_custom_words(&words_path)
+                .with_context(|| format!("Custom words file not found: {}", words_path.display()))?
+        } else {
+            HashSet::new()
+        };
+        Ok(Self {
             project_root,
             spellcheck_config,
             stub_dir,
             ignore_rules,
             cached_dict: OnceLock::new(),
-            cached_words: OnceLock::new(),
-        }
+            custom_words,
+        })
     }
 
     /// Check if any matching doc files exist
@@ -86,24 +93,17 @@ impl SpellcheckProcessor {
         self.stub_dir.join(stub_name)
     }
 
-    /// Path to the custom words file
-    fn words_file_path(&self) -> PathBuf {
-        self.project_root.join(&self.spellcheck_config.words_file)
-    }
-
     /// Load custom words from the words file
-    fn load_custom_words(&self) -> HashSet<String> {
-        let words_path = self.words_file_path();
+    fn load_custom_words(words_path: &Path) -> Result<HashSet<String>> {
+        let content = fs::read_to_string(words_path)?;
         let mut words = HashSet::new();
-        if let Ok(content) = fs::read_to_string(&words_path) {
-            for line in content.lines() {
-                let trimmed = line.trim();
-                if !trimmed.is_empty() && !trimmed.starts_with('#') {
-                    words.insert(trimmed.to_lowercase());
-                }
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if !trimmed.is_empty() && !trimmed.starts_with('#') {
+                words.insert(trimmed.to_lowercase());
             }
         }
-        words
+        Ok(words)
     }
 
     /// Build a zspell Dictionary from system hunspell files
@@ -137,9 +137,9 @@ impl SpellcheckProcessor {
         }
     }
 
-    /// Get or load the cached custom words (loaded once, reused across all files)
+    /// Get the custom words loaded at initialization
     fn get_custom_words(&self) -> &HashSet<String> {
-        self.cached_words.get_or_init(|| self.load_custom_words())
+        &self.custom_words
     }
 
     /// Extract words from markdown text, stripping code blocks, inline code, URLs, and HTML tags

@@ -332,9 +332,13 @@ pub struct SpellcheckConfig {
     #[serde(default = "default_spellcheck_language")]
     pub language: String,
 
-    /// Path to custom words file (default: ".spellcheck-words")
+    /// Path to custom words file (default: ".spellcheck-words", set to "" to disable)
     #[serde(default = "default_spellcheck_words_file")]
     pub words_file: String,
+
+    /// Enable custom words file (default: false)
+    #[serde(default)]
+    pub use_words_file: bool,
 
     /// Additional input files that trigger rebuilds when changed
     #[serde(default)]
@@ -359,6 +363,7 @@ impl Default for SpellcheckConfig {
             extensions: default_spellcheck_extensions(),
             language: default_spellcheck_language(),
             words_file: default_spellcheck_words_file(),
+            use_words_file: false,
             extra_inputs: Vec::new(),
         }
     }

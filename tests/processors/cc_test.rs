@@ -1,0 +1,547 @@
+use std::fs;
+use std::process::Command;
+use tempfile::TempDir;
+use crate::common::{setup_cc_project, run_rsb, run_rsb_with_env};
+
+#[test]
+fn cc_compile_single_c_file() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "rsb build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    // Check executable exists
+    assert!(project_path.join("out/cc/main.elf").exists(), "Executable should exist");
+}
+
+#[test]
+fn cc_incremental_skip() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    // First build
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success());
+    let stdout1 = String::from_utf8_lossy(&output1.stdout);
+    assert!(stdout1.contains("[cc] Processing:"), "First build should process: {}", stdout1);
+
+    // Second build - should skip
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success());
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(stdout2.contains("[cc] Skipping (unchanged):"), "Second build should skip: {}", stdout2);
+}
+
+#[test]
+fn cc_header_dependency() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Create header and source
+    fs::write(
+        project_path.join("src/utils.h"),
+        "#ifndef UTILS_H\n#define UTILS_H\n#define VALUE 42\n#endif\n"
+    ).unwrap();
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "#include \"utils.h\"\nint main() { return VALUE - 42; }\n"
+    ).unwrap();
+
+    // First build
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success(),
+        "First build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output1.stdout),
+        String::from_utf8_lossy(&output1.stderr));
+
+    // Wait a moment so mtime differs
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    // Modify header (keep VALUE defined so compilation still succeeds)
+    fs::write(
+        project_path.join("src/utils.h"),
+        "#ifndef UTILS_H\n#define UTILS_H\n#define VALUE 42\n#define OTHER 10\n#endif\n"
+    ).unwrap();
+
+    // Rebuild - should recompile files that include utils.h
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success(),
+        "Rebuild failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output2.stdout),
+        String::from_utf8_lossy(&output2.stderr));
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(stdout2.contains("[cc] Processing:"),
+        "Should recompile after header change: {}", stdout2);
+}
+
+#[test]
+fn cc_mixed_c_and_cpp() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/helper.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    fs::write(
+        project_path.join("src/main.cc"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Mixed C/C++ build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/helper.elf").exists(), "C executable should exist");
+    assert!(project_path.join("out/cc/main.elf").exists(), "C++ executable should exist");
+}
+
+#[test]
+fn cc_clean() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    // Build
+    let build_output = run_rsb(project_path, &["build"]);
+    assert!(build_output.status.success());
+    assert!(project_path.join("out/cc/main.elf").exists());
+
+    // Clean
+    let clean_output = run_rsb(project_path, &["clean"]);
+    assert!(clean_output.status.success());
+
+    // Verify outputs are removed but cache is preserved
+    assert!(!project_path.join("out/cc").exists(), "out/cc/ should be removed after clean");
+    assert!(project_path.join(".rsb/deps").exists(), "deps cache should be preserved after clean");
+}
+
+#[test]
+fn cc_dry_run() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    // Dry run
+    let output = run_rsb_with_env(project_path, &["build", "--dry-run"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("BUILD"), "Dry run should show BUILD for cc products: {}", stdout);
+
+    // Verify nothing was built
+    assert!(!project_path.join("out/cc/main.elf").exists(), "Dry run should not compile");
+}
+
+#[test]
+fn cc_config_change_triggers_rebuild() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    // First build — should process
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success(),
+        "First build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output1.stdout),
+        String::from_utf8_lossy(&output1.stderr));
+    let stdout1 = String::from_utf8_lossy(&output1.stdout);
+    assert!(stdout1.contains("[cc] Processing:"), "First build should process: {}", stdout1);
+
+    // Second build — should skip (nothing changed)
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success());
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(stdout2.contains("[cc] Skipping (unchanged):"), "Second build should skip: {}", stdout2);
+
+    // Change cflags in rsb.toml
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"cc\"]\n\n[processor.cc]\ncflags = [\"-O2\"]\n"
+    ).unwrap();
+
+    // Third build — should rebuild because config changed
+    let output3 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output3.status.success(),
+        "Third build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output3.stdout),
+        String::from_utf8_lossy(&output3.stderr));
+    let stdout3 = String::from_utf8_lossy(&output3.stdout);
+    assert!(stdout3.contains("[cc] Processing:"),
+        "Build after config change should reprocess, not skip: {}", stdout3);
+}
+
+#[test]
+fn cc_per_file_compile_flags() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Source with EXTRA_COMPILE_FLAGS_AFTER defining a macro
+    fs::write(
+        project_path.join("src/flagtest.c"),
+        r#"// EXTRA_COMPILE_FLAGS_AFTER=-DTEST_VALUE=42
+#include <stdio.h>
+int main() {
+    printf("%d\n", TEST_VALUE);
+    return 0;
+}
+"#
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build with per-file compile flags failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/flagtest.elf").exists(),
+        "Executable with per-file compile flags should exist");
+
+    // Run the executable and verify it outputs 42
+    let run_output = Command::new(project_path.join("out/cc/flagtest.elf"))
+        .output()
+        .expect("Failed to run flagtest");
+    let stdout = String::from_utf8_lossy(&run_output.stdout);
+    assert!(stdout.trim() == "42",
+        "Executable should output 42, got: {}", stdout.trim());
+}
+
+#[test]
+fn cc_per_file_link_flags() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Source that uses math library (sqrt), linked via per-file flag
+    fs::write(
+        project_path.join("src/mathtest.c"),
+        r#"// EXTRA_LINK_FLAGS_AFTER=-lm
+#include <stdio.h>
+#include <math.h>
+int main() {
+    printf("%.0f\n", sqrt(144.0));
+    return 0;
+}
+"#
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build with per-file link flags failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/mathtest.elf").exists(),
+        "Executable with per-file link flags should exist");
+
+    // Run the executable and verify it outputs 12
+    let run_output = Command::new(project_path.join("out/cc/mathtest.elf"))
+        .output()
+        .expect("Failed to run mathtest");
+    let stdout = String::from_utf8_lossy(&run_output.stdout);
+    assert!(stdout.trim() == "12",
+        "Executable should output 12, got: {}", stdout.trim());
+}
+
+#[test]
+fn cc_per_file_backtick_substitution() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Source with backtick command substitution to define a macro
+    fs::write(
+        project_path.join("src/backtick.c"),
+        r#"// EXTRA_COMPILE_FLAGS_AFTER=`echo -DBACKTICK_VAL=99`
+#include <stdio.h>
+int main() {
+    printf("%d\n", BACKTICK_VAL);
+    return 0;
+}
+"#
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build with backtick substitution failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/backtick.elf").exists(),
+        "Executable with backtick substitution should exist");
+
+    // Run the executable and verify it outputs 99
+    let run_output = Command::new(project_path.join("out/cc/backtick.elf"))
+        .output()
+        .expect("Failed to run backtick");
+    let stdout = String::from_utf8_lossy(&run_output.stdout);
+    assert!(stdout.trim() == "99",
+        "Executable should output 99, got: {}", stdout.trim());
+}
+
+#[test]
+fn cc_per_file_no_flags() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Source without any special comments
+    fs::write(
+        project_path.join("src/plain.c"),
+        r#"#include <stdio.h>
+int main() {
+    printf("hello\n");
+    return 0;
+}
+"#
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build without per-file flags failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/plain.elf").exists(),
+        "Executable without per-file flags should exist");
+
+    let run_output = Command::new(project_path.join("out/cc/plain.elf"))
+        .output()
+        .expect("Failed to run plain");
+    let stdout = String::from_utf8_lossy(&run_output.stdout);
+    assert!(stdout.trim() == "hello",
+        "Executable should output hello, got: {}", stdout.trim());
+}
+
+#[test]
+fn cc_per_file_compile_cmd() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // EXTRA_COMPILE_CMD runs a command as subprocess; use echo to produce a -D flag
+    fs::write(
+        project_path.join("src/compilecmd.c"),
+        r#"// EXTRA_COMPILE_CMD=echo -DCMD_VAL=77
+#include <stdio.h>
+int main() {
+    printf("%d\n", CMD_VAL);
+    return 0;
+}
+"#
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build with EXTRA_COMPILE_CMD failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/compilecmd.elf").exists(),
+        "Executable with EXTRA_COMPILE_CMD should exist");
+
+    let run_output = Command::new(project_path.join("out/cc/compilecmd.elf"))
+        .output()
+        .expect("Failed to run compilecmd");
+    let stdout = String::from_utf8_lossy(&run_output.stdout);
+    assert!(stdout.trim() == "77",
+        "Executable should output 77, got: {}", stdout.trim());
+}
+
+#[test]
+fn cc_per_file_link_cmd() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // EXTRA_LINK_CMD runs a command; use echo to produce -lm
+    fs::write(
+        project_path.join("src/linkcmd.c"),
+        r#"// EXTRA_LINK_CMD=echo -lm
+#include <stdio.h>
+#include <math.h>
+int main() {
+    printf("%.0f\n", sqrt(144.0));
+    return 0;
+}
+"#
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build with EXTRA_LINK_CMD failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/linkcmd.elf").exists(),
+        "Executable with EXTRA_LINK_CMD should exist");
+
+    let run_output = Command::new(project_path.join("out/cc/linkcmd.elf"))
+        .output()
+        .expect("Failed to run linkcmd");
+    let stdout = String::from_utf8_lossy(&run_output.stdout);
+    assert!(stdout.trim() == "12",
+        "Executable should output 12, got: {}", stdout.trim());
+}
+
+#[test]
+fn cc_per_file_block_comment_star_prefix() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Block comment continuation line with * prefix
+    fs::write(
+        project_path.join("src/blockstar.c"),
+        r#"/*
+ * EXTRA_LINK_FLAGS_AFTER=-lm
+ */
+#include <stdio.h>
+#include <math.h>
+int main() {
+    printf("%.0f\n", sqrt(144.0));
+    return 0;
+}
+"#
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build with block comment * prefix failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/blockstar.elf").exists(),
+        "Executable with block comment * prefix should exist");
+
+    let run_output = Command::new(project_path.join("out/cc/blockstar.elf"))
+        .output()
+        .expect("Failed to run blockstar");
+    let stdout = String::from_utf8_lossy(&run_output.stdout);
+    assert!(stdout.trim() == "12",
+        "Executable should output 12, got: {}", stdout.trim());
+}
+
+#[test]
+fn cc_per_file_compile_shell() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Use EXTRA_COMPILE_SHELL to define a macro via shell command
+    fs::write(
+        project_path.join("src/compileshell.c"),
+        r#"// EXTRA_COMPILE_SHELL=echo -DSHELL_VALUE=$(echo 77)
+#include <stdio.h>
+int main() {
+    printf("%d\n", SHELL_VALUE);
+    return 0;
+}
+"#
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build with EXTRA_COMPILE_SHELL failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/compileshell.elf").exists(),
+        "Executable with EXTRA_COMPILE_SHELL should exist");
+
+    let run_output = Command::new(project_path.join("out/cc/compileshell.elf"))
+        .output()
+        .expect("Failed to run compileshell");
+    let stdout = String::from_utf8_lossy(&run_output.stdout);
+    assert!(stdout.trim() == "77",
+        "Executable should output 77, got: {}", stdout.trim());
+}
+
+#[test]
+fn cc_per_file_link_shell() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Use EXTRA_LINK_SHELL to add -lm via shell
+    fs::write(
+        project_path.join("src/linkshell.c"),
+        r#"// EXTRA_LINK_SHELL=echo -lm
+#include <stdio.h>
+#include <math.h>
+int main() {
+    printf("%.0f\n", sqrt(49.0));
+    return 0;
+}
+"#
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "Build with EXTRA_LINK_SHELL failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    assert!(project_path.join("out/cc/linkshell.elf").exists(),
+        "Executable with EXTRA_LINK_SHELL should exist");
+
+    let run_output = Command::new(project_path.join("out/cc/linkshell.elf"))
+        .output()
+        .expect("Failed to run linkshell");
+    let stdout = String::from_utf8_lossy(&run_output.stdout);
+    assert!(stdout.trim() == "7",
+        "Executable should output 7, got: {}", stdout.trim());
+}

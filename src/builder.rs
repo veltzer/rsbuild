@@ -37,7 +37,7 @@ impl Builder {
     /// Execute an incremental build using the dependency graph
     pub fn build(&mut self, force: bool, verbose: bool, jobs: Option<usize>, timings: bool, keep_going: bool, processor_verbose: u8, interrupted: Arc<std::sync::atomic::AtomicBool>) -> Result<()> {
         // Create processors
-        let processors = self.create_processors(processor_verbose);
+        let processors = self.create_processors(processor_verbose)?;
 
         // Build the dependency graph
         let graph = self.build_graph_with_processors(&processors)?;
@@ -72,7 +72,7 @@ impl Builder {
 
     /// Show what would happen without executing anything
     pub fn dry_run(&self, force: bool) -> Result<()> {
-        let processors = self.create_processors(0);
+        let processors = self.create_processors(0)?;
         let graph = self.build_graph_with_processors(&processors)?;
 
         let order = graph.topological_sort()?;
@@ -118,7 +118,7 @@ impl Builder {
 
     /// Show the status of each product in the build graph
     pub fn status(&self) -> Result<()> {
-        let processors = self.create_processors(0);
+        let processors = self.create_processors(0)?;
         let graph = self.build_graph_with_processors(&processors)?;
 
         let products = graph.products();
@@ -166,7 +166,7 @@ impl Builder {
         println!("{}", color::bold("Cleaning build artifacts..."));
 
         // Create processors and build graph
-        let processors = self.create_processors(0);
+        let processors = self.create_processors(0)?;
         let graph = self.build_graph_with_processors(&processors)?;
 
         // Use executor to clean
@@ -240,7 +240,7 @@ impl Builder {
     }
 
     /// Create all available processors
-    fn create_processors(&self, processor_verbose: u8) -> HashMap<String, Box<dyn ProductDiscovery>> {
+    fn create_processors(&self, processor_verbose: u8) -> Result<HashMap<String, Box<dyn ProductDiscovery>>> {
         let mut processors: HashMap<String, Box<dyn ProductDiscovery>> = HashMap::new();
 
         // Template processor
@@ -267,10 +267,18 @@ impl Builder {
         processors.insert("cpplint".to_string(), Box::new(cpplinter));
 
         // Spellcheck processor
-        let spellcheck_proc = SpellcheckProcessor::new(self.project_root.clone(), self.config.processor.spellcheck.clone(), Arc::clone(&self.ignore_rules));
-        processors.insert("spellcheck".to_string(), Box::new(spellcheck_proc));
+        match SpellcheckProcessor::new(self.project_root.clone(), self.config.processor.spellcheck.clone(), Arc::clone(&self.ignore_rules)) {
+            Ok(spellcheck_proc) => {
+                processors.insert("spellcheck".to_string(), Box::new(spellcheck_proc));
+            }
+            Err(e) => {
+                if self.config.processor.is_enabled("spellcheck") {
+                    return Err(e);
+                }
+            }
+        }
 
-        processors
+        Ok(processors)
     }
 
     /// Print the dependency graph in the specified format
@@ -366,7 +374,7 @@ impl Builder {
 
     /// Build the dependency graph (creates processors internally)
     fn build_graph(&self) -> Result<BuildGraph> {
-        let processors = self.create_processors(0);
+        let processors = self.create_processors(0)?;
         self.build_graph_with_processors(&processors)
     }
 

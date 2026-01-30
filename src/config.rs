@@ -88,6 +88,9 @@ impl Default for CacheConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ProcessorConfig {
+    /// Use auto-detection to discover relevant processors (default: true)
+    #[serde(default = "default_true")]
+    pub auto_detect: bool,
     /// List of enabled processors (e.g., ["template", "ruff"])
     #[serde(default = "default_processors")]
     pub enabled: Vec<String>,
@@ -114,6 +117,7 @@ fn default_processors() -> Vec<String> {
 impl Default for ProcessorConfig {
     fn default() -> Self {
         Self {
+            auto_detect: true,
             enabled: default_processors(),
             template: TemplateConfig::default(),
             ruff: RuffConfig::default(),

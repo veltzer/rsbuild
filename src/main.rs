@@ -244,6 +244,7 @@ fn init_project() -> Result<()> {
 # parallel = 1
 
 [processor]
+# auto_detect = true
 # enabled = ["template", "ruff", "pylint", "sleep", "cc", "cpplint", "spellcheck"]
 
 [cache]

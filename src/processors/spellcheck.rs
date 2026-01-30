@@ -275,6 +275,10 @@ impl SpellcheckProcessor {
 }
 
 impl ProductDiscovery for SpellcheckProcessor {
+    fn auto_detect(&self) -> bool {
+        self.should_check()
+    }
+
     fn discover(&self, graph: &mut BuildGraph) -> Result<()> {
         if !self.should_check() {
             return Ok(());

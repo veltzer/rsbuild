@@ -8,11 +8,39 @@ This page describes RSB's internal design for contributors and those interested 
 
 Processors implement the `ProductDiscovery` trait. Each processor:
 
-1. Scans the project for source files matching its conventions
-2. Creates **products** describing what to build
-3. Executes the build for each product
+1. **Auto-detects** whether it is relevant for the current project
+2. Scans the project for source files matching its conventions
+3. Creates **products** describing what to build
+4. Executes the build for each product
 
 Available processors: `template`, `ruff`, `pylint`, `cc`, `cpplint`, `spellcheck`, `sleep`.
+
+### Auto-detection
+
+Every processor implements `auto_detect()`, which returns `true` if the processor appears relevant for the current project based on filesystem heuristics. This allows RSB to guess which processors a project needs without requiring manual configuration.
+
+The `ProductDiscovery` trait requires four methods:
+
+| Method | Purpose |
+|---|---|
+| `auto_detect()` | Return `true` if the project looks like it needs this processor |
+| `discover()` | Scan the project and add products to the build graph |
+| `execute()` | Build a single product |
+| `clean()` | Remove a product's outputs |
+
+Detection heuristics per processor:
+
+| Processor | Detected when |
+|---|---|
+| `template` | `templates/` directory contains files matching configured extensions |
+| `ruff` | `pyproject.toml` exists, or `tests/` contains `.py` files |
+| `pylint` | Same as `ruff` |
+| `cc` | Configured source directory contains `.c` or `.cc` files |
+| `cpplint` | Same as `cc` |
+| `spellcheck` | Project contains files matching configured extensions (e.g., `.md`) |
+| `sleep` | `sleep/` directory contains `.sleep` files |
+
+Run `rsb processor auto` to see the auto-detection results for the current project.
 
 ### Products
 

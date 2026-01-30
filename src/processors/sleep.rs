@@ -93,6 +93,10 @@ impl SleepProcessor {
 }
 
 impl ProductDiscovery for SleepProcessor {
+    fn auto_detect(&self) -> bool {
+        self.should_process()
+    }
+
     fn discover(&self, graph: &mut BuildGraph) -> Result<()> {
         if !self.should_process() {
             return Ok(());

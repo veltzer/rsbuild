@@ -34,6 +34,7 @@ A fast, incremental build tool written in Rust with template support, Python lin
 - `rsb cache list` - List all cache entries and their status
 - `rsb config show` - Show the active configuration (merged defaults + rsb.toml)
 - `rsb processor list` - List available processors and their status
+- `rsb processor auto` - Auto-detect which processors are relevant for this project
 - `rsb complete [shell]` - Generate shell completions
 - `rsb version` - Print version information
 

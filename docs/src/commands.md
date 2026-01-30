@@ -89,6 +89,8 @@ rsb config show    # Show the active configuration as TOML
 
 ```bash
 rsb processor list   # List available processors and their status
+rsb processor all    # Show all processors with descriptions
+rsb processor auto   # Auto-detect which processors are relevant for this project
 ```
 
 ## `rsb complete`

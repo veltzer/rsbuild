@@ -11,6 +11,7 @@ enabled = ["template", "ruff", "pylint", "cc", "cpplint", "spellcheck"]
 
 Use `rsb processor list` to see available processors and their status.
 Use `rsb processor all` to see all processors with descriptions.
+Use `rsb processor auto` to see which processors are auto-detected for the current project.
 
 ## Available Processors
 

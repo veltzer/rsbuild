@@ -31,6 +31,9 @@ pub trait ProductDiscovery: Sync + Send {
 
     /// Clean outputs for a product
     fn clean(&self, product: &Product) -> Result<()>;
+
+    /// Auto-detect whether this processor is relevant for the current project
+    fn auto_detect(&self) -> bool;
 }
 
 /// Timing for a single product execution

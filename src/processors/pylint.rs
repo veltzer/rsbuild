@@ -152,6 +152,10 @@ impl PylintProcessor {
 }
 
 impl ProductDiscovery for PylintProcessor {
+    fn auto_detect(&self) -> bool {
+        self.should_lint()
+    }
+
     fn discover(&self, graph: &mut BuildGraph) -> Result<()> {
         if !self.should_lint() {
             return Ok(());

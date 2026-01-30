@@ -121,6 +121,10 @@ impl Cpplinter {
 }
 
 impl ProductDiscovery for Cpplinter {
+    fn auto_detect(&self) -> bool {
+        self.should_lint() && !self.find_source_files().is_empty()
+    }
+
     fn discover(&self, graph: &mut BuildGraph) -> Result<()> {
         if !self.should_lint() {
             return Ok(());

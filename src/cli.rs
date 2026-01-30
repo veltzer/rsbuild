@@ -155,6 +155,8 @@ pub enum ProcessorAction {
     },
     /// Show all processors (including hidden), with enabled and hidden status
     All,
+    /// Auto-detect which processors are relevant for this project
+    Auto,
 }
 
 /// Parse a shell name string into a Shell enum

@@ -248,7 +248,7 @@ impl Builder {
     }
 
     /// Create all available processors
-    fn create_processors(&self, processor_verbose: u8) -> Result<HashMap<String, Box<dyn ProductDiscovery>>> {
+    pub fn create_processors(&self, processor_verbose: u8) -> Result<HashMap<String, Box<dyn ProductDiscovery>>> {
         let mut processors: HashMap<String, Box<dyn ProductDiscovery>> = HashMap::new();
 
         // Template processor

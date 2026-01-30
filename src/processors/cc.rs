@@ -496,6 +496,10 @@ impl CcProcessor {
 }
 
 impl ProductDiscovery for CcProcessor {
+    fn auto_detect(&self) -> bool {
+        self.should_process() && !self.find_source_files().is_empty()
+    }
+
     fn discover(&self, graph: &mut BuildGraph) -> Result<()> {
         if !self.should_process() {
             return Ok(());

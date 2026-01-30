@@ -142,6 +142,22 @@ fn main() -> Result<()> {
                         println!("{} {}{} — {}", name, enabled_status, hidden_status, color::dim(desc));
                     }
                 }
+                ProcessorAction::Auto => {
+                    let builder = Builder::new()?;
+                    let processors = builder.create_processors(0)?;
+                    for (name, _desc, _hidden) in &all_processors {
+                        let detected = processors.get(*name)
+                            .map_or(false, |p| p.auto_detect());
+                        let enabled = config.processor.is_enabled(name);
+                        let status = match (detected, enabled) {
+                            (true, true) => color::green("detected, enabled"),
+                            (true, false) => color::yellow("detected, disabled"),
+                            (false, true) => color::yellow("not detected, enabled"),
+                            (false, false) => color::dim("not detected, disabled"),
+                        };
+                        println!("{:<12} {}", name, status);
+                    }
+                }
             }
         }
         Commands::Complete { shells } => {

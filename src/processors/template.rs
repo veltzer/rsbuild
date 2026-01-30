@@ -137,6 +137,10 @@ impl TemplateProcessor {
 }
 
 impl ProductDiscovery for TemplateProcessor {
+    fn auto_detect(&self) -> bool {
+        self.find_templates().map_or(false, |t| !t.is_empty())
+    }
+
     fn discover(&self, graph: &mut BuildGraph) -> Result<()> {
         let items = self.find_templates()?;
         let extra = resolve_extra_inputs(&self.output_dir, &self.config.extra_inputs)?;

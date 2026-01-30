@@ -75,7 +75,7 @@ project/
 │   ├── cpplint/          # C/C++ lint stub files
 │   ├── spellcheck/       # Spellcheck stub files
 │   └── sleep/            # Sleep stub files
-├── doc/
+├── docs/
 │   └── processors/       # Per-processor documentation
 └── .rsb/                 # Cache (index.json, objects/, deps/)
 ```

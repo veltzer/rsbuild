@@ -81,8 +81,3 @@
 ### Shell command execution from source file comments
 - `src/processors/cc.rs` — `EXTRA_*_SHELL` directives execute arbitrary shell commands parsed from source file comments.
 - Document the security implications clearly.
-
-## Documentation
-
-### CLAUDE.md outdated doc/ reference
-- `CLAUDE.md` still references `doc/` in the project structure tree. Should be `docs/`.

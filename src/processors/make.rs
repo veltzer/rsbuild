@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::{MakeConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use super::{ProductDiscovery, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, log_command};
+use super::{ProductDiscovery, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, run_command};
 
 const MAKE_STUB_DIR: &str = "out/make";
 
@@ -56,11 +56,8 @@ impl MakeProcessor {
         }
 
         cmd.current_dir(makefile_dir);
-        log_command(&cmd);
 
-        let output = cmd
-            .output()
-            .context(format!("Failed to run {}", self.config.make))?;
+        let output = run_command(&mut cmd)?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

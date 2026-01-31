@@ -1,11 +1,11 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::config::RuffConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use super::{ProductDiscovery, discover_stub_products, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, log_command, execute_lint_batch};
+use super::{ProductDiscovery, discover_stub_products, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, run_command, execute_lint_batch};
 
 const RUFF_STUB_DIR: &str = "out/ruff";
 
@@ -37,11 +37,8 @@ impl RuffProcessor {
 
         cmd.arg(py_file);
         cmd.current_dir(&self.project_root);
-        log_command(&cmd);
 
-        let output = cmd
-            .output()
-            .context(format!("Failed to run {}", linter))?;
+        let output = run_command(&mut cmd)?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -71,11 +68,8 @@ impl RuffProcessor {
             cmd.arg(file);
         }
         cmd.current_dir(&self.project_root);
-        log_command(&cmd);
 
-        let output = cmd
-            .output()
-            .context(format!("Failed to run {}", linter))?;
+        let output = run_command(&mut cmd)?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

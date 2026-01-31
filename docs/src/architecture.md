@@ -65,6 +65,19 @@ The executor runs products in dependency order. It supports:
 - Dry-run mode (show what would be built)
 - Keep-going mode (continue after errors)
 
+## Interrupt handling
+
+All external subprocess execution goes through `run_command()` in `src/processors/mod.rs`. Instead of calling `Command::output()` (which blocks until the process finishes), `run_command()` uses `Command::spawn()` followed by a poll loop:
+
+1. Spawn the child process with piped stdout/stderr
+2. Every 50ms, call `try_wait()` to check if the process has exited
+3. Between polls, check the global `INTERRUPTED` flag (set by the Ctrl+C handler)
+4. If interrupted, kill the child process immediately and return an error
+
+This ensures that pressing Ctrl+C terminates running subprocesses within 50ms, even for long-running compilations or linter invocations. The sleep processor uses the same pattern — its sleep interval is broken into 50ms chunks with interrupt checks between them.
+
+The global `INTERRUPTED` flag is an `AtomicBool` set once by the `ctrlc` handler in `main.rs` and checked by all threads.
+
 ## File indexing
 
 RSB walks the project tree once at startup and builds a `FileIndex` — a sorted list of all non-ignored files. The walk is performed by the `ignore` crate (`ignore::WalkBuilder`), which natively handles:

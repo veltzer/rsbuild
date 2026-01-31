@@ -10,7 +10,7 @@ mod template;
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Output};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
@@ -21,9 +21,22 @@ use crate::file_index::FileIndex;
 /// Global flag: when true, print each external command before execution.
 static PROCESS_DEBUG: AtomicBool = AtomicBool::new(false);
 
+/// Global flag: set to true on Ctrl+C so subprocesses can be killed promptly.
+static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+
 /// Enable process debug logging (called once from main).
 pub fn set_process_debug(enabled: bool) {
     PROCESS_DEBUG.store(enabled, Ordering::Relaxed);
+}
+
+/// Mark the global interrupted flag (called from the Ctrl+C handler).
+pub fn set_interrupted() {
+    INTERRUPTED.store(true, Ordering::SeqCst);
+}
+
+/// Check whether the global interrupted flag is set.
+pub fn is_interrupted() -> bool {
+    INTERRUPTED.load(Ordering::SeqCst)
 }
 
 /// Format a `Command` as a shell-like string for display.
@@ -49,6 +62,50 @@ pub fn log_command(cmd: &Command) {
             eprintln!("{} {}", color::dim("[exec]"), format_command(cmd));
         } else {
             eprintln!("{} {} {}", color::dim("[exec]"), format_command(cmd), color::dim(&format!("(in {})", cwd)));
+        }
+    }
+}
+
+/// Run a command interruptibly: spawns the process and polls it while checking
+/// the global interrupted flag. If Ctrl+C is detected, the child process is
+/// killed immediately rather than waiting for it to finish.
+pub fn run_command(cmd: &mut Command) -> Result<Output> {
+    log_command(cmd);
+
+    let mut child = cmd.stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .with_context(|| format!("Failed to spawn: {}", format_command(cmd)))?;
+
+    // Poll the child every 50ms, checking for interrupts
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                // Process finished — collect output
+                let stdout = child.stdout.take().map(|mut s| {
+                    let mut buf = Vec::new();
+                    std::io::Read::read_to_end(&mut s, &mut buf).unwrap_or(0);
+                    buf
+                }).unwrap_or_default();
+                let stderr = child.stderr.take().map(|mut s| {
+                    let mut buf = Vec::new();
+                    std::io::Read::read_to_end(&mut s, &mut buf).unwrap_or(0);
+                    buf
+                }).unwrap_or_default();
+                return Ok(Output { status, stdout, stderr });
+            }
+            Ok(None) => {
+                // Still running — check interrupt
+                if INTERRUPTED.load(Ordering::SeqCst) {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    anyhow::bail!("Interrupted");
+                }
+                std::thread::sleep(Duration::from_millis(50));
+            }
+            Err(e) => {
+                return Err(e).context("Failed to wait for child process");
+            }
         }
     }
 }

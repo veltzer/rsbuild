@@ -32,6 +32,7 @@ fn main() -> Result<()> {
         let interrupted = Arc::clone(&interrupted);
         ctrlc::set_handler(move || {
             interrupted.store(true, std::sync::atomic::Ordering::SeqCst);
+            processors::set_interrupted();
         })?;
     }
 

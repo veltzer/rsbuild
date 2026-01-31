@@ -9,7 +9,7 @@ use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value}
 use crate::config::{TemplateConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use super::{ProductDiscovery, log_command};
+use super::{ProductDiscovery, run_command};
 
 /// Represents a single template file to be processed
 struct TemplateItem {
@@ -242,10 +242,7 @@ print(json.dumps(result))
     // Execute Python and capture output
     let mut cmd = Command::new("python3");
     cmd.arg("-c").arg(&python_script);
-    log_command(&cmd);
-    let output = cmd
-        .output()
-        .context("Failed to execute Python for config loading")?;
+    let output = run_command(&mut cmd)?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

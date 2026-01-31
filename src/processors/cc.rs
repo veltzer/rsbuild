@@ -6,7 +6,7 @@ use std::process::Command;
 use crate::config::{CcConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use super::{ProductDiscovery, scan_root, clean_outputs, format_command, log_command};
+use super::{ProductDiscovery, scan_root, clean_outputs, format_command, run_command};
 
 /// Per-file compile/link flags extracted from source comments.
 #[derive(Default)]
@@ -143,10 +143,7 @@ fn run_command_for_flags(cmd_line: &str) -> Result<Vec<String>> {
 
     let mut cmd = Command::new(program);
     cmd.args(args);
-    log_command(&cmd);
-    let output = cmd
-        .output()
-        .context(format!("Failed to execute command: {}", cmd_line))?;
+    let output = run_command(&mut cmd)?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -165,10 +162,7 @@ fn run_shell_for_flags(cmd_line: &str) -> Result<Vec<String>> {
 
     let mut cmd = Command::new("sh");
     cmd.arg("-c").arg(cmd_line);
-    log_command(&cmd);
-    let output = cmd
-        .output()
-        .context(format!("Failed to execute shell command: {}", cmd_line))?;
+    let output = run_command(&mut cmd)?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -198,10 +192,7 @@ fn expand_backticks(value: &str) -> Result<String> {
         let cmd_str = &after_start[..end];
         let mut cmd = Command::new("sh");
         cmd.arg("-c").arg(cmd_str);
-        log_command(&cmd);
-        let output = cmd
-            .output()
-            .context(format!("Failed to execute backtick command: {}", cmd_str))?;
+        let output = run_command(&mut cmd)?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             anyhow::bail!("Backtick command failed: {} — {}", cmd_str, stderr);
@@ -339,11 +330,8 @@ impl CcProcessor {
         if self.verbose >= 1 {
             println!("[cc_single_file] {}", format_command(&cmd));
         }
-        log_command(&cmd);
 
-        let output = cmd
-            .output()
-            .context(format!("Failed to run {} -MM on {}", compiler, source.display()))?;
+        let output = run_command(&mut cmd)?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -457,11 +445,8 @@ impl CcProcessor {
         if self.verbose >= 1 {
             println!("[cc_single_file] {}", format_command(&cmd));
         }
-        log_command(&cmd);
 
-        let output = cmd
-            .output()
-            .context(format!("Failed to run {} on {}", compiler, source.display()))?;
+        let output = run_command(&mut cmd)?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

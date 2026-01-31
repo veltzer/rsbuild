@@ -1,11 +1,11 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::config::CpplintConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use super::{ProductDiscovery, discover_stub_products, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, log_command};
+use super::{ProductDiscovery, discover_stub_products, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, run_command};
 
 const CPPLINT_STUB_DIR: &str = "out/cpplint";
 
@@ -40,11 +40,8 @@ impl CpplintProcessor {
 
         cmd.arg(source_file);
         cmd.current_dir(&self.project_root);
-        log_command(&cmd);
 
-        let output = cmd
-            .output()
-            .context(format!("Failed to run checker: {}", self.cpplint_config.checker))?;
+        let output = run_command(&mut cmd)?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

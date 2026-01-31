@@ -7,7 +7,7 @@ use std::time::Duration;
 use crate::config::{SleepConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use super::{ProductDiscovery, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs};
+use super::{ProductDiscovery, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, is_interrupted};
 
 const SLEEP_STUB_DIR: &str = "out/sleep";
 
@@ -51,8 +51,18 @@ impl SleepProcessor {
             .parse()
             .context(format!("Invalid duration in {}: '{}'", sleep_file.display(), content.trim()))?;
 
-        let duration = Duration::from_secs_f64(duration_secs);
-        thread::sleep(duration);
+        let total = Duration::from_secs_f64(duration_secs);
+        let interval = Duration::from_millis(50);
+        let mut elapsed = Duration::ZERO;
+        while elapsed < total {
+            if is_interrupted() {
+                anyhow::bail!("Interrupted");
+            }
+            let remaining = total - elapsed;
+            let sleep_time = remaining.min(interval);
+            thread::sleep(sleep_time);
+            elapsed += sleep_time;
+        }
 
         write_stub(stub_path, &format!("slept for {} seconds", duration_secs))
     }

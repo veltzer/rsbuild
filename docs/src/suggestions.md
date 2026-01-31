@@ -2,15 +2,7 @@
 
 Ideas for future improvements, organized by category.
 
-## Error Handling
-
-### ~~Mutex unwraps in executor.rs~~ *(Done)*
-- Switched to `parking_lot::Mutex` which doesn't poison. Eliminated 48 `.lock().unwrap()` calls and 5 `.into_inner().map_err(...)` chains.
-
 ## Missing Test Coverage
-
-### ~~Limited parallel execution tests~~ *(Done)*
-- Five tests now exercise parallel builds: `-j` flag, keep-going in parallel, all-products parallel, parallel timings, and parallel caching after failure.
 
 ### No ruff/pylint processor tests
 - `tests/processors/` has tests for cc, sleep, spellcheck, and template, but not for ruff or pylint.
@@ -23,11 +15,6 @@ Ideas for future improvements, organized by category.
 ## New Processors
 
 ### Linting / Checking (stub-based)
-
-#### ~~shellcheck~~ *(Done)*
-- Lint shell scripts (`.sh`, `.bash`) using `shellcheck`.
-- Stub-based, very similar to cpplint/ruff pattern.
-- Config: `checker` (default `"shellcheck"`), `args`, `extra_inputs`, `scan`.
 
 #### yamllint
 - Lint YAML files (`.yml`, `.yaml`) using `yamllint`.

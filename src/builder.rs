@@ -10,7 +10,7 @@ use crate::executor::Executor;
 use crate::graph::BuildGraph;
 use crate::ignore::IgnoreRules;
 use crate::object_store::ObjectStore;
-use crate::processors::{CcProcessor, Cpplinter, PylintProcessor, RuffProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TemplateProcessor};
+use crate::processors::{CcProcessor, Cpplinter, MakeProcessor, PylintProcessor, RuffProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TemplateProcessor};
 
 pub struct Builder {
     project_root: PathBuf,
@@ -175,7 +175,7 @@ impl Builder {
         executor.clean(&graph)?;
 
         // Clean all output subdirectories
-        for subdir in &["ruff", "pylint", "cpplint", "sleep", "cc_single_file", "spellcheck"] {
+        for subdir in &["ruff", "pylint", "cpplint", "sleep", "cc_single_file", "spellcheck", "make"] {
             let dir = self.project_root.join("out").join(subdir);
             if dir.exists() {
                 fs::remove_dir_all(&dir)
@@ -250,6 +250,10 @@ impl Builder {
                 }
             }
         }
+
+        // Make processor
+        let make_proc = MakeProcessor::new(self.project_root.clone(), self.config.processor.make.clone(), Arc::clone(&self.ignore_rules));
+        processors.insert("make".to_string(), Box::new(make_proc));
 
         Ok(processors)
     }

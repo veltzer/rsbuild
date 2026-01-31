@@ -89,7 +89,7 @@ fn main() -> Result<()> {
             Config::require_config(&project_root)?;
             let config = Config::load(&project_root)?;
 
-            let all_processors: [(&str, &str, bool); 7] = [
+            let all_processors: [(&str, &str, bool); 8] = [
                 ("template", "Render Tera templates into output files", false),
                 ("ruff", "Lint Python files with ruff", false),
                 ("pylint", "Lint Python files with pylint", false),
@@ -97,6 +97,7 @@ fn main() -> Result<()> {
                 ("cc_single_file", "Compile C/C++ source files into executables (single-file)", false),
                 ("cpplint", "Run static analysis on C/C++ source files", false),
                 ("spellcheck", "Check documentation files for spelling errors", false),
+                ("make", "Run make in directories containing Makefiles", false),
             ];
 
             match action {
@@ -329,7 +330,7 @@ fn init_project() -> Result<()> {
 
 [processor]
 # auto_detect = true
-# enabled = ["template", "ruff", "pylint", "sleep", "cc_single_file", "cpplint", "spellcheck"]
+# enabled = ["template", "ruff", "pylint", "sleep", "cc_single_file", "cpplint", "spellcheck", "make"]
 
 [cache]
 # restore_method = "hardlink"  # or "copy"
@@ -367,6 +368,13 @@ fn init_project() -> Result<()> {
 # args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
 # scan_dir = "src"
 # extensions = [".c", ".cc"]
+
+[processor.make]
+# make = "make"
+# args = []
+# target = ""
+# scan_dir = ""
+# extensions = ["Makefile"]
 
 [graph]
 # viewer = "google-chrome"

@@ -89,6 +89,8 @@ const SPELLCHECK_EXCLUDE_DIRS: &[&str] = &[
     "/.git/", "/out/", "/.rsb/", "/node_modules/", "/build/", "/dist/", "/target/",
 ];
 
+const MAKE_EXCLUDE_DIRS: &[&str] = &["/.git/", "/out/", "/.rsb/", "/build/", "/dist/", "/target/"];
+
 #[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -149,7 +151,7 @@ fn default_true() -> bool {
 fn default_processors() -> Vec<String> {
     vec![
         "template".into(), "ruff".into(), "pylint".into(), "sleep".into(),
-        "cc_single_file".into(), "cpplint".into(), "spellcheck".into(),
+        "cc_single_file".into(), "cpplint".into(), "spellcheck".into(), "make".into(),
     ]
 }
 
@@ -173,6 +175,8 @@ pub struct ProcessorConfig {
     pub spellcheck: SpellcheckConfig,
     #[serde(default)]
     pub sleep: SleepConfig,
+    #[serde(default)]
+    pub make: MakeConfig,
 }
 
 impl Default for ProcessorConfig {
@@ -187,6 +191,7 @@ impl Default for ProcessorConfig {
             cpplint: CpplintConfig::default(),
             spellcheck: SpellcheckConfig::default(),
             sleep: SleepConfig::default(),
+            make: MakeConfig::default(),
         }
     }
 }
@@ -207,6 +212,7 @@ impl ProcessorConfig {
         self.cpplint.scan.resolve("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
         self.spellcheck.scan.resolve("", &[".md"], SPELLCHECK_EXCLUDE_DIRS);
         self.sleep.scan.resolve("sleep", &[".sleep"], &[]);
+        self.make.scan.resolve("", &["Makefile"], MAKE_EXCLUDE_DIRS);
     }
 }
 
@@ -439,6 +445,40 @@ impl Default for SleepConfig {
             scan: ScanConfig {
                 scan_dir: Some("sleep".into()),
                 extensions: Some(vec![".sleep".into()]),
+                exclude_dirs: None,
+            },
+        }
+    }
+}
+
+fn default_make() -> String {
+    "make".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct MakeConfig {
+    #[serde(default = "default_make")]
+    pub make: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub target: String,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for MakeConfig {
+    fn default() -> Self {
+        Self {
+            make: "make".into(),
+            args: Vec::new(),
+            target: String::new(),
+            extra_inputs: Vec::new(),
+            scan: ScanConfig {
+                scan_dir: None,
+                extensions: Some(vec!["Makefile".into()]),
                 exclude_dirs: None,
             },
         }

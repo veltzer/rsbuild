@@ -1,5 +1,6 @@
 mod cc;
 mod cpplint;
+mod make;
 mod pylint;
 mod ruff;
 mod sleep;
@@ -182,6 +183,7 @@ pub fn write_stub(stub_path: &Path, content: &str) -> Result<()> {
 }
 pub use cc::CcProcessor;
 pub use cpplint::Cpplinter;
+pub use make::MakeProcessor;
 pub use pylint::PylintProcessor;
 pub use ruff::RuffProcessor;
 pub use sleep::SleepProcessor;

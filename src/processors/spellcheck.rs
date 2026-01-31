@@ -217,13 +217,22 @@ impl ProductDiscovery for SpellcheckProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+        let mut extra_inputs = self.spellcheck_config.extra_inputs.clone();
+        // If custom words are enabled, add the words file as an input so
+        // changes to it invalidate all spellcheck products.
+        if self.spellcheck_config.use_words_file {
+            let words_path = self.project_root.join(&self.spellcheck_config.words_file);
+            if words_path.exists() {
+                extra_inputs.push(self.spellcheck_config.words_file.clone());
+            }
+        }
         discover_stub_products(
             graph,
             &self.project_root,
             &self.stub_dir,
             &self.spellcheck_config.scan,
             file_index,
-            &self.spellcheck_config.extra_inputs,
+            &extra_inputs,
             &self.spellcheck_config,
             "spellcheck",
             "spellcheck",

@@ -162,7 +162,7 @@ fn default_true() -> bool {
 
 fn default_processors() -> Vec<String> {
     vec![
-        "template".into(), "ruff".into(), "pylint".into(), "sleep".into(),
+        "template".into(), "ruff".into(), "pylint".into(),
         "cc_single_file".into(), "cpplint".into(), "spellcheck".into(), "make".into(),
     ]
 }

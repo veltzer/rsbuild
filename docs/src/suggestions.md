@@ -44,12 +44,6 @@ Ideas for future improvements, organized by category.
 - `src/builder.rs` — The `clean()` method manually lists each processor's output directory. Adding a new processor requires updating this list.
 - Have each processor declare its output directory, or iterate over all `out/` subdirectories.
 
-## Configuration
-
-### Default enabled processors include sleep
-- `src/config.rs` — Default `enabled` list includes `sleep`, which is a testing-only processor.
-- Remove `sleep` from defaults.
-
 ## Security
 
 ### Shell command execution from source file comments

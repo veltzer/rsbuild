@@ -333,7 +333,7 @@ fn init_project() -> Result<()> {
 
 [processor]
 # auto_detect = true
-# enabled = ["template", "ruff", "pylint", "sleep", "cc_single_file", "cpplint", "spellcheck", "make"]
+# enabled = ["template", "ruff", "pylint", "cc_single_file", "cpplint", "spellcheck", "make"]
 
 [cache]
 # restore_method = "hardlink"  # or "copy"

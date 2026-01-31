@@ -11,7 +11,7 @@ mod watcher;
 
 use anyhow::{bail, Result};
 use clap::Parser;
-use cli::{CacheAction, CleanAction, Cli, Commands, ConfigAction, ProcessorAction, ToolsAction, parse_shell, print_completions};
+use cli::{CacheAction, CleanAction, Cli, Commands, parse_shell, print_completions};
 use config::Config;
 use builder::Builder;
 use object_store::ObjectStore;
@@ -96,154 +96,12 @@ fn main() -> Result<()> {
             }
         }
         Commands::Processor { action } => {
-            let project_root = env::current_dir()?;
-            Config::require_config(&project_root)?;
-            let config = Config::load(&project_root)?;
-
             let builder = Builder::new()?;
-            let processors = builder.create_processors(0)?;
-
-            // Build sorted processor list from the registry
-            let mut proc_names: Vec<&String> = processors.keys().collect();
-            proc_names.sort();
-
-            match action {
-                ProcessorAction::List { all } => {
-                    for name in &proc_names {
-                        let proc = &processors[name.as_str()];
-                        if proc.hidden() && !all {
-                            continue;
-                        }
-                        let status = if config.processor.is_enabled(name) {
-                            color::green("enabled")
-                        } else {
-                            color::dim("disabled")
-                        };
-                        println!("{} {}", name, status);
-                    }
-                }
-                ProcessorAction::All => {
-                    for name in &proc_names {
-                        let proc = &processors[name.as_str()];
-                        let enabled_status = if config.processor.is_enabled(name) {
-                            color::green("enabled")
-                        } else {
-                            color::dim("disabled")
-                        };
-                        let hidden_status = if proc.hidden() {
-                            format!(" {}", color::dim("(hidden)"))
-                        } else {
-                            String::new()
-                        };
-                        println!("{} {}{} — {}", name, enabled_status, hidden_status, color::dim(proc.description()));
-                    }
-                }
-                ProcessorAction::Auto => {
-                    for name in &proc_names {
-                        let proc = &processors[name.as_str()];
-                        let detected = proc.auto_detect(builder.file_index());
-                        let enabled = config.processor.is_enabled(name);
-                        let status = match (detected, enabled) {
-                            (true, true) => color::green("detected, enabled"),
-                            (true, false) => color::yellow("detected, disabled"),
-                            (false, true) => color::yellow("not detected, enabled"),
-                            (false, false) => color::dim("not detected, disabled"),
-                        };
-                        println!("{:<12} {}", name, status);
-                    }
-                }
-                ProcessorAction::Files { name, all } => {
-                    // Validate processor name if given
-                    if let Some(ref n) = name {
-                        if !processors.contains_key(n.as_str()) {
-                            bail!("Unknown processor: '{}'. Run 'rsb processor list' to see available processors.", n);
-                        }
-                    }
-
-                    let builder = Builder::new()?;
-                    let graph = builder.build_graph_filtered(name.as_deref(), all)?;
-
-                    let products = graph.products();
-                    if products.is_empty() {
-                        if let Some(ref n) = name {
-                            println!("[{}] (no files)", n);
-                        } else {
-                            println!("No files discovered by any processor.");
-                        }
-                        return Ok(());
-                    }
-
-                    // Pre-count per processor for the header
-                    let mut counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
-                    for p in products {
-                        *counts.entry(p.processor.as_str()).or_insert(0) += 1;
-                    }
-
-                    let project_root = env::current_dir()?;
-                    let mut current_processor = "";
-                    for product in products {
-                        if product.processor.as_str() != current_processor {
-                            if !current_processor.is_empty() {
-                                println!();
-                            }
-                            current_processor = product.processor.as_str();
-                            let n = counts[current_processor];
-                            println!("[{}] ({} {})", current_processor, n, if n == 1 { "product" } else { "products" });
-                        }
-                        let inputs: Vec<String> = product.inputs.iter()
-                            .map(|p| p.strip_prefix(&project_root).unwrap_or(p).display().to_string())
-                            .collect();
-                        let outputs: Vec<String> = product.outputs.iter()
-                            .map(|p| p.strip_prefix(&project_root).unwrap_or(p).display().to_string())
-                            .collect();
-                        println!("{} \u{2192} {}", inputs.join(", "), outputs.join(", "));
-                    }
-                }
-            }
+            builder.processor(action)?;
         }
         Commands::Tools { action } => {
             let builder = Builder::new()?;
-            let processors = builder.create_processors(0)?;
-            let config = Config::load(&env::current_dir()?)?;
-
-            let show_all = matches!(&action, ToolsAction::List { all: true } | ToolsAction::Check { all: true });
-
-            // Collect (tool_name, processor_name) pairs
-            let mut tool_pairs: Vec<(String, String)> = Vec::new();
-            let mut names: Vec<&String> = processors.keys().collect();
-            names.sort();
-            for name in names {
-                if !show_all && !config.processor.is_enabled(name) {
-                    continue;
-                }
-                for tool in processors[name].required_tools() {
-                    tool_pairs.push((tool, name.clone()));
-                }
-            }
-            tool_pairs.sort();
-            tool_pairs.dedup();
-
-            match action {
-                ToolsAction::List { .. } => {
-                    for (tool, processor) in &tool_pairs {
-                        println!("{} ({})", tool, processor);
-                    }
-                }
-                ToolsAction::Check { .. } => {
-                    let mut any_missing = false;
-                    for (tool, processor) in &tool_pairs {
-                        if let Ok(path) = which::which(tool) {
-                            println!("{} ({}) {} {}", tool, processor, color::green("found"), color::dim(&path.display().to_string()));
-                        } else {
-                            println!("{} ({}) {}", tool, processor, color::red("missing"));
-                            any_missing = true;
-                        }
-                    }
-                    if any_missing {
-                        bail!("Some required tools are missing");
-                    }
-                }
-            }
+            builder.tools(action)?;
         }
         Commands::Complete { shells } => {
             let shells_to_generate = if shells.is_empty() {
@@ -273,22 +131,8 @@ fn main() -> Result<()> {
             println!("rsb {}", env!("CARGO_PKG_VERSION"));
         }
         Commands::Config { action } => {
-            match action {
-                ConfigAction::Show => {
-                    let project_root = env::current_dir()?;
-                    Config::require_config(&project_root)?;
-                    let config = Config::load(&project_root)?;
-                    let output = toml::to_string_pretty(&config)?;
-                    let annotated = annotate_config(&output);
-                    println!("{}", annotated);
-                }
-                ConfigAction::ShowDefault => {
-                    let config = Config::default();
-                    let output = toml::to_string_pretty(&config)?;
-                    let annotated = annotate_config(&output);
-                    println!("{}", annotated);
-                }
-            }
+            let builder = Builder::new()?;
+            builder.config(action)?;
         }
         Commands::Graph { format, view } => {
             let builder = Builder::new()?;
@@ -301,23 +145,6 @@ fn main() -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Annotate TOML config output with comments for constrained values
-fn annotate_config(toml: &str) -> String {
-    toml.lines()
-        .map(|line| {
-            let trimmed = line.trim();
-            if trimmed.starts_with("parallel = ") {
-                format!("{} # 0 = auto-detect CPU cores", line)
-            } else if trimmed.starts_with("restore_method = ") {
-                format!("{} # options: hardlink, copy", line)
-            } else {
-                line.to_string()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
 }
 
 /// Initialize a new rsb project in the current directory

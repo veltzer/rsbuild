@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Arc;
-use crate::cli::{GraphFormat, GraphViewer};
+use crate::cli::{ConfigAction, GraphFormat, GraphViewer, ProcessorAction, ToolsAction};
 use crate::color;
 use crate::config::Config;
 use crate::executor::Executor;
@@ -41,11 +41,6 @@ impl Builder {
             config,
             file_index,
         })
-    }
-
-    /// Get a reference to the file index
-    pub fn file_index(&self) -> &FileIndex {
-        &self.file_index
     }
 
     /// Execute an incremental build using the dependency graph
@@ -431,6 +426,187 @@ impl Builder {
     fn build_graph(&self) -> Result<BuildGraph> {
         let processors = self.create_processors(0)?;
         self.build_graph_with_processors(&processors)
+    }
+
+    /// Handle `rsb processor` subcommands
+    pub fn processor(&self, action: ProcessorAction) -> Result<()> {
+        let processors = self.create_processors(0)?;
+
+        let mut proc_names: Vec<&String> = processors.keys().collect();
+        proc_names.sort();
+
+        match action {
+            ProcessorAction::List { all } => {
+                for name in &proc_names {
+                    let proc = &processors[name.as_str()];
+                    if proc.hidden() && !all {
+                        continue;
+                    }
+                    let status = if self.config.processor.is_enabled(name) {
+                        color::green("enabled")
+                    } else {
+                        color::dim("disabled")
+                    };
+                    println!("{} {}", name, status);
+                }
+            }
+            ProcessorAction::All => {
+                for name in &proc_names {
+                    let proc = &processors[name.as_str()];
+                    let enabled_status = if self.config.processor.is_enabled(name) {
+                        color::green("enabled")
+                    } else {
+                        color::dim("disabled")
+                    };
+                    let hidden_status = if proc.hidden() {
+                        format!(" {}", color::dim("(hidden)"))
+                    } else {
+                        String::new()
+                    };
+                    println!("{} {}{} \u{2014} {}", name, enabled_status, hidden_status, color::dim(proc.description()));
+                }
+            }
+            ProcessorAction::Auto => {
+                for name in &proc_names {
+                    let proc = &processors[name.as_str()];
+                    let detected = proc.auto_detect(&self.file_index);
+                    let enabled = self.config.processor.is_enabled(name);
+                    let status = match (detected, enabled) {
+                        (true, true) => color::green("detected, enabled"),
+                        (true, false) => color::yellow("detected, disabled"),
+                        (false, true) => color::yellow("not detected, enabled"),
+                        (false, false) => color::dim("not detected, disabled"),
+                    };
+                    println!("{:<12} {}", name, status);
+                }
+            }
+            ProcessorAction::Files { name, all } => {
+                if let Some(ref n) = name {
+                    if !processors.contains_key(n.as_str()) {
+                        bail!("Unknown processor: '{}'. Run 'rsb processor list' to see available processors.", n);
+                    }
+                }
+
+                let graph = self.build_graph_filtered(name.as_deref(), all)?;
+
+                let products = graph.products();
+                if products.is_empty() {
+                    if let Some(ref n) = name {
+                        println!("[{}] (no files)", n);
+                    } else {
+                        println!("No files discovered by any processor.");
+                    }
+                    return Ok(());
+                }
+
+                let mut counts: HashMap<&str, usize> = HashMap::new();
+                for p in products {
+                    *counts.entry(p.processor.as_str()).or_insert(0) += 1;
+                }
+
+                let mut current_processor = "";
+                for product in products {
+                    if product.processor.as_str() != current_processor {
+                        if !current_processor.is_empty() {
+                            println!();
+                        }
+                        current_processor = product.processor.as_str();
+                        let n = counts[current_processor];
+                        println!("[{}] ({} {})", current_processor, n, if n == 1 { "product" } else { "products" });
+                    }
+                    let inputs: Vec<String> = product.inputs.iter()
+                        .map(|p| p.strip_prefix(&self.project_root).unwrap_or(p).display().to_string())
+                        .collect();
+                    let outputs: Vec<String> = product.outputs.iter()
+                        .map(|p| p.strip_prefix(&self.project_root).unwrap_or(p).display().to_string())
+                        .collect();
+                    println!("{} \u{2192} {}", inputs.join(", "), outputs.join(", "));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Handle `rsb tools` subcommands
+    pub fn tools(&self, action: ToolsAction) -> Result<()> {
+        let processors = self.create_processors(0)?;
+
+        let show_all = matches!(&action, ToolsAction::List { all: true } | ToolsAction::Check { all: true });
+
+        let mut tool_pairs: Vec<(String, String)> = Vec::new();
+        let mut names: Vec<&String> = processors.keys().collect();
+        names.sort();
+        for name in names {
+            if !show_all && !self.config.processor.is_enabled(name) {
+                continue;
+            }
+            for tool in processors[name].required_tools() {
+                tool_pairs.push((tool, name.clone()));
+            }
+        }
+        tool_pairs.sort();
+        tool_pairs.dedup();
+
+        match action {
+            ToolsAction::List { .. } => {
+                for (tool, processor) in &tool_pairs {
+                    println!("{} ({})", tool, processor);
+                }
+            }
+            ToolsAction::Check { .. } => {
+                let mut any_missing = false;
+                for (tool, processor) in &tool_pairs {
+                    if let Ok(path) = which::which(tool) {
+                        println!("{} ({}) {} {}", tool, processor, color::green("found"), color::dim(&path.display().to_string()));
+                    } else {
+                        println!("{} ({}) {}", tool, processor, color::red("missing"));
+                        any_missing = true;
+                    }
+                }
+                if any_missing {
+                    bail!("Some required tools are missing");
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Handle `rsb config` subcommands
+    pub fn config(&self, action: ConfigAction) -> Result<()> {
+        match action {
+            ConfigAction::Show => {
+                let output = toml::to_string_pretty(&self.config)?;
+                let annotated = Self::annotate_config(&output);
+                println!("{}", annotated);
+            }
+            ConfigAction::ShowDefault => {
+                let config = Config::default();
+                let output = toml::to_string_pretty(&config)?;
+                let annotated = Self::annotate_config(&output);
+                println!("{}", annotated);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Annotate TOML config output with comments for constrained values
+    fn annotate_config(toml: &str) -> String {
+        toml.lines()
+            .map(|line| {
+                let trimmed = line.trim();
+                if trimmed.starts_with("parallel = ") {
+                    format!("{} # 0 = auto-detect CPU cores", line)
+                } else if trimmed.starts_with("restore_method = ") {
+                    format!("{} # options: hardlink, copy", line)
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     /// Open a file with the configured viewer or the system default application

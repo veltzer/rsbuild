@@ -74,8 +74,8 @@ pub enum Commands {
         #[arg(long)]
         no_summary: bool,
     },
-    /// Clean all build artifacts
-    Clean,
+    /// Clean all build output files
+    CleanOutputs,
     /// Remove all build outputs and cache directories (.rsb/ and out/)
     Distclean,
     /// Hard clean using git clean (requires git repository)

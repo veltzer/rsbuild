@@ -22,12 +22,6 @@ Ideas for future improvements, organized by category.
 - `tests/processors/` has no tests for the make processor.
 - Add integration tests covering Makefile discovery and execution.
 
-## Architecture
-
-### Hard-coded processor list in main.rs
-- `src/main.rs` — The `all_processors` array is hard-coded. Adding a new processor requires updating this list manually.
-- Generate from the processor registry or use a macro.
-
 ## Security
 
 ### Shell command execution from source file comments

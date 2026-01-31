@@ -140,7 +140,7 @@ fn spellcheck_clean() {
         "Spellcheck stub directory should exist after build");
 
     // Clean
-    let clean_output = run_rsb(project_path, &["clean"]);
+    let clean_output = run_rsb(project_path, &["clean-outputs"]);
     assert!(clean_output.status.success());
     assert!(!project_path.join("out/spellcheck").exists(),
         "Spellcheck stub directory should be removed after clean");

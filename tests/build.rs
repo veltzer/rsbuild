@@ -28,7 +28,7 @@ fn clean_command() {
     assert!(project_path.join(".rsb/index.json").exists());
 
     // Clean
-    let clean_output = run_rsb(project_path, &["clean"]);
+    let clean_output = run_rsb(project_path, &["clean-outputs"]);
     assert!(clean_output.status.success());
 
     // Verify build outputs are removed but cache is preserved

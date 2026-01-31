@@ -45,7 +45,7 @@ fn main() -> Result<()> {
                 builder.build(force, cli.verbose, jobs, timings, keep_going, Arc::clone(&interrupted), !no_summary)?;
             }
         }
-        Commands::Clean => {
+        Commands::CleanOutputs => {
             let mut builder = Builder::new()?;
             builder.clean()?;
         }

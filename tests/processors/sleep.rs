@@ -35,7 +35,7 @@ fn sleep_processor() {
     assert!(stdout2.contains("[sleep] Skipping (unchanged):"));
 
     // Clean should remove stub files
-    let clean_output = run_rsb(project_path, &["clean-outputs"]);
+    let clean_output = run_rsb(project_path, &["clean", "outputs"]);
     assert!(clean_output.status.success());
     assert!(!stub_path.exists(), "Sleep stub should be removed after clean");
 }

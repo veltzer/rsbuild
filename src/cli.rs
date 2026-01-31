@@ -74,12 +74,11 @@ pub enum Commands {
         #[arg(long)]
         no_summary: bool,
     },
-    /// Clean all build output files
-    CleanOutputs,
-    /// Remove all build outputs and cache directories (.rsb/ and out/)
-    Distclean,
-    /// Hard clean using git clean (requires git repository)
-    Hardclean,
+    /// Clean build artifacts
+    Clean {
+        #[command(subcommand)]
+        action: Option<CleanAction>,
+    },
     /// Show the status of each product (up-to-date, stale, or restorable)
     Status,
     /// Initialize a new rsb project in the current directory
@@ -140,6 +139,16 @@ pub enum Commands {
         #[arg(long, value_enum, num_args = 0..=1, default_missing_value = "svg")]
         view: Option<GraphViewer>,
     },
+}
+
+#[derive(Subcommand)]
+pub enum CleanAction {
+    /// Remove build output files (preserves cache) [default]
+    Outputs,
+    /// Remove all build outputs and cache directories (.rsb/ and out/)
+    All,
+    /// Hard clean using git clean (requires git repository)
+    Git,
 }
 
 #[derive(Subcommand)]

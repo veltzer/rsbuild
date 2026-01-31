@@ -21,8 +21,10 @@ A fast, incremental build tool written in Rust with template support, Python lin
 - `rsb build --dry-run` - Show what would be built without executing
 - `rsb build --keep-going` - Continue after errors
 - `rsb build --timings` - Show per-product and total timing info
-- `rsb clean` - Remove build artifacts (preserves cache)
-- `rsb distclean` - Remove all build directories (.rsb/ and out/) in one shot
+- `rsb clean` - Remove build output files (preserves cache) [default]
+- `rsb clean outputs` - Remove build output files (preserves cache)
+- `rsb clean all` - Remove all build directories (.rsb/ and out/)
+- `rsb clean git` - Hard clean using git clean (requires git repository)
 - `rsb status` - Show product status (up-to-date, stale, or restorable)
 - `rsb init` - Initialize a new rsb project in the current directory
 - `rsb watch` - Watch source files and auto-rebuild on changes

@@ -16,18 +16,13 @@ rsb build --timings               # Show per-product and total timing info
 
 ## `rsb clean`
 
-Remove build artifacts in `out/` while preserving the cache in `.rsb/`.
+Clean build artifacts. When run without a subcommand, removes build output files (same as `rsb clean outputs`).
 
 ```bash
-rsb clean
-```
-
-## `rsb distclean`
-
-Remove all build and cache directories (`.rsb/` and `out/`) in one shot.
-
-```bash
-rsb distclean
+rsb clean                # Remove build output files (preserves cache) [default]
+rsb clean outputs        # Remove build output files (preserves cache)
+rsb clean all            # Remove out/ and .rsb/ directories
+rsb clean git            # Hard clean using git clean -qffxd (requires git repository)
 ```
 
 ## `rsb status`

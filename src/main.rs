@@ -11,7 +11,7 @@ mod watcher;
 
 use anyhow::{bail, Result};
 use clap::Parser;
-use cli::{CacheAction, Cli, Commands, ConfigAction, ProcessorAction, ToolsAction, parse_shell, print_completions};
+use cli::{CacheAction, CleanAction, Cli, Commands, ConfigAction, ProcessorAction, ToolsAction, parse_shell, print_completions};
 use config::Config;
 use builder::Builder;
 use object_store::ObjectStore;
@@ -46,17 +46,21 @@ fn main() -> Result<()> {
                 builder.build(force, cli.verbose, jobs, timings, keep_going, Arc::clone(&interrupted), !no_summary)?;
             }
         }
-        Commands::CleanOutputs => {
-            let mut builder = Builder::new()?;
-            builder.clean()?;
-        }
-        Commands::Distclean => {
-            let builder = Builder::new()?;
-            builder.distclean()?;
-        }
-        Commands::Hardclean => {
-            let builder = Builder::new()?;
-            builder.hardclean()?;
+        Commands::Clean { action } => {
+            match action.unwrap_or(CleanAction::Outputs) {
+                CleanAction::Outputs => {
+                    let mut builder = Builder::new()?;
+                    builder.clean()?;
+                }
+                CleanAction::All => {
+                    let builder = Builder::new()?;
+                    builder.distclean()?;
+                }
+                CleanAction::Git => {
+                    let builder = Builder::new()?;
+                    builder.hardclean()?;
+                }
+            }
         }
         Commands::Status => {
             let builder = Builder::new()?;

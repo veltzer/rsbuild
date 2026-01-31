@@ -140,7 +140,7 @@ fn cc_single_file_clean() {
     assert!(project_path.join("out/cc_single_file/main.elf").exists());
 
     // Clean
-    let clean_output = run_rsb(project_path, &["clean-outputs"]);
+    let clean_output = run_rsb(project_path, &["clean", "outputs"]);
     assert!(clean_output.status.success());
 
     // Verify outputs are removed but cache is preserved

@@ -430,12 +430,16 @@ impl ObjectStore {
         entries
     }
 
-    /// Get the combined input checksum for a list of input files
+    /// Get the combined input checksum for a list of input files.
+    /// Missing files are represented by a sentinel so that different sets of
+    /// missing files never collide.
     pub fn combined_input_checksum(inputs: &[PathBuf]) -> Result<String> {
         let mut checksums = Vec::new();
         for input in inputs {
             if input.exists() {
                 checksums.push(Self::calculate_checksum(input)?);
+            } else {
+                checksums.push(format!("MISSING:{}", input.display()));
             }
         }
         Ok(checksums.join(":"))

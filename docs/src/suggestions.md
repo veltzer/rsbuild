@@ -16,10 +16,6 @@ Ideas for future improvements, organized by category.
 
 ## Potential Bugs
 
-### Combined input checksum skips missing files
-- `src/object_store.rs` — `combined_input_checksum()` silently skips files that don't exist. Two different input sets with different missing files could produce the same checksum.
-- Include a marker for missing files in the hash to avoid collisions.
-
 ### Hard link fallback is silent
 - `src/object_store.rs` — `restore_file()` silently falls back from hard link to copy when hard linking fails. The user has no way to know this happened.
 - Log the fallback at debug level.
@@ -53,12 +49,6 @@ Ideas for future improvements, organized by category.
 ### Default enabled processors include sleep
 - `src/config.rs` — Default `enabled` list includes `sleep`, which is a testing-only processor.
 - Remove `sleep` from defaults.
-
-## Performance
-
-### String allocations in config_hash
-- `src/config.rs` — `config_hash()` serializes to JSON string for every product during discovery.
-- Cache the hash per processor config instead of recomputing.
 
 ## Security
 

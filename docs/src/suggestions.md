@@ -24,7 +24,7 @@ Ideas for future improvements, organized by category.
 
 ### Linting / Checking (stub-based)
 
-#### shellcheck
+#### ~~shellcheck~~ *(Done)*
 - Lint shell scripts (`.sh`, `.bash`) using `shellcheck`.
 - Stub-based, very similar to cpplint/ruff pattern.
 - Config: `checker` (default `"shellcheck"`), `args`, `extra_inputs`, `scan`.

@@ -165,7 +165,7 @@ fn init_project() -> Result<()> {
 
 [processor]
 # auto_detect = true
-# enabled = ["template", "ruff", "pylint", "cc_single_file", "cpplint", "spellcheck", "make"]
+# enabled = ["template", "ruff", "pylint", "cc_single_file", "cpplint", "shellcheck", "spellcheck", "make"]
 
 [cache]
 # restore_method = "hardlink"  # or "copy"
@@ -203,6 +203,12 @@ fn init_project() -> Result<()> {
 # args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
 # scan_dir = "src"
 # extensions = [".c", ".cc"]
+
+[processor.shellcheck]
+# checker = "shellcheck"
+# args = []
+# scan_dir = ""
+# extensions = [".sh", ".bash"]
 
 [processor.make]
 # make = "make"

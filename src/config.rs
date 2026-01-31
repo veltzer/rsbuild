@@ -103,6 +103,8 @@ const SPELLCHECK_EXCLUDE_DIRS: &[&str] = &[
 
 const MAKE_EXCLUDE_DIRS: &[&str] = &["/.git/", "/out/", "/.rsb/", "/build/", "/dist/", "/target/"];
 
+const SHELL_EXCLUDE_DIRS: &[&str] = &["/.git/", "/out/", "/.rsb/", "/node_modules/", "/build/", "/dist/", "/target/"];
+
 #[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -163,7 +165,7 @@ fn default_true() -> bool {
 fn default_processors() -> Vec<String> {
     vec![
         "template".into(), "ruff".into(), "pylint".into(),
-        "cc_single_file".into(), "cpplint".into(), "spellcheck".into(), "make".into(),
+        "cc_single_file".into(), "cpplint".into(), "shellcheck".into(), "spellcheck".into(), "make".into(),
     ]
 }
 
@@ -186,6 +188,8 @@ pub struct ProcessorConfig {
     #[serde(default)]
     pub spellcheck: SpellcheckConfig,
     #[serde(default)]
+    pub shellcheck: ShellcheckConfig,
+    #[serde(default)]
     pub sleep: SleepConfig,
     #[serde(default)]
     pub make: MakeConfig,
@@ -201,6 +205,7 @@ impl Default for ProcessorConfig {
             pylint: PylintConfig::default(),
             cc_single_file: CcConfig::default(),
             cpplint: CpplintConfig::default(),
+            shellcheck: ShellcheckConfig::default(),
             spellcheck: SpellcheckConfig::default(),
             sleep: SleepConfig::default(),
             make: MakeConfig::default(),
@@ -222,6 +227,7 @@ impl ProcessorConfig {
         self.pylint.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
         self.cc_single_file.scan.resolve("src", &[".c", ".cc"], &[]);
         self.cpplint.scan.resolve("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
+        self.shellcheck.scan.resolve("", &[".sh", ".bash"], SHELL_EXCLUDE_DIRS);
         self.spellcheck.scan.resolve("", &[".md"], SPELLCHECK_EXCLUDE_DIRS);
         self.sleep.scan.resolve("sleep", &[".sleep"], &[]);
         self.make.scan.resolve("", &["Makefile"], MAKE_EXCLUDE_DIRS);
@@ -498,6 +504,38 @@ impl Default for MakeConfig {
             scan: ScanConfig {
                 scan_dir: None,
                 extensions: Some(vec!["Makefile".into()]),
+                exclude_dirs: None,
+                exclude_files: None,
+            },
+        }
+    }
+}
+
+fn default_shellcheck_checker() -> String {
+    "shellcheck".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ShellcheckConfig {
+    #[serde(default = "default_shellcheck_checker")]
+    pub checker: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for ShellcheckConfig {
+    fn default() -> Self {
+        Self {
+            checker: "shellcheck".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            scan: ScanConfig {
+                scan_dir: None,
+                extensions: Some(vec![".sh".into(), ".bash".into()]),
                 exclude_dirs: None,
                 exclude_files: None,
             },

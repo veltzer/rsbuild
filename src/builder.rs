@@ -11,7 +11,7 @@ use crate::executor::Executor;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::ObjectStore;
-use crate::processors::{CcProcessor, CpplintProcessor, MakeProcessor, PylintProcessor, RuffProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TemplateProcessor, log_command};
+use crate::processors::{CcProcessor, CpplintProcessor, MakeProcessor, PylintProcessor, RuffProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TemplateProcessor, log_command};
 
 /// Labels for the three product states used by dry_run and status.
 struct ProductStatusLabels {
@@ -269,6 +269,10 @@ impl Builder {
         // C/C++ lint processor
         let cpplinter = CpplintProcessor::new(self.project_root.clone(), self.config.processor.cpplint.clone());
         processors.insert("cpplint".to_string(), Box::new(cpplinter));
+
+        // Shellcheck processor
+        let shellcheck_proc = ShellcheckProcessor::new(self.project_root.clone(), self.config.processor.shellcheck.clone());
+        processors.insert("shellcheck".to_string(), Box::new(shellcheck_proc));
 
         // Spellcheck processor
         match SpellcheckProcessor::new(self.project_root.clone(), self.config.processor.spellcheck.clone()) {

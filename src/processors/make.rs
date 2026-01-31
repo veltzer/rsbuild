@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::config::{MakeConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
-use super::{ProductDiscovery, scan_files, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs};
+use super::{ProductDiscovery, scan_files, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, log_command};
 
 const MAKE_STUB_DIR: &str = "out/make";
 
@@ -59,6 +59,7 @@ impl MakeProcessor {
         }
 
         cmd.current_dir(makefile_dir);
+        log_command(&cmd);
 
         let output = cmd
             .output()

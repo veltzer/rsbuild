@@ -510,14 +510,17 @@ impl BuildGraph {
     pub fn to_svg(&self) -> Result<String> {
         use std::process::{Command, Stdio};
         use std::io::Write;
+        use crate::processors::log_command;
 
         let dot_content = self.to_dot();
 
-        let mut child = Command::new("dot")
-            .arg("-Tsvg")
+        let mut cmd = Command::new("dot");
+        cmd.arg("-Tsvg")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
+            .stderr(Stdio::piped());
+        log_command(&cmd);
+        let mut child = cmd
             .spawn()
             .map_err(|_| anyhow::anyhow!("Graphviz 'dot' command not found. Install Graphviz to use SVG format"))?;
 

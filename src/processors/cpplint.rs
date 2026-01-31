@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::config::CpplintConfig;
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
-use super::{ProductDiscovery, discover_stub_products, scan_files, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs};
+use super::{ProductDiscovery, discover_stub_products, scan_files, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, log_command};
 
 const CPPLINT_STUB_DIR: &str = "out/cpplint";
 
@@ -43,6 +43,7 @@ impl Cpplinter {
 
         cmd.arg(source_file);
         cmd.current_dir(&self.project_root);
+        log_command(&cmd);
 
         let output = cmd
             .output()

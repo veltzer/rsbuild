@@ -10,13 +10,50 @@ mod template;
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use walkdir::WalkDir;
 
 use crate::color;
 use crate::config::{ScanConfig, config_hash, resolve_extra_inputs};
 use crate::ignore::IgnoreRules;
+
+/// Global flag: when true, print each external command before execution.
+static PROCESS_DEBUG: AtomicBool = AtomicBool::new(false);
+
+/// Enable process debug logging (called once from main).
+pub fn set_process_debug(enabled: bool) {
+    PROCESS_DEBUG.store(enabled, Ordering::Relaxed);
+}
+
+/// Format a `Command` as a shell-like string for display.
+pub fn format_command(cmd: &Command) -> String {
+    let program = cmd.get_program().to_string_lossy().to_string();
+    let args: Vec<String> = cmd.get_args()
+        .map(|a| a.to_string_lossy().to_string())
+        .collect();
+    if args.is_empty() {
+        program
+    } else {
+        format!("{} {}", program, args.join(" "))
+    }
+}
+
+/// If --process is enabled, print the command that is about to be executed.
+pub fn log_command(cmd: &Command) {
+    if PROCESS_DEBUG.load(Ordering::Relaxed) {
+        let cwd = cmd.get_current_dir()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default();
+        if cwd.is_empty() {
+            eprintln!("{} {}", color::dim("[exec]"), format_command(cmd));
+        } else {
+            eprintln!("{} {} {}", color::dim("[exec]"), format_command(cmd), color::dim(&format!("(in {})", cwd)));
+        }
+    }
+}
 
 pub use crate::graph::{BuildGraph, Product};
 

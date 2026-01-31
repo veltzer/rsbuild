@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::config::{CcConfig, config_hash, resolve_extra_inputs};
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
-use super::{ProductDiscovery, scan_files, scan_root, clean_outputs};
+use super::{ProductDiscovery, scan_files, scan_root, clean_outputs, format_command, log_command};
 
 /// Per-file compile/link flags extracted from source comments.
 #[derive(Default)]
@@ -142,8 +142,10 @@ fn run_command_for_flags(cmd_line: &str) -> Result<Vec<String>> {
     let program = parts[0];
     let args = &parts[1..];
 
-    let output = Command::new(program)
-        .args(args)
+    let mut cmd = Command::new(program);
+    cmd.args(args);
+    log_command(&cmd);
+    let output = cmd
         .output()
         .context(format!("Failed to execute command: {}", cmd_line))?;
 
@@ -162,9 +164,10 @@ fn run_shell_for_flags(cmd_line: &str) -> Result<Vec<String>> {
         return Ok(Vec::new());
     }
 
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg(cmd_line)
+    let mut cmd = Command::new("sh");
+    cmd.arg("-c").arg(cmd_line);
+    log_command(&cmd);
+    let output = cmd
         .output()
         .context(format!("Failed to execute shell command: {}", cmd_line))?;
 
@@ -194,9 +197,10 @@ fn expand_backticks(value: &str) -> Result<String> {
             anyhow::anyhow!("Unmatched backtick in value: {}", value)
         })?;
         let cmd_str = &after_start[..end];
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(cmd_str)
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c").arg(cmd_str);
+        log_command(&cmd);
+        let output = cmd
             .output()
             .context(format!("Failed to execute backtick command: {}", cmd_str))?;
         if !output.status.success() {
@@ -210,19 +214,6 @@ fn expand_backticks(value: &str) -> Result<String> {
     result.push_str(rest);
 
     Ok(result)
-}
-
-/// Format a Command as a shell-like string for display.
-fn format_command(cmd: &Command) -> String {
-    let program = cmd.get_program().to_string_lossy().to_string();
-    let args: Vec<String> = cmd.get_args()
-        .map(|a| a.to_string_lossy().to_string())
-        .collect();
-    if args.is_empty() {
-        program
-    } else {
-        format!("{} {}", program, args.join(" "))
-    }
 }
 
 pub struct CcProcessor {
@@ -351,6 +342,7 @@ impl CcProcessor {
         if self.verbose >= 1 {
             println!("[cc_single_file] {}", format_command(&cmd));
         }
+        log_command(&cmd);
 
         let output = cmd
             .output()
@@ -468,6 +460,7 @@ impl CcProcessor {
         if self.verbose >= 1 {
             println!("[cc_single_file] {}", format_command(&cmd));
         }
+        log_command(&cmd);
 
         let output = cmd
             .output()

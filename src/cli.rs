@@ -12,6 +12,10 @@ pub struct Cli {
     #[arg(short, long, global = true, default_value = "0", num_args = 0..=1, default_missing_value = "1")]
     pub verbose: u8,
 
+    /// Print each external command before it is executed
+    #[arg(long, global = true)]
+    pub process: bool,
+
     #[command(subcommand)]
     pub command: Commands,
 }

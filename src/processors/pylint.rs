@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::config::PylintConfig;
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
-use super::{ProductDiscovery, discover_stub_products, scan_files, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs};
+use super::{ProductDiscovery, discover_stub_products, scan_files, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, log_command};
 
 const PYLINT_STUB_DIR: &str = "out/pylint";
 
@@ -38,6 +38,7 @@ impl PylintProcessor {
 
         cmd.arg(py_file);
         cmd.current_dir(&self.project_root);
+        log_command(&cmd);
 
         let output = cmd
             .output()

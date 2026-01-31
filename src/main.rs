@@ -24,6 +24,9 @@ use std::sync::atomic::AtomicBool;
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    // Enable process debug logging if --process flag is set
+    processors::set_process_debug(cli.process);
+
     // Set up Ctrl+C handler: sets a flag so the executor can stop gracefully
     let interrupted = Arc::new(AtomicBool::new(false));
     {

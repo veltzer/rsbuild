@@ -10,7 +10,7 @@ use crate::executor::Executor;
 use crate::graph::BuildGraph;
 use crate::ignore::IgnoreRules;
 use crate::object_store::ObjectStore;
-use crate::processors::{CcProcessor, Cpplinter, MakeProcessor, PylintProcessor, RuffProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TemplateProcessor};
+use crate::processors::{CcProcessor, Cpplinter, MakeProcessor, PylintProcessor, RuffProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TemplateProcessor, log_command};
 
 pub struct Builder {
     project_root: PathBuf,
@@ -297,7 +297,10 @@ impl Builder {
             }
             GraphViewer::Svg => {
                 // Check if dot is available
-                let dot_check = Command::new("dot").arg("-V").output();
+                let mut dot_check_cmd = Command::new("dot");
+                dot_check_cmd.arg("-V");
+                log_command(&dot_check_cmd);
+                let dot_check = dot_check_cmd.output();
                 if dot_check.is_err() || !dot_check.unwrap().status.success() {
                     anyhow::bail!("Graphviz 'dot' command not found. Install Graphviz or use --view=mermaid");
                 }
@@ -311,11 +314,10 @@ impl Builder {
                     .context("Failed to write DOT file")?;
 
                 // Convert to SVG
-                let output = Command::new("dot")
-                    .arg("-Tsvg")
-                    .arg(&dot_path)
-                    .arg("-o")
-                    .arg(&svg_path)
+                let mut dot_cmd = Command::new("dot");
+                dot_cmd.arg("-Tsvg").arg(&dot_path).arg("-o").arg(&svg_path);
+                log_command(&dot_cmd);
+                let output = dot_cmd
                     .output()
                     .context("Failed to run dot command")?;
 
@@ -412,8 +414,10 @@ impl Builder {
             { "start" }
         };
 
-        Command::new(cmd)
-            .arg(path)
+        let mut open_cmd = Command::new(cmd);
+        open_cmd.arg(path);
+        log_command(&open_cmd);
+        open_cmd
             .spawn()
             .context(format!("Failed to open file with {}", cmd))?;
 

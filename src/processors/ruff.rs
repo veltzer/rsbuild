@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::config::RuffConfig;
 use crate::graph::{BuildGraph, Product};
 use crate::ignore::IgnoreRules;
-use super::{ProductDiscovery, discover_stub_products, scan_files, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs};
+use super::{ProductDiscovery, discover_stub_products, scan_files, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, log_command};
 
 const RUFF_STUB_DIR: &str = "out/ruff";
 
@@ -40,6 +40,7 @@ impl RuffProcessor {
 
         cmd.arg(py_file);
         cmd.current_dir(&self.project_root);
+        log_command(&cmd);
 
         let output = cmd
             .output()

@@ -64,3 +64,4 @@ stderr
 linters
 subprocesses
 subcommand
+zsh

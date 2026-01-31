@@ -337,7 +337,7 @@ impl BuildStats {
         if self.failed_count > 0 {
             println!("{}", color::red(&format!("Build finished with {} error(s):", self.failed_count)));
             for msg in &self.failed_messages {
-                println!("  {} {}", color::red("*"), msg);
+                println!("{} {}", color::red("*"), msg);
             }
         }
 
@@ -346,11 +346,11 @@ impl BuildStats {
             println!("{}", color::bold("Timing:"));
             for cat in &self.categories {
                 for pt in &cat.product_timings {
-                    println!("  [{}] {} {}", pt.processor, pt.display,
+                    println!("[{}] {} {}", pt.processor, pt.display,
                         color::dim(&format!("({:.3}s)", pt.duration.as_secs_f64())));
                 }
             }
-            println!("  {}", color::bold(&format!("Total: {:.3}s", self.total_duration.as_secs_f64())));
+            println!("{}", color::bold(&format!("Total: {:.3}s", self.total_duration.as_secs_f64())));
         }
     }
 }

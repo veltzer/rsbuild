@@ -92,20 +92,20 @@ impl Builder {
             let input_checksum = match ObjectStore::combined_input_checksum(&product.inputs) {
                 Ok(cs) => cs,
                 Err(_) => {
-                    println!("  {} [{}] {}", color::yellow("BUILD"), product.processor, product.display(0));
+                    println!("{} [{}] {}", color::yellow("BUILD"), product.processor, product.display(0));
                     build_count += 1;
                     continue;
                 }
             };
 
             if !force && !self.object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs) {
-                println!("  {} [{}] {}", color::dim("SKIP"), product.processor, product.display(0));
+                println!("{} [{}] {}", color::dim("SKIP"), product.processor, product.display(0));
                 skip_count += 1;
             } else if !force && self.object_store.can_restore(&cache_key, &input_checksum, &product.outputs) {
-                println!("  {} [{}] {}", color::cyan("RESTORE"), product.processor, product.display(0));
+                println!("{} [{}] {}", color::cyan("RESTORE"), product.processor, product.display(0));
                 restore_count += 1;
             } else {
-                println!("  {} [{}] {}", color::yellow("BUILD"), product.processor, product.display(0));
+                println!("{} [{}] {}", color::yellow("BUILD"), product.processor, product.display(0));
                 build_count += 1;
             }
         }
@@ -137,20 +137,20 @@ impl Builder {
             let input_checksum = match ObjectStore::combined_input_checksum(&product.inputs) {
                 Ok(cs) => cs,
                 Err(_) => {
-                    println!("  {} [{}] {}", color::yellow("STALE"), product.processor, product.display(0));
+                    println!("{} [{}] {}", color::yellow("STALE"), product.processor, product.display(0));
                     stale += 1;
                     continue;
                 }
             };
 
             if !self.object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs) {
-                println!("  {} [{}] {}", color::green("UP-TO-DATE"), product.processor, product.display(0));
+                println!("{} [{}] {}", color::green("UP-TO-DATE"), product.processor, product.display(0));
                 up_to_date += 1;
             } else if self.object_store.can_restore(&cache_key, &input_checksum, &product.outputs) {
-                println!("  {} [{}] {}", color::cyan("RESTORABLE"), product.processor, product.display(0));
+                println!("{} [{}] {}", color::cyan("RESTORABLE"), product.processor, product.display(0));
                 restorable += 1;
             } else {
-                println!("  {} [{}] {}", color::yellow("STALE"), product.processor, product.display(0));
+                println!("{} [{}] {}", color::yellow("STALE"), product.processor, product.display(0));
                 stale += 1;
             }
         }

@@ -20,6 +20,11 @@ For example, tests for the `cc_single_file` processor must be named
 Tests for the `sleep` processor must be named `sleep_processor`,
 `sleep_extra_inputs_valid`, etc.
 
+## No indented output
+
+All `println!` output must start at column 0. Never prefix output with spaces
+or tabs for visual indentation unless when printing some data with structure.
+
 ## Never hard-code counts of dynamic sets
 
 Documentation and code must never state the number of processors, commands,

@@ -188,7 +188,7 @@ fn main() -> Result<()> {
                         let outputs: Vec<String> = product.outputs.iter()
                             .map(|p| p.strip_prefix(&project_root).unwrap_or(p).display().to_string())
                             .collect();
-                        println!("  {} \u{2192} {}", inputs.join(", "), outputs.join(", "));
+                        println!("{} \u{2192} {}", inputs.join(", "), outputs.join(", "));
                     }
                 }
             }

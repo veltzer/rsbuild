@@ -167,6 +167,14 @@ pub enum ProcessorAction {
     All,
     /// Auto-detect which processors are relevant for this project
     Auto,
+    /// Show source and target files for each processor
+    Files {
+        /// Processor name (omit to show all enabled processors)
+        name: Option<String>,
+        /// Include disabled and hidden processors
+        #[arg(short, long)]
+        all: bool,
+    },
 }
 
 /// Parse a shell name string into a Shell enum

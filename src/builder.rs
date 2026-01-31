@@ -350,6 +350,41 @@ impl Builder {
         Ok(graph)
     }
 
+    /// Build the dependency graph, optionally filtering to a single processor.
+    /// If `include_all` is true, skip enabled/auto-detect checks.
+    pub fn build_graph_filtered(
+        &self,
+        filter_name: Option<&str>,
+        include_all: bool,
+    ) -> Result<BuildGraph> {
+        let processors = self.create_processors(0)?;
+        let mut graph = BuildGraph::new();
+
+        let mut names: Vec<&String> = processors.keys().collect();
+        names.sort();
+        for name in names {
+            if let Some(filter) = filter_name {
+                if name.as_str() != filter {
+                    continue;
+                }
+            }
+            if !include_all {
+                let in_enabled_list = self.config.processor.is_enabled(name);
+                if !in_enabled_list {
+                    continue;
+                }
+                let should_run = !self.config.processor.auto_detect || processors[name].auto_detect();
+                if !should_run {
+                    continue;
+                }
+            }
+            processors[name].discover(&mut graph)?;
+        }
+
+        graph.resolve_dependencies();
+        Ok(graph)
+    }
+
     /// Build the dependency graph (creates processors internally)
     fn build_graph(&self) -> Result<BuildGraph> {
         let processors = self.create_processors(0)?;

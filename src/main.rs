@@ -144,6 +144,53 @@ fn main() -> Result<()> {
                         println!("{:<12} {}", name, status);
                     }
                 }
+                ProcessorAction::Files { name, all } => {
+                    // Validate processor name if given
+                    if let Some(ref n) = name {
+                        if !all_processors.iter().any(|(pname, _, _)| *pname == n.as_str()) {
+                            bail!("Unknown processor: '{}'. Run 'rsb processor list' to see available processors.", n);
+                        }
+                    }
+
+                    let builder = Builder::new()?;
+                    let graph = builder.build_graph_filtered(name.as_deref(), all)?;
+
+                    let products = graph.products();
+                    if products.is_empty() {
+                        if let Some(ref n) = name {
+                            println!("[{}] (no files)", n);
+                        } else {
+                            println!("No files discovered by any processor.");
+                        }
+                        return Ok(());
+                    }
+
+                    // Pre-count per processor for the header
+                    let mut counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+                    for p in products {
+                        *counts.entry(p.processor.as_str()).or_insert(0) += 1;
+                    }
+
+                    let project_root = env::current_dir()?;
+                    let mut current_processor = "";
+                    for product in products {
+                        if product.processor.as_str() != current_processor {
+                            if !current_processor.is_empty() {
+                                println!();
+                            }
+                            current_processor = product.processor.as_str();
+                            let n = counts[current_processor];
+                            println!("[{}] ({} {})", current_processor, n, if n == 1 { "product" } else { "products" });
+                        }
+                        let inputs: Vec<String> = product.inputs.iter()
+                            .map(|p| p.strip_prefix(&project_root).unwrap_or(p).display().to_string())
+                            .collect();
+                        let outputs: Vec<String> = product.outputs.iter()
+                            .map(|p| p.strip_prefix(&project_root).unwrap_or(p).display().to_string())
+                            .collect();
+                        println!("  {} \u{2192} {}", inputs.join(", "), outputs.join(", "));
+                    }
+                }
             }
         }
         Commands::Complete { shells } => {

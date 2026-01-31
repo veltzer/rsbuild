@@ -108,9 +108,24 @@ impl BuildGraph {
         }
     }
 
-    /// Add a product to the graph
-    pub fn add_product(&mut self, inputs: Vec<PathBuf>, outputs: Vec<PathBuf>, processor: &str, config_hash: Option<String>) -> usize {
+    /// Add a product to the graph.
+    /// Returns an error if any output path is already claimed by another product.
+    pub fn add_product(&mut self, inputs: Vec<PathBuf>, outputs: Vec<PathBuf>, processor: &str, config_hash: Option<String>) -> Result<usize> {
         let id = self.products.len();
+
+        // Check for output conflicts before mutating anything
+        for output in &outputs {
+            if let Some(&existing_id) = self.output_to_product.get(output) {
+                let existing = &self.products[existing_id];
+                bail!(
+                    "Output conflict: {} is produced by both [{}] and [{}]",
+                    output.display(),
+                    existing.processor,
+                    processor,
+                );
+            }
+        }
+
         let product = Product::new(inputs, outputs.clone(), processor, id, config_hash);
 
         // Register outputs
@@ -122,7 +137,7 @@ impl BuildGraph {
         self.dependents.insert(id, Vec::new());
         self.dependencies.insert(id, Vec::new());
 
-        id
+        Ok(id)
     }
 
     /// Resolve dependencies between products

@@ -151,7 +151,7 @@ pub fn discover_stub_products(
         let stub = stub_path(project_root, stub_dir, &file, stub_suffix);
         let mut inputs = vec![file];
         inputs.extend(extra.clone());
-        graph.add_product(inputs, vec![stub], processor_name, hash.clone());
+        graph.add_product(inputs, vec![stub], processor_name, hash.clone())?;
     }
     Ok(())
 }

@@ -105,7 +105,7 @@ impl ProductDiscovery for MakeProcessor {
             let stub_path = self.get_stub_path(&makefile);
             let mut inputs = vec![makefile];
             inputs.extend(extra.clone());
-            graph.add_product(inputs, vec![stub_path], "make", cfg_hash.clone());
+            graph.add_product(inputs, vec![stub_path], "make", cfg_hash.clone())?;
         }
 
         Ok(())

@@ -83,7 +83,7 @@ impl ProductDiscovery for SleepProcessor {
             let stub_path = self.get_stub_path(&sleep_file);
             let mut inputs = vec![sleep_file];
             inputs.extend(extra.clone());
-            graph.add_product(inputs, vec![stub_path], "sleep", cfg_hash.clone());
+            graph.add_product(inputs, vec![stub_path], "sleep", cfg_hash.clone())?;
         }
 
         Ok(())

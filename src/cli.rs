@@ -7,9 +7,10 @@ use std::str::FromStr;
 #[command(name = "rsb")]
 #[command(about = "Rust Build Tool - Incremental build system with templates", long_about = None)]
 pub struct Cli {
-    /// Show verbose output
-    #[arg(short, long, global = true)]
-    pub verbose: bool,
+    /// Verbosity level (0=quiet, 1=show skip/restore, 2=add source paths, 3=add all inputs).
+    /// Use -v for level 1, -v 2 for level 2, etc.
+    #[arg(short, long, global = true, default_value = "0", num_args = 0..=1, default_missing_value = "1")]
+    pub verbose: u8,
 
     #[command(subcommand)]
     pub command: Commands,
@@ -64,11 +65,6 @@ pub enum Commands {
         /// Show what would be built without executing anything
         #[arg(short = 'n', long)]
         dry_run: bool,
-
-        /// Processor verbosity level (0=target basename, 1=target full path,
-        /// 2=add source path, 3=add all inputs including headers)
-        #[arg(long, default_value = "0")]
-        processor_verbose: u8,
 
         /// Suppress the build summary
         #[arg(long)]

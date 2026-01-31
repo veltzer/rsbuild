@@ -140,7 +140,7 @@ impl ProductDiscovery for TemplateProcessor {
                 vec![item.output_path.clone()],
                 "template",
                 Some(config_hash(&self.config)),
-            );
+            )?;
         }
 
         Ok(())

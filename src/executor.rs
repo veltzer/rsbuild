@@ -15,23 +15,23 @@ use crate::processors::{BuildStats, ProcessStats, ProductDiscovery, ProductTimin
 pub struct Executor<'a> {
     processors: &'a HashMap<String, Box<dyn ProductDiscovery>>,
     parallel: usize,
-    processor_verbose: u8,
+    verbose: u8,
     interrupted: Arc<AtomicBool>,
 }
 
 impl<'a> Executor<'a> {
-    pub fn new(processors: &'a HashMap<String, Box<dyn ProductDiscovery>>, parallel: usize, processor_verbose: u8, interrupted: Arc<AtomicBool>) -> Self {
+    pub fn new(processors: &'a HashMap<String, Box<dyn ProductDiscovery>>, parallel: usize, verbose: u8, interrupted: Arc<AtomicBool>) -> Self {
         Self {
             processors,
             parallel,
-            processor_verbose,
+            verbose,
             interrupted,
         }
     }
 
-    /// Display a product at the current processor verbosity level.
+    /// Display a product at the current verbosity level.
     fn product_display(&self, product: &crate::graph::Product) -> String {
-        product.display(self.processor_verbose)
+        product.display(self.verbose)
     }
 
     /// Execute all products in the graph that need rebuilding
@@ -40,7 +40,6 @@ impl<'a> Executor<'a> {
         graph: &BuildGraph,
         object_store: &mut ObjectStore,
         force: bool,
-        verbose: bool,
         timings: bool,
         keep_going: bool,
     ) -> Result<BuildStats> {
@@ -48,9 +47,9 @@ impl<'a> Executor<'a> {
         let order = graph.topological_sort()?;
 
         let result = if self.parallel <= 1 {
-            self.execute_sequential(graph, &order, object_store, force, verbose, timings, keep_going)
+            self.execute_sequential(graph, &order, object_store, force, timings, keep_going)
         } else {
-            self.execute_parallel(graph, &order, object_store, force, verbose, timings, keep_going)
+            self.execute_parallel(graph, &order, object_store, force, timings, keep_going)
         };
 
         match result {
@@ -69,7 +68,6 @@ impl<'a> Executor<'a> {
         order: &[usize],
         object_store: &mut ObjectStore,
         force: bool,
-        verbose: bool,
         timings: bool,
         keep_going: bool,
     ) -> Result<BuildStats> {
@@ -90,7 +88,7 @@ impl<'a> Executor<'a> {
 
             // Skip products whose dependencies have failed
             if self.has_failed_dependency(graph, id, &failed_products) {
-                if verbose {
+                if self.verbose >= 1 {
                     println!("[{}] {} {}", product.processor,
                         color::yellow("Skipping (dependency failed):"),
                         self.product_display(product));
@@ -104,7 +102,7 @@ impl<'a> Executor<'a> {
 
             // Check if this product needs rebuilding
             if !force && !object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs) {
-                if verbose {
+                if self.verbose >= 1 {
                     println!("[{}] {} {}", product.processor,
                         color::dim("Skipping (unchanged):"),
                         self.product_display(product));
@@ -118,7 +116,7 @@ impl<'a> Executor<'a> {
 
             // Try to restore from cache if outputs are missing
             if !force && object_store.restore_from_cache(&cache_key, &input_checksum, &product.outputs)? {
-                if verbose {
+                if self.verbose >= 1 {
                     println!("[{}] {} {}", product.processor,
                         color::cyan("Restored from cache:"),
                         self.product_display(product));
@@ -215,7 +213,6 @@ impl<'a> Executor<'a> {
         order: &[usize],
         object_store: &mut ObjectStore,
         force: bool,
-        verbose: bool,
         timings: bool,
         keep_going: bool,
     ) -> Result<BuildStats> {
@@ -246,7 +243,7 @@ impl<'a> Executor<'a> {
                 for &id in &level {
                     if self.has_failed_dependency(graph, id, &failed_guard) {
                         let product = graph.get_product(id).unwrap();
-                        if verbose {
+                        if self.verbose >= 1 {
                             println!("[{}] {} {}", product.processor,
                                 color::yellow("Skipping (dependency failed):"),
                                 self.product_display(product));
@@ -326,7 +323,7 @@ impl<'a> Executor<'a> {
                             let cache_key = product.cache_key();
 
                             if !needs_rebuild {
-                                if verbose {
+                                if self.verbose >= 1 {
                                     println!("[{}] {} {}", product.processor,
                                         color::dim("Skipping (unchanged):"),
                                         self.product_display(product));
@@ -347,7 +344,7 @@ impl<'a> Executor<'a> {
                                 };
                                 match restore_result {
                                     Ok(true) => {
-                                        if verbose {
+                                        if self.verbose >= 1 {
                                             println!("[{}] {} {}", product.processor,
                                                 color::cyan("Restored from cache:"),
                                                 self.product_display(product));

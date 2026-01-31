@@ -36,19 +36,19 @@ impl Builder {
     }
 
     /// Execute an incremental build using the dependency graph
-    pub fn build(&mut self, force: bool, verbose: bool, jobs: Option<usize>, timings: bool, keep_going: bool, processor_verbose: u8, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool) -> Result<()> {
+    pub fn build(&mut self, force: bool, verbose: u8, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool) -> Result<()> {
         // Create processors
-        let processors = self.create_processors(processor_verbose)?;
+        let processors = self.create_processors(verbose)?;
 
         // Build the dependency graph
         let graph = self.build_graph_with_processors(&processors)?;
 
         // Create executor with parallelism from command line or config
         let parallel = jobs.unwrap_or(self.config.build.parallel);
-        let executor = Executor::new(&processors, parallel, processor_verbose, Arc::clone(&interrupted));
+        let executor = Executor::new(&processors, parallel, verbose, Arc::clone(&interrupted));
 
         // Execute the build
-        let result = executor.execute(&graph, &mut self.object_store, force, verbose, timings, keep_going);
+        let result = executor.execute(&graph, &mut self.object_store, force, timings, keep_going);
 
         // Always save object store index, even after errors or interrupt
         self.object_store.save()?;
@@ -211,7 +211,7 @@ impl Builder {
     }
 
     /// Create all available processors
-    pub fn create_processors(&self, processor_verbose: u8) -> Result<HashMap<String, Box<dyn ProductDiscovery>>> {
+    pub fn create_processors(&self, verbose: u8) -> Result<HashMap<String, Box<dyn ProductDiscovery>>> {
         let mut processors: HashMap<String, Box<dyn ProductDiscovery>> = HashMap::new();
 
         // Template processor
@@ -232,7 +232,7 @@ impl Builder {
         processors.insert("sleep".to_string(), Box::new(sleep_proc));
 
         // C/C++ compiler processor (single-file compilation)
-        let cc_proc = CcProcessor::new(self.project_root.clone(), self.config.processor.cc_single_file.clone(), Arc::clone(&self.ignore_rules), processor_verbose);
+        let cc_proc = CcProcessor::new(self.project_root.clone(), self.config.processor.cc_single_file.clone(), Arc::clone(&self.ignore_rules), verbose);
         processors.insert("cc_single_file".to_string(), Box::new(cc_proc));
 
         // C/C++ lint processor

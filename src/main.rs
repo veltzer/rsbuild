@@ -34,13 +34,13 @@ fn main() -> Result<()> {
     }
 
     match cli.command {
-        Commands::Build { force, jobs, timings, keep_going, dry_run, processor_verbose, no_summary } => {
+        Commands::Build { force, jobs, timings, keep_going, dry_run, no_summary } => {
             if dry_run {
                 let builder = Builder::new()?;
                 builder.dry_run(force)?;
             } else {
                 let mut builder = Builder::new()?;
-                builder.build(force, cli.verbose, jobs, timings, keep_going, processor_verbose, Arc::clone(&interrupted), !no_summary)?;
+                builder.build(force, cli.verbose, jobs, timings, keep_going, Arc::clone(&interrupted), !no_summary)?;
             }
         }
         Commands::Clean => {
@@ -260,6 +260,7 @@ fn main() -> Result<()> {
         }
         Commands::Watch { jobs, timings, keep_going, no_summary } => {
             watcher::watch(cli.verbose, jobs, timings, keep_going, !no_summary, Arc::clone(&interrupted))?;
+
         }
         Commands::Version => {
             println!("rsb {}", env!("CARGO_PKG_VERSION"));

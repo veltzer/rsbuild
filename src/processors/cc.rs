@@ -524,7 +524,7 @@ impl ProductDiscovery for CcProcessor {
                 vec![executable],
                 "cc_single_file",
                 config_hash.clone(),
-            );
+            )?;
         }
 
         Ok(())

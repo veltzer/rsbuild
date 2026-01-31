@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::PylintConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use super::{ProductDiscovery, discover_stub_products, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, run_command, execute_lint_batch};
+use super::{ProductDiscovery, discover_stub_products, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, run_command, check_command_output, execute_lint_batch};
 
 const PYLINT_STUB_DIR: &str = "out/pylint";
 
@@ -37,17 +37,7 @@ impl PylintProcessor {
         cmd.current_dir(&self.project_root);
 
         let output = run_command(&mut cmd)?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(anyhow::anyhow!(
-                "Pylint failed:\n{}{}",
-                stdout,
-                stderr
-            ));
-        }
-
+        check_command_output(&output, "Pylint")?;
         write_stub(stub_path, "linted")
     }
 
@@ -65,17 +55,7 @@ impl PylintProcessor {
         cmd.current_dir(&self.project_root);
 
         let output = run_command(&mut cmd)?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(anyhow::anyhow!(
-                "Pylint batch failed:\n{}{}",
-                stdout,
-                stderr
-            ));
-        }
-
+        check_command_output(&output, "Pylint batch")?;
         Ok(())
     }
 }

@@ -251,8 +251,6 @@ impl BuildGraph {
 
     /// Format graph as DOT (Graphviz)
     pub fn to_dot(&self) -> String {
-        use std::collections::HashSet;
-
         let mut lines = Vec::new();
         lines.push("digraph build_graph {".to_string());
         lines.push("    rankdir=LR;".to_string());
@@ -330,8 +328,6 @@ impl BuildGraph {
     /// Only shows primary source files (first input per product), not headers,
     /// to keep the diagram manageable for large projects.
     pub fn to_mermaid(&self) -> String {
-        use std::collections::HashSet;
-
         let mut lines = Vec::new();
         lines.push("graph LR".to_string());
 

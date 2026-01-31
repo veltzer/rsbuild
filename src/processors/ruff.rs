@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::RuffConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use super::{ProductDiscovery, discover_stub_products, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, run_command, execute_lint_batch};
+use super::{ProductDiscovery, discover_stub_products, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, run_command, check_command_output, execute_lint_batch};
 
 const RUFF_STUB_DIR: &str = "out/ruff";
 
@@ -39,18 +39,7 @@ impl RuffProcessor {
         cmd.current_dir(&self.project_root);
 
         let output = run_command(&mut cmd)?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(anyhow::anyhow!(
-                "{} linting failed:\n{}{}",
-                linter,
-                stdout,
-                stderr
-            ));
-        }
-
+        check_command_output(&output, format_args!("{} linting", linter))?;
         write_stub(stub_path, "linted")
     }
 
@@ -70,18 +59,7 @@ impl RuffProcessor {
         cmd.current_dir(&self.project_root);
 
         let output = run_command(&mut cmd)?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(anyhow::anyhow!(
-                "{} batch linting failed:\n{}{}",
-                linter,
-                stdout,
-                stderr
-            ));
-        }
-
+        check_command_output(&output, format_args!("{} batch linting", linter))?;
         Ok(())
     }
 }

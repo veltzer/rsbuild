@@ -303,15 +303,10 @@ impl CcProcessor {
         Some(headers)
     }
 
-    /// Run gcc/g++ -MM to scan dependencies for a source file.
-    /// Also writes the result to the deps cache.
-    fn scan_dependencies(&self, source: &Path, is_cpp: bool) -> Result<Vec<PathBuf>> {
-        let compiler = if is_cpp { &self.config.cxx } else { &self.config.cc };
+    /// Add include paths and compile flags (before, base, after) to a command.
+    /// Shared between `scan_dependencies()` and `compile_source()`.
+    fn add_compile_flags(&self, cmd: &mut Command, is_cpp: bool, source_flags: &SourceFlags) {
         let flags = if is_cpp { &self.config.cxxflags } else { &self.config.cflags };
-        let source_flags = parse_source_flags(source)?;
-
-        let mut cmd = Command::new(compiler);
-        cmd.arg("-MM");
         for inc in &self.config.include_paths {
             cmd.arg(format!("-I{}", inc));
         }
@@ -324,6 +319,17 @@ impl CcProcessor {
         for arg in &source_flags.compile_args_after {
             cmd.arg(arg);
         }
+    }
+
+    /// Run gcc/g++ -MM to scan dependencies for a source file.
+    /// Also writes the result to the deps cache.
+    fn scan_dependencies(&self, source: &Path, is_cpp: bool) -> Result<Vec<PathBuf>> {
+        let compiler = if is_cpp { &self.config.cxx } else { &self.config.cc };
+        let source_flags = parse_source_flags(source)?;
+
+        let mut cmd = Command::new(compiler);
+        cmd.arg("-MM");
+        self.add_compile_flags(&mut cmd, is_cpp, &source_flags);
         cmd.arg(source);
         cmd.current_dir(&self.project_root);
 
@@ -397,7 +403,6 @@ impl CcProcessor {
     /// Compile a single source file directly to an executable.
     fn compile_source(&self, source: &Path, executable: &Path, deps_file: &Path, is_cpp: bool) -> Result<()> {
         let compiler = if is_cpp { &self.config.cxx } else { &self.config.cc };
-        let flags = if is_cpp { &self.config.cxxflags } else { &self.config.cflags };
         let source_flags = parse_source_flags(source)?;
 
         // Ensure output directory exists
@@ -413,24 +418,9 @@ impl CcProcessor {
         }
 
         let mut cmd = Command::new(compiler);
-        cmd.arg("-MMD");
-        cmd.arg("-MF");
-        cmd.arg(deps_file);
-        for inc in &self.config.include_paths {
-            cmd.arg(format!("-I{}", inc));
-        }
-        for arg in &source_flags.compile_args_before {
-            cmd.arg(arg);
-        }
-        for flag in flags {
-            cmd.arg(flag);
-        }
-        for arg in &source_flags.compile_args_after {
-            cmd.arg(arg);
-        }
-        cmd.arg("-o");
-        cmd.arg(executable);
-        cmd.arg(source);
+        cmd.arg("-MMD").arg("-MF").arg(deps_file);
+        self.add_compile_flags(&mut cmd, is_cpp, &source_flags);
+        cmd.arg("-o").arg(executable).arg(source);
         for arg in &source_flags.link_args_before {
             cmd.arg(arg);
         }

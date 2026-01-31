@@ -112,6 +112,17 @@ pub fn run_command(cmd: &mut Command) -> Result<Output> {
 
 pub use crate::graph::{BuildGraph, Product};
 
+/// Check that a command exited successfully, returning an error with
+/// combined stdout+stderr if it did not.
+pub fn check_command_output(output: &Output, context: impl std::fmt::Display) -> Result<()> {
+    if !output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("{context} failed:\n{stdout}{stderr}");
+    }
+    Ok(())
+}
+
 /// Compute the scan root directory from a ScanConfig.
 /// Returns project_root if scan_dir is empty, otherwise project_root/scan_dir.
 pub fn scan_root(project_root: &Path, scan: &crate::config::ScanConfig) -> PathBuf {
@@ -341,7 +352,7 @@ pub struct ProcessStats {
 }
 
 impl ProcessStats {
-    pub fn new(_name: &str) -> Self {
+    pub fn new() -> Self {
         Self {
             processed: 0,
             failed: 0,

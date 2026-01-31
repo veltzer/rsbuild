@@ -4,9 +4,8 @@ Ideas for future improvements, organized by category.
 
 ## Error Handling
 
-### Mutex unwraps in executor.rs
-- `src/executor.rs` has many `.lock().unwrap()` calls on mutexes. If a thread panics while holding a lock, this causes cascading panics.
-- Consider using `parking_lot::Mutex` (no poisoning) or handling `PoisonError`.
+### ~~Mutex unwraps in executor.rs~~ *(Done)*
+- Switched to `parking_lot::Mutex` which doesn't poison. Eliminated 48 `.lock().unwrap()` calls and 5 `.into_inner().map_err(...)` chains.
 
 ## Missing Test Coverage
 

@@ -1,7 +1,8 @@
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 use std::thread;
 use std::time::Instant;
 
@@ -154,14 +155,14 @@ impl<'a> Executor<'a> {
                             object_store.cache_outputs(&pw.cache_key, &pw.input_checksum, &product.outputs)?;
                             let stats = stats_by_processor
                                 .entry(proc_name.clone())
-                                .or_insert_with(|| ProcessStats::new(&proc_name));
+                                .or_insert_with(|| ProcessStats::new());
                             stats.processed += 1;
                             stats.files_created += product.outputs.len();
                         }
                         Err(e) => {
                             let stats = stats_by_processor
                                 .entry(proc_name.clone())
-                                .or_insert_with(|| ProcessStats::new(&proc_name));
+                                .or_insert_with(|| ProcessStats::new());
                             stats.failed += 1;
                             if keep_going {
                                 let msg = format!("[{}] {}: {}", proc_name, product.display(verbose), e);
@@ -183,7 +184,7 @@ impl<'a> Executor<'a> {
                 if timings && !silenced {
                     let stats = stats_by_processor
                         .entry(proc_name.clone())
-                        .or_insert_with(|| ProcessStats::new(&proc_name));
+                        .or_insert_with(|| ProcessStats::new());
                     stats.duration += batch_duration;
                     stats.product_timings.push(ProductTiming {
                         display: format!("batch ({} files)", products.len()),
@@ -210,7 +211,7 @@ impl<'a> Executor<'a> {
                             object_store.cache_outputs(&pw.cache_key, &pw.input_checksum, &product.outputs)?;
                             let stats = stats_by_processor
                                 .entry(proc_name.clone())
-                                .or_insert_with(|| ProcessStats::new(&proc_name));
+                                .or_insert_with(|| ProcessStats::new());
                             stats.processed += 1;
                             stats.files_created += product.outputs.len();
                             stats.duration += duration;
@@ -225,7 +226,7 @@ impl<'a> Executor<'a> {
                         Err(e) => {
                             let stats = stats_by_processor
                                 .entry(proc_name.clone())
-                                .or_insert_with(|| ProcessStats::new(&proc_name));
+                                .or_insert_with(|| ProcessStats::new());
                             stats.failed += 1;
                             if keep_going {
                                 let msg = format!("[{}] {}: {}", proc_name, product.display(verbose), e);
@@ -287,7 +288,7 @@ impl<'a> Executor<'a> {
                 }
                 let stats = stats_by_processor
                     .entry(product.processor.clone())
-                    .or_insert_with(|| ProcessStats::new(&product.processor));
+                    .or_insert_with(|| ProcessStats::new());
                 stats.skipped += 1;
                 continue;
             }
@@ -301,7 +302,7 @@ impl<'a> Executor<'a> {
                 }
                 let stats = stats_by_processor
                     .entry(product.processor.clone())
-                    .or_insert_with(|| ProcessStats::new(&product.processor));
+                    .or_insert_with(|| ProcessStats::new());
                 stats.restored += 1;
                 stats.files_restored += product.outputs.len();
                 continue;
@@ -387,7 +388,7 @@ impl<'a> Executor<'a> {
             // First pass: identify products with failed dependencies
             let mut skipped_ids: Vec<usize> = Vec::new();
             {
-                let failed_guard = failed_products.lock().unwrap();
+                let failed_guard = failed_products.lock();
                 for &id in &level {
                     if self.has_failed_dependency(graph, id, &failed_guard) {
                         let product = graph.get_product(id).unwrap();
@@ -401,7 +402,7 @@ impl<'a> Executor<'a> {
                 }
             }
             if !skipped_ids.is_empty() {
-                let mut failed_guard = failed_products.lock().unwrap();
+                let mut failed_guard = failed_products.lock();
                 for id in &skipped_ids {
                     failed_guard.insert(*id);
                 }
@@ -409,8 +410,8 @@ impl<'a> Executor<'a> {
 
             // Second pass: determine work items for non-skipped products
             {
-                let store_guard = store.lock().unwrap();
-                let fp_guard = failed_processors.lock().unwrap();
+                let store_guard = store.lock();
+                let fp_guard = failed_processors.lock();
                 for &id in &level {
                     if skipped_ids.contains(&id) {
                         continue;
@@ -421,7 +422,7 @@ impl<'a> Executor<'a> {
                     // In non-keep-going mode, silently skip products from a
                     // processor that failed in a previous level
                     if !keep_going && fp_guard.contains(&product.processor) {
-                        failed_products.lock().unwrap().insert(id);
+                        failed_products.lock().insert(id);
                         continue;
                     }
                     let cache_key = product.cache_key();
@@ -431,11 +432,11 @@ impl<'a> Executor<'a> {
                             if keep_going {
                                 let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
                                 println!("{}", color::red(&format!("Error: {}", msg)));
-                                failed_products.lock().unwrap().insert(id);
-                                failed_messages.lock().unwrap().push(msg);
+                                failed_products.lock().insert(id);
+                                failed_messages.lock().push(msg);
                             } else {
-                                failed_products.lock().unwrap().insert(id);
-                                errors.lock().unwrap().push(e);
+                                failed_products.lock().insert(id);
+                                errors.lock().push(e);
                             }
                             continue;
                         }
@@ -514,10 +515,10 @@ impl<'a> Executor<'a> {
                                         color::dim("Skipping (unchanged):"),
                                         self.product_display(product));
                                 }
-                                let mut stats = stats_ref.lock().unwrap();
+                                let mut stats = stats_ref.lock();
                                 let proc_stats = stats
                                     .entry(product.processor.clone())
-                                    .or_insert_with(|| ProcessStats::new(&product.processor));
+                                    .or_insert_with(|| ProcessStats::new());
                                 proc_stats.skipped += 1;
                                 continue;
                             }
@@ -525,7 +526,7 @@ impl<'a> Executor<'a> {
                             // Try to restore from cache
                             if !force {
                                 let restore_result = {
-                                    let store_guard = store_ref.lock().unwrap();
+                                    let store_guard = store_ref.lock();
                                     store_guard.restore_from_cache(&cache_key, input_checksum, &product.outputs)
                                 };
                                 match restore_result {
@@ -535,10 +536,10 @@ impl<'a> Executor<'a> {
                                                 color::cyan("Restored from cache:"),
                                                 self.product_display(product));
                                         }
-                                        let mut stats = stats_ref.lock().unwrap();
+                                        let mut stats = stats_ref.lock();
                                         let proc_stats = stats
                                             .entry(product.processor.clone())
-                                            .or_insert_with(|| ProcessStats::new(&product.processor));
+                                            .or_insert_with(|| ProcessStats::new());
                                         proc_stats.restored += 1;
                                         proc_stats.files_restored += product.outputs.len();
                                         continue;
@@ -547,11 +548,11 @@ impl<'a> Executor<'a> {
                                         if keep_going {
                                             let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
                                             println!("{}", color::red(&format!("Error: {}", msg)));
-                                            failed_ref.lock().unwrap().insert(*id);
-                                            failed_msgs_ref.lock().unwrap().push(msg);
+                                            failed_ref.lock().insert(*id);
+                                            failed_msgs_ref.lock().push(msg);
                                         } else {
-                                            failed_ref.lock().unwrap().insert(*id);
-                                            errors_ref.lock().unwrap().push(e);
+                                            failed_ref.lock().insert(*id);
+                                            errors_ref.lock().push(e);
                                         }
                                         continue;
                                     }
@@ -593,44 +594,44 @@ impl<'a> Executor<'a> {
                             match result {
                                 Ok(()) => {
                                     {
-                                        let mut store_guard = store_ref.lock().unwrap();
+                                        let mut store_guard = store_ref.lock();
                                         if let Err(e) = store_guard.cache_outputs(&cache_key, input_checksum, &product.outputs) {
                                             if keep_going {
                                                 let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
                                                 println!("{}", color::red(&format!("Error: {}", msg)));
-                                                failed_ref.lock().unwrap().insert(*id);
-                                                failed_msgs_ref.lock().unwrap().push(msg);
+                                                failed_ref.lock().insert(*id);
+                                                failed_msgs_ref.lock().push(msg);
                                             } else {
-                                                failed_ref.lock().unwrap().insert(*id);
-                                                errors_ref.lock().unwrap().push(e);
+                                                failed_ref.lock().insert(*id);
+                                                errors_ref.lock().push(e);
                                             }
                                             continue;
                                         }
                                     }
-                                    let mut stats = stats_ref.lock().unwrap();
+                                    let mut stats = stats_ref.lock();
                                     let proc_stats = stats
                                         .entry(proc_name.clone())
-                                        .or_insert_with(|| ProcessStats::new(proc_name));
+                                        .or_insert_with(|| ProcessStats::new());
                                     proc_stats.processed += 1;
                                     proc_stats.files_created += product.outputs.len();
                                 }
                                 Err(e) => {
                                     {
-                                        let mut stats = stats_ref.lock().unwrap();
+                                        let mut stats = stats_ref.lock();
                                         let proc_stats = stats
                                             .entry(proc_name.clone())
-                                            .or_insert_with(|| ProcessStats::new(proc_name));
+                                            .or_insert_with(|| ProcessStats::new());
                                         proc_stats.failed += 1;
                                     }
                                     if keep_going {
                                         let msg = format!("[{}] {}: {}", proc_name, self.product_display(product), e);
                                         println!("{}", color::red(&format!("Error: {}", msg)));
-                                        failed_ref.lock().unwrap().insert(*id);
-                                        failed_msgs_ref.lock().unwrap().push(msg);
+                                        failed_ref.lock().insert(*id);
+                                        failed_msgs_ref.lock().push(msg);
                                     } else {
-                                        failed_ref.lock().unwrap().insert(*id);
-                                        failed_procs_ref.lock().unwrap().insert(proc_name.clone());
-                                        errors_ref.lock().unwrap().push(e);
+                                        failed_ref.lock().insert(*id);
+                                        failed_procs_ref.lock().insert(proc_name.clone());
+                                        errors_ref.lock().push(e);
                                     }
                                 }
                             }
@@ -638,10 +639,10 @@ impl<'a> Executor<'a> {
 
                         // Record batch timing
                         if timings {
-                            let mut stats = stats_ref.lock().unwrap();
+                            let mut stats = stats_ref.lock();
                             let proc_stats = stats
                                 .entry(proc_name.clone())
-                                .or_insert_with(|| ProcessStats::new(proc_name));
+                                .or_insert_with(|| ProcessStats::new());
                             proc_stats.duration += batch_duration;
                             proc_stats.product_timings.push(ProductTiming {
                                 display: format!("batch ({} files)", product_refs.len()),
@@ -680,10 +681,10 @@ impl<'a> Executor<'a> {
                                             color::dim("Skipping (unchanged):"),
                                             self.product_display(product));
                                     }
-                                    let mut stats = stats_ref.lock().unwrap();
+                                    let mut stats = stats_ref.lock();
                                     let proc_stats = stats
                                         .entry(product.processor.clone())
-                                        .or_insert_with(|| ProcessStats::new(&product.processor));
+                                        .or_insert_with(|| ProcessStats::new());
                                     proc_stats.skipped += 1;
                                     continue;
                                 }
@@ -691,7 +692,7 @@ impl<'a> Executor<'a> {
                                 // Try to restore from cache
                                 if !force {
                                     let restore_result = {
-                                        let store_guard = store_ref.lock().unwrap();
+                                        let store_guard = store_ref.lock();
                                         store_guard.restore_from_cache(&cache_key, input_checksum, &product.outputs)
                                     };
                                     match restore_result {
@@ -701,10 +702,10 @@ impl<'a> Executor<'a> {
                                                     color::cyan("Restored from cache:"),
                                                     self.product_display(product));
                                             }
-                                            let mut stats = stats_ref.lock().unwrap();
+                                            let mut stats = stats_ref.lock();
                                             let proc_stats = stats
                                                 .entry(product.processor.clone())
-                                                .or_insert_with(|| ProcessStats::new(&product.processor));
+                                                .or_insert_with(|| ProcessStats::new());
                                             proc_stats.restored += 1;
                                             proc_stats.files_restored += product.outputs.len();
                                             continue;
@@ -713,11 +714,11 @@ impl<'a> Executor<'a> {
                                             if keep_going {
                                                 let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
                                                 println!("{}", color::red(&format!("Error: {}", msg)));
-                                                failed_ref.lock().unwrap().insert(*id);
-                                                failed_msgs_ref.lock().unwrap().push(msg);
+                                                failed_ref.lock().insert(*id);
+                                                failed_msgs_ref.lock().push(msg);
                                             } else {
-                                                failed_ref.lock().unwrap().insert(*id);
-                                                errors_ref.lock().unwrap().push(e);
+                                                failed_ref.lock().insert(*id);
+                                                errors_ref.lock().push(e);
                                             }
                                             continue;
                                         }
@@ -736,25 +737,25 @@ impl<'a> Executor<'a> {
                                             let duration = product_start.elapsed();
 
                                             {
-                                                let mut store_guard = store_ref.lock().unwrap();
+                                                let mut store_guard = store_ref.lock();
                                                 if let Err(e) = store_guard.cache_outputs(&cache_key, input_checksum, &product.outputs) {
                                                     if keep_going {
                                                         let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
                                                         println!("{}", color::red(&format!("Error: {}", msg)));
-                                                        failed_ref.lock().unwrap().insert(*id);
-                                                        failed_msgs_ref.lock().unwrap().push(msg);
+                                                        failed_ref.lock().insert(*id);
+                                                        failed_msgs_ref.lock().push(msg);
                                                     } else {
-                                                        failed_ref.lock().unwrap().insert(*id);
-                                                        errors_ref.lock().unwrap().push(e);
+                                                        failed_ref.lock().insert(*id);
+                                                        errors_ref.lock().push(e);
                                                     }
                                                     continue;
                                                 }
                                             }
 
-                                            let mut stats = stats_ref.lock().unwrap();
+                                            let mut stats = stats_ref.lock();
                                             let proc_stats = stats
                                                 .entry(product.processor.clone())
-                                                .or_insert_with(|| ProcessStats::new(&product.processor));
+                                                .or_insert_with(|| ProcessStats::new());
                                             proc_stats.processed += 1;
                                             proc_stats.files_created += product.outputs.len();
                                             proc_stats.duration += duration;
@@ -768,21 +769,21 @@ impl<'a> Executor<'a> {
                                         }
                                         Err(e) => {
                                             {
-                                                let mut stats = stats_ref.lock().unwrap();
+                                                let mut stats = stats_ref.lock();
                                                 let proc_stats = stats
                                                     .entry(product.processor.clone())
-                                                    .or_insert_with(|| ProcessStats::new(&product.processor));
+                                                    .or_insert_with(|| ProcessStats::new());
                                                 proc_stats.failed += 1;
                                             }
                                             if keep_going {
                                                 let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
                                                 println!("{}", color::red(&format!("Error: {}", msg)));
-                                                failed_ref.lock().unwrap().insert(*id);
-                                                failed_msgs_ref.lock().unwrap().push(msg);
+                                                failed_ref.lock().insert(*id);
+                                                failed_msgs_ref.lock().push(msg);
                                             } else {
-                                                failed_ref.lock().unwrap().insert(*id);
-                                                failed_procs_ref.lock().unwrap().insert(product.processor.clone());
-                                                errors_ref.lock().unwrap().push(e);
+                                                failed_ref.lock().insert(*id);
+                                                failed_procs_ref.lock().insert(product.processor.clone());
+                                                errors_ref.lock().push(e);
                                             }
                                             continue;
                                         }
@@ -804,14 +805,12 @@ impl<'a> Executor<'a> {
         // Restore the store
         *object_store = Arc::try_unwrap(store)
             .map_err(|_| anyhow::anyhow!("internal error: outstanding Arc reference to object store"))?
-            .into_inner()
-            .map_err(|e| anyhow::anyhow!("internal error: poisoned mutex in object store: {e}"))?;
+            .into_inner();
 
         // Build aggregated stats
         let final_stats = Arc::try_unwrap(stats_by_processor)
             .map_err(|_| anyhow::anyhow!("internal error: outstanding Arc reference to stats"))?
-            .into_inner()
-            .map_err(|e| anyhow::anyhow!("internal error: poisoned mutex in stats: {e}"))?;
+            .into_inner();
         let mut stats = BuildStats::default();
         for (_, proc_stats) in final_stats {
             stats.add(proc_stats);
@@ -819,12 +818,10 @@ impl<'a> Executor<'a> {
 
         let final_failed = Arc::try_unwrap(failed_products)
             .map_err(|_| anyhow::anyhow!("internal error: outstanding Arc reference to failed products"))?
-            .into_inner()
-            .map_err(|e| anyhow::anyhow!("internal error: poisoned mutex in failed products: {e}"))?;
+            .into_inner();
         let final_msgs = Arc::try_unwrap(failed_messages)
             .map_err(|_| anyhow::anyhow!("internal error: outstanding Arc reference to failed messages"))?
-            .into_inner()
-            .map_err(|e| anyhow::anyhow!("internal error: poisoned mutex in failed messages: {e}"))?;
+            .into_inner();
         stats.failed_count = final_failed.len();
         stats.failed_messages = final_msgs;
 
@@ -833,8 +830,7 @@ impl<'a> Executor<'a> {
         if !keep_going && !self.interrupted.load(Ordering::SeqCst) {
             let errs = Arc::try_unwrap(errors)
                 .map_err(|_| anyhow::anyhow!("internal error: outstanding Arc reference to errors"))?
-                .into_inner()
-                .map_err(|e| anyhow::anyhow!("internal error: poisoned mutex in errors: {e}"))?;
+                .into_inner();
             if let Some(first_err) = errs.into_iter().next() {
                 return Err(first_err);
             }

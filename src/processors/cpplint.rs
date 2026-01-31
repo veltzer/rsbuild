@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::CpplintConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use super::{ProductDiscovery, discover_stub_products, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, run_command};
+use super::{ProductDiscovery, discover_stub_products, scan_root, validate_stub_product, ensure_stub_dir, write_stub, clean_outputs, run_command, check_command_output};
 
 const CPPLINT_STUB_DIR: &str = "out/cpplint";
 
@@ -42,17 +42,7 @@ impl CpplintProcessor {
         cmd.current_dir(&self.project_root);
 
         let output = run_command(&mut cmd)?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(anyhow::anyhow!(
-                "C/C++ checking failed:\n{}{}",
-                stdout,
-                stderr
-            ));
-        }
-
+        check_command_output(&output, "C/C++ checking")?;
         write_stub(stub_path, "checked")
     }
 }

@@ -147,9 +147,50 @@ overridden in the `WalkBuilder` configuration.
   files from other processors (though extension filtering would exclude most of
   these).
 
-### F. Hybrid: Visible `out/` + Fixed-Point Discovery
+### F. Two-Phase Processor Trait (Declarative Forward Tracing)
 
-Combine Approach E (make `out/` visible) with Approach C (fixed-point loop).
+Split the `ProductDiscovery` trait so that each processor can declare what
+output paths it would produce for a given input path, without performing full
+discovery:
+
+```rust
+trait ProductDiscovery {
+    /// Given an input path, return the output paths this processor would
+    /// produce. Called even for files that don't exist on disk yet.
+    fn would_produce(&self, input_path: &Path) -> Vec<PathBuf>;
+
+    /// Full discovery (as today)
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()>;
+    // ...
+}
+```
+
+The build system first runs `discover()` on all processors to get the initial
+set of products and their outputs. Then, for each declared output, it calls
+`would_produce()` on every other processor to trace the chain forward. This
+repeats transitively until no new outputs are produced. Finally, `discover()`
+runs once more with the complete set of known paths (real + virtual).
+
+Unlike Approach C, this does not require a loop over full discovery passes.
+The chain is traced declaratively by asking each processor "if this file
+existed, what would you produce from it?" — a lightweight query that does not
+modify the graph.
+
+- **Pro:** Single discovery pass plus lightweight forward tracing. No loop, no
+  convergence check, no iteration limit. Each processor defines its output
+  naming convention in one place. The full transitive closure of outputs is
+  known before the main discovery runs.
+- **Con:** Adds a method to the `ProductDiscovery` trait that every processor
+  must implement. Some processors have complex output path logic (e.g.,
+  `cc_single_file` changes the extension and directory), so `would_produce()`
+  must replicate that logic — meaning the output path computation exists in
+  two places (in `would_produce()` and in `discover()`). Keeping these in sync
+  is a maintenance risk.
+
+### G. Hybrid: Visible `out/` + Fixed-Point Discovery
+
+Combine Approach E (make `out/` visible) with Approach C (fixed-point loop) or
+Approach F (forward tracing).
 On subsequent builds, existing files in `out/` are already in the index. On
 clean builds, the fixed-point loop discovers them from declared outputs.
 

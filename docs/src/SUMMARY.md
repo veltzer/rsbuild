@@ -17,6 +17,7 @@
 - [Advanced Usage](advanced.md)
 - [Testing](testing.md)
 - [Design Notes](design.md)
+- [Cross-Processor Dependencies](cross-processor-dependencies.md)
 - [Architecture](architecture.md)
 - [Processor Contract](processor-contract.md)
 - [Coding Standards](coding-standards.md)

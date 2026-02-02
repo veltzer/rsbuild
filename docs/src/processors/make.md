@@ -35,4 +35,5 @@ extra_inputs = []    # Additional files that trigger rebuilds when changed
 | `target` | string | `""` | Make target to build (empty = default target) |
 | `scan_dir` | string | `""` | Directory to scan for Makefiles |
 | `extensions` | string[] | `["Makefile"]` | File names to match |
+| `exclude_paths` | string[] | `[]` | Paths (relative to project root) to exclude |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |

@@ -35,12 +35,16 @@ impl FileIndex {
     /// - `extensions`: file extensions to match (e.g., `[".py", ".pyi"]`)
     /// - `exclude_dirs`: directory path segments to skip (e.g., `["/.git/", "/out/"]`)
     /// - `exclude_files`: file names to skip (e.g., `["setup.py"]`)
+    /// - `exclude_paths`: paths relative to project root to skip (e.g., `["Makefile"]`)
+    /// - `project_root`: the project root, used to compute relative paths for `exclude_paths`
     pub fn query(
         &self,
         root: &Path,
         extensions: &[&str],
         exclude_dirs: &[&str],
         exclude_files: &[&str],
+        exclude_paths: &[&str],
+        project_root: &Path,
     ) -> Vec<PathBuf> {
         self.files
             .iter()
@@ -69,6 +73,16 @@ impl FileIndex {
                     return false;
                 }
 
+                // Check exclude paths (relative to project root)
+                if !exclude_paths.is_empty() {
+                    if let Ok(rel) = path.strip_prefix(project_root) {
+                        let rel_str = rel.to_string_lossy();
+                        if exclude_paths.iter().any(|p| *p == rel_str) {
+                            return false;
+                        }
+                    }
+                }
+
                 true
             })
             .cloned()
@@ -95,7 +109,8 @@ impl FileIndex {
         let ext_refs: Vec<&str> = scan.extensions().iter().map(|s| s.as_str()).collect();
         let exclude_dir_refs: Vec<&str> = scan.exclude_dirs().iter().map(|s| s.as_str()).collect();
         let exclude_file_refs: Vec<&str> = scan.exclude_files().iter().map(|s| s.as_str()).collect();
-        let mut results = self.query(&root, &ext_refs, &exclude_dir_refs, &exclude_file_refs);
+        let exclude_path_refs: Vec<&str> = scan.exclude_paths().iter().map(|s| s.as_str()).collect();
+        let mut results = self.query(&root, &ext_refs, &exclude_dir_refs, &exclude_file_refs, &exclude_path_refs, project_root);
 
         if !recursive {
             // Filter to max_depth=1 from scan root: only files directly in root

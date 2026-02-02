@@ -50,6 +50,10 @@ pub struct ScanConfig {
     /// File names to exclude from scanning
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exclude_files: Option<Vec<String>>,
+
+    /// Paths (relative to project root) to exclude from scanning
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exclude_paths: Option<Vec<String>>,
 }
 
 impl ScanConfig {
@@ -66,6 +70,9 @@ impl ScanConfig {
         }
         if self.exclude_files.is_none() {
             self.exclude_files = Some(Vec::new());
+        }
+        if self.exclude_paths.is_none() {
+            self.exclude_paths = Some(Vec::new());
         }
     }
 
@@ -87,6 +94,11 @@ impl ScanConfig {
     /// Get the resolved exclude files. Panics if called before resolve().
     pub fn exclude_files(&self) -> &[String] {
         self.exclude_files.as_deref().expect("ScanConfig not resolved")
+    }
+
+    /// Get the resolved exclude paths. Panics if called before resolve().
+    pub fn exclude_paths(&self) -> &[String] {
+        self.exclude_paths.as_deref().expect("ScanConfig not resolved")
     }
 }
 
@@ -259,6 +271,7 @@ impl Default for TemplateConfig {
                 extensions: Some(vec![".tera".into()]),
                 exclude_dirs: None,
                 exclude_files: None,
+                exclude_paths: None,
             },
         }
     }
@@ -291,6 +304,7 @@ impl Default for RuffConfig {
                 extensions: Some(vec![".py".into()]),
                 exclude_dirs: None,
                 exclude_files: None,
+                exclude_paths: None,
             },
         }
     }
@@ -316,6 +330,7 @@ impl Default for PylintConfig {
                 extensions: Some(vec![".py".into()]),
                 exclude_dirs: None,
                 exclude_files: None,
+                exclude_paths: None,
             },
         }
     }
@@ -355,6 +370,7 @@ impl Default for CpplintConfig {
                 extensions: Some(vec![".c".into(), ".cc".into()]),
                 exclude_dirs: None,
                 exclude_files: None,
+                exclude_paths: None,
             },
         }
     }
@@ -410,6 +426,7 @@ impl Default for CcConfig {
                 extensions: Some(vec![".c".into(), ".cc".into()]),
                 exclude_dirs: None,
                 exclude_files: None,
+                exclude_paths: None,
             },
         }
     }
@@ -449,6 +466,7 @@ impl Default for SpellcheckConfig {
                 extensions: Some(vec![".md".into()]),
                 exclude_dirs: None,
                 exclude_files: None,
+                exclude_paths: None,
             },
         }
     }
@@ -471,6 +489,7 @@ impl Default for SleepConfig {
                 extensions: Some(vec![".sleep".into()]),
                 exclude_dirs: None,
                 exclude_files: None,
+                exclude_paths: None,
             },
         }
     }
@@ -506,6 +525,7 @@ impl Default for MakeConfig {
                 extensions: Some(vec!["Makefile".into()]),
                 exclude_dirs: None,
                 exclude_files: None,
+                exclude_paths: None,
             },
         }
     }
@@ -538,6 +558,7 @@ impl Default for ShellcheckConfig {
                 extensions: Some(vec![".sh".into(), ".bash".into()]),
                 exclude_dirs: None,
                 exclude_files: None,
+                exclude_paths: None,
             },
         }
     }

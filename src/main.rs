@@ -259,6 +259,7 @@ fn init_project() -> Result<()> {
 # target = ""
 # scan_dir = ""
 # extensions = ["Makefile"]
+# exclude_paths = []
 
 [graph]
 # viewer = "google-chrome"

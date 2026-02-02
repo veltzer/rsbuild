@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -58,7 +59,7 @@ pub struct ScanConfig {
 
 impl ScanConfig {
     /// Fill in None fields with the given defaults (mutates in place).
-    fn resolve(&mut self, scan_dir: &str, extensions: &[&str], exclude_dirs: &[&str]) {
+    pub fn resolve(&mut self, scan_dir: &str, extensions: &[&str], exclude_dirs: &[&str]) {
         if self.scan_dir.is_none() {
             self.scan_dir = Some(scan_dir.to_string());
         }
@@ -117,6 +118,22 @@ const MAKE_EXCLUDE_DIRS: &[&str] = &["/.git/", "/out/", "/.rsb/", "/build/", "/d
 
 const SHELL_EXCLUDE_DIRS: &[&str] = &["/.git/", "/out/", "/.rsb/", "/node_modules/", "/build/", "/dist/", "/target/"];
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PluginsConfig {
+    #[serde(default = "default_plugins_dir")]
+    pub dir: String,
+}
+
+fn default_plugins_dir() -> String {
+    "plugins".into()
+}
+
+impl Default for PluginsConfig {
+    fn default() -> Self {
+        Self { dir: "plugins".into() }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -130,6 +147,8 @@ pub struct Config {
     pub completions: CompletionsConfig,
     #[serde(default)]
     pub graph: GraphConfig,
+    #[serde(default)]
+    pub plugins: PluginsConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -205,6 +224,9 @@ pub struct ProcessorConfig {
     pub sleep: SleepConfig,
     #[serde(default)]
     pub make: MakeConfig,
+    /// Captures unknown [processor.PLUGIN_NAME] sections for Lua plugins
+    #[serde(flatten)]
+    pub extra: HashMap<String, toml::Value>,
 }
 
 impl Default for ProcessorConfig {
@@ -221,6 +243,7 @@ impl Default for ProcessorConfig {
             spellcheck: SpellcheckConfig::default(),
             sleep: SleepConfig::default(),
             make: MakeConfig::default(),
+            extra: HashMap::new(),
         }
     }
 }
@@ -612,4 +635,50 @@ impl Config {
         config.processor.resolve_scan_defaults();
         Ok(config)
     }
+}
+
+/// Extract a `ScanConfig` from a dynamic TOML table (used by Lua plugins).
+/// Falls back to the given defaults for any missing fields.
+pub fn scan_config_from_toml(
+    value: &toml::Value,
+    default_scan_dir: &str,
+    default_extensions: &[&str],
+    default_exclude_dirs: &[&str],
+) -> ScanConfig {
+    let table = value.as_table();
+
+    let scan_dir = table
+        .and_then(|t| t.get("scan_dir"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let extensions = table
+        .and_then(|t| t.get("extensions"))
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
+
+    let exclude_dirs = table
+        .and_then(|t| t.get("exclude_dirs"))
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
+
+    let exclude_files = table
+        .and_then(|t| t.get("exclude_files"))
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
+
+    let exclude_paths = table
+        .and_then(|t| t.get("exclude_paths"))
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
+
+    let mut scan = ScanConfig {
+        scan_dir,
+        extensions,
+        exclude_dirs,
+        exclude_files,
+        exclude_paths,
+    };
+    scan.resolve(default_scan_dir, default_extensions, default_exclude_dirs);
+    scan
 }

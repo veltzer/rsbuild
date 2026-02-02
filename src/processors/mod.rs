@@ -1,5 +1,6 @@
 mod cc;
 mod cpplint;
+pub mod lua_processor;
 mod make;
 mod pylint;
 mod ruff;
@@ -283,6 +284,7 @@ where
 
 pub use cc::CcProcessor;
 pub use cpplint::CpplintProcessor;
+pub use lua_processor::LuaProcessor;
 pub use make::MakeProcessor;
 pub use pylint::PylintProcessor;
 pub use ruff::RuffProcessor;

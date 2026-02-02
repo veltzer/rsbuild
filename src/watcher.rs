@@ -19,6 +19,7 @@ fn collect_watch_paths(project_root: &Path) -> Vec<PathBuf> {
         "src",
         "tests",
         "pyproject.toml",
+        "plugins",
     ];
     candidates
         .iter()

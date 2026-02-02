@@ -11,7 +11,7 @@ use crate::executor::Executor;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::ObjectStore;
-use crate::processors::{CcProcessor, CpplintProcessor, MakeProcessor, PylintProcessor, RuffProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TemplateProcessor, log_command};
+use crate::processors::{CcProcessor, CpplintProcessor, LuaProcessor, MakeProcessor, PylintProcessor, RuffProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TemplateProcessor, log_command};
 use crate::tool_lock;
 
 /// Labels for the three product states used by dry_run and status.
@@ -290,6 +290,19 @@ impl Builder {
         // Make processor
         let make_proc = MakeProcessor::new(self.project_root.clone(), self.config.processor.make.clone());
         processors.insert("make".to_string(), Box::new(make_proc));
+
+        // Lua plugin processors
+        let lua_plugins = LuaProcessor::discover_plugins(
+            &self.project_root,
+            &self.config.plugins.dir,
+            &self.config.processor.extra,
+        )?;
+        for (name, proc) in lua_plugins {
+            if processors.contains_key(&name) {
+                anyhow::bail!("Lua plugin '{}' conflicts with built-in processor", name);
+            }
+            processors.insert(name, Box::new(proc));
+        }
 
         Ok(processors)
     }

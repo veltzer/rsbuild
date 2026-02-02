@@ -266,6 +266,9 @@ fn init_project() -> Result<()> {
 
 [completions]
 # shells = ["bash"]
+
+# [plugins]
+# dir = "plugins"  # directory containing .lua processor plugins
 "#;
     fs::write(&config_path, config_content)?;
     println!("Created {}", config_path.display());

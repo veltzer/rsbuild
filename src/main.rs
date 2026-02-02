@@ -15,13 +15,17 @@ use clap::Parser;
 use cli::{CacheAction, CleanAction, Cli, Commands, parse_shell, print_completions};
 use config::Config;
 use builder::Builder;
-use object_store::ObjectStore;
 use std::env;
 use std::fs;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 fn main() -> Result<()> {
+    // Reset SIGPIPE to default so piping to head/more/less exits cleanly
+    unsafe {
+        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
+    }
+
     let cli = Cli::parse();
 
     // Enable process debug logging if --process flag is set
@@ -43,7 +47,7 @@ fn main() -> Result<()> {
                 let builder = Builder::new()?;
                 builder.dry_run(force)?;
             } else {
-                let mut builder = Builder::new()?;
+                let builder = Builder::new()?;
                 if !ignore_tool_versions {
                     builder.verify_tool_versions()?;
                 }
@@ -53,7 +57,7 @@ fn main() -> Result<()> {
         Commands::Clean { action } => {
             match action.unwrap_or(CleanAction::Outputs) {
                 CleanAction::Outputs => {
-                    let mut builder = Builder::new()?;
+                    let builder = Builder::new()?;
                     builder.clean()?;
                 }
                 CleanAction::All => {
@@ -74,28 +78,63 @@ fn main() -> Result<()> {
             init_project()?;
         }
         Commands::Cache { action } => {
-            let project_root = env::current_dir()?;
-            Config::require_config(&project_root)?;
-            let config = Config::load(&project_root)?;
-            let mut store = ObjectStore::new(project_root, config.cache.restore_method)?;
-
             match action {
                 CacheAction::Clear => {
-                    store.clear()?;
+                    let mut builder = Builder::new()?;
+                    builder.object_store_mut().clear()?;
                     println!("Cache cleared.");
                 }
                 CacheAction::Size => {
-                    let (bytes, count) = store.size()?;
+                    let builder = Builder::new()?;
+                    let (bytes, count) = builder.object_store().size()?;
                     println!("Cache size: {} ({} objects)", humansize::format_size(bytes, humansize::BINARY), count);
                 }
                 CacheAction::Trim => {
-                    let (bytes, count) = store.trim()?;
-                    store.save()?;
+                    let builder = Builder::new()?;
+                    let (bytes, count) = builder.object_store().trim()?;
+                    builder.object_store().save()?;
                     println!("Removed {} bytes ({} unreferenced objects)", bytes, count);
                 }
+                CacheAction::RemoveStale => {
+                    let builder = Builder::new()?;
+                    let graph = builder.build_graph_for_cache()?;
+                    let valid_keys: std::collections::HashSet<String> = graph.products().iter()
+                        .map(|p| p.cache_key())
+                        .collect();
+                    let stale_count = builder.object_store().remove_stale(&valid_keys);
+                    let (bytes, trim_count) = builder.object_store().trim()?;
+                    builder.object_store().save()?;
+                    println!("Removed {} stale index entries", stale_count);
+                    if trim_count > 0 {
+                        println!("Removed {} bytes ({} orphaned objects)", bytes, trim_count);
+                    }
+                }
                 CacheAction::List => {
-                    let entries = store.list();
+                    let builder = Builder::new()?;
+                    let entries = builder.object_store().list();
                     println!("{}", serde_json::to_string_pretty(&entries)?);
+                }
+                CacheAction::Stale => {
+                    let builder = Builder::new()?;
+                    let graph = builder.build_graph_for_cache()?;
+                    let valid_keys: std::collections::HashSet<String> = graph.products().iter()
+                        .map(|p| p.cache_key())
+                        .collect();
+                    let entries = builder.object_store().list();
+                    let mut current_count = 0usize;
+                    let mut stale_count = 0usize;
+                    for entry in &entries {
+                        if valid_keys.contains(&entry.cache_key) {
+                            println!("{} {}", color::green("current"), entry.cache_key);
+                            current_count += 1;
+                        } else {
+                            println!("{} {}", color::yellow("stale"), entry.cache_key);
+                            stale_count += 1;
+                        }
+                    }
+                    println!();
+                    println!("{}: {} current, {} stale",
+                        color::bold("Summary"), current_count, stale_count);
                 }
             }
         }

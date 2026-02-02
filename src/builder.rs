@@ -45,7 +45,7 @@ impl Builder {
     }
 
     /// Execute an incremental build using the dependency graph
-    pub fn build(&mut self, force: bool, verbose: u8, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool) -> Result<()> {
+    pub fn build(&self, force: bool, verbose: u8, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool) -> Result<()> {
         // Create processors
         let processors = self.create_processors(verbose)?;
 
@@ -57,7 +57,7 @@ impl Builder {
         let executor = Executor::new(&processors, parallel, verbose, Arc::clone(&interrupted));
 
         // Execute the build
-        let result = executor.execute(&graph, &mut self.object_store, force, timings, keep_going);
+        let result = executor.execute(&graph, &self.object_store, force, timings, keep_going);
 
         // Always save object store index, even after errors or interrupt
         self.object_store.save()?;
@@ -167,7 +167,7 @@ impl Builder {
     }
 
     /// Clean all build artifacts using the dependency graph
-    pub fn clean(&mut self) -> Result<()> {
+    pub fn clean(&self) -> Result<()> {
         println!("{}", color::bold("Cleaning build artifacts..."));
 
         // Create processors and build graph
@@ -388,6 +388,17 @@ impl Builder {
             }
         }
 
+        // Incorporate locked tool versions into product cache keys
+        let config = &self.config;
+        let tool_hashes = tool_lock::processor_tool_hashes(
+            &self.project_root,
+            processors,
+            &|name| config.processor.is_enabled(name),
+        )?;
+        if !tool_hashes.is_empty() {
+            graph.apply_tool_version_hashes(&tool_hashes);
+        }
+
         graph.resolve_dependencies();
         Ok(graph)
     }
@@ -431,6 +442,21 @@ impl Builder {
     fn build_graph(&self) -> Result<BuildGraph> {
         let processors = self.create_processors(0)?;
         self.build_graph_with_processors(&processors)
+    }
+
+    /// Build the dependency graph for cache operations (public).
+    pub fn build_graph_for_cache(&self) -> Result<BuildGraph> {
+        self.build_graph()
+    }
+
+    /// Get a reference to the object store.
+    pub fn object_store(&self) -> &ObjectStore {
+        &self.object_store
+    }
+
+    /// Get a mutable reference to the object store.
+    pub fn object_store_mut(&mut self) -> &mut ObjectStore {
+        &mut self.object_store
     }
 
     /// Handle `rsb processor` subcommands

@@ -163,8 +163,12 @@ pub enum CacheAction {
     Size,
     /// Remove unreferenced objects from cache
     Trim,
+    /// Remove stale index entries not matching any current product
+    RemoveStale,
     /// List all cache entries and their status
     List,
+    /// Show which cache entries are stale vs current
+    Stale,
 }
 
 #[derive(Subcommand)]

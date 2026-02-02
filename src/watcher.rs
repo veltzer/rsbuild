@@ -70,7 +70,7 @@ pub fn watch(verbose: u8, jobs: Option<usize>, timings: bool, keep_going: bool, 
     // Initial build
     println!("{}", color::bold("Running initial build..."));
     {
-        let mut builder = Builder::new()?;
+        let builder = Builder::new()?;
         if let Err(e) = builder.build(false, verbose, jobs, timings, keep_going, Arc::clone(&interrupted), summary) {
             println!("{}", color::red(&format!("Initial build error: {}", e)));
         }
@@ -137,7 +137,7 @@ pub fn watch(verbose: u8, jobs: Option<usize>, timings: bool, keep_going: bool, 
         println!();
         println!("{}", color::bold("Change detected, rebuilding..."));
         {
-            let mut builder = Builder::new()?;
+            let builder = Builder::new()?;
             if let Err(e) = builder.build(false, verbose, jobs, timings, keep_going, Arc::clone(&interrupted), summary) {
                 println!("{}", color::red(&format!("Build error: {}", e)));
             }

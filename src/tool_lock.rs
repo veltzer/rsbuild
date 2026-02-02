@@ -134,6 +134,54 @@ pub fn read_lock_file(project_root: &Path) -> Result<Option<ToolLockFile>> {
     Ok(Some(lock))
 }
 
+/// Compute a tool version hash per processor from the lock file.
+/// Returns a map from processor name to a hash of its tools' locked version strings.
+/// If there is no lock file, returns an empty map.
+pub fn processor_tool_hashes(
+    project_root: &Path,
+    processors: &std::collections::HashMap<String, Box<dyn ProductDiscovery>>,
+    enabled: &dyn Fn(&str) -> bool,
+) -> Result<std::collections::HashMap<String, String>> {
+    use sha2::{Digest, Sha256};
+
+    let lock = match read_lock_file(project_root)? {
+        Some(lock) => lock,
+        None => return Ok(std::collections::HashMap::new()),
+    };
+
+    let mut result = std::collections::HashMap::new();
+
+    let mut names: Vec<&String> = processors.keys().collect();
+    names.sort();
+
+    for name in names {
+        if !enabled(name) {
+            continue;
+        }
+        let tools = processors[name].required_tools();
+        if tools.is_empty() {
+            continue;
+        }
+
+        // Collect locked version strings for this processor's tools, sorted
+        let mut version_parts: Vec<String> = Vec::new();
+        for tool in &tools {
+            if let Some(locked) = lock.tools.get(tool) {
+                version_parts.push(format!("{}={}", tool, locked.version_output));
+            }
+        }
+
+        if !version_parts.is_empty() {
+            version_parts.sort();
+            let combined = version_parts.join("\n");
+            let hash = Sha256::digest(combined.as_bytes());
+            result.insert(name.clone(), hex::encode(hash));
+        }
+    }
+
+    Ok(result)
+}
+
 /// Verify that the current tool versions match the lock file.
 /// Returns Ok(()) if everything matches, or an error describing mismatches.
 pub fn verify_lock_file(
@@ -143,10 +191,13 @@ pub fn verify_lock_file(
     let lock = match read_lock_file(project_root)? {
         Some(lock) => lock,
         None => {
-            eprintln!(
-                "{} No .tools.versions file found. Run 'rsb tools lock' to create one.",
-                color::yellow("warning:")
-            );
+            let lock = create_lock(tool_commands)?;
+            write_lock_file(project_root, &lock)?;
+            for (name, info) in &lock.tools {
+                let first_line = info.version_output.lines().next().unwrap_or("");
+                eprintln!("{} {} {}", name, color::green("locked"), color::dim(first_line));
+            }
+            eprintln!("Created {}", color::bold(".tools.versions"));
             return Ok(());
         }
     };

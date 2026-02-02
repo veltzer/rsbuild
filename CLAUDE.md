@@ -34,7 +34,9 @@ A fast, incremental build tool written in Rust with template support, Python lin
 - `rsb cache clear` - Clear the entire cache
 - `rsb cache size` - Show cache size
 - `rsb cache trim` - Remove unreferenced objects from cache
+- `rsb cache remove-stale` - Remove stale index entries not matching any current product
 - `rsb cache list` - List all cache entries and their status
+- `rsb cache stale` - Show which cache entries are stale vs current
 - `rsb config show` - Show the active configuration (merged defaults + rsb.toml)
 - `rsb config show-default` - Show the default configuration
 - `rsb processor list` - List available processors and their status
@@ -90,7 +92,7 @@ project/
 │   └── make/             # Make stub files
 ├── docs/
 │   └── processors/       # Per-processor documentation
-└── .rsb/                 # Cache (index.json, objects/, deps/)
+└── .rsb/                 # Cache (db/, objects/)
 ```
 
 ## Architecture

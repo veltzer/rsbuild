@@ -39,7 +39,7 @@ impl<'a> Executor<'a> {
     pub fn execute(
         &self,
         graph: &BuildGraph,
-        object_store: &mut ObjectStore,
+        object_store: &ObjectStore,
         force: bool,
         timings: bool,
         keep_going: bool,
@@ -68,7 +68,7 @@ impl<'a> Executor<'a> {
         &self,
         graph: &BuildGraph,
         order: &[usize],
-        object_store: &mut ObjectStore,
+        object_store: &ObjectStore,
         force: bool,
         timings: bool,
         keep_going: bool,
@@ -94,7 +94,7 @@ impl<'a> Executor<'a> {
             pending_processor: &mut Option<String>,
             graph: &BuildGraph,
             processors: &HashMap<String, Box<dyn ProductDiscovery>>,
-            object_store: &mut ObjectStore,
+            object_store: &ObjectStore,
             stats_by_processor: &mut HashMap<String, ProcessStats>,
             failed_products: &mut HashSet<usize>,
             failed_messages: &mut Vec<String>,
@@ -359,7 +359,7 @@ impl<'a> Executor<'a> {
         &self,
         graph: &BuildGraph,
         order: &[usize],
-        object_store: &mut ObjectStore,
+        object_store: &ObjectStore,
         force: bool,
         timings: bool,
         keep_going: bool,
@@ -369,7 +369,6 @@ impl<'a> Executor<'a> {
 
         let stats_by_processor: Arc<Mutex<HashMap<String, ProcessStats>>> =
             Arc::new(Mutex::new(HashMap::new()));
-        let store = Arc::new(Mutex::new(std::mem::take(object_store)));
         let errors: Arc<Mutex<Vec<anyhow::Error>>> = Arc::new(Mutex::new(Vec::new()));
         let failed_products: Arc<Mutex<HashSet<usize>>> = Arc::new(Mutex::new(HashSet::new()));
         let failed_messages: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
@@ -410,7 +409,6 @@ impl<'a> Executor<'a> {
 
             // Second pass: determine work items for non-skipped products
             {
-                let store_guard = store.lock();
                 let fp_guard = failed_processors.lock();
                 for &id in &level {
                     if skipped_ids.contains(&id) {
@@ -442,7 +440,7 @@ impl<'a> Executor<'a> {
                         }
                     };
 
-                    let needs = force || store_guard.needs_rebuild(&cache_key, &input_checksum, &product.outputs);
+                    let needs = force || object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs);
                     work_items.push((id, input_checksum, needs));
                 }
             }
@@ -476,7 +474,6 @@ impl<'a> Executor<'a> {
             // Process this level in parallel using thread pool
             thread::scope(|s| {
                 let stats_ref = &stats_by_processor;
-                let store_ref = &store;
                 let errors_ref = &errors;
                 let failed_ref = &failed_products;
                 let failed_msgs_ref = &failed_messages;
@@ -486,7 +483,6 @@ impl<'a> Executor<'a> {
                 // Spawn one thread per batch group
                 for (proc_name, items) in &batch_groups {
                     let stats_ref = Arc::clone(stats_ref);
-                    let store_ref = Arc::clone(store_ref);
                     let errors_ref = Arc::clone(errors_ref);
                     let failed_ref = Arc::clone(failed_ref);
                     let failed_msgs_ref = Arc::clone(failed_msgs_ref);
@@ -525,10 +521,7 @@ impl<'a> Executor<'a> {
 
                             // Try to restore from cache
                             if !force {
-                                let restore_result = {
-                                    let store_guard = store_ref.lock();
-                                    store_guard.restore_from_cache(&cache_key, input_checksum, &product.outputs)
-                                };
+                                let restore_result = object_store.restore_from_cache(&cache_key, input_checksum, &product.outputs);
                                 match restore_result {
                                     Ok(true) => {
                                         if self.verbose >= 1 {
@@ -593,20 +586,17 @@ impl<'a> Executor<'a> {
 
                             match result {
                                 Ok(()) => {
-                                    {
-                                        let mut store_guard = store_ref.lock();
-                                        if let Err(e) = store_guard.cache_outputs(&cache_key, input_checksum, &product.outputs) {
-                                            if keep_going {
-                                                let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
-                                                println!("{}", color::red(&format!("Error: {}", msg)));
-                                                failed_ref.lock().insert(*id);
-                                                failed_msgs_ref.lock().push(msg);
-                                            } else {
-                                                failed_ref.lock().insert(*id);
-                                                errors_ref.lock().push(e);
-                                            }
-                                            continue;
+                                    if let Err(e) = object_store.cache_outputs(&cache_key, input_checksum, &product.outputs) {
+                                        if keep_going {
+                                            let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
+                                            println!("{}", color::red(&format!("Error: {}", msg)));
+                                            failed_ref.lock().insert(*id);
+                                            failed_msgs_ref.lock().push(msg);
+                                        } else {
+                                            failed_ref.lock().insert(*id);
+                                            errors_ref.lock().push(e);
                                         }
+                                        continue;
                                     }
                                     let mut stats = stats_ref.lock();
                                     let proc_stats = stats
@@ -660,7 +650,6 @@ impl<'a> Executor<'a> {
 
                     for chunk in chunks {
                         let stats_ref = Arc::clone(stats_ref);
-                        let store_ref = Arc::clone(store_ref);
                         let errors_ref = Arc::clone(errors_ref);
                         let failed_ref = Arc::clone(failed_ref);
                         let failed_msgs_ref = Arc::clone(failed_msgs_ref);
@@ -691,10 +680,7 @@ impl<'a> Executor<'a> {
 
                                 // Try to restore from cache
                                 if !force {
-                                    let restore_result = {
-                                        let store_guard = store_ref.lock();
-                                        store_guard.restore_from_cache(&cache_key, input_checksum, &product.outputs)
-                                    };
+                                    let restore_result = object_store.restore_from_cache(&cache_key, input_checksum, &product.outputs);
                                     match restore_result {
                                         Ok(true) => {
                                             if self.verbose >= 1 {
@@ -736,20 +722,17 @@ impl<'a> Executor<'a> {
                                         Ok(()) => {
                                             let duration = product_start.elapsed();
 
-                                            {
-                                                let mut store_guard = store_ref.lock();
-                                                if let Err(e) = store_guard.cache_outputs(&cache_key, input_checksum, &product.outputs) {
-                                                    if keep_going {
-                                                        let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
-                                                        println!("{}", color::red(&format!("Error: {}", msg)));
-                                                        failed_ref.lock().insert(*id);
-                                                        failed_msgs_ref.lock().push(msg);
-                                                    } else {
-                                                        failed_ref.lock().insert(*id);
-                                                        errors_ref.lock().push(e);
-                                                    }
-                                                    continue;
+                                            if let Err(e) = object_store.cache_outputs(&cache_key, input_checksum, &product.outputs) {
+                                                if keep_going {
+                                                    let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
+                                                    println!("{}", color::red(&format!("Error: {}", msg)));
+                                                    failed_ref.lock().insert(*id);
+                                                    failed_msgs_ref.lock().push(msg);
+                                                } else {
+                                                    failed_ref.lock().insert(*id);
+                                                    errors_ref.lock().push(e);
                                                 }
+                                                continue;
                                             }
 
                                             let mut stats = stats_ref.lock();
@@ -801,11 +784,6 @@ impl<'a> Executor<'a> {
                 break;
             }
         }
-
-        // Restore the store
-        *object_store = Arc::try_unwrap(store)
-            .map_err(|_| anyhow::anyhow!("internal error: outstanding Arc reference to object store"))?
-            .into_inner();
 
         // Build aggregated stats
         let final_stats = Arc::try_unwrap(stats_by_processor)

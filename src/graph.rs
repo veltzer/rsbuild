@@ -140,6 +140,20 @@ impl BuildGraph {
         Ok(id)
     }
 
+    /// Incorporate tool version hashes into product config hashes.
+    /// For each product whose processor has an entry in the map, the tool
+    /// version hash is appended to (or becomes) the product's config_hash.
+    pub fn apply_tool_version_hashes(&mut self, processor_tool_hashes: &HashMap<String, String>) {
+        for product in &mut self.products {
+            if let Some(tool_hash) = processor_tool_hashes.get(&product.processor) {
+                product.config_hash = Some(match &product.config_hash {
+                    Some(existing) => format!("{}:{}", existing, tool_hash),
+                    None => tool_hash.clone(),
+                });
+            }
+        }
+    }
+
     /// Resolve dependencies between products
     pub fn resolve_dependencies(&mut self) {
         // Collect edges first to avoid borrow conflict with self.products

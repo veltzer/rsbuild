@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use sha2::{Sha256, Digest};
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
@@ -25,10 +24,11 @@ fn walk_files(dir: &Path) -> Vec<PathBuf> {
 
 const RSB_DIR: &str = ".rsb";
 const OBJECTS_DIR: &str = "objects";
-const INDEX_FILE: &str = "index.json";
+const DB_DIR: &str = "db";
 
 /// Object store for caching build outputs
 /// Uses git-like object storage: .rsb/objects/[2 chars]/[rest of hash]
+/// Index is stored in a sled embedded key/value database at .rsb/db/
 #[derive(Debug)]
 pub struct ObjectStore {
     /// Root directory of the project
@@ -37,32 +37,10 @@ pub struct ObjectStore {
     rsb_dir: PathBuf,
     /// Path to objects directory
     objects_dir: PathBuf,
-    /// Index mapping cache keys to stored checksums
-    index: CacheIndex,
+    /// sled database for cache index
+    db: sled::Db,
     /// Method to restore files from cache
     restore_method: RestoreMethod,
-}
-
-impl Default for ObjectStore {
-    fn default() -> Self {
-        let project_root = PathBuf::from(".");
-        let rsb_dir = project_root.join(RSB_DIR);
-        let objects_dir = rsb_dir.join(OBJECTS_DIR);
-        Self {
-            project_root,
-            rsb_dir,
-            objects_dir,
-            index: CacheIndex::default(),
-            restore_method: RestoreMethod::default(),
-        }
-    }
-}
-
-/// Index file that maps product cache keys to their stored output checksums
-#[derive(Debug, Serialize, Deserialize, Default)]
-struct CacheIndex {
-    /// Map from cache key (e.g., "template:/path/to/input") to output info
-    entries: HashMap<String, CacheEntry>,
 }
 
 /// Information about a cached product
@@ -103,25 +81,39 @@ impl ObjectStore {
     pub fn new(project_root: PathBuf, restore_method: RestoreMethod) -> Result<Self> {
         let rsb_dir = project_root.join(RSB_DIR);
         let objects_dir = rsb_dir.join(OBJECTS_DIR);
+        let db_path = rsb_dir.join(DB_DIR);
 
-        // Load existing index or create new one
-        let index_path = rsb_dir.join(INDEX_FILE);
-        let index = if index_path.exists() {
-            let content = fs::read_to_string(&index_path)
-                .context("Failed to read cache index")?;
-            serde_json::from_str(&content)
-                .context("Failed to parse cache index")?
-        } else {
-            CacheIndex::default()
-        };
+        // Ensure .rsb directory exists
+        fs::create_dir_all(&rsb_dir)
+            .context("Failed to create .rsb directory")?;
+
+        // Open sled database
+        let db = sled::open(&db_path)
+            .context("Failed to open cache database")?;
 
         Ok(Self {
             project_root,
             rsb_dir,
             objects_dir,
-            index,
+            db,
             restore_method,
         })
+    }
+
+    /// Get a cache entry from the database
+    fn get_entry(&self, cache_key: &str) -> Option<CacheEntry> {
+        self.db.get(cache_key.as_bytes()).ok().flatten().and_then(|bytes| {
+            serde_json::from_slice(&bytes).ok()
+        })
+    }
+
+    /// Insert a cache entry into the database
+    fn insert_entry(&self, cache_key: &str, entry: &CacheEntry) -> Result<()> {
+        let value = serde_json::to_vec(entry)
+            .context("Failed to serialize cache entry")?;
+        self.db.insert(cache_key.as_bytes(), value)
+            .context("Failed to insert cache entry")?;
+        Ok(())
     }
 
     /// Calculate SHA-256 checksum of a file
@@ -193,7 +185,7 @@ impl ObjectStore {
     /// Returns true if inputs changed or outputs are missing
     pub fn needs_rebuild(&self, cache_key: &str, input_checksum: &str, output_paths: &[PathBuf]) -> bool {
         // Check if we have a cache entry
-        let entry = match self.index.entries.get(cache_key) {
+        let entry = match self.get_entry(cache_key) {
             Some(e) => e,
             None => return true,
         };
@@ -227,7 +219,7 @@ impl ObjectStore {
     /// Check if outputs can be restored from cache (read-only, does not restore)
     /// Returns true if all missing outputs are available in cache
     pub fn can_restore(&self, cache_key: &str, input_checksum: &str, output_paths: &[PathBuf]) -> bool {
-        let entry = match self.index.entries.get(cache_key) {
+        let entry = match self.get_entry(cache_key) {
             Some(e) if e.input_checksum == input_checksum => e,
             _ => return false,
         };
@@ -254,7 +246,7 @@ impl ObjectStore {
     /// Returns true if all outputs were restored
     pub fn restore_from_cache(&self, cache_key: &str, input_checksum: &str, output_paths: &[PathBuf]) -> Result<bool> {
         // Check if we have a cache entry with matching input checksum
-        let entry = match self.index.entries.get(cache_key) {
+        let entry = match self.get_entry(cache_key) {
             Some(e) if e.input_checksum == input_checksum => e,
             _ => return Ok(false),
         };
@@ -285,7 +277,7 @@ impl ObjectStore {
     }
 
     /// Cache the outputs of a successful build
-    pub fn cache_outputs(&mut self, cache_key: &str, input_checksum: &str, output_paths: &[PathBuf]) -> Result<()> {
+    pub fn cache_outputs(&self, cache_key: &str, input_checksum: &str, output_paths: &[PathBuf]) -> Result<()> {
         let mut outputs = Vec::new();
 
         for output_path in output_paths {
@@ -303,20 +295,20 @@ impl ObjectStore {
             });
         }
 
-        self.index.entries.insert(cache_key.to_string(), CacheEntry {
+        let entry = CacheEntry {
             input_checksum: input_checksum.to_string(),
             outputs,
-        });
+        };
+
+        self.insert_entry(cache_key, &entry)?;
 
         Ok(())
     }
 
-    /// Save the index to disk
+    /// Save the index to disk (flush sled)
     pub fn save(&self) -> Result<()> {
-        fs::create_dir_all(&self.rsb_dir)?;
-        let index_path = self.rsb_dir.join(INDEX_FILE);
-        let content = serde_json::to_string_pretty(&self.index)?;
-        fs::write(&index_path, content)?;
+        self.db.flush()
+            .context("Failed to flush cache database")?;
         Ok(())
     }
 
@@ -330,7 +322,9 @@ impl ObjectStore {
 
     /// Clear the entire cache
     pub fn clear(&mut self) -> Result<()> {
-        self.index.entries.clear();
+        // Drop the database before removing the directory
+        // We need to reopen after clearing
+        drop(std::mem::replace(&mut self.db, sled::Config::new().temporary(true).open().unwrap()));
 
         if self.rsb_dir.exists() {
             fs::remove_dir_all(&self.rsb_dir)
@@ -360,7 +354,7 @@ impl ObjectStore {
     }
 
     /// Trim cache by removing objects not referenced in the index
-    pub fn trim(&mut self) -> Result<(u64, usize)> {
+    pub fn trim(&self) -> Result<(u64, usize)> {
         let mut removed_bytes = 0u64;
         let mut removed_count = 0usize;
 
@@ -370,9 +364,12 @@ impl ObjectStore {
 
         // Collect all referenced checksums
         let mut referenced: std::collections::HashSet<String> = std::collections::HashSet::new();
-        for entry in self.index.entries.values() {
-            for output in &entry.outputs {
-                referenced.insert(output.checksum.clone());
+        for result in self.db.iter() {
+            let (_, value) = result.context("Failed to read cache entry during trim")?;
+            if let Ok(entry) = serde_json::from_slice::<CacheEntry>(&value) {
+                for output in &entry.outputs {
+                    referenced.insert(output.checksum.clone());
+                }
             }
         }
 
@@ -407,21 +404,51 @@ impl ObjectStore {
         Ok((removed_bytes, removed_count))
     }
 
+    /// Remove stale index entries whose cache keys are not in the valid set.
+    /// Returns the number of entries removed.
+    pub fn remove_stale(&self, valid_keys: &std::collections::HashSet<String>) -> usize {
+        let mut count = 0;
+        let mut stale_keys: Vec<Vec<u8>> = Vec::new();
+
+        for result in self.db.iter() {
+            if let Ok((key, _)) = result {
+                if let Ok(key_str) = std::str::from_utf8(&key) {
+                    if !valid_keys.contains(key_str) {
+                        stale_keys.push(key.to_vec());
+                    }
+                }
+            }
+        }
+
+        for key in stale_keys {
+            if self.db.remove(&key).is_ok() {
+                count += 1;
+            }
+        }
+
+        count
+    }
+
     /// List all cache entries with their status
     pub fn list(&self) -> Vec<CacheListEntry> {
-        let mut entries: Vec<CacheListEntry> = self.index.entries.iter().map(|(key, entry)| {
-            let outputs = entry.outputs.iter().map(|o| {
-                CacheListOutput {
-                    path: o.path.clone(),
-                    exists: self.has_object(&o.checksum),
-                }
-            }).collect();
-            CacheListEntry {
-                cache_key: key.clone(),
-                input_checksum: entry.input_checksum.clone(),
-                outputs,
-            }
-        }).collect();
+        let mut entries: Vec<CacheListEntry> = self.db.iter()
+            .filter_map(|result| {
+                let (key, value) = result.ok()?;
+                let key_str = std::str::from_utf8(&key).ok()?.to_string();
+                let entry: CacheEntry = serde_json::from_slice(&value).ok()?;
+                let outputs = entry.outputs.iter().map(|o| {
+                    CacheListOutput {
+                        path: o.path.clone(),
+                        exists: self.has_object(&o.checksum),
+                    }
+                }).collect();
+                Some(CacheListEntry {
+                    cache_key: key_str,
+                    input_checksum: entry.input_checksum,
+                    outputs,
+                })
+            })
+            .collect();
         entries.sort_by(|a, b| a.cache_key.cmp(&b.cache_key));
         entries
     }

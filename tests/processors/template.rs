@@ -107,7 +107,7 @@ fn incremental_build() {
     assert!(stdout2.contains("[template] Skipping (unchanged):"));
 
     // Verify cache directory exists
-    assert!(project_path.join(".rsb/index.json").exists());
+    assert!(project_path.join(".rsb/db").exists());
 }
 
 #[test]

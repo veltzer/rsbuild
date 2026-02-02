@@ -545,3 +545,130 @@ int main() {
     assert!(stdout.trim() == "7",
         "Executable should output 7, got: {}", stdout.trim());
 }
+
+#[test]
+fn cc_single_file_direct_header_change_triggers_rebuild() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Create header and source that includes it directly
+    fs::write(
+        project_path.join("src/direct.h"),
+        "#define DIRECT_VAL 10\n"
+    ).unwrap();
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "#include \"direct.h\"\nint main() { return DIRECT_VAL - 10; }\n"
+    ).unwrap();
+
+    // First build
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success(),
+        "First build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output1.stdout),
+        String::from_utf8_lossy(&output1.stderr));
+    let stdout1 = String::from_utf8_lossy(&output1.stdout);
+    assert!(stdout1.contains("[cc_single_file] Processing:"), "First build should process: {}", stdout1);
+
+    // Second build — should skip (nothing changed)
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success());
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(stdout2.contains("[cc_single_file] Skipping (unchanged):"),
+        "Second build should skip: {}", stdout2);
+
+    // Modify the directly included header
+    fs::write(
+        project_path.join("src/direct.h"),
+        "#define DIRECT_VAL 20\n"
+    ).unwrap();
+
+    // Third build — should recompile because the direct header changed
+    let output3 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output3.status.success(),
+        "Rebuild after direct header change failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output3.stdout),
+        String::from_utf8_lossy(&output3.stderr));
+    let stdout3 = String::from_utf8_lossy(&output3.stdout);
+    assert!(stdout3.contains("[cc_single_file] Processing:"),
+        "Should recompile after direct header change: {}", stdout3);
+
+    // Verify the new value was compiled in (return 20 - 10 = 10, nonzero exit)
+    let run_output = Command::new(project_path.join("out/cc_single_file/main.elf"))
+        .output()
+        .expect("Failed to run main");
+    assert!(!run_output.status.success(),
+        "Executable should exit nonzero after header change (DIRECT_VAL=20, returns 20-10=10)");
+}
+
+#[test]
+fn cc_single_file_indirect_header_change_triggers_rebuild() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    setup_cc_project(project_path);
+
+    // Create an indirect header, a direct header that includes it, and a source file
+    fs::write(
+        project_path.join("src/indirect.h"),
+        "#define INDIRECT_VAL 5\n"
+    ).unwrap();
+
+    fs::write(
+        project_path.join("src/middle.h"),
+        "#include \"indirect.h\"\n#define MIDDLE_VAL (INDIRECT_VAL + 1)\n"
+    ).unwrap();
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "#include \"middle.h\"\nint main() { return MIDDLE_VAL - 6; }\n"
+    ).unwrap();
+
+    // First build
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success(),
+        "First build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output1.stdout),
+        String::from_utf8_lossy(&output1.stderr));
+    let stdout1 = String::from_utf8_lossy(&output1.stdout);
+    assert!(stdout1.contains("[cc_single_file] Processing:"), "First build should process: {}", stdout1);
+
+    // Verify exit code 0 (MIDDLE_VAL=6, 6-6=0)
+    let run_output = Command::new(project_path.join("out/cc_single_file/main.elf"))
+        .output()
+        .expect("Failed to run main");
+    assert!(run_output.status.success(), "Executable should exit 0 initially");
+
+    // Second build — should skip (nothing changed)
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success());
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(stdout2.contains("[cc_single_file] Skipping (unchanged):"),
+        "Second build should skip: {}", stdout2);
+
+    // Modify the indirect header (not directly included by source)
+    fs::write(
+        project_path.join("src/indirect.h"),
+        "#define INDIRECT_VAL 100\n"
+    ).unwrap();
+
+    // Third build — should recompile because an indirect header changed
+    let output3 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output3.status.success(),
+        "Rebuild after indirect header change failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output3.stdout),
+        String::from_utf8_lossy(&output3.stderr));
+    let stdout3 = String::from_utf8_lossy(&output3.stdout);
+    assert!(stdout3.contains("[cc_single_file] Processing:"),
+        "Should recompile after indirect header change: {}", stdout3);
+
+    // Verify the new value was compiled in (MIDDLE_VAL=101, 101-6=95, nonzero exit)
+    let run_output2 = Command::new(project_path.join("out/cc_single_file/main.elf"))
+        .output()
+        .expect("Failed to run main after indirect header change");
+    assert!(!run_output2.status.success(),
+        "Executable should exit nonzero after indirect header change (MIDDLE_VAL=101, returns 101-6=95)");
+}

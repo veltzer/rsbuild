@@ -7,10 +7,13 @@ use std::str::FromStr;
 #[command(name = "rsb")]
 #[command(about = "Rust Build Tool - Incremental build system with templates", long_about = None)]
 pub struct Cli {
-    /// Verbosity level (0=quiet, 1=show skip/restore, 2=add source paths, 3=add all inputs).
-    /// Use -v for level 1, -v 2 for level 2, etc.
-    #[arg(short, long, global = true, default_value = "0", num_args = 0..=1, default_missing_value = "1")]
-    pub verbose: u8,
+    /// Show skip/restore/cache messages during build
+    #[arg(short, long, global = true)]
+    pub verbose: bool,
+
+    /// File name detail level in output (0=basename, 1=relative path, 2=+source, 3=+all inputs)
+    #[arg(long, global = true, default_value = "0")]
+    pub file_names: u8,
 
     /// Print each external command before it is executed
     #[arg(long, global = true)]

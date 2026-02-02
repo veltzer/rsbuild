@@ -16,23 +16,25 @@ use crate::processors::{BuildStats, ProcessStats, ProductDiscovery, ProductTimin
 pub struct Executor<'a> {
     processors: &'a HashMap<String, Box<dyn ProductDiscovery>>,
     parallel: usize,
-    verbose: u8,
+    verbose: bool,
+    file_names: u8,
     interrupted: Arc<AtomicBool>,
 }
 
 impl<'a> Executor<'a> {
-    pub fn new(processors: &'a HashMap<String, Box<dyn ProductDiscovery>>, parallel: usize, verbose: u8, interrupted: Arc<AtomicBool>) -> Self {
+    pub fn new(processors: &'a HashMap<String, Box<dyn ProductDiscovery>>, parallel: usize, verbose: bool, file_names: u8, interrupted: Arc<AtomicBool>) -> Self {
         Self {
             processors,
             parallel,
             verbose,
+            file_names,
             interrupted,
         }
     }
 
-    /// Display a product at the current verbosity level.
+    /// Display a product at the current file-names detail level.
     fn product_display(&self, product: &crate::graph::Product) -> String {
-        product.display(self.verbose)
+        product.display(self.file_names)
     }
 
     /// Execute all products in the graph that need rebuilding
@@ -102,7 +104,7 @@ impl<'a> Executor<'a> {
             silenced_processors: &mut HashSet<String>,
             timings: bool,
             keep_going: bool,
-            verbose: u8,
+            file_names: u8,
         | -> Result<()> {
             if pending_batch.is_empty() {
                 *pending_processor = None;
@@ -127,7 +129,7 @@ impl<'a> Executor<'a> {
                 if !silenced {
                     let displays: Vec<String> = pending_batch.iter().map(|pw| {
                         let product = graph.get_product(pw.product_id).unwrap();
-                        product.display(verbose)
+                        product.display(file_names)
                     }).collect();
                     println!("[{}] {} {} files: {}",
                         proc_name,
@@ -165,7 +167,7 @@ impl<'a> Executor<'a> {
                                 .or_insert_with(|| ProcessStats::new());
                             stats.failed += 1;
                             if keep_going {
-                                let msg = format!("[{}] {}: {}", proc_name, product.display(verbose), e);
+                                let msg = format!("[{}] {}: {}", proc_name, product.display(file_names), e);
                                 println!("{}", color::red(&format!("Error: {}", msg)));
                                 failed_products.insert(pw.product_id);
                                 failed_messages.push(msg);
@@ -201,7 +203,7 @@ impl<'a> Executor<'a> {
                     if !silenced {
                         println!("[{}] {} {}", proc_name,
                             color::green("Processing:"),
-                            product.display(verbose));
+                            product.display(file_names));
                     }
 
                     let product_start = Instant::now();
@@ -217,7 +219,7 @@ impl<'a> Executor<'a> {
                             stats.duration += duration;
                             if timings && !silenced {
                                 stats.product_timings.push(ProductTiming {
-                                    display: product.display(verbose),
+                                    display: product.display(file_names),
                                     processor: proc_name.clone(),
                                     duration,
                                 });
@@ -229,7 +231,7 @@ impl<'a> Executor<'a> {
                                 .or_insert_with(|| ProcessStats::new());
                             stats.failed += 1;
                             if keep_going {
-                                let msg = format!("[{}] {}: {}", proc_name, product.display(verbose), e);
+                                let msg = format!("[{}] {}: {}", proc_name, product.display(file_names), e);
                                 println!("{}", color::red(&format!("Error: {}", msg)));
                                 failed_products.insert(pw.product_id);
                                 failed_messages.push(msg);
@@ -257,7 +259,7 @@ impl<'a> Executor<'a> {
                     &mut pending_batch, &mut pending_processor, graph, self.processors,
                     object_store, &mut stats_by_processor, &mut failed_products,
                     &mut failed_messages, &mut first_error, &mut silenced_processors,
-                    timings, keep_going, self.verbose,
+                    timings, keep_going, self.file_names,
                 )?;
                 println!("{}", color::yellow("Interrupted, saving progress..."));
                 break;
@@ -267,7 +269,7 @@ impl<'a> Executor<'a> {
 
             // Skip products whose dependencies have failed
             if self.has_failed_dependency(graph, id, &failed_products) {
-                if self.verbose >= 1 {
+                if self.verbose {
                     println!("[{}] {} {}", product.processor,
                         color::yellow("Skipping (dependency failed):"),
                         self.product_display(product));
@@ -281,7 +283,7 @@ impl<'a> Executor<'a> {
 
             // Check if this product needs rebuilding
             if !force && !object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs) {
-                if self.verbose >= 1 {
+                if self.verbose {
                     println!("[{}] {} {}", product.processor,
                         color::dim("Skipping (unchanged):"),
                         self.product_display(product));
@@ -295,7 +297,7 @@ impl<'a> Executor<'a> {
 
             // Try to restore from cache if outputs are missing
             if !force && object_store.restore_from_cache(&cache_key, &input_checksum, &product.outputs)? {
-                if self.verbose >= 1 {
+                if self.verbose {
                     println!("[{}] {} {}", product.processor,
                         color::cyan("Restored from cache:"),
                         self.product_display(product));
@@ -314,7 +316,7 @@ impl<'a> Executor<'a> {
                     &mut pending_batch, &mut pending_processor, graph, self.processors,
                     object_store, &mut stats_by_processor, &mut failed_products,
                     &mut failed_messages, &mut first_error, &mut silenced_processors,
-                    timings, keep_going, self.verbose,
+                    timings, keep_going, self.file_names,
                 )?;
             }
 
@@ -332,7 +334,7 @@ impl<'a> Executor<'a> {
             &mut pending_batch, &mut pending_processor, graph, self.processors,
             object_store, &mut stats_by_processor, &mut failed_products,
             &mut failed_messages, &mut first_error, &mut silenced_processors,
-            timings, keep_going, self.verbose,
+            timings, keep_going, self.file_names,
         )?;
 
         // In non-keep-going mode, return the first error after giving
@@ -391,7 +393,7 @@ impl<'a> Executor<'a> {
                 for &id in &level {
                     if self.has_failed_dependency(graph, id, &failed_guard) {
                         let product = graph.get_product(id).unwrap();
-                        if self.verbose >= 1 {
+                        if self.verbose {
                             println!("[{}] {} {}", product.processor,
                                 color::yellow("Skipping (dependency failed):"),
                                 self.product_display(product));
@@ -506,7 +508,7 @@ impl<'a> Executor<'a> {
                             let cache_key = product.cache_key();
 
                             if !needs_rebuild {
-                                if self.verbose >= 1 {
+                                if self.verbose {
                                     println!("[{}] {} {}", product.processor,
                                         color::dim("Skipping (unchanged):"),
                                         self.product_display(product));
@@ -524,7 +526,7 @@ impl<'a> Executor<'a> {
                                 let restore_result = object_store.restore_from_cache(&cache_key, input_checksum, &product.outputs);
                                 match restore_result {
                                     Ok(true) => {
-                                        if self.verbose >= 1 {
+                                        if self.verbose {
                                             println!("[{}] {} {}", product.processor,
                                                 color::cyan("Restored from cache:"),
                                                 self.product_display(product));
@@ -665,7 +667,7 @@ impl<'a> Executor<'a> {
                                 let cache_key = product.cache_key();
 
                                 if !needs_rebuild {
-                                    if self.verbose >= 1 {
+                                    if self.verbose {
                                         println!("[{}] {} {}", product.processor,
                                             color::dim("Skipping (unchanged):"),
                                             self.product_display(product));
@@ -683,7 +685,7 @@ impl<'a> Executor<'a> {
                                     let restore_result = object_store.restore_from_cache(&cache_key, input_checksum, &product.outputs);
                                     match restore_result {
                                         Ok(true) => {
-                                            if self.verbose >= 1 {
+                                            if self.verbose {
                                                 println!("[{}] {} {}", product.processor,
                                                     color::cyan("Restored from cache:"),
                                                     self.product_display(product));

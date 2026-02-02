@@ -211,11 +211,11 @@ pub struct CcProcessor {
     config: CcConfig,
     output_dir: PathBuf,
     deps_dir: PathBuf,
-    verbose: u8,
+    verbose: bool,
 }
 
 impl CcProcessor {
-    pub fn new(project_root: PathBuf, config: CcConfig, verbose: u8) -> Self {
+    pub fn new(project_root: PathBuf, config: CcConfig, verbose: bool) -> Self {
         let output_dir = project_root.join("out/cc_single_file");
         let deps_dir = project_root.join(".rsb/deps");
         Self {
@@ -333,7 +333,7 @@ impl CcProcessor {
         cmd.arg(source);
         cmd.current_dir(&self.project_root);
 
-        if self.verbose >= 1 {
+        if self.verbose {
             println!("[cc_single_file] {}", format_command(&cmd));
         }
 
@@ -432,7 +432,7 @@ impl CcProcessor {
         }
         cmd.current_dir(&self.project_root);
 
-        if self.verbose >= 1 {
+        if self.verbose {
             println!("[cc_single_file] {}", format_command(&cmd));
         }
 

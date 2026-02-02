@@ -51,7 +51,7 @@ fn main() -> Result<()> {
                 if !ignore_tool_versions {
                     builder.verify_tool_versions()?;
                 }
-                builder.build(force, cli.verbose, jobs, timings, keep_going, Arc::clone(&interrupted), !no_summary)?;
+                builder.build(force, cli.verbose, cli.file_names, jobs, timings, keep_going, Arc::clone(&interrupted), !no_summary)?;
             }
         }
         Commands::Clean { action } => {
@@ -167,7 +167,7 @@ fn main() -> Result<()> {
             }
         }
         Commands::Watch { jobs, timings, keep_going, no_summary } => {
-            watcher::watch(cli.verbose, jobs, timings, keep_going, !no_summary, Arc::clone(&interrupted))?;
+            watcher::watch(cli.verbose, cli.file_names, jobs, timings, keep_going, !no_summary, Arc::clone(&interrupted))?;
 
         }
         Commands::Version => {

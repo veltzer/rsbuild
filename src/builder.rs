@@ -45,7 +45,7 @@ impl Builder {
     }
 
     /// Execute an incremental build using the dependency graph
-    pub fn build(&self, force: bool, verbose: u8, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool) -> Result<()> {
+    pub fn build(&self, force: bool, verbose: bool, file_names: u8, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool) -> Result<()> {
         // Create processors
         let processors = self.create_processors(verbose)?;
 
@@ -54,7 +54,7 @@ impl Builder {
 
         // Create executor with parallelism from command line or config
         let parallel = jobs.unwrap_or(self.config.build.parallel);
-        let executor = Executor::new(&processors, parallel, verbose, Arc::clone(&interrupted));
+        let executor = Executor::new(&processors, parallel, verbose, file_names, Arc::clone(&interrupted));
 
         // Execute the build
         let result = executor.execute(&graph, &self.object_store, force, timings, keep_going);
@@ -82,7 +82,7 @@ impl Builder {
 
     /// Show what would happen without executing anything
     pub fn dry_run(&self, force: bool) -> Result<()> {
-        let processors = self.create_processors(0)?;
+        let processors = self.create_processors(false)?;
         let graph = self.build_graph_with_processors(&processors)?;
 
         let order = graph.topological_sort()?;
@@ -107,7 +107,7 @@ impl Builder {
 
     /// Show the status of each product in the build graph
     pub fn status(&self) -> Result<()> {
-        let processors = self.create_processors(0)?;
+        let processors = self.create_processors(false)?;
         let graph = self.build_graph_with_processors(&processors)?;
 
         let products: Vec<&_> = graph.products().iter().collect();
@@ -171,11 +171,11 @@ impl Builder {
         println!("{}", color::bold("Cleaning build artifacts..."));
 
         // Create processors and build graph
-        let processors = self.create_processors(0)?;
+        let processors = self.create_processors(false)?;
         let graph = self.build_graph_with_processors(&processors)?;
 
         // Use executor to clean
-        let executor = Executor::new(&processors, 1, 0, Arc::new(std::sync::atomic::AtomicBool::new(false)));
+        let executor = Executor::new(&processors, 1, false, 0, Arc::new(std::sync::atomic::AtomicBool::new(false)));
         executor.clean(&graph)?;
 
         // Remove empty subdirectories under out/
@@ -243,7 +243,7 @@ impl Builder {
     }
 
     /// Create all available processors
-    pub fn create_processors(&self, verbose: u8) -> Result<HashMap<String, Box<dyn ProductDiscovery>>> {
+    pub fn create_processors(&self, verbose: bool) -> Result<HashMap<String, Box<dyn ProductDiscovery>>> {
         let mut processors: HashMap<String, Box<dyn ProductDiscovery>> = HashMap::new();
 
         // Template processor
@@ -410,7 +410,7 @@ impl Builder {
         filter_name: Option<&str>,
         include_all: bool,
     ) -> Result<BuildGraph> {
-        let processors = self.create_processors(0)?;
+        let processors = self.create_processors(false)?;
         let mut graph = BuildGraph::new();
 
         let mut names: Vec<&String> = processors.keys().collect();
@@ -440,7 +440,7 @@ impl Builder {
 
     /// Build the dependency graph (creates processors internally)
     fn build_graph(&self) -> Result<BuildGraph> {
-        let processors = self.create_processors(0)?;
+        let processors = self.create_processors(false)?;
         self.build_graph_with_processors(&processors)
     }
 
@@ -461,7 +461,7 @@ impl Builder {
 
     /// Handle `rsb processor` subcommands
     pub fn processor(&self, action: ProcessorAction) -> Result<()> {
-        let processors = self.create_processors(0)?;
+        let processors = self.create_processors(false)?;
 
         let mut proc_names: Vec<&String> = processors.keys().collect();
         proc_names.sort();
@@ -562,7 +562,7 @@ impl Builder {
     /// Verify tool versions against .tools.versions lock file.
     /// Called at the start of build unless --ignore-tool-versions is passed.
     pub fn verify_tool_versions(&self) -> Result<()> {
-        let processors = self.create_processors(0)?;
+        let processors = self.create_processors(false)?;
         let config = &self.config;
         let tool_commands = tool_lock::collect_tool_commands(
             &processors,
@@ -576,7 +576,7 @@ impl Builder {
 
     /// Handle `rsb tools` subcommands
     pub fn tools(&self, action: ToolsAction) -> Result<()> {
-        let processors = self.create_processors(0)?;
+        let processors = self.create_processors(false)?;
 
         let show_all = matches!(&action, ToolsAction::List { all: true } | ToolsAction::Check { all: true });
 

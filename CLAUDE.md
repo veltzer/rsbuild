@@ -56,6 +56,7 @@ A fast, incremental build tool written in Rust with template support, Python lin
 ```toml
 [build]
 parallel = 1  # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
+batch_size = 0  # Max files per batch (0 = no limit, omit to disable batching)
 
 [processor]
 enabled = ["template", "ruff", "pylint", "sleep", "cc_single_file", "cpplint", "shellcheck", "spellcheck", "make"]

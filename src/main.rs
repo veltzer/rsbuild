@@ -210,6 +210,8 @@ fn init_project() -> Result<()> {
 [build]
 # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
 # parallel = 1
+# Max files per batch for batch-capable processors (0 = no limit, omit to disable batching)
+# batch_size = 0
 
 [processor]
 # auto_detect = true

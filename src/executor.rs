@@ -20,16 +20,26 @@ pub struct Executor<'a> {
     verbose: bool,
     file_names: u8,
     interrupted: Arc<AtomicBool>,
+    /// Batch size setting: None = disable batching, Some(0) = no limit, Some(n) = max n files per batch
+    batch_size: Option<usize>,
 }
 
 impl<'a> Executor<'a> {
-    pub fn new(processors: &'a HashMap<String, Box<dyn ProductDiscovery>>, parallel: usize, verbose: bool, file_names: u8, interrupted: Arc<AtomicBool>) -> Self {
+    pub fn new(
+        processors: &'a HashMap<String, Box<dyn ProductDiscovery>>,
+        parallel: usize,
+        verbose: bool,
+        file_names: u8,
+        interrupted: Arc<AtomicBool>,
+        batch_size: Option<usize>,
+    ) -> Self {
         Self {
             processors,
             parallel,
             verbose,
             file_names,
             interrupted,
+            batch_size,
         }
     }
 
@@ -121,6 +131,7 @@ impl<'a> Executor<'a> {
             timings: bool,
             keep_going: bool,
             file_names: u8,
+            batch_size: Option<usize>,
         | -> Result<()> {
             if pending_batch.is_empty() {
                 *pending_processor = None;
@@ -138,7 +149,8 @@ impl<'a> Executor<'a> {
             };
 
             let silenced = !keep_going && silenced_processors.contains(&proc_name);
-            let use_batch = processor.supports_batch() && pending_batch.len() > 1;
+            // Batching: None = disabled, Some(0) = no limit, Some(n) = max n items
+            let use_batch = batch_size.is_some() && processor.supports_batch() && pending_batch.len() > 1;
 
             if use_batch {
                 // Print batch processing message
@@ -326,7 +338,7 @@ impl<'a> Executor<'a> {
                     &mut pending_batch, &mut pending_processor, graph, self.processors,
                     object_store, &mut stats_by_processor, &mut failed_products,
                     &mut failed_messages, &mut first_error, &mut silenced_processors,
-                    timings, keep_going, self.file_names,
+                    timings, keep_going, self.file_names, self.batch_size,
                 )?;
                 println!("{}", color::yellow("Interrupted, saving progress..."));
                 break;
@@ -397,7 +409,7 @@ impl<'a> Executor<'a> {
                     &mut pending_batch, &mut pending_processor, graph, self.processors,
                     object_store, &mut stats_by_processor, &mut failed_products,
                     &mut failed_messages, &mut first_error, &mut silenced_processors,
-                    timings, keep_going, self.file_names,
+                    timings, keep_going, self.file_names, self.batch_size,
                 )?;
             }
 
@@ -415,7 +427,7 @@ impl<'a> Executor<'a> {
             &mut pending_batch, &mut pending_processor, graph, self.processors,
             object_store, &mut stats_by_processor, &mut failed_products,
             &mut failed_messages, &mut first_error, &mut silenced_processors,
-            timings, keep_going, self.file_names,
+            timings, keep_going, self.file_names, self.batch_size,
         )?;
 
         // In non-keep-going mode, return the first error after giving
@@ -541,13 +553,15 @@ impl<'a> Executor<'a> {
             }
 
             // Then separate into batch vs non-batch
+            // batch_size: None = disable batching, Some(0) = no limit, Some(n) = max n items
+            let batching_enabled = self.batch_size.is_some();
             for (proc_name, items) in by_processor {
                 let processor = self.processors.get(&proc_name);
                 let supports_batch = processor.map_or(false, |p| p.supports_batch());
                 // Count items that actually need rebuild (not just cache-skip)
                 let rebuild_count = items.iter().filter(|(_, _, needs)| *needs).count();
 
-                if supports_batch && rebuild_count > 1 {
+                if batching_enabled && supports_batch && rebuild_count > 1 {
                     batch_groups.insert(proc_name, items);
                 } else {
                     non_batch_items.extend(items);

@@ -157,6 +157,10 @@ pub struct BuildConfig {
     /// Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
     #[serde(default = "default_parallel")]
     pub parallel: usize,
+    /// Maximum files per batch for batch-capable processors.
+    /// 0 = no limit (all files in one batch), None = disable batching entirely.
+    #[serde(default)]
+    pub batch_size: Option<usize>,
 }
 
 fn default_parallel() -> usize {
@@ -165,7 +169,10 @@ fn default_parallel() -> usize {
 
 impl Default for BuildConfig {
     fn default() -> Self {
-        Self { parallel: 1 }
+        Self {
+            parallel: 1,
+            batch_size: Some(0), // Default: batching enabled, no size limit
+        }
     }
 }
 

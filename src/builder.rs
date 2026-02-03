@@ -67,7 +67,7 @@ impl Builder {
 
         // Create executor with parallelism from command line or config
         let parallel = jobs.unwrap_or(self.config.build.parallel);
-        let executor = Executor::new(&processors, parallel, verbose, file_names, Arc::clone(&interrupted));
+        let executor = Executor::new(&processors, parallel, verbose, file_names, Arc::clone(&interrupted), self.config.build.batch_size);
 
         // Execute the build
         let result = executor.execute(&graph, &self.object_store, force, timings, keep_going);
@@ -187,8 +187,8 @@ impl Builder {
         let processors = self.create_processors(false)?;
         let graph = self.build_graph_with_processors(&processors)?;
 
-        // Use executor to clean
-        let executor = Executor::new(&processors, 1, false, 0, Arc::new(std::sync::atomic::AtomicBool::new(false)));
+        // Use executor to clean (batch_size doesn't matter for clean)
+        let executor = Executor::new(&processors, 1, false, 0, Arc::new(std::sync::atomic::AtomicBool::new(false)), None);
         executor.clean(&graph)?;
 
         // Remove empty subdirectories under out/

@@ -9,10 +9,12 @@ Full documentation: <https://veltzer.github.io/rsb/>
 ## Features
 
 - **Incremental builds** using SHA-256 checksums to detect changes
+- **Remote caching** — share build artifacts across machines via S3, HTTP, or filesystem
 - **C/C++ compilation** with automatic header dependency tracking
 - **Parallel execution** of independent build products with `-j` flag
 - **Template processing** via the Tera templating engine
 - **Python linting** with ruff (configurable)
+- **Lua plugins** — extend with custom processors without forking
 - **Deterministic builds** — same input always produces same build order
 - **Graceful interrupt** — Ctrl+C saves progress, next build resumes where it left off
 - **Config-aware caching** — changing compiler flags or linter config triggers rebuilds

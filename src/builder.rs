@@ -12,6 +12,7 @@ use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::ObjectStore;
 use crate::processors::{CcProcessor, CpplintProcessor, LuaProcessor, MakeProcessor, PylintProcessor, RuffProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TemplateProcessor, log_command};
+use crate::remote_cache;
 use crate::tool_lock;
 
 /// Labels for the three product states used by dry_run and status.
@@ -33,7 +34,20 @@ impl Builder {
         let project_root = std::env::current_dir()?;
         Config::require_config(&project_root)?;
         let config = Config::load(&project_root)?;
-        let object_store = ObjectStore::new(project_root.clone(), config.cache.restore_method)?;
+
+        // Create remote cache backend if configured
+        let remote_backend = match &config.cache.remote {
+            Some(url) => Some(remote_cache::create_backend(url)?),
+            None => None,
+        };
+
+        let object_store = ObjectStore::new(
+            project_root.clone(),
+            config.cache.restore_method,
+            remote_backend,
+            config.cache.remote_push,
+            config.cache.remote_pull,
+        )?;
         let file_index = FileIndex::build(&project_root)?;
 
         Ok(Self {

@@ -5,10 +5,12 @@ A fast, incremental build tool written in Rust with template support, Python lin
 ## Key Features
 
 - **Incremental builds** using SHA-256 checksums to detect changes
+- **Remote caching** — share build artifacts across machines via S3, HTTP, or filesystem
 - **Dependency graph** with topological sort for correct build order
 - **Parallel execution** - run independent products concurrently with `-j` flag
 - **Template processing** via the Tera templating engine
 - **Python linting** with ruff and pylint processors
+- **Lua plugins** — extend with custom processors without forking
 - **Python configuration** - load config from `.py` files using `load_python()` function
 - **CLI** built with clap with shell completion support
 
@@ -60,6 +62,9 @@ enabled = ["template", "ruff", "pylint", "sleep", "cc_single_file", "cpplint", "
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
+remote = "s3://bucket/prefix"  # Optional: remote cache (s3://, http://, file://)
+remote_push = true   # Push to remote cache (default: true)
+remote_pull = true   # Pull from remote cache (default: true)
 
 [graph]
 viewer = "google-chrome"  # Command to open graph files (default: platform-specific)
@@ -104,6 +109,7 @@ project/
 - **Executor** runs products in dependency order, with optional parallelism
 - **Build order** is deterministic — file discovery, processor iteration, and topological sort are all sorted
 - **Config-aware caching** — processor config (compiler flags, linter args, etc.) is hashed into cache keys so config changes trigger rebuilds
+- **Remote caching** — optional S3/HTTP/filesystem remote cache for sharing artifacts across machines
 
 ## Philosophy
 

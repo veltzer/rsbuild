@@ -14,6 +14,9 @@ enabled = ["template", "ruff", "pylint", "cc_single_file", "cpplint", "spellchec
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
+remote = "s3://my-bucket/rsb-cache"  # Optional: remote cache URL
+remote_push = true   # Push local builds to remote (default: true)
+remote_pull = true   # Pull from remote on cache miss (default: true)
 
 [graph]
 viewer = "google-chrome"  # Command to open graph files (default: platform-specific)
@@ -48,6 +51,9 @@ Lua plugin configuration is documented under [Lua Plugins](plugins.md).
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `restore_method` | string | `"hardlink"` | How to restore cached outputs. `"hardlink"` is faster; `"copy"` works across filesystems. |
+| `remote` | string | none | Remote cache URL. See [Remote Caching](remote-caching.md). |
+| `remote_push` | boolean | `true` | Push locally built artifacts to remote cache. |
+| `remote_pull` | boolean | `true` | Pull from remote cache on local cache miss. |
 
 ### `[graph]`
 

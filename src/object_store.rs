@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::config::RestoreMethod;
+use crate::remote_cache::RemoteCache;
 
 /// Recursively collect all files under a directory.
 fn walk_files(dir: &Path) -> Vec<PathBuf> {
@@ -29,7 +30,6 @@ const DB_DIR: &str = "db";
 /// Object store for caching build outputs
 /// Uses git-like object storage: .rsb/objects/[2 chars]/[rest of hash]
 /// Index is stored in a sled embedded key/value database at .rsb/db/
-#[derive(Debug)]
 pub struct ObjectStore {
     /// Root directory of the project
     project_root: PathBuf,
@@ -41,6 +41,12 @@ pub struct ObjectStore {
     db: sled::Db,
     /// Method to restore files from cache
     restore_method: RestoreMethod,
+    /// Optional remote cache backend
+    remote: Option<Box<dyn RemoteCache>>,
+    /// Whether to push to remote cache
+    remote_push: bool,
+    /// Whether to pull from remote cache
+    remote_pull: bool,
 }
 
 /// Information about a cached product
@@ -78,7 +84,13 @@ pub struct CacheListOutput {
 }
 
 impl ObjectStore {
-    pub fn new(project_root: PathBuf, restore_method: RestoreMethod) -> Result<Self> {
+    pub fn new(
+        project_root: PathBuf,
+        restore_method: RestoreMethod,
+        remote: Option<Box<dyn RemoteCache>>,
+        remote_push: bool,
+        remote_pull: bool,
+    ) -> Result<Self> {
         let rsb_dir = project_root.join(RSB_DIR);
         let objects_dir = rsb_dir.join(OBJECTS_DIR);
         let db_path = rsb_dir.join(DB_DIR);
@@ -97,6 +109,9 @@ impl ObjectStore {
             objects_dir,
             db,
             restore_method,
+            remote,
+            remote_push,
+            remote_pull,
         })
     }
 
@@ -242,14 +257,31 @@ impl ObjectStore {
         true
     }
 
-    /// Try to restore outputs from cache
+    /// Try to restore outputs from cache (local first, then remote)
     /// Returns true if all outputs were restored
     pub fn restore_from_cache(&self, cache_key: &str, input_checksum: &str, output_paths: &[PathBuf]) -> Result<bool> {
         // Check if we have a cache entry with matching input checksum
         let entry = match self.get_entry(cache_key) {
-            Some(e) if e.input_checksum == input_checksum => e,
-            _ => return Ok(false),
+            Some(e) if e.input_checksum == input_checksum => Some(e),
+            _ => {
+                // Try to fetch from remote if enabled
+                if self.remote_pull {
+                    self.try_fetch_from_remote(cache_key, input_checksum)?
+                } else {
+                    None
+                }
+            }
         };
+
+        let entry = match entry {
+            Some(e) => e,
+            None => return Ok(false),
+        };
+
+        // Verify input checksum matches
+        if entry.input_checksum != input_checksum {
+            return Ok(false);
+        }
 
         // Try to restore each missing output
         for output_path in output_paths {
@@ -262,18 +294,80 @@ impl ObjectStore {
                 .find(|o| o.path == rel_path);
 
             match cached_output {
-                Some(out) if self.has_object(&out.checksum) => {
-                    // Restore from cache
-                    if let Some(parent) = output_path.parent() {
-                        fs::create_dir_all(parent)?;
+                Some(out) => {
+                    // Check local cache first
+                    if self.has_object(&out.checksum) {
+                        if let Some(parent) = output_path.parent() {
+                            fs::create_dir_all(parent)?;
+                        }
+                        self.restore_file(&out.checksum, output_path)?;
+                    } else if self.remote_pull {
+                        // Try to fetch object from remote
+                        if !self.try_fetch_object_from_remote(&out.checksum)? {
+                            return Ok(false);
+                        }
+                        if let Some(parent) = output_path.parent() {
+                            fs::create_dir_all(parent)?;
+                        }
+                        self.restore_file(&out.checksum, output_path)?;
+                    } else {
+                        return Ok(false);
                     }
-                    self.restore_file(&out.checksum, output_path)?;
                 }
-                _ => return Ok(false),
+                None => return Ok(false),
             }
         }
 
         Ok(true)
+    }
+
+    /// Try to fetch a cache entry from remote cache
+    fn try_fetch_from_remote(&self, cache_key: &str, input_checksum: &str) -> Result<Option<CacheEntry>> {
+        let remote = match &self.remote {
+            Some(r) => r,
+            None => return Ok(None),
+        };
+
+        let remote_key = format!("index/{}", cache_key);
+        let data = match remote.download_bytes(&remote_key)? {
+            Some(d) => d,
+            None => return Ok(None),
+        };
+
+        let entry: CacheEntry = match serde_json::from_slice(&data) {
+            Ok(e) => e,
+            Err(_) => return Ok(None),
+        };
+
+        // Verify the input checksum matches what we expect
+        if entry.input_checksum != input_checksum {
+            return Ok(None);
+        }
+
+        // Store the entry locally for future use
+        self.insert_entry(cache_key, &entry)?;
+
+        Ok(Some(entry))
+    }
+
+    /// Try to fetch an object from remote cache
+    fn try_fetch_object_from_remote(&self, checksum: &str) -> Result<bool> {
+        let remote = match &self.remote {
+            Some(r) => r,
+            None => return Ok(false),
+        };
+
+        let object_path = self.object_path(checksum);
+        if object_path.exists() {
+            return Ok(true);
+        }
+
+        let remote_key = format!("objects/{}/{}", &checksum[..2], &checksum[2..]);
+        if remote.download(&remote_key, &object_path)? {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 
     /// Cache the outputs of a successful build
@@ -289,6 +383,11 @@ impl ObjectStore {
             let checksum = self.store_object(&content)?;
             let rel_path = self.relative_path(output_path);
 
+            // Push object to remote cache if enabled
+            if self.remote_push {
+                self.try_push_object_to_remote(&checksum)?;
+            }
+
             outputs.push(OutputEntry {
                 path: rel_path,
                 checksum,
@@ -301,6 +400,57 @@ impl ObjectStore {
         };
 
         self.insert_entry(cache_key, &entry)?;
+
+        // Push index entry to remote cache if enabled
+        if self.remote_push {
+            self.try_push_entry_to_remote(cache_key, &entry)?;
+        }
+
+        Ok(())
+    }
+
+    /// Try to push an object to remote cache (ignores errors)
+    fn try_push_object_to_remote(&self, checksum: &str) -> Result<()> {
+        let remote = match &self.remote {
+            Some(r) => r,
+            None => return Ok(()),
+        };
+
+        let object_path = self.object_path(checksum);
+        if !object_path.exists() {
+            return Ok(());
+        }
+
+        let remote_key = format!("objects/{}/{}", &checksum[..2], &checksum[2..]);
+
+        // Check if already exists remotely (avoid redundant uploads)
+        if remote.exists(&remote_key).unwrap_or(false) {
+            return Ok(());
+        }
+
+        // Upload (ignore errors - remote cache is best-effort)
+        if let Err(e) = remote.upload(&remote_key, &object_path) {
+            eprintln!("Warning: failed to push to remote cache: {}", e);
+        }
+
+        Ok(())
+    }
+
+    /// Try to push a cache entry to remote cache (ignores errors)
+    fn try_push_entry_to_remote(&self, cache_key: &str, entry: &CacheEntry) -> Result<()> {
+        let remote = match &self.remote {
+            Some(r) => r,
+            None => return Ok(()),
+        };
+
+        let remote_key = format!("index/{}", cache_key);
+        let data = serde_json::to_vec(entry)
+            .context("Failed to serialize cache entry for remote")?;
+
+        // Upload (ignore errors - remote cache is best-effort)
+        if let Err(e) = remote.upload_bytes(&remote_key, &data) {
+            eprintln!("Warning: failed to push index to remote cache: {}", e);
+        }
 
         Ok(())
     }

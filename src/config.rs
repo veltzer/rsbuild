@@ -181,11 +181,25 @@ pub enum RestoreMethod {
 pub struct CacheConfig {
     #[serde(default)]
     pub restore_method: RestoreMethod,
+    /// Remote cache URL (e.g., "s3://bucket/prefix", "http://host:port/path", or local "file:///path")
+    #[serde(default)]
+    pub remote: Option<String>,
+    /// Whether to push local builds to remote cache (default: true)
+    #[serde(default = "default_true")]
+    pub remote_push: bool,
+    /// Whether to pull from remote cache on miss (default: true)
+    #[serde(default = "default_true")]
+    pub remote_pull: bool,
 }
 
 impl Default for CacheConfig {
     fn default() -> Self {
-        Self { restore_method: RestoreMethod::default() }
+        Self {
+            restore_method: RestoreMethod::default(),
+            remote: None,
+            remote_push: true,
+            remote_pull: true,
+        }
     }
 }
 

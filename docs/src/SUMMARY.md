@@ -5,6 +5,7 @@
 - [Binary Releases](binary-releases.md)
 - [Commands](commands.md)
 - [Configuration](configuration.md)
+- [Remote Caching](remote-caching.md)
 - [Project Structure](project-structure.md)
 - [Processors](processors.md)
     - [Template](processors/template.md)

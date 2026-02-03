@@ -1,0 +1,391 @@
+//! Remote cache support for sharing build artifacts across machines.
+//!
+//! Supported backends:
+//! - `s3://bucket/prefix` - Amazon S3 (requires AWS credentials)
+//! - `http://host:port/path` or `https://...` - HTTP server with GET/PUT support
+//! - `file:///absolute/path` - Local filesystem (for testing or network mounts)
+
+use anyhow::{Context, Result};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+/// Remote cache backend trait
+pub trait RemoteCache: Send + Sync {
+    /// Check if an object exists in the remote cache
+    fn exists(&self, key: &str) -> Result<bool>;
+
+    /// Download an object from remote cache to local path
+    fn download(&self, key: &str, dest: &Path) -> Result<bool>;
+
+    /// Upload a local file to remote cache
+    fn upload(&self, key: &str, src: &Path) -> Result<()>;
+
+    /// Download raw bytes (for index entries)
+    fn download_bytes(&self, key: &str) -> Result<Option<Vec<u8>>>;
+
+    /// Upload raw bytes (for index entries)
+    fn upload_bytes(&self, key: &str, data: &[u8]) -> Result<()>;
+}
+
+/// Parse a remote URL and create the appropriate backend
+pub fn create_backend(url: &str) -> Result<Box<dyn RemoteCache>> {
+    if url.starts_with("s3://") {
+        Ok(Box::new(S3Backend::new(url)?))
+    } else if url.starts_with("http://") || url.starts_with("https://") {
+        Ok(Box::new(HttpBackend::new(url)?))
+    } else if url.starts_with("file://") {
+        Ok(Box::new(FileBackend::new(url)?))
+    } else {
+        anyhow::bail!(
+            "Unsupported remote cache URL: {}. Supported schemes: s3://, http://, https://, file://",
+            url
+        )
+    }
+}
+
+/// S3 backend using AWS CLI
+pub struct S3Backend {
+    bucket: String,
+    prefix: String,
+}
+
+impl S3Backend {
+    pub fn new(url: &str) -> Result<Self> {
+        // Parse s3://bucket/prefix
+        let without_scheme = url
+            .strip_prefix("s3://")
+            .context("Invalid S3 URL")?;
+
+        let (bucket, prefix) = match without_scheme.find('/') {
+            Some(idx) => {
+                let (b, p) = without_scheme.split_at(idx);
+                (b.to_string(), p[1..].to_string()) // Skip the leading '/'
+            }
+            None => (without_scheme.to_string(), String::new()),
+        };
+
+        Ok(Self { bucket, prefix })
+    }
+
+    fn s3_key(&self, key: &str) -> String {
+        if self.prefix.is_empty() {
+            key.to_string()
+        } else {
+            format!("{}/{}", self.prefix.trim_end_matches('/'), key)
+        }
+    }
+
+    fn s3_uri(&self, key: &str) -> String {
+        format!("s3://{}/{}", self.bucket, self.s3_key(key))
+    }
+}
+
+impl RemoteCache for S3Backend {
+    fn exists(&self, key: &str) -> Result<bool> {
+        let output = Command::new("aws")
+            .args(["s3", "ls", &self.s3_uri(key)])
+            .output()
+            .context("Failed to run aws s3 ls")?;
+
+        Ok(output.status.success())
+    }
+
+    fn download(&self, key: &str, dest: &Path) -> Result<bool> {
+        // Ensure parent directory exists
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let output = Command::new("aws")
+            .args([
+                "s3",
+                "cp",
+                &self.s3_uri(key),
+                &dest.display().to_string(),
+                "--only-show-errors",
+            ])
+            .output()
+            .context("Failed to run aws s3 cp")?;
+
+        Ok(output.status.success())
+    }
+
+    fn upload(&self, key: &str, src: &Path) -> Result<()> {
+        let output = Command::new("aws")
+            .args([
+                "s3",
+                "cp",
+                &src.display().to_string(),
+                &self.s3_uri(key),
+                "--only-show-errors",
+            ])
+            .output()
+            .context("Failed to run aws s3 cp")?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!("S3 upload failed: {}", stderr);
+        }
+
+        Ok(())
+    }
+
+    fn download_bytes(&self, key: &str) -> Result<Option<Vec<u8>>> {
+        let output = Command::new("aws")
+            .args(["s3", "cp", &self.s3_uri(key), "-"])
+            .output()
+            .context("Failed to run aws s3 cp")?;
+
+        if output.status.success() {
+            Ok(Some(output.stdout))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn upload_bytes(&self, key: &str, data: &[u8]) -> Result<()> {
+        let temp_dir = std::env::temp_dir();
+        let temp_file = temp_dir.join(format!("rsb-upload-{}", uuid_simple()));
+        fs::write(&temp_file, data)?;
+
+        let result = self.upload(key, &temp_file);
+        let _ = fs::remove_file(&temp_file);
+        result
+    }
+}
+
+/// HTTP backend using curl
+pub struct HttpBackend {
+    base_url: String,
+}
+
+impl HttpBackend {
+    pub fn new(url: &str) -> Result<Self> {
+        Ok(Self {
+            base_url: url.trim_end_matches('/').to_string(),
+        })
+    }
+
+    fn full_url(&self, key: &str) -> String {
+        format!("{}/{}", self.base_url, key)
+    }
+}
+
+impl RemoteCache for HttpBackend {
+    fn exists(&self, key: &str) -> Result<bool> {
+        let output = Command::new("curl")
+            .args([
+                "-s",
+                "-o",
+                "/dev/null",
+                "-w",
+                "%{http_code}",
+                "--head",
+                &self.full_url(key),
+            ])
+            .output()
+            .context("Failed to run curl")?;
+
+        let status_code = String::from_utf8_lossy(&output.stdout);
+        Ok(status_code.trim() == "200")
+    }
+
+    fn download(&self, key: &str, dest: &Path) -> Result<bool> {
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let output = Command::new("curl")
+            .args([
+                "-s",
+                "-f", // Fail on HTTP errors
+                "-o",
+                &dest.display().to_string(),
+                &self.full_url(key),
+            ])
+            .output()
+            .context("Failed to run curl")?;
+
+        Ok(output.status.success())
+    }
+
+    fn upload(&self, key: &str, src: &Path) -> Result<()> {
+        let output = Command::new("curl")
+            .args([
+                "-s",
+                "-f",
+                "-X",
+                "PUT",
+                "--data-binary",
+                &format!("@{}", src.display()),
+                &self.full_url(key),
+            ])
+            .output()
+            .context("Failed to run curl")?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!("HTTP upload failed: {}", stderr);
+        }
+
+        Ok(())
+    }
+
+    fn download_bytes(&self, key: &str) -> Result<Option<Vec<u8>>> {
+        let output = Command::new("curl")
+            .args(["-s", "-f", &self.full_url(key)])
+            .output()
+            .context("Failed to run curl")?;
+
+        if output.status.success() {
+            Ok(Some(output.stdout))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn upload_bytes(&self, key: &str, data: &[u8]) -> Result<()> {
+        let temp_dir = std::env::temp_dir();
+        let temp_file = temp_dir.join(format!("rsb-upload-{}", uuid_simple()));
+        fs::write(&temp_file, data)?;
+
+        let result = self.upload(key, &temp_file);
+        let _ = fs::remove_file(&temp_file);
+        result
+    }
+}
+
+/// File backend for local/network filesystem
+pub struct FileBackend {
+    base_path: PathBuf,
+}
+
+impl FileBackend {
+    pub fn new(url: &str) -> Result<Self> {
+        // Parse file:///path
+        let path = url
+            .strip_prefix("file://")
+            .context("Invalid file:// URL")?;
+
+        let base_path = PathBuf::from(path);
+
+        // Create base directory if it doesn't exist
+        fs::create_dir_all(&base_path)
+            .with_context(|| format!("Failed to create remote cache directory: {}", base_path.display()))?;
+
+        Ok(Self { base_path })
+    }
+
+    fn full_path(&self, key: &str) -> PathBuf {
+        self.base_path.join(key)
+    }
+}
+
+impl RemoteCache for FileBackend {
+    fn exists(&self, key: &str) -> Result<bool> {
+        Ok(self.full_path(key).exists())
+    }
+
+    fn download(&self, key: &str, dest: &Path) -> Result<bool> {
+        let src = self.full_path(key);
+        if !src.exists() {
+            return Ok(false);
+        }
+
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        fs::copy(&src, dest)
+            .with_context(|| format!("Failed to copy from remote cache: {}", src.display()))?;
+
+        Ok(true)
+    }
+
+    fn upload(&self, key: &str, src: &Path) -> Result<()> {
+        let dest = self.full_path(key);
+
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        fs::copy(src, &dest)
+            .with_context(|| format!("Failed to copy to remote cache: {}", dest.display()))?;
+
+        Ok(())
+    }
+
+    fn download_bytes(&self, key: &str) -> Result<Option<Vec<u8>>> {
+        let path = self.full_path(key);
+        if !path.exists() {
+            return Ok(None);
+        }
+
+        let data = fs::read(&path)
+            .with_context(|| format!("Failed to read from remote cache: {}", path.display()))?;
+
+        Ok(Some(data))
+    }
+
+    fn upload_bytes(&self, key: &str, data: &[u8]) -> Result<()> {
+        let path = self.full_path(key);
+
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        fs::write(&path, data)
+            .with_context(|| format!("Failed to write to remote cache: {}", path.display()))?;
+
+        Ok(())
+    }
+}
+
+/// Generate a simple unique identifier (timestamp + random)
+fn uuid_simple() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+
+    format!("{:x}", timestamp)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_file_backend() {
+        let temp_dir = TempDir::new().unwrap();
+        let url = format!("file://{}", temp_dir.path().display());
+        let backend = FileBackend::new(&url).unwrap();
+
+        // Test upload and download bytes
+        let key = "test/data.txt";
+        let data = b"hello world";
+
+        backend.upload_bytes(key, data).unwrap();
+        assert!(backend.exists(key).unwrap());
+
+        let downloaded = backend.download_bytes(key).unwrap();
+        assert_eq!(downloaded, Some(data.to_vec()));
+    }
+
+    #[test]
+    fn test_s3_url_parsing() {
+        let backend = S3Backend::new("s3://my-bucket/cache/prefix").unwrap();
+        assert_eq!(backend.bucket, "my-bucket");
+        assert_eq!(backend.prefix, "cache/prefix");
+        assert_eq!(backend.s3_key("objects/ab/cdef"), "cache/prefix/objects/ab/cdef");
+
+        let backend2 = S3Backend::new("s3://bucket").unwrap();
+        assert_eq!(backend2.bucket, "bucket");
+        assert_eq!(backend2.prefix, "");
+        assert_eq!(backend2.s3_key("objects/ab/cdef"), "objects/ab/cdef");
+    }
+}

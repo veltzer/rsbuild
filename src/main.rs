@@ -7,6 +7,7 @@ mod file_index;
 mod graph;
 mod object_store;
 mod processors;
+mod remote_cache;
 mod tool_lock;
 mod watcher;
 

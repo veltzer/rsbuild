@@ -506,7 +506,12 @@ impl Builder {
                         color::dim("disabled")
                     };
                     let proc_type = color::dim(&format!("[{}]", proc.processor_type().as_str()));
-                    println!("{} {} {}", name, proc_type, status);
+                    let batch = if proc.supports_batch() {
+                        format!(" {}", color::dim("[batch]"))
+                    } else {
+                        String::new()
+                    };
+                    println!("{} {}{} {}", name, proc_type, batch, status);
                 }
             }
             ProcessorAction::All => {
@@ -523,7 +528,12 @@ impl Builder {
                         String::new()
                     };
                     let proc_type = color::dim(&format!("[{}]", proc.processor_type().as_str()));
-                    println!("{} {} {}{} \u{2014} {}", name, proc_type, enabled_status, hidden_status, color::dim(proc.description()));
+                    let batch = if proc.supports_batch() {
+                        format!(" {}", color::dim("[batch]"))
+                    } else {
+                        String::new()
+                    };
+                    println!("{} {}{} {}{} \u{2014} {}", name, proc_type, batch, enabled_status, hidden_status, color::dim(proc.description()));
                 }
             }
             ProcessorAction::Auto => {

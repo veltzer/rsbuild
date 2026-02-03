@@ -91,7 +91,27 @@ impl ProductDiscovery for MakeProcessor {
 
         for makefile in makefiles {
             let stub_path = self.get_stub_path(&makefile);
-            let mut inputs = vec![makefile];
+            let makefile_dir = makefile.parent().unwrap_or(&self.project_root);
+
+            // Collect all files under the Makefile's directory as inputs so that
+            // changes to any sibling source file trigger a rebuild.
+            let sibling_files = file_index.query(
+                makefile_dir,
+                &[""],       // match all extensions
+                &["/.git/", "/out/", "/.rsb/"],
+                &[],
+                &[],
+                &self.project_root,
+            );
+
+            let mut inputs: Vec<PathBuf> = Vec::new();
+            // Makefile first so product display shows it
+            inputs.push(makefile.clone());
+            for file in &sibling_files {
+                if *file != makefile {
+                    inputs.push(file.clone());
+                }
+            }
             inputs.extend(extra.clone());
             graph.add_product(inputs, vec![stub_path], "make", cfg_hash.clone())?;
         }

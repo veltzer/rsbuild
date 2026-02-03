@@ -135,3 +135,4 @@ libc
 lz
 mtimes
 zstd
+cwd

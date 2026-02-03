@@ -106,6 +106,39 @@ project/
 - **Config-aware caching** — processor config (compiler flags, linter args, etc.) is hashed into cache keys so config changes trigger rebuilds
 - **Remote caching** — optional S3/HTTP/filesystem remote cache for sharing artifacts across machines
 
+## Path Handling
+
+**All paths are relative to project root.** RSB assumes it is run from the project root directory (where `rsb.toml` lives).
+
+### Internal paths (always relative)
+- `Product.inputs` and `Product.outputs` — stored as relative paths
+- `FileIndex` — returns relative paths from `scan()` and `query()`
+- Cache keys (`Product.cache_key()`) — use relative paths, enabling cache sharing across different checkout locations
+- Cache entries (`CacheEntry.outputs[].path`) — stored as relative paths
+
+### Processor execution
+- Processors pass relative paths directly to external tools
+- Processors set `cmd.current_dir(project_root)` to ensure tools resolve paths correctly
+- `fs::read()`, `fs::write()`, etc. work directly with relative paths since cwd is project root
+
+### Exception: Processors requiring absolute paths
+If a processor absolutely must use absolute paths (e.g., for a tool that doesn't respect current directory), it should:
+1. Store the `project_root` in the processor struct
+2. Join paths with `project_root` only at execution time
+3. Never store absolute paths in `Product.inputs` or `Product.outputs`
+
+Example:
+```rust
+// In execute(), convert to absolute only for the command
+let absolute_path = self.project_root.join(&product.inputs[0]);
+cmd.arg(&absolute_path);
+```
+
+### Why relative paths?
+- **Cache portability** — cache keys don't include machine-specific absolute paths
+- **Remote cache sharing** — same project checked out to different paths can share cache
+- **Simpler code** — no need to strip prefixes for display or storage
+
 ## Caching and Clean Behavior
 
 The cache (`.rsb/`) stores build state to enable fast incremental builds:

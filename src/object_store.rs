@@ -269,10 +269,20 @@ impl ObjectStore {
         true
     }
 
-    /// Try to restore outputs from cache (local first, then remote)
-    /// Returns true if all outputs were restored
+    /// Try to restore outputs from cache (local first, then remote).
+    /// Returns true if all outputs were restored (or for checkers, if cache entry is valid).
+    ///
+    /// # Behavior by processor type
+    ///
+    /// - **Generators** (non-empty `output_paths`): Restores output files from cached objects
+    ///   via hardlink or copy. Returns true only if all outputs were successfully restored.
+    ///
+    /// - **Checkers** (empty `output_paths`): No files to restore. Returns true if a cache
+    ///   entry exists with matching input checksum, indicating the check previously passed.
+    ///   This allows checkers to skip re-running after `rsb clean && rsb build`.
     pub fn restore_from_cache(&self, cache_key: &str, input_checksum: &str, output_paths: &[PathBuf]) -> Result<bool> {
-        // For checkers (empty outputs), just verify cache entry exists with matching checksum
+        // For checkers (empty outputs), just verify cache entry exists with matching checksum.
+        // The cache entry itself serves as the "success marker" - no files need restoration.
         if output_paths.is_empty() {
             return Ok(self.get_entry(cache_key)
                 .map(|e| e.input_checksum == input_checksum)

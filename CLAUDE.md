@@ -87,14 +87,7 @@ project/
 ├── src/                  # C/C++ source files
 ├── sleep/                # .sleep files (for parallel testing)
 ├── out/
-│   ├── cc_single_file/   # Compiled executables
-│   ├── ruff/             # Ruff lint stub files
-│   ├── pylint/           # Pylint lint stub files
-│   ├── cpplint/          # C/C++ lint stub files
-│   ├── shellcheck/       # Shellcheck stub files
-│   ├── spellcheck/       # Spellcheck stub files
-│   ├── sleep/            # Sleep stub files
-│   └── make/             # Make stub files
+│   └── cc_single_file/   # Compiled executables (generators only)
 ├── docs/
 │   └── processors/       # Per-processor documentation
 └── .rsb/                 # Cache (db/, objects/)
@@ -102,14 +95,26 @@ project/
 
 ## Architecture
 
-- **Processors** implement `ProductDiscovery` trait (template, ruff, pylint, sleep, cc_single_file, cpplint, shellcheck, spellcheck, make)
+- **Processors** implement `ProductDiscovery` trait — two types:
+  - **Generators** (cc_single_file, template): produce output files, must implement `clean()`
+  - **Checkers** (ruff, pylint, cpplint, shellcheck, spellcheck, make, sleep): validate inputs, no output files
 - **FileIndex** walks the project once using the `ignore` crate, respecting `.gitignore` and `.rsbignore`
-- **Products** have inputs (source files) and outputs (generated files)
+- **Products** have inputs (source files) and outputs (generated files, empty for checkers)
 - **BuildGraph** manages dependencies between products
 - **Executor** runs products in dependency order, with optional parallelism
 - **Build order** is deterministic — file discovery, processor iteration, and topological sort are all sorted
 - **Config-aware caching** — processor config (compiler flags, linter args, etc.) is hashed into cache keys so config changes trigger rebuilds
 - **Remote caching** — optional S3/HTTP/filesystem remote cache for sharing artifacts across machines
+
+## Caching and Clean Behavior
+
+The cache (`.rsb/`) stores build state to enable fast incremental builds:
+
+- **Generators**: Cache stores copies of output files. After `rsb clean`, outputs are deleted but cache remains. Next `rsb build` restores outputs from cache (fast hardlink/copy) instead of regenerating.
+
+- **Checkers**: No output files to cache. The cache entry itself serves as a "success marker". After `rsb clean` (nothing to delete), next `rsb build` sees the cache entry is valid and skips the check entirely (instant).
+
+This ensures `rsb clean && rsb build` is fast for both types — generators restore from cache, checkers skip entirely.
 
 ## Philosophy
 

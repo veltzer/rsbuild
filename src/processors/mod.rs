@@ -184,7 +184,13 @@ pub fn discover_stub_products(
 }
 
 /// Discover checker products: no output files, cache entry serves as success marker.
-/// Used by built-in checker processors (ruff, pylint, cpplint, shellcheck, spellcheck, sleep).
+///
+/// Creates one product per source file with empty outputs. When executed successfully,
+/// the cache stores the input checksum. On subsequent builds, if the checksum matches,
+/// the check is skipped entirely without running the external tool.
+///
+/// This is the standard way to implement checker discovery. See [`ProcessorType::Checker`]
+/// for details on the caching behavior.
 pub fn discover_checker_products(
     graph: &mut BuildGraph,
     project_root: &Path,
@@ -339,12 +345,31 @@ pub use checkers::{
 pub use generators::{CcProcessor, TemplateProcessor};
 pub use lua_processor::LuaProcessor;
 
-/// The type of processor - whether it generates new files or checks existing files
+/// The type of processor - whether it generates new files or checks existing files.
+///
+/// # Caching Behavior
+///
+/// Both processor types use the cache to avoid redundant work:
+///
+/// - **Generators** produce output files (e.g., executables, rendered templates). The cache
+///   stores copies of these outputs. On `rsb clean`, output files are deleted but the cache
+///   remains intact. On the next `rsb build`, outputs are restored from cache (fast copy/hardlink)
+///   instead of being regenerated.
+///
+/// - **Checkers** validate input files but produce no output files. The cache entry itself
+///   serves as a "success marker". On `rsb clean`, there's nothing to delete. On the next
+///   `rsb build`, if the cache entry exists and inputs haven't changed, the check is skipped
+///   entirely (instant).
+///
+/// This design ensures that `rsb clean && rsb build` is fast for both types - generators
+/// restore from cache, checkers skip entirely.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProcessorType {
-    /// Generates new output files from input files (e.g., template, cc_single_file, pandoc)
+    /// Generates new output files from input files (e.g., template, cc_single_file).
+    /// Products have non-empty `outputs` which are cached and can be restored.
     Generator,
-    /// Checks/validates input files, produces stub files as cache markers (e.g., ruff, pylint, spellcheck)
+    /// Checks/validates input files without producing output files (e.g., ruff, pylint, shellcheck).
+    /// Products have empty `outputs`; the cache entry serves as the success marker.
     Checker,
 }
 
@@ -358,8 +383,49 @@ impl ProcessorType {
     }
 }
 
-/// Trait for processors that can discover products for the build graph
-/// Must be Sync + Send for parallel execution support
+/// Trait for processors that can discover products for the build graph.
+///
+/// Processors come in two types (see [`ProcessorType`]):
+/// - **Generators**: Create output files from inputs (must override `clean()`)
+/// - **Checkers**: Validate inputs without producing outputs (use default `clean()`)
+///
+/// # Implementing a Checker
+///
+/// Checkers are simpler - just implement the required methods and use defaults for the rest:
+///
+/// ```ignore
+/// impl ProductDiscovery for MyChecker {
+///     fn description(&self) -> &str { "Check files with mytool" }
+///     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+///         discover_checker_products(graph, ..., "mychecker")  // empty outputs
+///     }
+///     fn execute(&self, product: &Product) -> Result<()> {
+///         run_mytool(&product.inputs[0])
+///     }
+///     fn auto_detect(&self, file_index: &FileIndex) -> bool { ... }
+/// }
+/// ```
+///
+/// # Implementing a Generator
+///
+/// Generators must override `processor_type()` and `clean()`:
+///
+/// ```ignore
+/// impl ProductDiscovery for MyGenerator {
+///     fn description(&self) -> &str { "Generate files" }
+///     fn processor_type(&self) -> ProcessorType { ProcessorType::Generator }
+///     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+///         graph.add_product(inputs, outputs, "mygen", ...)?;  // non-empty outputs
+///     }
+///     fn execute(&self, product: &Product) -> Result<()> { ... }
+///     fn clean(&self, product: &Product) -> Result<()> {
+///         clean_outputs(product, "mygen")
+///     }
+///     fn auto_detect(&self, file_index: &FileIndex) -> bool { ... }
+/// }
+/// ```
+///
+/// Must be Sync + Send for parallel execution support.
 pub trait ProductDiscovery: Sync + Send {
     /// Human-readable description of what this processor does
     fn description(&self) -> &str;
@@ -381,8 +447,14 @@ pub trait ProductDiscovery: Sync + Send {
     /// Execute a single product
     fn execute(&self, product: &Product) -> Result<()>;
 
-    /// Clean outputs for a product.
-    /// Default implementation does nothing (appropriate for checkers with no output files).
+    /// Clean outputs for a product (called by `rsb clean`).
+    ///
+    /// - **Checkers**: Use the default (do nothing) - checkers have no output files.
+    ///   The cache entry remains intact, so the next build will skip the check.
+    ///
+    /// - **Generators**: Must override to delete output files. Use `clean_outputs()`
+    ///   helper. The cache entry remains intact, so the next build will restore
+    ///   outputs from cache instead of regenerating them.
     fn clean(&self, _product: &Product) -> Result<()> {
         Ok(())
     }

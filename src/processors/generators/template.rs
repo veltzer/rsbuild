@@ -152,10 +152,6 @@ impl ProductDiscovery for TemplateProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        if product.inputs.is_empty() || product.outputs.len() != 1 {
-            anyhow::bail!("Template product must have at least one input and exactly one output");
-        }
-
         let item = TemplateItem::new(
             product.inputs[0].clone(),
             product.outputs[0].clone(),

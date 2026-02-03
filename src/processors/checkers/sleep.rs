@@ -59,10 +59,6 @@ impl ProductDiscovery for SleepProcessor {
         "Sleep for a duration (testing)"
     }
 
-    fn processor_type(&self) -> crate::processors::ProcessorType {
-        crate::processors::ProcessorType::Checker
-    }
-
     fn hidden(&self) -> bool {
         true
     }
@@ -87,14 +83,6 @@ impl ProductDiscovery for SleepProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        if product.inputs.is_empty() {
-            anyhow::bail!("Sleep product must have at least one input");
-        }
         self.execute_sleep(&product.inputs[0])
-    }
-
-    fn clean(&self, _product: &Product) -> Result<()> {
-        // No output files to clean for checkers
-        Ok(())
     }
 }

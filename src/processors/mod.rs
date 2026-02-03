@@ -210,6 +210,8 @@ pub fn discover_checker_products(
 }
 
 /// Validate that a stub product has at least one input and exactly one output.
+/// Note: This is typically not needed since the graph guarantees products have inputs.
+#[allow(dead_code)]
 pub fn validate_stub_product(product: &Product, processor_name: &str) -> Result<()> {
     if product.inputs.is_empty() || product.outputs.len() != 1 {
         anyhow::bail!("{} product must have at least one input and exactly one output", processor_name);
@@ -317,48 +319,16 @@ where
     F: Fn(&[&Path]) -> Result<()>,
     G: Fn(&Path) -> Result<()>,
 {
-    // Validate all products and collect input paths
-    let mut validated: Vec<&Path> = Vec::with_capacity(products.len());
-    let mut results: Vec<Option<Result<()>>> = (0..products.len()).map(|_| None).collect();
-
-    for (i, product) in products.iter().enumerate() {
-        if product.inputs.is_empty() {
-            results[i] = Some(Err(anyhow::anyhow!("Checker product must have at least one input")));
-        } else {
-            validated.push(&product.inputs[0]);
-        }
-    }
-
-    if validated.is_empty() {
-        // All products failed validation
-        return results.into_iter().map(|r| r.unwrap()).collect();
-    }
+    let input_paths: Vec<&Path> = products.iter().map(|p| p.inputs[0].as_path()).collect();
 
     // Try batch execution
-    if batch_fn(&validated).is_ok() {
-        // Batch succeeded — mark all validated products as successful
-        let mut validated_idx = 0;
-        for i in 0..products.len() {
-            if results[i].is_some() {
-                continue; // Already failed validation
-            }
-            validated_idx += 1;
-            let _ = validated_idx; // suppress unused warning
-            results[i] = Some(Ok(()));
-        }
+    if batch_fn(&input_paths).is_ok() {
+        // Batch succeeded — all products pass
+        products.iter().map(|_| Ok(())).collect()
     } else {
         // Batch failed — fall back to per-file execution to isolate errors
-        let mut validated_iter = validated.iter();
-        for i in 0..products.len() {
-            if results[i].is_some() {
-                continue; // Already failed validation
-            }
-            let input = validated_iter.next().unwrap();
-            results[i] = Some(single_fn(input));
-        }
+        input_paths.iter().map(|input| single_fn(input)).collect()
     }
-
-    results.into_iter().map(|r| r.unwrap()).collect()
 }
 
 // Re-export from subdirectories
@@ -394,8 +364,11 @@ pub trait ProductDiscovery: Sync + Send {
     /// Human-readable description of what this processor does
     fn description(&self) -> &str;
 
-    /// The type of this processor (generator or checker)
-    fn processor_type(&self) -> ProcessorType;
+    /// The type of this processor (generator or checker).
+    /// Default is Checker since most processors are checkers.
+    fn processor_type(&self) -> ProcessorType {
+        ProcessorType::Checker
+    }
 
     /// Whether this processor should be hidden from default listings (e.g. testing-only processors)
     fn hidden(&self) -> bool {
@@ -408,8 +381,11 @@ pub trait ProductDiscovery: Sync + Send {
     /// Execute a single product
     fn execute(&self, product: &Product) -> Result<()>;
 
-    /// Clean outputs for a product
-    fn clean(&self, product: &Product) -> Result<()>;
+    /// Clean outputs for a product.
+    /// Default implementation does nothing (appropriate for checkers with no output files).
+    fn clean(&self, _product: &Product) -> Result<()> {
+        Ok(())
+    }
 
     /// Auto-detect whether this processor is relevant for the current project
     fn auto_detect(&self, file_index: &FileIndex) -> bool;

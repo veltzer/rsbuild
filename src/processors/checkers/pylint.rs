@@ -58,10 +58,6 @@ impl ProductDiscovery for PylintProcessor {
         "Lint Python files with pylint"
     }
 
-    fn processor_type(&self) -> crate::processors::ProcessorType {
-        crate::processors::ProcessorType::Checker
-    }
-
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
         !file_index.scan(&self.project_root, &self.pylint_config.scan, true).is_empty()
     }
@@ -89,15 +85,7 @@ impl ProductDiscovery for PylintProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        if product.inputs.is_empty() {
-            anyhow::bail!("Pylint product must have at least one input");
-        }
         self.lint_file(&product.inputs[0])
-    }
-
-    fn clean(&self, _product: &Product) -> Result<()> {
-        // No output files to clean for checkers
-        Ok(())
     }
 
     fn supports_batch(&self) -> bool {

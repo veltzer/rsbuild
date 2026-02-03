@@ -363,10 +363,10 @@ where
 
 // Re-export from subdirectories
 pub use checkers::{
-    CpplintProcessor, PylintProcessor, RuffProcessor,
+    CpplintProcessor, MakeProcessor, PylintProcessor, RuffProcessor,
     ShellcheckProcessor, SleepProcessor, SpellcheckProcessor,
 };
-pub use generators::{CcProcessor, MakeProcessor, TemplateProcessor};
+pub use generators::{CcProcessor, TemplateProcessor};
 pub use lua_processor::LuaProcessor;
 
 /// The type of processor - whether it generates new files or checks existing files

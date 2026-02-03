@@ -69,7 +69,7 @@ impl ProductDiscovery for MakeProcessor {
     }
 
     fn processor_type(&self) -> crate::processors::ProcessorType {
-        crate::processors::ProcessorType::Generator
+        crate::processors::ProcessorType::Checker
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {

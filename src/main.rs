@@ -37,6 +37,9 @@ fn main() -> Result<()> {
     // Enable JSON output mode if --json flag is set
     json_output::set_json_mode(cli.json);
 
+    // Enable phases debug logging if --phases flag is set
+    builder::set_phases_debug(cli.phases);
+
     // Set up Ctrl+C handler: sets a flag so the executor can stop gracefully
     let interrupted = Arc::new(AtomicBool::new(false));
     {

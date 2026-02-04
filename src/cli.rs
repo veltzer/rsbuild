@@ -23,6 +23,10 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub json: bool,
 
+    /// Show build phase messages (discover, add_dependencies, etc.)
+    #[arg(long, global = true)]
+    pub phases: bool,
+
     #[command(subcommand)]
     pub command: Commands,
 }

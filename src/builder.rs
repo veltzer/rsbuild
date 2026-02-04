@@ -4,6 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use crate::cli::{ConfigAction, DepsAction, GraphFormat, GraphViewer, ProcessorAction, ToolsAction};
 use crate::color;
 use crate::config::Config;
@@ -14,6 +15,19 @@ use crate::object_store::ObjectStore;
 use crate::processors::{CcProcessor, CpplintProcessor, LuaProcessor, MakeProcessor, PylintProcessor, RuffProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TemplateProcessor, log_command};
 use crate::remote_cache;
 use crate::tool_lock;
+
+/// Global flag: when true, print phase messages during graph building.
+static PHASES_DEBUG: AtomicBool = AtomicBool::new(false);
+
+/// Enable phases debug logging (called once from main).
+pub fn set_phases_debug(enabled: bool) {
+    PHASES_DEBUG.store(enabled, Ordering::Relaxed);
+}
+
+/// Check if phases debug is enabled.
+fn phases_debug() -> bool {
+    PHASES_DEBUG.load(Ordering::Relaxed)
+}
 
 /// Labels for the three product states used by dry_run and status.
 struct ProductStatusLabels {
@@ -412,7 +426,9 @@ impl Builder {
 
     /// Build the dependency graph using provided processors
     fn build_graph_with_processors_impl(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, for_clean: bool) -> Result<BuildGraph> {
-        eprintln!("{}", color::bold("Building dependency graph..."));
+        if phases_debug() {
+            eprintln!("{}", color::bold("Phase: Building dependency graph..."));
+        }
         let mut graph = BuildGraph::new();
 
         // Collect which processors should run
@@ -429,6 +445,9 @@ impl Builder {
             .collect();
 
         // Phase 1: Discover products
+        if phases_debug() {
+            eprintln!("{}", color::dim("  Phase: discover"));
+        }
         for name in &active_processors {
             if for_clean {
                 processors[*name].discover_for_clean(&mut graph, &self.file_index)?;
@@ -439,12 +458,18 @@ impl Builder {
 
         // Phase 2: Add dependencies (only for regular builds, not clean)
         if !for_clean {
+            if phases_debug() {
+                eprintln!("{}", color::dim("  Phase: add_dependencies"));
+            }
             for name in &active_processors {
                 processors[*name].add_dependencies(&mut graph)?;
             }
         }
 
-        // Incorporate locked tool versions into product cache keys
+        // Phase 3: Apply tool version hashes
+        if phases_debug() {
+            eprintln!("{}", color::dim("  Phase: apply_tool_version_hashes"));
+        }
         let config = &self.config;
         let tool_hashes = tool_lock::processor_tool_hashes(
             &self.project_root,
@@ -455,6 +480,10 @@ impl Builder {
             graph.apply_tool_version_hashes(&tool_hashes);
         }
 
+        // Phase 4: Resolve dependencies
+        if phases_debug() {
+            eprintln!("{}", color::dim("  Phase: resolve_dependencies"));
+        }
         graph.resolve_dependencies();
         Ok(graph)
     }

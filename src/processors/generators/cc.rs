@@ -1,12 +1,32 @@
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::Mutex;
 
 use crate::config::{CcConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, scan_root, clean_outputs, format_command, run_command};
+
+/// Global cache for shell command results to avoid running the same command multiple times.
+/// Key is the command string, value is the resulting flags.
+static SHELL_COMMAND_CACHE: Mutex<Option<HashMap<String, Vec<String>>>> = Mutex::new(None);
+
+/// Get or compute flags from a shell command, caching the result.
+fn cached_shell_command(cmd_line: &str, runner: impl FnOnce(&str) -> Result<Vec<String>>) -> Result<Vec<String>> {
+    let mut cache = SHELL_COMMAND_CACHE.lock().unwrap();
+    let cache = cache.get_or_insert_with(HashMap::new);
+
+    if let Some(cached) = cache.get(cmd_line) {
+        return Ok(cached.clone());
+    }
+
+    let result = runner(cmd_line)?;
+    cache.insert(cmd_line.to_string(), result.clone());
+    Ok(result)
+}
 
 /// Per-file compile/link flags extracted from source comments.
 #[derive(Default)]
@@ -104,7 +124,8 @@ fn parse_source_flags(source: &Path) -> Result<SourceFlags> {
         for var_name in &cmd_var_names {
             if let Some(rest) = value_part.strip_prefix(var_name) {
                 if let Some(raw_value) = rest.strip_prefix('=') {
-                    let args = run_command_for_flags(raw_value.trim())?;
+                    let cmd = raw_value.trim();
+                    let args = cached_shell_command(cmd, run_command_for_flags)?;
                     match *var_name {
                         "EXTRA_COMPILE_CMD" => flags.compile_args_after.extend(args),
                         "EXTRA_LINK_CMD" => flags.link_args_after.extend(args),
@@ -117,7 +138,8 @@ fn parse_source_flags(source: &Path) -> Result<SourceFlags> {
         for var_name in &shell_var_names {
             if let Some(rest) = value_part.strip_prefix(var_name) {
                 if let Some(raw_value) = rest.strip_prefix('=') {
-                    let args = run_shell_for_flags(raw_value.trim())?;
+                    let cmd = raw_value.trim();
+                    let args = cached_shell_command(cmd, run_shell_for_flags)?;
                     match *var_name {
                         "EXTRA_COMPILE_SHELL" => flags.compile_args_after.extend(args),
                         "EXTRA_LINK_SHELL" => flags.link_args_after.extend(args),
@@ -173,8 +195,23 @@ fn run_shell_for_flags(cmd_line: &str) -> Result<Vec<String>> {
     Ok(stdout.split_whitespace().map(String::from).collect())
 }
 
+/// Run a backtick command and return its output as a single string.
+fn run_backtick_command(cmd_str: &str) -> Result<Vec<String>> {
+    let mut cmd = Command::new("sh");
+    cmd.arg("-c").arg(cmd_str);
+    let output = run_command(&mut cmd)?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("Backtick command failed: {} — {}", cmd_str, stderr);
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    // Return as single-element vec so caching works uniformly
+    Ok(vec![stdout])
+}
+
 /// Expand backtick-wrapped portions in a string by running them as shell commands.
 /// E.g. "`pkg-config --cflags gtk+-3.0`" → the stdout of that command.
+/// Results are cached to avoid running the same command multiple times.
 fn expand_backticks(value: &str) -> Result<String> {
     if !value.contains('`') {
         return Ok(value.to_string());
@@ -190,15 +227,10 @@ fn expand_backticks(value: &str) -> Result<String> {
             anyhow::anyhow!("Unmatched backtick in value: {}", value)
         })?;
         let cmd_str = &after_start[..end];
-        let mut cmd = Command::new("sh");
-        cmd.arg("-c").arg(cmd_str);
-        let output = run_command(&mut cmd)?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            anyhow::bail!("Backtick command failed: {} — {}", cmd_str, stderr);
-        }
-        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        result.push_str(&stdout);
+        // Use cache for backtick commands too
+        let cached = cached_shell_command(cmd_str, run_backtick_command)?;
+        let stdout = cached.first().map(|s| s.as_str()).unwrap_or("");
+        result.push_str(stdout);
         rest = &after_start[end + 1..];
     }
     result.push_str(rest);

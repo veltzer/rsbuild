@@ -56,6 +56,19 @@ Execute via `sh -c` (full shell syntax):
 // EXTRA_LINK_SHELL=echo -L$(brew --prefix openssl)/lib
 ```
 
+### Backtick substitution
+
+Flag directives also support backtick substitution for inline command execution:
+
+```c
+// EXTRA_COMPILE_FLAGS_AFTER=`pkg-config --cflags gtk+-3.0`
+// EXTRA_LINK_FLAGS_AFTER=`pkg-config --libs gtk+-3.0`
+```
+
+### Command caching
+
+All command and shell directives (`EXTRA_*_CMD`, `EXTRA_*_SHELL`, and backtick substitutions) are cached in memory during a build. If multiple source files use the same command (e.g., `pkg-config --cflags gtk+-3.0`), it is executed only once. This improves build performance when many files share common dependencies.
+
 ### Directive summary
 
 | Directive | Execution | Use case |

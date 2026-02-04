@@ -84,6 +84,14 @@ pub enum Commands {
         /// Skip tool version verification against .tools.versions
         #[arg(long)]
         ignore_tool_versions: bool,
+
+        /// Batch size for batch-capable processors (0 = no limit, omit to use config)
+        #[arg(long)]
+        batch_size: Option<usize>,
+
+        /// Disable batching entirely
+        #[arg(long)]
+        no_batch: bool,
     },
     /// Clean build artifacts
     Clean {
@@ -122,6 +130,14 @@ pub enum Commands {
         /// Suppress the build summary
         #[arg(long)]
         no_summary: bool,
+
+        /// Batch size for batch-capable processors (0 = no limit, omit to use config)
+        #[arg(long)]
+        batch_size: Option<usize>,
+
+        /// Disable batching entirely
+        #[arg(long)]
+        no_batch: bool,
     },
     /// Manage processors
     Processor {

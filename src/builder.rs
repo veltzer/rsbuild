@@ -58,7 +58,8 @@ impl Builder {
     }
 
     /// Execute an incremental build using the dependency graph
-    pub fn build(&self, force: bool, verbose: bool, file_names: u8, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool) -> Result<()> {
+    /// batch_size_override: Some(Some(n)) = use n, Some(None) = disable batching, None = use config
+    pub fn build(&self, force: bool, verbose: bool, file_names: u8, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool, batch_size_override: Option<Option<usize>>) -> Result<()> {
         // Create processors
         let processors = self.create_processors(verbose)?;
 
@@ -67,7 +68,9 @@ impl Builder {
 
         // Create executor with parallelism from command line or config
         let parallel = jobs.unwrap_or(self.config.build.parallel);
-        let executor = Executor::new(&processors, parallel, verbose, file_names, Arc::clone(&interrupted), self.config.build.batch_size);
+        // CLI overrides config for batch_size
+        let batch_size = batch_size_override.unwrap_or(self.config.build.batch_size);
+        let executor = Executor::new(&processors, parallel, verbose, file_names, Arc::clone(&interrupted), batch_size);
 
         // Execute the build
         let result = executor.execute(&graph, &self.object_store, force, timings, keep_going);

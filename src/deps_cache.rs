@@ -26,9 +26,19 @@ struct DepsEntry {
     dependencies: Vec<String>,
 }
 
+/// Statistics about dependency cache usage
+#[derive(Debug, Default, Clone)]
+pub struct DepsCacheStats {
+    /// Number of cache hits
+    pub hits: usize,
+    /// Number of cache misses (recalculated)
+    pub misses: usize,
+}
+
 /// Dependency cache using sled key/value store
 pub struct DepsCache {
     db: sled::Db,
+    stats: DepsCacheStats,
 }
 
 impl DepsCache {
@@ -44,21 +54,41 @@ impl DepsCache {
         let db = sled::open(&db_path)
             .context("Failed to open dependency cache database")?;
 
-        Ok(Self { db })
+        Ok(Self { db, stats: DepsCacheStats::default() })
     }
 
     /// Get cached dependencies for a source file if the cache is valid.
     /// Returns None if the file has changed or isn't cached.
-    pub fn get(&self, source: &Path) -> Option<Vec<PathBuf>> {
+    /// Updates internal statistics (hits/misses).
+    pub fn get(&mut self, source: &Path) -> Option<Vec<PathBuf>> {
         let key = path_to_key(source);
 
         // Get cached entry
-        let data = self.db.get(&key).ok()??;
-        let entry: DepsEntry = serde_json::from_slice(&data).ok()?;
+        let data = match self.db.get(&key).ok()? {
+            Some(d) => d,
+            None => {
+                self.stats.misses += 1;
+                return None;
+            }
+        };
+        let entry: DepsEntry = match serde_json::from_slice(&data) {
+            Ok(e) => e,
+            Err(_) => {
+                self.stats.misses += 1;
+                return None;
+            }
+        };
 
         // Verify source file hasn't changed
-        let current_checksum = file_checksum(source).ok()?;
+        let current_checksum = match file_checksum(source) {
+            Ok(c) => c,
+            Err(_) => {
+                self.stats.misses += 1;
+                return None;
+            }
+        };
         if entry.source_checksum != current_checksum {
+            self.stats.misses += 1;
             return None;
         }
 
@@ -69,10 +99,12 @@ impl DepsCache {
 
         for dep in &deps {
             if !dep.exists() {
+                self.stats.misses += 1;
                 return None;
             }
         }
 
+        self.stats.hits += 1;
         Some(deps)
     }
 
@@ -102,6 +134,11 @@ impl DepsCache {
         self.db.flush()
             .context("Failed to flush dependency cache")?;
         Ok(())
+    }
+
+    /// Get cache statistics (hits and misses)
+    pub fn stats(&self) -> &DepsCacheStats {
+        &self.stats
     }
 
     /// Clear all cached dependencies

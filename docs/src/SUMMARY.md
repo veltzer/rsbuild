@@ -6,6 +6,7 @@
 - [Commands](commands.md)
 - [Configuration](configuration.md)
 - [Remote Caching](remote-caching.md)
+- [Dependency Caching](dependency-caching.md)
 - [Project Structure](project-structure.md)
 - [Processors](processors.md)
     - [Template](processors/template.md)

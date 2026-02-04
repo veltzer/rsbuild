@@ -583,7 +583,7 @@ impl ProductDiscovery for CcProcessor {
         let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
 
         // Open dependency cache
-        let deps_cache = DepsCache::open()?;
+        let mut deps_cache = DepsCache::open()?;
 
         // Show progress bar for dependency scanning
         let pb = indicatif::ProgressBar::new(source_files.len() as u64);
@@ -623,6 +623,13 @@ impl ProductDiscovery for CcProcessor {
             pb.inc(1);
         }
         pb.finish_and_clear();
+
+        // Show cache stats
+        let stats = deps_cache.stats();
+        if stats.hits > 0 || stats.misses > 0 {
+            eprintln!("[cc_single_file] Dependency cache: {} hits, {} recalculated",
+                stats.hits, stats.misses);
+        }
 
         // Flush cache to disk
         let _ = deps_cache.flush();

@@ -115,8 +115,8 @@ Processor configuration (compiler flags, linter arguments, etc.) is hashed into 
 
 The cache lives in `.rsb/` and consists of:
 
-- `index.json` — maps product hashes to cached outputs
+- `db/` — sled database storing the object store index (maps product hashes to cached outputs)
 - `objects/` — stored build artifacts (addressed by content hash)
-- `deps/` — dependency files (e.g., gcc `-MMD` output for header tracking)
+- `deps/` — sled database storing source file dependencies (see [Dependency Caching](dependency-caching.md))
 
 Cache restoration can use either hardlinks (fast, same filesystem) or copies (works across filesystems), configured via `restore_method`.

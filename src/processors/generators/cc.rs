@@ -7,6 +7,7 @@ use std::sync::Mutex;
 use regex::Regex;
 
 use crate::config::{CcConfig, IncludeScanner, config_hash, resolve_extra_inputs};
+use crate::deps_cache::DepsCache;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, scan_root, clean_outputs, format_command, run_command};
@@ -340,15 +341,22 @@ impl CcProcessor {
         };
 
         // Regex to match #include "file" and #include <file>
-        // We capture both quoted and angle-bracket includes
-        let include_re = Regex::new(r#"^\s*#\s*include\s*[<"]([^>"]+)[>"]"#).unwrap();
+        // Captures: 1 = bracket type (< or "), 2 = path
+        let include_re = Regex::new(r#"^\s*#\s*include\s*([<"])([^>"]+)[>"]"#).unwrap();
 
         for line in content.lines() {
             if let Some(caps) = include_re.captures(line) {
-                let include_path = &caps[1];
+                let bracket = &caps[1];
+                let include_path = &caps[2];
 
-                // Skip system headers (absolute paths or common system dirs)
+                // Skip system headers (absolute paths)
                 if include_path.starts_with('/') {
+                    continue;
+                }
+
+                // For angle-bracket includes without file extension, assume system header
+                // (e.g., <vector>, <string>, <iostream>, <cstdio>)
+                if bracket == "<" && !include_path.contains('.') && !include_path.contains('/') {
                     continue;
                 }
 
@@ -391,7 +399,7 @@ impl CcProcessor {
         // First, try relative to current file's directory (for #include "file")
         if let Some(dir) = current_dir {
             let candidate = dir.join(include);
-            if candidate.exists() {
+            if candidate.is_file() {
                 return Some(candidate);
             }
         }
@@ -403,7 +411,7 @@ impl CcProcessor {
             } else {
                 search.join(include)
             };
-            if candidate.exists() {
+            if candidate.is_file() {
                 return Some(candidate);
             }
         }
@@ -574,6 +582,9 @@ impl ProductDiscovery for CcProcessor {
         let config_hash = Some(config_hash(&self.config));
         let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
 
+        // Open dependency cache
+        let deps_cache = DepsCache::open()?;
+
         // Show progress bar for dependency scanning
         let pb = indicatif::ProgressBar::new(source_files.len() as u64);
         pb.set_style(
@@ -588,8 +599,15 @@ impl ProductDiscovery for CcProcessor {
 
             let executable = self.get_executable_path(source);
 
-            // Resolve header dependencies
-            let headers = self.scan_dependencies(source, *is_cpp).unwrap_or_default();
+            // Try to get cached dependencies, otherwise scan
+            let headers = if let Some(cached) = deps_cache.get(source) {
+                cached
+            } else {
+                let scanned = self.scan_dependencies(source, *is_cpp).unwrap_or_default();
+                // Cache the result (ignore errors)
+                let _ = deps_cache.set(source, &scanned);
+                scanned
+            };
 
             // Build inputs: source file + all headers + extra inputs
             let mut inputs = vec![source.clone()];
@@ -605,6 +623,9 @@ impl ProductDiscovery for CcProcessor {
             pb.inc(1);
         }
         pb.finish_and_clear();
+
+        // Flush cache to disk
+        let _ = deps_cache.flush();
 
         Ok(())
     }

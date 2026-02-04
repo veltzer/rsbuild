@@ -412,6 +412,7 @@ impl Builder {
 
     /// Build the dependency graph using provided processors
     fn build_graph_with_processors_impl(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, for_clean: bool) -> Result<BuildGraph> {
+        eprintln!("{}", color::bold("Building dependency graph..."));
         let mut graph = BuildGraph::new();
 
         let mut names: Vec<&String> = processors.keys().collect();

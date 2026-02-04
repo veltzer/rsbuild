@@ -2,6 +2,7 @@ mod builder;
 mod cli;
 mod color;
 mod config;
+mod deps_cache;
 mod executor;
 mod file_index;
 mod graph;

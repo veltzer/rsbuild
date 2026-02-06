@@ -612,16 +612,16 @@ These are relatively straightforward improvements that would enhance usability.
 - Equivalent to `rsb build @lint` if target aliases are implemented.
 - Useful for pre-commit hooks and quick validation.
 
-### Colored diff on config changes
-- When config changes trigger rebuilds, show what changed:
+### ~~Colored diff on config changes~~ *(Done)*
+- When config changes trigger rebuilds, rsb now shows what changed:
   ```bash
   $ rsb build
-  Config changed for cc_single_file:
-    - cflags: ["-O2", "-Wall"] → ["-O3", "-Wall", "-Werror"]
-  Rebuilding 15 products...
+  Config changed for [cc_single_file]:
+    - compilers[0].cflags[0]: "-O2"
+    + compilers[0].cflags[0]: "-O3"
   ```
 - Helps understand why products are rebuilding when source files haven't changed.
-- Use colored diff format (red for removed, green for added).
+- Uses colored diff format (red for removed, green for added).
 
 ## Security
 

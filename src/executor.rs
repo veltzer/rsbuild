@@ -230,16 +230,19 @@ impl<'a> Executor<'a> {
                                     .entry(proc_name.clone())
                                     .or_insert_with(|| ProcessStats::new());
                                 stats.failed += 1;
+                                failed_products.insert(pw.product_id);
                                 if keep_going {
                                     let msg = format!("[{}] {}: {}", proc_name, product.display(file_names), e);
                                     println!("{}", color::red(&format!("Error: {}", msg)));
-                                    failed_products.insert(pw.product_id);
                                     failed_messages.push(msg);
                                 } else {
+                                    // Print error immediately so it appears right after "Processing:"
+                                    if !crate::json_output::is_json_mode() {
+                                        println!("{}", color::red(&format!("Error: {}", e)));
+                                    }
                                     if first_error.is_none() {
                                         first_error.replace(e);
                                     }
-                                    failed_products.insert(pw.product_id);
                                     silenced_processors.insert(proc_name.clone());
                                 }
                             }
@@ -274,13 +277,15 @@ impl<'a> Executor<'a> {
                             product.display(file_names));
                     }
 
-                    // Emit JSON start event
-                    crate::json_output::emit_product_start(
-                        &product.display(file_names),
-                        &proc_name,
-                        &product.inputs,
-                        &product.outputs,
-                    );
+                    // Emit JSON start event (if not silenced)
+                    if !silenced {
+                        crate::json_output::emit_product_start(
+                            &product.display(file_names),
+                            &proc_name,
+                            &product.inputs,
+                            &product.outputs,
+                        );
+                    }
 
                     let product_start = Instant::now();
                     match processor.execute(product) {
@@ -327,18 +332,21 @@ impl<'a> Executor<'a> {
                                 .entry(proc_name.clone())
                                 .or_insert_with(|| ProcessStats::new());
                             stats.failed += 1;
+                            failed_products.insert(pw.product_id);
                             if keep_going {
                                 let msg = format!("[{}] {}: {}", proc_name, product.display(file_names), e);
                                 if !crate::json_output::is_json_mode() {
                                     println!("{}", color::red(&format!("Error: {}", msg)));
                                 }
-                                failed_products.insert(pw.product_id);
                                 failed_messages.push(msg);
                             } else {
+                                // Print error immediately (only if not silenced) so it appears right after "Processing:"
+                                if !silenced && !crate::json_output::is_json_mode() {
+                                    println!("{}", color::red(&format!("Error: {}", e)));
+                                }
                                 if first_error.is_none() {
                                     first_error.replace(e);
                                 }
-                                failed_products.insert(pw.product_id);
                                 silenced_processors.insert(proc_name.clone());
                             }
                         }

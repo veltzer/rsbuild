@@ -219,7 +219,7 @@ fn default_true() -> bool {
 
 fn default_processors() -> Vec<String> {
     vec![
-        "template".into(), "ruff".into(), "pylint".into(),
+        "tera".into(), "ruff".into(), "pylint".into(),
         "cc_single_file".into(), "cpplint".into(), "shellcheck".into(), "spellcheck".into(), "make".into(),
     ]
 }
@@ -231,7 +231,7 @@ pub struct ProcessorConfig {
     #[serde(default = "default_processors")]
     pub enabled: Vec<String>,
     #[serde(default)]
-    pub template: TemplateConfig,
+    pub tera: TeraConfig,
     #[serde(default)]
     pub ruff: RuffConfig,
     #[serde(default)]
@@ -258,7 +258,7 @@ impl Default for ProcessorConfig {
         Self {
             auto_detect: true,
             enabled: default_processors(),
-            template: TemplateConfig::default(),
+            tera: TeraConfig::default(),
             ruff: RuffConfig::default(),
             pylint: PylintConfig::default(),
             cc_single_file: CcConfig::default(),
@@ -281,7 +281,7 @@ impl ProcessorConfig {
     /// Called after loading from TOML so that `config show` displays resolved values
     /// and processors can access fields without fallbacks.
     pub fn resolve_scan_defaults(&mut self) {
-        self.template.scan.resolve("templates", &[".tera"], &[]);
+        self.tera.scan.resolve("templates", &[".tera"], &[]);
         self.ruff.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
         self.pylint.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
         self.cc_single_file.scan.resolve("src", &[".c", ".cc"], &[]);
@@ -296,7 +296,7 @@ impl ProcessorConfig {
 // --- Processor configs ---
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct TemplateConfig {
+pub struct TeraConfig {
     #[serde(default = "default_true")]
     pub strict: bool,
     #[serde(default)]
@@ -307,7 +307,7 @@ pub struct TemplateConfig {
     pub scan: ScanConfig,
 }
 
-impl Default for TemplateConfig {
+impl Default for TeraConfig {
     fn default() -> Self {
         Self {
             strict: true,

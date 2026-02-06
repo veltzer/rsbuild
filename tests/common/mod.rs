@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::Command;
 use tempfile::TempDir;
 
-/// Helper to create a test project structure (template processor only)
+/// Helper to create a test project structure (tera processor only)
 pub fn setup_test_project() -> TempDir {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
 
@@ -13,10 +13,10 @@ pub fn setup_test_project() -> TempDir {
     fs::create_dir_all(temp_dir.path().join("templates")).expect("Failed to create templates dir");
     fs::create_dir_all(temp_dir.path().join("config")).expect("Failed to create config dir");
 
-    // Only enable the template processor so config/*.py files aren't picked up by linters
+    // Only enable the tera processor so config/*.py files aren't picked up by linters
     fs::write(
         temp_dir.path().join("rsb.toml"),
-        "[processor]\nenabled = [\"template\"]\n"
+        "[processor]\nenabled = [\"tera\"]\n"
     ).expect("Failed to write rsb.toml");
 
     temp_dir

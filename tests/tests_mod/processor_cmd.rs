@@ -10,8 +10,8 @@ fn processors_list_shows_enabled() {
     assert!(output.status.success(), "processors list failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("template"), "Expected template processor in list");
-    assert!(stdout.contains("enabled"), "Expected 'enabled' status for template");
+    assert!(stdout.contains("tera"), "Expected tera processor in list");
+    assert!(stdout.contains("enabled"), "Expected 'enabled' status for tera");
 }
 
 #[test]
@@ -23,16 +23,16 @@ fn processors_list_shows_disabled() {
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    // Only template is enabled in setup_test_project, others should be disabled
+    // Only tera is enabled in setup_test_project, others should be disabled
     assert!(stdout.contains("disabled"), "Expected some disabled processors in list");
 }
 
 #[test]
-fn processors_auto_detects_template() {
+fn processors_auto_detects_tera() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Write a template file so the template processor is detected
+    // Write a template file so the tera processor is detected
     fs::write(
         project_path.join("templates/test.txt.tera"),
         "hello"
@@ -42,8 +42,8 @@ fn processors_auto_detects_template() {
     assert!(output.status.success(), "processors auto failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("template"), "Expected template in auto-detect output");
-    assert!(stdout.contains("detected"), "Expected 'detected' for template processor");
+    assert!(stdout.contains("tera"), "Expected tera in auto-detect output");
+    assert!(stdout.contains("detected"), "Expected 'detected' for tera processor");
 }
 
 #[test]
@@ -65,7 +65,7 @@ fn processors_files_shows_products() {
     assert!(output.status.success(), "processors files failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("[template]"), "Expected [template] header in output");
+    assert!(stdout.contains("[tera]"), "Expected [tera] header in output");
     assert!(stdout.contains("output.txt"), "Expected output file in listing");
 }
 
@@ -105,5 +105,5 @@ fn processors_all_shows_descriptions() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     // processors all shows descriptions with " — " separator
-    assert!(stdout.contains("template"), "Expected template processor");
+    assert!(stdout.contains("tera"), "Expected tera processor");
 }

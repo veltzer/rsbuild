@@ -37,7 +37,7 @@ Processors implement the `ProductDiscovery` trait. Each processor discovers prod
 (input/output pairs), and the executor builds them in dependency order.
 
 Available processors:
-- **template** — Tera template processing (`templates/{X}.tera` -> `{X}`)
+- **tera** — Tera tera processing (`templates/{X}.tera` -> `{X}`)
 - **ruff** — Python linting with ruff (configurable linter binary)
 - **pylint** — Python linting with pylint
 - **cc_single_file** — C/C++ single-file compilation with automatic header dependency tracking

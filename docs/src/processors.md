@@ -14,7 +14,7 @@ The processor type is displayed in `rsb processors list` output:
 ```
 cc_single_file [generator] enabled
 ruff [checker] enabled
-template [generator] enabled
+tera [generator] enabled
 ```
 
 For checkers, `rsb processors files` shows "(checker)" instead of output paths since no files are produced:
@@ -31,7 +31,7 @@ Enable processors in `rsb.toml`:
 
 ```toml
 [processor]
-enabled = ["template", "ruff", "pylint", "cc_single_file", "cpplint", "spellcheck", "sleep", "make"]
+enabled = ["tera", "ruff", "pylint", "cc_single_file", "cpplint", "spellcheck", "sleep", "make"]
 ```
 
 Use `rsb processors list` to see available processors and their status.
@@ -41,7 +41,7 @@ Use `rsb processors files` to see which files each processor discovers.
 
 ## Available Processors
 
-- [Template](processors/template.md) — renders Tera templates into output files
+- [Tera](processors/tera.md) — renders Tera templates into output files
 - [Ruff](processors/ruff.md) — lints Python files with ruff
 - [Pylint](processors/pylint.md) — lints Python files with pylint
 - [CC Single File](processors/cc.md) — compiles C/C++ source files into executables (single-file)

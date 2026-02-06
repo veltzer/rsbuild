@@ -57,7 +57,7 @@ fn force_rebuild() {
     let output = run_rsb_with_env(project_path, &["build", "--force"], &[("NO_COLOR", "1")]);
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("[template] Processing:"));
+    assert!(stdout.contains("[tera] Processing:"));
     assert!(!stdout.contains("Skipping (unchanged)"));
 }
 

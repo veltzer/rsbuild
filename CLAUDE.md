@@ -1,6 +1,6 @@
 # RSB - Rust Build Tool Summary
 
-A fast, incremental build tool written in Rust with template support, Python linting, and parallel execution.
+A fast, incremental build tool written in Rust with tera support, Python linting, and parallel execution.
 
 ## Key Features
 
@@ -8,7 +8,7 @@ A fast, incremental build tool written in Rust with template support, Python lin
 - **Remote caching** — share build artifacts across machines via S3, HTTP, or filesystem
 - **Dependency graph** with topological sort for correct build order
 - **Parallel execution** - run independent products concurrently with `-j` flag
-- **Template processing** via the Tera templating engine
+- **Tera processing** via the Tera templating engine
 - **Python linting** with ruff and pylint processors
 - **Lua plugins** — extend with custom processors without forking
 - **Python configuration** - load config from `.py` files using `load_python()` function
@@ -62,7 +62,7 @@ parallel = 1  # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cor
 batch_size = 0  # Max files per batch (0 = no limit, omit to disable batching)
 
 [processor]
-enabled = ["template", "ruff", "pylint", "sleep", "cc_single_file", "cpplint", "shellcheck", "spellcheck", "make"]
+enabled = ["tera", "ruff", "pylint", "sleep", "cc_single_file", "cpplint", "shellcheck", "spellcheck", "make"]
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
@@ -100,7 +100,7 @@ project/
 ## Architecture
 
 - **Processors** implement `ProductDiscovery` trait — two types:
-  - **Generators** (cc_single_file, template): produce output files, must implement `clean()`
+  - **Generators** (cc_single_file, tera): produce output files, must implement `clean()`
   - **Checkers** (ruff, pylint, cpplint, shellcheck, spellcheck, make, sleep): validate inputs, no output files
 - **FileIndex** walks the project once using the `ignore` crate, respecting `.gitignore` and `.rsbignore`
 - **Products** have inputs (source files) and outputs (generated files, empty for checkers)

@@ -14,7 +14,7 @@ use crate::executor::Executor;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::ObjectStore;
-use crate::processors::{CcProcessor, CpplintProcessor, LuaProcessor, MakeProcessor, PylintProcessor, RuffProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TemplateProcessor, log_command};
+use crate::processors::{CcProcessor, CpplintProcessor, LuaProcessor, MakeProcessor, PylintProcessor, RuffProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TeraProcessor, log_command};
 use crate::remote_cache;
 use crate::tool_lock;
 
@@ -284,9 +284,9 @@ impl Builder {
     pub fn create_processors(&self, verbose: bool) -> Result<HashMap<String, Box<dyn ProductDiscovery>>> {
         let mut processors: HashMap<String, Box<dyn ProductDiscovery>> = HashMap::new();
 
-        // Template processor
-        if let Ok(template_proc) = TemplateProcessor::new(self.project_root.clone(), self.config.processor.template.clone()) {
-            processors.insert("template".to_string(), Box::new(template_proc));
+        // Tera processor
+        if let Ok(tera_proc) = TeraProcessor::new(self.project_root.clone(), self.config.processor.tera.clone()) {
+            processors.insert("tera".to_string(), Box::new(tera_proc));
         }
 
         // Ruff processor

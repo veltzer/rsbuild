@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value};
 
-use crate::config::{TemplateConfig, config_hash, resolve_extra_inputs};
+use crate::config::{TeraConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, run_command};
@@ -28,7 +28,7 @@ impl TemplateItem {
     }
 
     /// Render the template and write to output
-    fn render(&self, config: &TemplateConfig) -> Result<()> {
+    fn render(&self, config: &TeraConfig) -> Result<()> {
         // Read template content
         let template_content = fs::read_to_string(&self.source_path)?;
 
@@ -79,12 +79,12 @@ fn trim_block_newlines(content: &str) -> String {
     content.replace("%}\n", "%}")
 }
 
-pub struct TemplateProcessor {
-    config: TemplateConfig,
+pub struct TeraProcessor {
+    config: TeraConfig,
 }
 
-impl TemplateProcessor {
-    pub fn new(_project_root: PathBuf, config: TemplateConfig) -> Result<Self> {
+impl TeraProcessor {
+    pub fn new(_project_root: PathBuf, config: TeraConfig) -> Result<Self> {
         Ok(Self {
             config,
         })
@@ -115,7 +115,7 @@ impl TemplateProcessor {
     }
 }
 
-impl ProductDiscovery for TemplateProcessor {
+impl ProductDiscovery for TeraProcessor {
     fn description(&self) -> &str {
         "Render Tera templates into output files"
     }
@@ -142,7 +142,7 @@ impl ProductDiscovery for TemplateProcessor {
             graph.add_product(
                 inputs,
                 vec![item.output_path.clone()],
-                "template",
+                "tera",
                 Some(config_hash(&self.config)),
             )?;
         }

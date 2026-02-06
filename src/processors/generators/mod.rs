@@ -1,5 +1,5 @@
 mod cc;
-mod template;
+mod tera;
 
 pub use cc::CcProcessor;
-pub use template::TemplateProcessor;
+pub use tera::TeraProcessor;

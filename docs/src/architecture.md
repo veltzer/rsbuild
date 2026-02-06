@@ -13,7 +13,7 @@ Processors implement the `ProductDiscovery` trait. Each processor:
 3. Creates **products** describing what to build
 4. Executes the build for each product
 
-Available processors: `template`, `ruff`, `pylint`, `cc_single_file`, `cpplint`, `spellcheck`, `sleep`, `make`.
+Available processors: `tera`, `ruff`, `pylint`, `cc_single_file`, `cpplint`, `spellcheck`, `sleep`, `make`.
 
 ### Auto-detection
 
@@ -34,7 +34,7 @@ Detection heuristics per processor:
 
 | Processor | Detected when |
 |---|---|
-| `template` | `templates/` directory contains files matching configured extensions |
+| `tera` | `teras/` directory contains files matching configured extensions |
 | `ruff` | Project contains `.py` files (excluding `.venv/`, `__pycache__/`, etc.) |
 | `pylint` | Same as `ruff` |
 | `cc_single_file` | Configured source directory contains `.c` or `.cc` files |

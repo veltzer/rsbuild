@@ -10,7 +10,7 @@
 - [Project Structure](project-structure.md)
 - [Dependency Analyzers](analyzers.md)
 - [Processors](processors.md)
-    - [Template](processors/template.md)
+    - [Tera](processors/tera.md)
     - [Ruff](processors/ruff.md)
     - [Pylint](processors/pylint.md)
     - [CC Single File](processors/cc.md)

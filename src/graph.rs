@@ -356,7 +356,7 @@ impl BuildGraph {
         for product in &self.products {
             let node_id = Self::processor_node_id(product);
             let color = match product.processor.as_str() {
-                "template" => "lightblue",
+                "tera" => "lightblue",
                 "lint" => "lightyellow",
                 "cc_single_file" => "lightsalmon",
                 _ => "lightgray",
@@ -451,8 +451,8 @@ impl BuildGraph {
 
         // Add styling
         lines.push("".to_string());
-        let template_procs: Vec<_> = self.products.iter()
-            .filter(|p| p.processor == "template")
+        let tera_procs: Vec<_> = self.products.iter()
+            .filter(|p| p.processor == "tera")
             .map(|p| Self::processor_node_id(p))
             .collect();
         let lint_procs: Vec<_> = self.products.iter()
@@ -464,8 +464,8 @@ impl BuildGraph {
             .map(|p| Self::processor_node_id(p))
             .collect();
 
-        if !template_procs.is_empty() {
-            lines.push(format!("    style {} fill:#add8e6", template_procs.join(",")));
+        if !tera_procs.is_empty() {
+            lines.push(format!("    style {} fill:#add8e6", tera_procs.join(",")));
         }
         if !lint_procs.is_empty() {
             lines.push(format!("    style {} fill:#ffffe0", lint_procs.join(",")));

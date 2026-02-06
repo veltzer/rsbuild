@@ -337,7 +337,7 @@ pub use checkers::{
     CpplintProcessor, MakeProcessor, PylintProcessor, RuffProcessor,
     ShellcheckProcessor, SleepProcessor, SpellcheckProcessor,
 };
-pub use generators::{CcProcessor, TemplateProcessor};
+pub use generators::{CcProcessor, TeraProcessor};
 pub use lua_processor::LuaProcessor;
 
 /// The type of processor - whether it generates new files or checks existing files.
@@ -360,7 +360,7 @@ pub use lua_processor::LuaProcessor;
 /// restore from cache, checkers skip entirely.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProcessorType {
-    /// Generates new output files from input files (e.g., template, cc_single_file).
+    /// Generates new output files from input files (e.g., tera, cc_single_file).
     /// Products have non-empty `outputs` which are cached and can be restored.
     Generator,
     /// Checks/validates input files without producing output files (e.g., ruff, pylint, shellcheck).

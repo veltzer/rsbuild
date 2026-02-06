@@ -249,6 +249,15 @@ impl CppDepAnalyzer {
         canonical.starts_with(&self.canonical_project_root)
     }
 
+    /// Check if a path should be excluded based on exclude_dirs config.
+    fn is_excluded(&self, path: &Path) -> bool {
+        if self.config.exclude_dirs.is_empty() {
+            return false;
+        }
+        let path_str = path.to_string_lossy();
+        self.config.exclude_dirs.iter().any(|dir| path_str.contains(dir))
+    }
+
     /// Native regex-based include scanner.
     /// Scans source files for #include directives and recursively follows them.
     /// Returns all header files that the source depends on.
@@ -554,7 +563,7 @@ impl DepAnalyzer for CppDepAnalyzer {
         // Find all products that have C/C++ source files as their primary input
         let cpp_extensions: HashSet<&str> = [".c", ".cc", ".cpp", ".cxx"].iter().copied().collect();
 
-        // Collect products with C/C++ sources
+        // Collect products with C/C++ sources, excluding those in exclude_dirs
         let products: Vec<(usize, PathBuf, bool)> = graph.products()
             .iter()
             .filter_map(|p| {
@@ -562,6 +571,10 @@ impl DepAnalyzer for CppDepAnalyzer {
                     return None;
                 }
                 let source = &p.inputs[0];
+                // Skip files in excluded directories
+                if self.is_excluded(source) {
+                    return None;
+                }
                 let ext = source.extension().and_then(|s| s.to_str()).unwrap_or("");
                 let ext_with_dot = format!(".{}", ext);
                 if cpp_extensions.contains(ext_with_dot.as_str()) {

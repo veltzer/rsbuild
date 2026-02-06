@@ -36,7 +36,8 @@ The cpp analyzer queries the compiler for its include search paths using `gcc -E
 include_scanner = "native"  # or "compiler" for gcc -MM
 include_paths = ["include", "src"]
 pkg_config = ["gtk+-3.0", "libcurl"]  # Query pkg-config for include paths
-include_path_commands = ["gcc -print-file-name=plugin"]  # Run commands to get include paths
+include_path_commands = ["echo $(gcc -print-file-name=plugin)/include"]  # Run commands to get include paths
+exclude_dirs = ["/kernel/", "/vendor/"]  # Skip analyzing files in these directories
 cc = "gcc"
 cxx = "g++"
 cflags = ["-I/usr/local/include"]

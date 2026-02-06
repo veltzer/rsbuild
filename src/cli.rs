@@ -269,13 +269,10 @@ pub enum ToolsAction {
 pub enum DepsAction {
     /// List all available dependency analyzers
     List,
-    /// Show dependencies for all source files
-    All,
-    /// Show dependencies for specific files
-    For {
-        /// Source files to show dependencies for
-        #[arg(required = true)]
-        files: Vec<String>,
+    /// Show cached dependencies
+    Show {
+        #[command(subcommand)]
+        filter: DepsShowFilter,
     },
     /// Show statistics about cached dependencies by analyzer
     Stats,
@@ -284,6 +281,24 @@ pub enum DepsAction {
         /// Only clear entries from this analyzer (e.g., "cpp", "python")
         #[arg(long)]
         analyzer: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum DepsShowFilter {
+    /// Show dependencies for all source files
+    All,
+    /// Show dependencies for specific files
+    Files {
+        /// Source files to show dependencies for
+        #[arg(required = true)]
+        files: Vec<String>,
+    },
+    /// Show dependencies for files handled by specific analyzers
+    Analyzers {
+        /// Analyzer names (e.g., "cpp", "python")
+        #[arg(required = true)]
+        analyzers: Vec<String>,
     },
 }
 

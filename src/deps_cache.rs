@@ -197,6 +197,23 @@ impl DepsCache {
         stats
     }
 
+    /// List cached source files and their dependencies filtered by analyzer names.
+    /// Returns tuples of (source_path, dependencies, analyzer_name).
+    pub fn list_by_analyzers(&self, analyzers: &[String]) -> Vec<(PathBuf, Vec<PathBuf>, String)> {
+        self.db.iter()
+            .filter_map(|item| {
+                let (key, value) = item.ok()?;
+                let source = PathBuf::from(String::from_utf8(key.to_vec()).ok()?);
+                let entry: DepsEntry = serde_json::from_slice(&value).ok()?;
+                if !analyzers.contains(&entry.analyzer) {
+                    return None;
+                }
+                let deps: Vec<PathBuf> = entry.dependencies.iter().map(PathBuf::from).collect();
+                Some((source, deps, entry.analyzer))
+            })
+            .collect()
+    }
+
     /// Remove all cached entries created by a specific analyzer.
     /// Returns the number of entries removed.
     pub fn remove_by_analyzer(&self, analyzer: &str) -> Result<usize> {

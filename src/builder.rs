@@ -958,35 +958,53 @@ impl Builder {
                 println!("{}: {} files, {} dependencies",
                     color::bold("Total"), total_files, total_deps);
             }
-            DepsAction::All => {
-                // Open the dependency cache and list all entries
+            DepsAction::Show { filter } => {
+                use crate::cli::DepsShowFilter;
                 let deps_cache = DepsCache::open()?;
-                let mut entries: Vec<_> = deps_cache.list_all();
-                if entries.is_empty() {
-                    println!("Dependency cache is empty. Run a build first.");
-                    return Ok(());
-                }
-                // Sort by source path for consistent output
-                entries.sort_by(|a, b| a.0.cmp(&b.0));
-                for (source, deps, analyzer) in entries {
-                    Self::print_deps(&source, &deps, &analyzer);
-                }
-            }
-            DepsAction::For { files } => {
-                // Open the dependency cache and query specific files
-                let deps_cache = DepsCache::open()?;
-                let mut found_any = false;
-                for file_arg in &files {
-                    let file_path = PathBuf::from(file_arg);
-                    if let Some((deps, analyzer)) = deps_cache.get_raw(&file_path) {
-                        found_any = true;
-                        Self::print_deps(&file_path, &deps, &analyzer);
-                    } else {
-                        eprintln!("{}: '{}' not in dependency cache", color::yellow("Warning"), file_arg);
+
+                match filter {
+                    DepsShowFilter::All => {
+                        // List all entries
+                        let mut entries: Vec<_> = deps_cache.list_all();
+                        if entries.is_empty() {
+                            println!("Dependency cache is empty. Run a build first.");
+                            return Ok(());
+                        }
+                        // Sort by source path for consistent output
+                        entries.sort_by(|a, b| a.0.cmp(&b.0));
+                        for (source, deps, analyzer) in entries {
+                            Self::print_deps(&source, &deps, &analyzer);
+                        }
                     }
-                }
-                if !found_any {
-                    bail!("No cached dependencies found for the specified files");
+                    DepsShowFilter::Files { files } => {
+                        // Query specific files
+                        let mut found_any = false;
+                        for file_arg in &files {
+                            let file_path = PathBuf::from(file_arg);
+                            if let Some((deps, analyzer)) = deps_cache.get_raw(&file_path) {
+                                found_any = true;
+                                Self::print_deps(&file_path, &deps, &analyzer);
+                            } else {
+                                eprintln!("{}: '{}' not in dependency cache", color::yellow("Warning"), file_arg);
+                            }
+                        }
+                        if !found_any {
+                            bail!("No cached dependencies found for the specified files");
+                        }
+                    }
+                    DepsShowFilter::Analyzers { analyzers } => {
+                        // Filter by analyzer names
+                        let mut entries: Vec<_> = deps_cache.list_by_analyzers(&analyzers);
+                        if entries.is_empty() {
+                            println!("No cached dependencies found for analyzers: {}", analyzers.join(", "));
+                            return Ok(());
+                        }
+                        // Sort by source path for consistent output
+                        entries.sort_by(|a, b| a.0.cmp(&b.0));
+                        for (source, deps, analyzer) in entries {
+                            Self::print_deps(&source, &deps, &analyzer);
+                        }
+                    }
                 }
             }
         }

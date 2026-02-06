@@ -156,14 +156,14 @@ rsb config show           # Show the active configuration (defaults merged with 
 rsb config show-default   # Show the default configuration (without rsb.toml overrides)
 ```
 
-## `rsb processor`
+## `rsb processors`
 
 ```bash
-rsb processor list          # List available processors and their status
-rsb processor all           # Show all processors with descriptions
-rsb processor auto          # Auto-detect which processors are relevant for this project
-rsb processor files         # Show source and target files for each enabled processor
-rsb processor files ruff    # Show files for a specific processor
+rsb processors list          # List available processors and their status
+rsb processors all           # Show all processors with descriptions
+rsb processors auto          # Auto-detect which processors are relevant for this project
+rsb processors files         # Show source and target files for each enabled processor
+rsb processors files ruff    # Show files for a specific processor
 ```
 
 ## `rsb tools`

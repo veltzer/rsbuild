@@ -9,7 +9,7 @@ Processors are classified into two types:
 - **Generators** — produce real output files from input files (e.g., compiling code, rendering templates, transforming file formats)
 - **Checkers** — validate input files without producing output files (e.g., linters, spell checkers, static analyzers). Success is recorded in the cache database.
 
-The processor type is displayed in `rsb processor list` output:
+The processor type is displayed in `rsb processors list` output:
 
 ```
 cc_single_file [generator] enabled
@@ -17,7 +17,7 @@ ruff [checker] enabled
 template [generator] enabled
 ```
 
-For checkers, `rsb processor files` shows "(checker)" instead of output paths since no files are produced:
+For checkers, `rsb processors files` shows "(checker)" instead of output paths since no files are produced:
 
 ```
 [ruff] (3 products)
@@ -34,10 +34,10 @@ Enable processors in `rsb.toml`:
 enabled = ["template", "ruff", "pylint", "cc_single_file", "cpplint", "spellcheck", "sleep", "make"]
 ```
 
-Use `rsb processor list` to see available processors and their status.
-Use `rsb processor all` to see all processors with descriptions.
-Use `rsb processor auto` to see which processors are auto-detected for the current project.
-Use `rsb processor files` to see which files each processor discovers.
+Use `rsb processors list` to see available processors and their status.
+Use `rsb processors all` to see all processors with descriptions.
+Use `rsb processors auto` to see which processors are auto-detected for the current project.
+Use `rsb processors files` to see which files each processor discovers.
 
 ## Available Processors
 

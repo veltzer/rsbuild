@@ -52,8 +52,8 @@ extensions = [".js", ".ts"]
 
 ```sh
 rsb build            # builds including the plugin
-rsb processor list   # shows the plugin
-rsb processor files  # shows files discovered by the plugin
+rsb processors list   # shows the plugin
+rsb processors files  # shows files discovered by the plugin
 ```
 
 ## Lua API Contract
@@ -143,7 +143,7 @@ end
 
 #### `hidden()`
 
-Returns `true` to hide this processor from default `rsb processor list` output (still shown with `--all`). Default: `false`.
+Returns `true` to hide this processor from default `rsb processors list` output (still shown with `--all`). Default: `false`.
 
 ```lua
 function hidden()
@@ -243,7 +243,7 @@ The plugin name is derived from the `.lua` filename (without extension). This na
 - The `[processor.NAME]` config section
 - The `enabled` list in `[processor]`
 - The `out/NAME/` stub directory
-- Display in `rsb processor list` and build output
+- Display in `rsb processors list` and build output
 
 A plugin name must not conflict with a built-in processor name (`template`, `ruff`, `pylint`, `cc_single_file`, `cpplint`, `shellcheck`, `spellcheck`, `sleep`, `make`). RSB will error if a conflict is detected.
 

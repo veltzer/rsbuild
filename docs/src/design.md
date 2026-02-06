@@ -14,7 +14,7 @@ RSB is a Rust build tool with incremental builds using SHA-256 checksums.
 - `rsb graph` — display the build dependency graph
 - `rsb cache` — manage the build cache (clear, size, trim, list)
 - `rsb config` — show active or default configuration
-- `rsb processor` — manage processors (list, all, auto, files)
+- `rsb processors` — manage processors (list, all, auto, files)
 - `rsb tools` — list or check required external tools
 - `rsb complete` — generate shell completions
 - `rsb version` — print version information

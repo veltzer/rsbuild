@@ -41,15 +41,15 @@ A fast, incremental build tool written in Rust with template support, Python lin
 - `rsb cache stale` - Show which cache entries are stale vs current
 - `rsb config show` - Show the active configuration (merged defaults + rsb.toml)
 - `rsb config show-default` - Show the default configuration
-- `rsb processor list` - List available processors and their status
-- `rsb processor auto` - Auto-detect which processors are relevant for this project
-- `rsb processor files` - Show source and target files for each processor
+- `rsb processors list` - List available processors and their status
+- `rsb processors auto` - Auto-detect which processors are relevant for this project
+- `rsb processors files` - Show source and target files for each processor
 - `rsb tools list` - List required external tools
 - `rsb tools check` - Check if required tools are available on PATH
 - `rsb tools lock` - Lock tool versions to .tools.versions
 - `rsb tools lock --check` - Verify tool versions match lock file
-- `rsb deps all` - Show dependencies for all source files
-- `rsb deps for <files>` - Show dependencies for specific files
+- `rsb deps show all` - Show dependencies for all source files
+- `rsb deps show files <files>` - Show dependencies for specific files
 - `rsb deps clean` - Clear the dependency cache
 - `rsb complete [shell]` - Generate shell completions
 - `rsb version` - Print version information

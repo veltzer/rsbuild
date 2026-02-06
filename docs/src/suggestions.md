@@ -205,7 +205,7 @@ Features that have been implemented and are documented elsewhere:
     { file = ".deploy-ready" }
   ]
   ```
-- `rsb processor list` shows which processors are enabled/disabled and why.
+- `rsb processors list` shows which processors are enabled/disabled and why.
 - This avoids needing multiple config files or complex shell scripts around rsb.
 
 ### Target aliases

@@ -2,12 +2,12 @@ use std::fs;
 use crate::common::{setup_test_project, run_rsb_with_env};
 
 #[test]
-fn processor_list_shows_enabled() {
+fn processors_list_shows_enabled() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    let output = run_rsb_with_env(project_path, &["processor", "list"], &[("NO_COLOR", "1")]);
-    assert!(output.status.success(), "processor list failed: {}", String::from_utf8_lossy(&output.stderr));
+    let output = run_rsb_with_env(project_path, &["processors", "list"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "processors list failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("template"), "Expected template processor in list");
@@ -15,11 +15,11 @@ fn processor_list_shows_enabled() {
 }
 
 #[test]
-fn processor_list_shows_disabled() {
+fn processors_list_shows_disabled() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    let output = run_rsb_with_env(project_path, &["processor", "list"], &[("NO_COLOR", "1")]);
+    let output = run_rsb_with_env(project_path, &["processors", "list"], &[("NO_COLOR", "1")]);
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -28,7 +28,7 @@ fn processor_list_shows_disabled() {
 }
 
 #[test]
-fn processor_auto_detects_template() {
+fn processors_auto_detects_template() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -38,8 +38,8 @@ fn processor_auto_detects_template() {
         "hello"
     ).expect("Failed to write template");
 
-    let output = run_rsb_with_env(project_path, &["processor", "auto"], &[("NO_COLOR", "1")]);
-    assert!(output.status.success(), "processor auto failed: {}", String::from_utf8_lossy(&output.stderr));
+    let output = run_rsb_with_env(project_path, &["processors", "auto"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "processors auto failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("template"), "Expected template in auto-detect output");
@@ -47,7 +47,7 @@ fn processor_auto_detects_template() {
 }
 
 #[test]
-fn processor_files_shows_products() {
+fn processors_files_shows_products() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -61,8 +61,8 @@ fn processor_files_shows_products() {
         "{% set c = load_python(path='config/test.py') %}{{ c.value }}"
     ).expect("Failed to write template");
 
-    let output = run_rsb_with_env(project_path, &["processor", "files"], &[("NO_COLOR", "1")]);
-    assert!(output.status.success(), "processor files failed: {}", String::from_utf8_lossy(&output.stderr));
+    let output = run_rsb_with_env(project_path, &["processors", "files"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "processors files failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("[template]"), "Expected [template] header in output");
@@ -70,12 +70,12 @@ fn processor_files_shows_products() {
 }
 
 #[test]
-fn processor_files_no_files_message() {
+fn processors_files_no_files_message() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
     // No template files written, so no products
-    let output = run_rsb_with_env(project_path, &["processor", "files"], &[("NO_COLOR", "1")]);
+    let output = run_rsb_with_env(project_path, &["processors", "files"], &[("NO_COLOR", "1")]);
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -84,11 +84,11 @@ fn processor_files_no_files_message() {
 }
 
 #[test]
-fn processor_files_unknown_processor_fails() {
+fn processors_files_unknown_processor_fails() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    let output = run_rsb_with_env(project_path, &["processor", "files", "nonexistent"], &[("NO_COLOR", "1")]);
+    let output = run_rsb_with_env(project_path, &["processors", "files", "nonexistent"], &[("NO_COLOR", "1")]);
     assert!(!output.status.success(), "Expected failure for unknown processor");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -96,14 +96,14 @@ fn processor_files_unknown_processor_fails() {
 }
 
 #[test]
-fn processor_all_shows_descriptions() {
+fn processors_all_shows_descriptions() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    let output = run_rsb_with_env(project_path, &["processor", "all"], &[("NO_COLOR", "1")]);
-    assert!(output.status.success(), "processor all failed: {}", String::from_utf8_lossy(&output.stderr));
+    let output = run_rsb_with_env(project_path, &["processors", "all"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "processors all failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    // processor all shows descriptions with " — " separator
+    // processors all shows descriptions with " — " separator
     assert!(stdout.contains("template"), "Expected template processor");
 }

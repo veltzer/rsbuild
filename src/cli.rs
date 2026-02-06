@@ -154,7 +154,7 @@ pub enum Commands {
         batch_size: Option<i32>,
     },
     /// Manage processors
-    Processor {
+    Processors {
         #[command(subcommand)]
         action: ProcessorAction,
     },

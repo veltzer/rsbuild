@@ -43,7 +43,7 @@ Detection heuristics per processor:
 | `sleep` | `sleep/` directory contains `.sleep` files |
 | `make` | Project contains `Makefile` files |
 
-Run `rsb processor auto` to see the auto-detection results for the current project.
+Run `rsb processors auto` to see the auto-detection results for the current project.
 
 ### Products
 

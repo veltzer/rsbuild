@@ -150,7 +150,7 @@ fn main() -> Result<()> {
                 }
             }
         }
-        Commands::Processor { action } => {
+        Commands::Processors { action } => {
             let builder = Builder::new()?;
             builder.processor(action)?;
         }

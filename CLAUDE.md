@@ -12,6 +12,7 @@ A fast, incremental build tool written in Rust with tera support, Python linting
 - **Python linting** with ruff and pylint processors
 - **Lua plugins** — extend with custom processors without forking
 - **Python configuration** - load config from `.py` files using `load_python()` function
+- **Variable substitution** — define reusable values in `[vars]` section, reference with `${var_name}`
 - **CLI** built with clap with shell completion support
 
 ## Main Commands
@@ -76,6 +77,23 @@ viewer = "google-chrome"  # Command to open graph files (default: platform-speci
 [completions]
 shells = ["bash"]
 ```
+
+### Variable Substitution
+
+Define variables in a `[vars]` section and reference them using `${var_name}` syntax:
+
+```toml
+[vars]
+kernel_excludes = ["/kernel/", "/kernel_standalone/", "/examples_standalone/"]
+
+[processor.cpplint]
+exclude_dirs = "${kernel_excludes}"
+
+[processor.cc_single_file]
+exclude_dirs = "${kernel_excludes}"
+```
+
+Variables are substituted before TOML parsing. The `"${var_name}"` (including quotes) is replaced with the TOML-serialized value, preserving types (arrays stay arrays, strings stay strings). Undefined variable references produce an error.
 
 Per-processor configuration is documented in `docs/src/processors/`.
 

@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::OnceLock;
 
 use crate::config::{CppAnalyzerConfig, IncludeScanner};
 use crate::deps_cache::DepsCache;
@@ -22,35 +23,190 @@ use super::DepAnalyzer;
 pub struct CppDepAnalyzer {
     config: CppAnalyzerConfig,
     project_root: PathBuf,
+    canonical_project_root: PathBuf,
     verbose: bool,
+    /// Cached system include paths from the C compiler
+    system_include_paths_c: OnceLock<Vec<PathBuf>>,
+    /// Cached system include paths from the C++ compiler
+    system_include_paths_cxx: OnceLock<Vec<PathBuf>>,
+    /// Cached include paths from pkg-config
+    pkg_config_include_paths: OnceLock<Vec<PathBuf>>,
 }
 
 impl CppDepAnalyzer {
     pub fn new(config: CppAnalyzerConfig, project_root: PathBuf, verbose: bool) -> Self {
+        let canonical_project_root = project_root.canonicalize().unwrap_or_else(|_| project_root.clone());
         Self {
             config,
             project_root,
+            canonical_project_root,
             verbose,
+            system_include_paths_c: OnceLock::new(),
+            system_include_paths_cxx: OnceLock::new(),
+            pkg_config_include_paths: OnceLock::new(),
         }
+    }
+
+    /// Query pkg-config for include paths from configured packages.
+    /// Uses `pkg-config --cflags-only-I` and strips the -I prefix.
+    fn get_pkg_config_include_paths(&self) -> &[PathBuf] {
+        self.pkg_config_include_paths.get_or_init(|| {
+            if self.config.pkg_config.is_empty() {
+                return Vec::new();
+            }
+
+            let mut cmd = Command::new("pkg-config");
+            cmd.arg("--cflags-only-I");
+            cmd.args(&self.config.pkg_config);
+            cmd.current_dir(&self.project_root);
+
+            if self.verbose {
+                eprintln!("[cpp] Querying pkg-config: {}", format_command(&cmd));
+            }
+
+            let output = match run_command(&mut cmd) {
+                Ok(o) => o,
+                Err(e) => {
+                    eprintln!("[cpp] Failed to query pkg-config: {}", e);
+                    return Vec::new();
+                }
+            };
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                eprintln!("[cpp] pkg-config failed: {}", stderr.trim());
+                return Vec::new();
+            }
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let paths: Vec<PathBuf> = stdout
+                .split_whitespace()
+                .filter_map(|flag| {
+                    // Strip -I prefix
+                    flag.strip_prefix("-I").map(PathBuf::from)
+                })
+                .collect();
+
+            if self.verbose && !paths.is_empty() {
+                eprintln!("[cpp] Found {} include paths from pkg-config", paths.len());
+            }
+
+            paths
+        })
+    }
+
+    /// Query the compiler for its default include search paths.
+    /// Uses `compiler -E -Wp,-v -xc /dev/null` (or -xc++ for C++).
+    /// Returns the list of system include directories.
+    fn get_system_include_paths(&self, is_cpp: bool) -> &[PathBuf] {
+        let cache = if is_cpp {
+            &self.system_include_paths_cxx
+        } else {
+            &self.system_include_paths_c
+        };
+
+        cache.get_or_init(|| {
+            let compiler = if is_cpp { &self.config.cxx } else { &self.config.cc };
+            let lang_flag = if is_cpp { "-xc++" } else { "-xc" };
+
+            let mut cmd = Command::new(compiler);
+            cmd.args(["-E", "-Wp,-v", lang_flag, "/dev/null"]);
+            cmd.current_dir(&self.project_root);
+
+            if self.verbose {
+                eprintln!("[cpp] Querying {} include paths: {}", compiler, format_command(&cmd));
+            }
+
+            let output = match run_command(&mut cmd) {
+                Ok(o) => o,
+                Err(e) => {
+                    if self.verbose {
+                        eprintln!("[cpp] Failed to query compiler include paths: {}", e);
+                    }
+                    return Vec::new();
+                }
+            };
+
+            // The include paths are printed to stderr between lines:
+            // "#include <...> search starts here:"
+            // and
+            // "End of search list."
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let mut paths = Vec::new();
+            let mut in_search_list = false;
+
+            for line in stderr.lines() {
+                let trimmed = line.trim();
+                if trimmed.contains("#include <...> search starts here:") ||
+                   trimmed.contains("#include \"...\" search starts here:") {
+                    in_search_list = true;
+                    continue;
+                }
+                if trimmed == "End of search list." {
+                    break;
+                }
+                if in_search_list && !trimmed.is_empty() {
+                    // Remove any trailing annotations like "(framework directory)"
+                    let path_str = trimmed.split_whitespace().next().unwrap_or(trimmed);
+                    let path = PathBuf::from(path_str);
+                    // Canonicalize to resolve symlinks
+                    if let Ok(canonical) = path.canonicalize() {
+                        paths.push(canonical);
+                    } else {
+                        paths.push(path);
+                    }
+                }
+            }
+
+            if self.verbose && !paths.is_empty() {
+                eprintln!("[cpp] Found {} system include paths", paths.len());
+            }
+
+            paths
+        })
+    }
+
+    /// Check if a path is within the project root (not a system header).
+    fn is_project_local(&self, path: &Path) -> bool {
+        // Canonicalize to resolve symlinks and get absolute path
+        let canonical = match path.canonicalize() {
+            Ok(p) => p,
+            Err(_) => return false, // Can't canonicalize, probably doesn't exist
+        };
+
+        // Check if it starts with the project root
+        canonical.starts_with(&self.canonical_project_root)
     }
 
     /// Native regex-based include scanner.
     /// Scans source files for #include directives and recursively follows them.
     /// Returns all header files that the source depends on.
-    fn scan_dependencies_native(&self, source: &Path) -> Result<Vec<PathBuf>> {
+    fn scan_dependencies_native(&self, source: &Path, is_cpp: bool) -> Result<Vec<PathBuf>> {
         let mut visited: HashSet<PathBuf> = HashSet::new();
         let mut headers: Vec<PathBuf> = Vec::new();
 
-        // Build include search paths: source directory + configured include_paths
+        // Build include search paths:
+        // 1. Source file's directory (for "" includes)
+        // 2. Configured include_paths (-I flags)
+        // 3. pkg-config include paths
+        // 4. Project root
+        // 5. System include paths from compiler (for <> includes)
         let source_dir = source.parent().unwrap_or(Path::new("."));
         let mut search_paths = vec![source_dir.to_path_buf()];
         for inc in &self.config.include_paths {
             search_paths.push(PathBuf::from(inc));
         }
+        // Add pkg-config include paths
+        for inc in self.get_pkg_config_include_paths() {
+            search_paths.push(inc.clone());
+        }
         // Also search from project root for project-relative includes
         search_paths.push(PathBuf::new());
 
-        self.scan_includes_recursive(source, &search_paths, &mut visited, &mut headers)?;
+        // Get system include paths from the compiler
+        let system_paths = self.get_system_include_paths(is_cpp);
+
+        self.scan_includes_recursive(source, &search_paths, system_paths, &mut visited, &mut headers)?;
 
         Ok(headers)
     }
@@ -60,21 +216,23 @@ impl CppDepAnalyzer {
         &self,
         file: &Path,
         search_paths: &[PathBuf],
+        system_paths: &[PathBuf],
         visited: &mut HashSet<PathBuf>,
         headers: &mut Vec<PathBuf>,
     ) -> Result<()> {
         // Normalize path to avoid visiting same file twice
-        let canonical = file.to_path_buf();
+        let canonical = match file.canonicalize() {
+            Ok(p) => p,
+            Err(_) => file.to_path_buf(),
+        };
 
         if visited.contains(&canonical) {
             return Ok(());
         }
         visited.insert(canonical.clone());
 
-        let content = match fs::read_to_string(file) {
-            Ok(c) => c,
-            Err(_) => return Ok(()), // File doesn't exist or can't be read
-        };
+        let content = fs::read_to_string(file)
+            .map_err(|e| anyhow::anyhow!("Failed to read {}: {}", file.display(), e))?;
 
         // Regex to match #include "file" and #include <file>
         // Captures: 1 = bracket type (< or "), 2 = path
@@ -85,33 +243,37 @@ impl CppDepAnalyzer {
                 let bracket = &caps[1];
                 let include_path = &caps[2];
 
-                // Skip system headers (absolute paths)
+                // Skip absolute paths in the include directive itself
                 if include_path.starts_with('/') {
                     continue;
                 }
 
-                // For angle-bracket includes without file extension, assume system header
-                // (e.g., <vector>, <string>, <iostream>, <cstdio>)
-                if bracket == "<" && !include_path.contains('.') && !include_path.contains('/') {
+                // For angle-bracket includes without file extension and no path separator,
+                // assume C++ standard library header (e.g., <vector>, <string>, <iostream>)
+                let is_angle_bracket = bracket == "<";
+                if is_angle_bracket && !include_path.contains('.') && !include_path.contains('/') {
                     continue;
                 }
 
                 // Try to find the included file in search paths
-                let found = self.find_include(include_path, file.parent(), search_paths);
+                // For "" includes, search relative to current file's directory first
+                // For <> includes, search in include_paths and system paths
+                let found = self.find_include(include_path, file.parent(), search_paths, system_paths, is_angle_bracket);
 
                 if let Some(header_path) = found {
-                    // Skip system headers
-                    let path_str = header_path.to_string_lossy();
-                    if path_str.starts_with("/usr/") || path_str.starts_with("/lib/") {
-                        continue;
-                    }
-
-                    // Only include if it's a relative path (project-local)
-                    if !header_path.is_absolute() || header_path.starts_with(&self.project_root) {
+                    // Only track headers that are within the project root
+                    if self.is_project_local(&header_path) {
                         let relative = if header_path.is_absolute() {
-                            header_path.strip_prefix(&self.project_root)
-                                .unwrap_or(&header_path)
-                                .to_path_buf()
+                            // Try to strip project root prefix
+                            if let Ok(rel) = header_path.strip_prefix(&self.project_root) {
+                                rel.to_path_buf()
+                            } else if let Ok(canonical) = header_path.canonicalize() {
+                                canonical.strip_prefix(&self.canonical_project_root)
+                                    .map(|p| p.to_path_buf())
+                                    .unwrap_or_else(|_| header_path.clone())
+                            } else {
+                                header_path.clone()
+                            }
                         } else {
                             header_path.clone()
                         };
@@ -121,8 +283,18 @@ impl CppDepAnalyzer {
                         }
 
                         // Recursively scan this header
-                        self.scan_includes_recursive(&header_path, search_paths, visited, headers)?;
+                        self.scan_includes_recursive(&header_path, search_paths, system_paths, visited, headers)?;
                     }
+                    // If found but not project-local (system header), that's fine - skip it
+                } else {
+                    // Include not found anywhere - this is an error
+                    let bracket_close = if is_angle_bracket { ">" } else { "\"" };
+                    let bracket_open = if is_angle_bracket { "<" } else { "\"" };
+                    anyhow::bail!(
+                        "Include not found: #include {}{}{} in {}",
+                        bracket_open, include_path, bracket_close,
+                        file.display()
+                    );
                 }
             }
         }
@@ -131,16 +303,28 @@ impl CppDepAnalyzer {
     }
 
     /// Find an include file in the search paths
-    fn find_include(&self, include: &str, current_dir: Option<&Path>, search_paths: &[PathBuf]) -> Option<PathBuf> {
-        // First, try relative to current file's directory (for #include "file")
-        if let Some(dir) = current_dir {
-            let candidate = dir.join(include);
-            if candidate.is_file() {
-                return Some(candidate);
+    /// For "" includes (is_angle_bracket=false), searches current directory first
+    /// For <> includes (is_angle_bracket=true), searches include paths then system paths
+    fn find_include(
+        &self,
+        include: &str,
+        current_dir: Option<&Path>,
+        search_paths: &[PathBuf],
+        system_paths: &[PathBuf],
+        is_angle_bracket: bool,
+    ) -> Option<PathBuf> {
+        // For #include "file", first try relative to current file's directory
+        // For #include <file>, skip this step
+        if !is_angle_bracket {
+            if let Some(dir) = current_dir {
+                let candidate = dir.join(include);
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
             }
         }
 
-        // Then try each search path
+        // Then try each configured search path (for both "" and <> includes)
         for search in search_paths {
             let candidate = if search.as_os_str().is_empty() {
                 PathBuf::from(include)
@@ -149,6 +333,16 @@ impl CppDepAnalyzer {
             };
             if candidate.is_file() {
                 return Some(candidate);
+            }
+        }
+
+        // For <> includes, also search system include paths from compiler
+        if is_angle_bracket {
+            for search in system_paths {
+                let candidate = search.join(include);
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
             }
         }
 
@@ -165,6 +359,11 @@ impl CppDepAnalyzer {
         // Add include paths
         for inc in &self.config.include_paths {
             cmd.arg(format!("-I{}", inc));
+        }
+
+        // Add pkg-config include paths
+        for inc in self.get_pkg_config_include_paths() {
+            cmd.arg(format!("-I{}", inc.display()));
         }
 
         // Add compile flags
@@ -215,18 +414,29 @@ impl CppDepAnalyzer {
         tokens[1..]
             .iter()
             .filter_map(|token| {
-                let path = Path::new(token);
-                // Filter out system headers (absolute paths starting with /usr/ or /lib/)
-                let path_str = path.to_string_lossy();
-                if path_str.starts_with("/usr/") || path_str.starts_with("/lib/") {
-                    return None;
-                }
-                // Skip other absolute paths (system headers)
+                let path = PathBuf::from(token);
+
+                // For absolute paths, check if they're within the project
                 if path.is_absolute() {
-                    return None;
+                    if self.is_project_local(&path) {
+                        // Convert to relative path
+                        if let Ok(rel) = path.strip_prefix(&self.project_root) {
+                            Some(rel.to_path_buf())
+                        } else if let Ok(canonical) = path.canonicalize() {
+                            canonical.strip_prefix(&self.canonical_project_root)
+                                .ok()
+                                .map(|p| p.to_path_buf())
+                        } else {
+                            None
+                        }
+                    } else {
+                        // System header, skip it
+                        None
+                    }
+                } else {
+                    // Relative paths are assumed to be project-local
+                    Some(path)
                 }
-                // Keep relative paths as-is
-                Some(path.to_path_buf())
             })
             .collect()
     }
@@ -234,7 +444,7 @@ impl CppDepAnalyzer {
     /// Scan dependencies using the configured method (native or compiler).
     fn scan_dependencies(&self, source: &Path, is_cpp: bool) -> Result<Vec<PathBuf>> {
         match self.config.include_scanner {
-            IncludeScanner::Native => self.scan_dependencies_native(source),
+            IncludeScanner::Native => self.scan_dependencies_native(source, is_cpp),
             IncludeScanner::Compiler => self.scan_dependencies_compiler(source, is_cpp),
         }
     }
@@ -303,7 +513,7 @@ impl DepAnalyzer for CppDepAnalyzer {
             let headers = if let Some(cached) = deps_cache.get(source) {
                 cached
             } else {
-                let scanned = self.scan_dependencies(source, *is_cpp).unwrap_or_default();
+                let scanned = self.scan_dependencies(source, *is_cpp)?;
                 // Cache the result with analyzer tag (ignore errors)
                 let _ = deps_cache.set(source, &scanned, "cpp");
                 scanned

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Mutex;
 
-use crate::config::{CcConfig, config_hash, resolve_extra_inputs};
+use crate::config::{CcConfig, CompilerProfile, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, scan_root, clean_outputs, format_command, run_command};
@@ -241,16 +241,19 @@ fn expand_backticks(value: &str) -> Result<String> {
 pub struct CcProcessor {
     project_root: PathBuf,
     config: CcConfig,
+    profiles: Vec<CompilerProfile>,
     output_dir: PathBuf,
     verbose: bool,
 }
 
 impl CcProcessor {
     pub fn new(project_root: PathBuf, config: CcConfig, verbose: bool) -> Self {
+        let profiles = config.get_compiler_profiles();
         let output_dir = PathBuf::from("out/cc_single_file");
         Self {
             project_root,
             config,
+            profiles,
             output_dir,
             verbose,
         }
@@ -278,9 +281,10 @@ impl CcProcessor {
             .collect()
     }
 
-    /// Get executable path for a source file.
-    /// Mirrors directory structure: src/a/b.c -> out/cc/a/b.elf (suffix is configurable)
-    fn get_executable_path(&self, source: &Path) -> PathBuf {
+    /// Get executable path for a source file with a specific compiler profile.
+    /// If profile has a name, outputs go to out/cc_single_file/<profile_name>/...
+    /// Otherwise: out/cc_single_file/...
+    fn get_executable_path(&self, source: &Path, profile: &CompilerProfile) -> PathBuf {
         let source_dir = self.source_dir();
         let relative = if source_dir.as_os_str().is_empty() {
             source.to_path_buf()
@@ -288,13 +292,23 @@ impl CcProcessor {
             source.strip_prefix(&source_dir).unwrap_or(source).to_path_buf()
         };
         let stem = relative.with_extension("");
-        let name = format!("{}{}", stem.display(), self.config.output_suffix);
-        self.output_dir.join(name)
+        let name = format!("{}{}", stem.display(), profile.output_suffix);
+
+        if profile.name.is_empty() {
+            self.output_dir.join(name)
+        } else {
+            self.output_dir.join(&profile.name).join(name)
+        }
+    }
+
+    /// Find a compiler profile by name
+    fn find_profile(&self, name: &str) -> Option<&CompilerProfile> {
+        self.profiles.iter().find(|p| p.name == name)
     }
 
     /// Add include paths and compile flags (before, base, after) to a command.
-    fn add_compile_flags(&self, cmd: &mut Command, is_cpp: bool, source_flags: &SourceFlags) {
-        let flags = if is_cpp { &self.config.cxxflags } else { &self.config.cflags };
+    fn add_compile_flags(&self, cmd: &mut Command, profile: &CompilerProfile, is_cpp: bool, source_flags: &SourceFlags) {
+        let flags = if is_cpp { &profile.cxxflags } else { &profile.cflags };
         for inc in &self.config.include_paths {
             cmd.arg(format!("-I{}", inc));
         }
@@ -309,9 +323,9 @@ impl CcProcessor {
         }
     }
 
-    /// Compile a single source file directly to an executable.
-    fn compile_source(&self, source: &Path, executable: &Path, is_cpp: bool) -> Result<()> {
-        let compiler = if is_cpp { &self.config.cxx } else { &self.config.cc };
+    /// Compile a single source file directly to an executable using a specific profile.
+    fn compile_source(&self, source: &Path, executable: &Path, profile: &CompilerProfile, is_cpp: bool) -> Result<()> {
+        let compiler = if is_cpp { &profile.cxx } else { &profile.cc };
         let source_flags = parse_source_flags(source)?;
 
         // Ensure output directory exists
@@ -321,12 +335,12 @@ impl CcProcessor {
         }
 
         let mut cmd = Command::new(compiler);
-        self.add_compile_flags(&mut cmd, is_cpp, &source_flags);
+        self.add_compile_flags(&mut cmd, profile, is_cpp, &source_flags);
         cmd.arg("-o").arg(executable).arg(source);
         for arg in &source_flags.link_args_before {
             cmd.arg(arg);
         }
-        for flag in &self.config.ldflags {
+        for flag in &profile.ldflags {
             cmd.arg(flag);
         }
         for arg in &source_flags.link_args_after {
@@ -335,7 +349,8 @@ impl CcProcessor {
         cmd.current_dir(&self.project_root);
 
         if self.verbose {
-            println!("[cc_single_file] {}", format_command(&cmd));
+            let profile_tag = if profile.name.is_empty() { String::new() } else { format!(":{}", profile.name) };
+            println!("[cc_single_file{}] {}", profile_tag, format_command(&cmd));
         }
 
         let output = run_command(&mut cmd)?;
@@ -346,6 +361,25 @@ impl CcProcessor {
         }
 
         Ok(())
+    }
+
+    /// Extract profile name from product metadata
+    fn get_profile_from_product(&self, product: &Product) -> &CompilerProfile {
+        // Profile name is stored in the output path structure
+        // out/cc_single_file/<profile_name>/... or out/cc_single_file/... (legacy)
+        if let Some(output) = product.outputs.first() {
+            if let Ok(relative) = output.strip_prefix(&self.output_dir) {
+                // Check if first component is a profile name
+                if let Some(first) = relative.components().next() {
+                    let first_str = first.as_os_str().to_string_lossy();
+                    if let Some(profile) = self.find_profile(&first_str) {
+                        return profile;
+                    }
+                }
+            }
+        }
+        // Fall back to first profile (legacy mode)
+        &self.profiles[0]
     }
 }
 
@@ -363,7 +397,13 @@ impl ProductDiscovery for CcProcessor {
     }
 
     fn required_tools(&self) -> Vec<String> {
-        vec![self.config.cc.clone(), self.config.cxx.clone()]
+        // Collect unique compilers from all profiles
+        let mut tools: Vec<String> = self.profiles.iter()
+            .flat_map(|p| vec![p.cc.clone(), p.cxx.clone()])
+            .collect();
+        tools.sort();
+        tools.dedup();
+        tools
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
@@ -376,22 +416,24 @@ impl ProductDiscovery for CcProcessor {
             return Ok(());
         }
 
-        let config_hash = Some(config_hash(&self.config));
+        let cfg_hash = Some(config_hash(&self.config));
         let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
 
-        // Create products with just source file + extra inputs (no header deps yet)
-        for (source, _is_cpp) in &source_files {
-            let executable = self.get_executable_path(source);
+        // Create products for each source file × compiler profile combination
+        for profile in &self.profiles {
+            for (source, _is_cpp) in &source_files {
+                let executable = self.get_executable_path(source, profile);
 
-            let mut inputs = vec![source.clone()];
-            inputs.extend(extra.clone());
+                let mut inputs = vec![source.clone()];
+                inputs.extend(extra.clone());
 
-            graph.add_product(
-                inputs,
-                vec![executable],
-                "cc_single_file",
-                config_hash.clone(),
-            )?;
+                graph.add_product(
+                    inputs,
+                    vec![executable],
+                    "cc_single_file",
+                    cfg_hash.clone(),
+                )?;
+            }
         }
 
         Ok(())
@@ -409,15 +451,17 @@ impl ProductDiscovery for CcProcessor {
         }
 
         // For clean, we only need source -> output mapping, no header dependencies
-        for (source, _is_cpp) in &source_files {
-            let executable = self.get_executable_path(source);
+        for profile in &self.profiles {
+            for (source, _is_cpp) in &source_files {
+                let executable = self.get_executable_path(source, profile);
 
-            graph.add_product(
-                vec![source.clone()],
-                vec![executable],
-                "cc_single_file",
-                None,
-            )?;
+                graph.add_product(
+                    vec![source.clone()],
+                    vec![executable],
+                    "cc_single_file",
+                    None,
+                )?;
+            }
         }
 
         Ok(())
@@ -427,7 +471,8 @@ impl ProductDiscovery for CcProcessor {
         let source = &product.inputs[0];
         let executable = &product.outputs[0];
         let is_cpp = source.extension().and_then(|s| s.to_str()) == Some("cc");
-        self.compile_source(source, executable, is_cpp)
+        let profile = self.get_profile_from_product(product);
+        self.compile_source(source, executable, profile, is_cpp)
     }
 
     fn clean(&self, product: &Product) -> Result<()> {

@@ -20,9 +20,14 @@ Scans C/C++ source files for `#include` directives and adds header file dependen
 
 **Features**:
 - Recursive header scanning (follows includes in header files)
-- Filters out system headers (`/usr/`, `/lib/`)
-- Supports both native regex scanning and compiler-based scanning (`gcc -MM`)
+- Queries compiler for system include paths (only tracks project-local headers)
+- Handles both `#include "file"` (relative to source) and `#include <file>` (searches include paths)
+- Supports native regex scanning and compiler-based scanning (`gcc -MM`)
 - Uses dependency cache for incremental builds
+
+**System Header Detection**:
+
+The cpp analyzer queries the compiler for its include search paths using `gcc -E -Wp,-v -xc /dev/null`. This allows it to properly identify which headers are system headers vs project-local headers. Only headers within the project directory are tracked as dependencies.
 
 **Configuration** (`rsb.toml`):
 
@@ -30,11 +35,23 @@ Scans C/C++ source files for `#include` directives and adds header file dependen
 [analyzer.cpp]
 include_scanner = "native"  # or "compiler" for gcc -MM
 include_paths = ["include", "src"]
+pkg_config = ["gtk+-3.0", "libcurl"]  # Query pkg-config for include paths
 cc = "gcc"
 cxx = "g++"
 cflags = ["-I/usr/local/include"]
 cxxflags = ["-std=c++17"]
 ```
+
+**pkg-config Integration**:
+
+The `pkg_config` option allows you to specify pkg-config packages. The analyzer will run `pkg-config --cflags-only-I` to get the include paths for these packages and add them to the header search path. This is useful when your code includes headers from system libraries:
+
+```toml
+[analyzer.cpp]
+pkg_config = ["gtk+-3.0", "glib-2.0"]
+```
+
+This will automatically find headers like `<gtk/gtk.h>` and `<glib.h>` without needing to manually specify their include paths.
 
 ### python
 

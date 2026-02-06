@@ -757,3 +757,160 @@ fn cc_single_file_new_include_triggers_dependency_recomputation() {
     assert!(!run_output.status.success(),
         "Executable should exit nonzero after header change (NEW_VAL=99, returns 99-55=44)");
 }
+
+#[test]
+fn cc_single_file_angle_bracket_include_dependency() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    // Create project with include_paths configured
+    fs::create_dir_all(project_path.join("src")).unwrap();
+    fs::create_dir_all(project_path.join("include")).unwrap();
+    fs::write(
+        project_path.join("rsb.toml"),
+        r#"[processor]
+enabled = ["cc_single_file"]
+
+[processor.cc_single_file]
+scan_dir = "src"
+include_paths = ["include"]
+
+[analyzer.cpp]
+include_paths = ["include"]
+"#
+    ).unwrap();
+
+    // Create a header in include/ directory
+    fs::write(
+        project_path.join("include/mylib.h"),
+        "#ifndef MYLIB_H\n#define MYLIB_H\n#define MYLIB_VALUE 123\n#endif\n"
+    ).unwrap();
+
+    // Create source file that uses angle-bracket include for local header
+    fs::write(
+        project_path.join("src/main.c"),
+        "#include <mylib.h>\nint main() { return MYLIB_VALUE - 123; }\n"
+    ).unwrap();
+
+    // First build
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success(),
+        "First build failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output1.stdout),
+        String::from_utf8_lossy(&output1.stderr));
+
+    // Second build - should skip (nothing changed)
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success());
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(stdout2.contains("[cc_single_file] Skipping (unchanged):"),
+        "Second build should skip: {}", stdout2);
+
+    // Modify the angle-bracket included header
+    fs::write(
+        project_path.join("include/mylib.h"),
+        "#ifndef MYLIB_H\n#define MYLIB_H\n#define MYLIB_VALUE 456\n#endif\n"
+    ).unwrap();
+
+    // Third build - should recompile because the header changed
+    let output3 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output3.status.success(),
+        "Rebuild after angle-bracket header change failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output3.stdout),
+        String::from_utf8_lossy(&output3.stderr));
+    let stdout3 = String::from_utf8_lossy(&output3.stdout);
+    assert!(stdout3.contains("[cc_single_file] Processing:"),
+        "Should recompile after angle-bracket header change: {}", stdout3);
+}
+
+#[test]
+fn cc_single_file_multiple_compiler_profiles() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    // Create project with multiple compiler profiles
+    fs::create_dir_all(project_path.join("src")).unwrap();
+    fs::write(
+        project_path.join("rsb.toml"),
+        r#"[processor]
+enabled = ["cc_single_file"]
+
+[processor.cc_single_file]
+scan_dir = "src"
+
+[[processor.cc_single_file.compilers]]
+name = "gcc"
+cc = "gcc"
+cxx = "g++"
+output_suffix = ".elf"
+
+[[processor.cc_single_file.compilers]]
+name = "clang"
+cc = "clang"
+cxx = "clang++"
+output_suffix = ".elf"
+"#
+    ).unwrap();
+
+    fs::write(
+        project_path.join("src/main.c"),
+        "int main() { return 0; }\n"
+    ).unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(),
+        "rsb build with multiple compilers failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr));
+
+    // Check both executables exist
+    assert!(project_path.join("out/cc_single_file/gcc/main.elf").exists(),
+        "GCC executable should exist");
+    assert!(project_path.join("out/cc_single_file/clang/main.elf").exists(),
+        "Clang executable should exist");
+
+    // Verify both executables run successfully
+    let gcc_output = Command::new(project_path.join("out/cc_single_file/gcc/main.elf"))
+        .output()
+        .expect("Failed to run gcc executable");
+    assert!(gcc_output.status.success(), "GCC executable should run successfully");
+
+    let clang_output = Command::new(project_path.join("out/cc_single_file/clang/main.elf"))
+        .output()
+        .expect("Failed to run clang executable");
+    assert!(clang_output.status.success(), "Clang executable should run successfully");
+}
+
+#[test]
+fn cc_single_file_missing_include_errors() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    // Create minimal project
+    fs::create_dir_all(project_path.join("src")).unwrap();
+    fs::write(
+        project_path.join("rsb.toml"),
+        r#"[processor]
+enabled = ["cc_single_file"]
+
+[processor.cc_single_file]
+scan_dir = "src"
+"#
+    ).unwrap();
+
+    // Create source file with missing include
+    fs::write(
+        project_path.join("src/main.c"),
+        r#"#include "nonexistent.h"
+int main() { return 0; }
+"#
+    ).unwrap();
+
+    // Build should fail with error about missing include
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(!output.status.success(),
+        "Build with missing include should fail");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("Include not found") && stderr.contains("nonexistent.h"),
+        "Error should mention missing include: {}", stderr);
+}

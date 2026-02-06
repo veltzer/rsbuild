@@ -133,6 +133,8 @@ Link flags come **after** the source file so the linker can resolve symbols corr
 
 ## Configuration
 
+### Single Compiler (Legacy)
+
 ```toml
 [processor.cc_single_file]
 cc = "gcc"                # C compiler (default: "gcc")
@@ -141,11 +143,53 @@ cflags = []               # C compiler flags
 cxxflags = []             # C++ compiler flags
 ldflags = []              # Linker flags
 include_paths = []        # Additional -I paths (relative to project root)
-source_dir = "src"        # Source directory (default: "src")
+scan_dir = "src"          # Source directory (default: "src")
 output_suffix = ".elf"    # Suffix for output executables (default: ".elf")
 extra_inputs = []         # Additional files that trigger rebuilds when changed
 include_scanner = "native" # Method for scanning header dependencies (default: "native")
 ```
+
+### Multiple Compilers
+
+To compile with multiple compilers (e.g., both GCC and Clang), use the `compilers` array:
+
+```toml
+[processor.cc_single_file]
+scan_dir = "src"
+include_paths = ["include"]  # Shared across all compilers
+
+[[processor.cc_single_file.compilers]]
+name = "gcc"
+cc = "gcc"
+cxx = "g++"
+cflags = ["-Wall", "-Wextra"]
+cxxflags = ["-Wall", "-Wextra"]
+ldflags = []
+output_suffix = ".elf"
+
+[[processor.cc_single_file.compilers]]
+name = "clang"
+cc = "clang"
+cxx = "clang++"
+cflags = ["-Wall", "-Wextra", "-Weverything"]
+cxxflags = ["-Wall", "-Wextra"]
+ldflags = []
+output_suffix = ".elf"
+```
+
+When using multiple compilers, outputs are organized by compiler name:
+
+```
+src/main.c  →  out/cc_single_file/gcc/main.elf
+            →  out/cc_single_file/clang/main.elf
+```
+
+Each source file is compiled once per compiler profile, allowing you to:
+- Test code with multiple compilers to catch different warnings
+- Compare output between compilers
+- Build for different targets (cross-compilation)
+
+### Configuration Reference
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
@@ -154,11 +198,26 @@ include_scanner = "native" # Method for scanning header dependencies (default: "
 | `cflags` | string[] | `[]` | Flags passed to the C compiler |
 | `cxxflags` | string[] | `[]` | Flags passed to the C++ compiler |
 | `ldflags` | string[] | `[]` | Flags passed to the linker |
-| `include_paths` | string[] | `[]` | Additional `-I` include paths |
-| `source_dir` | string | `"src"` | Directory to scan for source files |
+| `include_paths` | string[] | `[]` | Additional `-I` include paths (shared) |
+| `scan_dir` | string | `"src"` | Directory to scan for source files |
 | `output_suffix` | string | `".elf"` | Suffix appended to output executables |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 | `include_scanner` | string | `"native"` | Method for scanning header dependencies |
+| `compilers` | array | `[]` | Multiple compiler profiles (overrides single-compiler fields) |
+
+### Compiler Profile Fields
+
+Each entry in the `compilers` array can have:
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `name` | string | Yes | Profile name (used in output path) |
+| `cc` | string | No | C compiler (default: "gcc") |
+| `cxx` | string | No | C++ compiler (default: "g++") |
+| `cflags` | string[] | No | C compiler flags |
+| `cxxflags` | string[] | No | C++ compiler flags |
+| `ldflags` | string[] | No | Linker flags |
+| `output_suffix` | string | No | Output suffix (default: ".elf") |
 
 ## Include Scanner
 

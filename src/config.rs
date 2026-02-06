@@ -446,8 +446,11 @@ pub enum IncludeScanner {
     Compiler,
 }
 
+/// Configuration for a single compiler profile
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct CcConfig {
+pub struct CompilerProfile {
+    /// Profile name (used in output paths, e.g., "gcc", "clang")
+    pub name: String,
     #[serde(default = "default_cc_compiler")]
     pub cc: String,
     #[serde(default = "default_cxx_compiler")]
@@ -458,10 +461,49 @@ pub struct CcConfig {
     pub cxxflags: Vec<String>,
     #[serde(default)]
     pub ldflags: Vec<String>,
-    #[serde(default)]
-    pub include_paths: Vec<String>,
     #[serde(default = "default_output_suffix")]
     pub output_suffix: String,
+}
+
+impl CompilerProfile {
+    /// Create a default GCC profile
+    #[allow(dead_code)]
+    pub fn default_gcc() -> Self {
+        Self {
+            name: "gcc".into(),
+            cc: "gcc".into(),
+            cxx: "g++".into(),
+            cflags: Vec::new(),
+            cxxflags: Vec::new(),
+            ldflags: Vec::new(),
+            output_suffix: ".elf".into(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct CcConfig {
+    /// Legacy single-compiler fields (used when `compilers` is empty)
+    #[serde(default = "default_cc_compiler")]
+    pub cc: String,
+    #[serde(default = "default_cxx_compiler")]
+    pub cxx: String,
+    #[serde(default)]
+    pub cflags: Vec<String>,
+    #[serde(default)]
+    pub cxxflags: Vec<String>,
+    #[serde(default)]
+    pub ldflags: Vec<String>,
+    #[serde(default = "default_output_suffix")]
+    pub output_suffix: String,
+
+    /// Multiple compiler profiles (if set, overrides legacy fields)
+    #[serde(default)]
+    pub compilers: Vec<CompilerProfile>,
+
+    /// Shared settings across all compilers
+    #[serde(default)]
+    pub include_paths: Vec<String>,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
     /// Method for scanning header dependencies (native or compiler)
@@ -469,6 +511,28 @@ pub struct CcConfig {
     pub include_scanner: IncludeScanner,
     #[serde(flatten)]
     pub scan: ScanConfig,
+}
+
+impl CcConfig {
+    /// Get the list of compiler profiles to use.
+    /// If `compilers` is set, returns those profiles.
+    /// Otherwise, creates a single profile from the legacy fields.
+    pub fn get_compiler_profiles(&self) -> Vec<CompilerProfile> {
+        if !self.compilers.is_empty() {
+            self.compilers.clone()
+        } else {
+            // Legacy mode: create single profile from top-level fields
+            vec![CompilerProfile {
+                name: String::new(), // Empty name = no subdirectory
+                cc: self.cc.clone(),
+                cxx: self.cxx.clone(),
+                cflags: self.cflags.clone(),
+                cxxflags: self.cxxflags.clone(),
+                ldflags: self.ldflags.clone(),
+                output_suffix: self.output_suffix.clone(),
+            }]
+        }
+    }
 }
 
 impl Default for CcConfig {
@@ -479,8 +543,9 @@ impl Default for CcConfig {
             cflags: Vec::new(),
             cxxflags: Vec::new(),
             ldflags: Vec::new(),
-            include_paths: Vec::new(),
             output_suffix: ".elf".into(),
+            compilers: Vec::new(),
+            include_paths: Vec::new(),
             extra_inputs: Vec::new(),
             include_scanner: IncludeScanner::default(),
             scan: ScanConfig {
@@ -675,7 +740,7 @@ impl AnalyzerConfig {
 }
 
 /// Configuration for the C/C++ dependency analyzer
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CppAnalyzerConfig {
     /// Method for scanning header dependencies (native or compiler)
     #[serde(default)]
@@ -683,6 +748,9 @@ pub struct CppAnalyzerConfig {
     /// Additional include paths for header search
     #[serde(default)]
     pub include_paths: Vec<String>,
+    /// pkg-config packages to query for include paths
+    #[serde(default)]
+    pub pkg_config: Vec<String>,
     /// C compiler (for -MM scanning with compiler method)
     #[serde(default = "default_cc_compiler")]
     pub cc: String,
@@ -695,6 +763,20 @@ pub struct CppAnalyzerConfig {
     /// C++ compiler flags (for -MM scanning)
     #[serde(default)]
     pub cxxflags: Vec<String>,
+}
+
+impl Default for CppAnalyzerConfig {
+    fn default() -> Self {
+        Self {
+            include_scanner: IncludeScanner::default(),
+            include_paths: Vec::new(),
+            pkg_config: Vec::new(),
+            cc: default_cc_compiler(),
+            cxx: default_cxx_compiler(),
+            cflags: Vec::new(),
+            cxxflags: Vec::new(),
+        }
+    }
 }
 
 /// Configuration for the Python dependency analyzer

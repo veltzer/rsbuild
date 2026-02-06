@@ -31,6 +31,8 @@ pub struct CppDepAnalyzer {
     system_include_paths_cxx: OnceLock<Vec<PathBuf>>,
     /// Cached include paths from pkg-config
     pkg_config_include_paths: OnceLock<Vec<PathBuf>>,
+    /// Cached include paths from include_path_commands
+    command_include_paths: OnceLock<Vec<PathBuf>>,
 }
 
 impl CppDepAnalyzer {
@@ -44,6 +46,7 @@ impl CppDepAnalyzer {
             system_include_paths_c: OnceLock::new(),
             system_include_paths_cxx: OnceLock::new(),
             pkg_config_include_paths: OnceLock::new(),
+            command_include_paths: OnceLock::new(),
         }
     }
 
@@ -89,6 +92,74 @@ impl CppDepAnalyzer {
 
             if self.verbose && !paths.is_empty() {
                 eprintln!("[cpp] Found {} include paths from pkg-config", paths.len());
+            }
+
+            paths
+        })
+    }
+
+    /// Run configured include_path_commands and collect their output as include paths.
+    /// Each command is executed via `sh -c` and its stdout (trimmed) is added as an include path.
+    /// This supports shell syntax like command substitution: "echo $(gcc -print-file-name=plugin)/include"
+    fn get_command_include_paths(&self) -> &[PathBuf] {
+        self.command_include_paths.get_or_init(|| {
+            if self.config.include_path_commands.is_empty() {
+                return Vec::new();
+            }
+
+            let mut paths = Vec::new();
+
+            for cmd_str in &self.config.include_path_commands {
+                if cmd_str.trim().is_empty() {
+                    continue;
+                }
+
+                // Run via shell to support shell syntax (command substitution, etc.)
+                let mut cmd = Command::new("sh");
+                cmd.arg("-c");
+                cmd.arg(cmd_str);
+                cmd.current_dir(&self.project_root);
+
+                if self.verbose {
+                    eprintln!("[cpp] Running include path command: sh -c '{}'", cmd_str);
+                }
+
+                let output = match run_command(&mut cmd) {
+                    Ok(o) => o,
+                    Err(e) => {
+                        eprintln!("[cpp] Failed to run '{}': {}", cmd_str, e);
+                        continue;
+                    }
+                };
+
+                if !output.status.success() {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    eprintln!("[cpp] Command '{}' failed: {}", cmd_str, stderr.trim());
+                    continue;
+                }
+
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let path_str = stdout.trim();
+
+                if path_str.is_empty() {
+                    continue;
+                }
+
+                let path = PathBuf::from(path_str);
+
+                // Check if the path exists and is a directory
+                if path.is_dir() {
+                    if self.verbose {
+                        eprintln!("[cpp] Added include path from command: {}", path.display());
+                    }
+                    paths.push(path);
+                } else if self.verbose {
+                    eprintln!("[cpp] Command output is not a directory: {}", path_str);
+                }
+            }
+
+            if self.verbose && !paths.is_empty() {
+                eprintln!("[cpp] Found {} include paths from commands", paths.len());
             }
 
             paths
@@ -198,6 +269,10 @@ impl CppDepAnalyzer {
         }
         // Add pkg-config include paths
         for inc in self.get_pkg_config_include_paths() {
+            search_paths.push(inc.clone());
+        }
+        // Add include paths from commands
+        for inc in self.get_command_include_paths() {
             search_paths.push(inc.clone());
         }
         // Also search from project root for project-relative includes
@@ -363,6 +438,11 @@ impl CppDepAnalyzer {
 
         // Add pkg-config include paths
         for inc in self.get_pkg_config_include_paths() {
+            cmd.arg(format!("-I{}", inc.display()));
+        }
+
+        // Add include paths from commands
+        for inc in self.get_command_include_paths() {
             cmd.arg(format!("-I{}", inc.display()));
         }
 

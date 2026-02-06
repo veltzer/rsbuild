@@ -36,10 +36,23 @@ The cpp analyzer queries the compiler for its include search paths using `gcc -E
 include_scanner = "native"  # or "compiler" for gcc -MM
 include_paths = ["include", "src"]
 pkg_config = ["gtk+-3.0", "libcurl"]  # Query pkg-config for include paths
+include_path_commands = ["gcc -print-file-name=plugin"]  # Run commands to get include paths
 cc = "gcc"
 cxx = "g++"
 cflags = ["-I/usr/local/include"]
 cxxflags = ["-std=c++17"]
+```
+
+**include_path_commands**:
+
+The `include_path_commands` option allows you to specify shell commands that output include paths. Each command is executed and its stdout (trimmed) is added to the include search paths. This is useful for compiler-specific include directories:
+
+```toml
+[analyzer.cpp]
+include_path_commands = [
+    "gcc -print-file-name=plugin",  # GCC plugin development headers
+    "llvm-config --includedir",     # LLVM headers
+]
 ```
 
 **pkg-config Integration**:

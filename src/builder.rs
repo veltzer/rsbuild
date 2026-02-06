@@ -6,7 +6,7 @@ use std::process::Command;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use crate::analyzers::{CppDepAnalyzer, DepAnalyzer, PythonDepAnalyzer};
-use crate::cli::{BuildPhase, ConfigAction, DepsAction, GraphFormat, GraphViewer, ProcessorAction, ToolsAction};
+use crate::cli::{BuildPhase, ConfigAction, DepsAction, DisplayOptions, GraphFormat, GraphViewer, ProcessorAction, ToolsAction};
 use crate::color;
 use crate::config::Config;
 use crate::deps_cache::DepsCache;
@@ -75,7 +75,7 @@ impl Builder {
 
     /// Execute an incremental build using the dependency graph
     /// batch_size_override: Some(Some(n)) = use n, Some(None) = disable batching, None = use config
-    pub fn build(&self, force: bool, verbose: bool, file_names: u8, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool, batch_size_override: Option<Option<usize>>, stop_after: BuildPhase) -> Result<()> {
+    pub fn build(&self, force: bool, verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool, batch_size_override: Option<Option<usize>>, stop_after: BuildPhase) -> Result<()> {
         // Create processors
         let processors = self.create_processors(verbose)?;
 
@@ -95,7 +95,7 @@ impl Builder {
         let parallel = jobs.unwrap_or(self.config.build.parallel);
         // CLI overrides config for batch_size
         let batch_size = batch_size_override.unwrap_or(self.config.build.batch_size);
-        let executor = Executor::new(&processors, parallel, verbose, file_names, Arc::clone(&interrupted), batch_size);
+        let executor = Executor::new(&processors, parallel, verbose, display_opts, Arc::clone(&interrupted), batch_size);
 
         // Execute the build
         let result = executor.execute(&graph, &self.object_store, force, timings, keep_going);
@@ -176,25 +176,26 @@ impl Builder {
     ) {
         let mut counts = [0usize; 3]; // [current, restorable, stale]
 
+        let display_opts = DisplayOptions::minimal();
         for product in products {
             let cache_key = product.cache_key();
             let input_checksum = match ObjectStore::combined_input_checksum(&product.inputs) {
                 Ok(cs) => cs,
                 Err(_) => {
-                    println!("{} [{}] {}", labels.stale.0, product.processor, product.display(0));
+                    println!("{} [{}] {}", labels.stale.0, product.processor, product.display(display_opts));
                     counts[2] += 1;
                     continue;
                 }
             };
 
             if !force && !self.object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs) {
-                println!("{} [{}] {}", labels.current.0, product.processor, product.display(0));
+                println!("{} [{}] {}", labels.current.0, product.processor, product.display(display_opts));
                 counts[0] += 1;
             } else if !force && self.object_store.can_restore(&cache_key, &input_checksum, &product.outputs) {
-                println!("{} [{}] {}", labels.restorable.0, product.processor, product.display(0));
+                println!("{} [{}] {}", labels.restorable.0, product.processor, product.display(display_opts));
                 counts[1] += 1;
             } else {
-                println!("{} [{}] {}", labels.stale.0, product.processor, product.display(0));
+                println!("{} [{}] {}", labels.stale.0, product.processor, product.display(display_opts));
                 counts[2] += 1;
             }
         }
@@ -216,7 +217,7 @@ impl Builder {
         let graph = self.build_graph_for_clean_with_processors(&processors)?;
 
         // Use executor to clean (batch_size doesn't matter for clean)
-        let executor = Executor::new(&processors, 1, false, 0, Arc::new(std::sync::atomic::AtomicBool::new(false)), None);
+        let executor = Executor::new(&processors, 1, false, DisplayOptions::minimal(), Arc::new(std::sync::atomic::AtomicBool::new(false)), None);
         executor.clean(&graph)?;
 
         // Remove empty subdirectories under out/

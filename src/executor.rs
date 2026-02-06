@@ -6,6 +6,7 @@ use parking_lot::Mutex;
 use std::thread;
 use std::time::Instant;
 
+use crate::cli::DisplayOptions;
 use crate::color;
 use crate::graph::BuildGraph;
 use crate::json_output;
@@ -18,7 +19,7 @@ pub struct Executor<'a> {
     processors: &'a HashMap<String, Box<dyn ProductDiscovery>>,
     parallel: usize,
     verbose: bool,
-    file_names: u8,
+    display_opts: DisplayOptions,
     interrupted: Arc<AtomicBool>,
     /// Batch size setting: None = disable batching, Some(0) = no limit, Some(n) = max n files per batch
     batch_size: Option<usize>,
@@ -29,7 +30,7 @@ impl<'a> Executor<'a> {
         processors: &'a HashMap<String, Box<dyn ProductDiscovery>>,
         parallel: usize,
         verbose: bool,
-        file_names: u8,
+        display_opts: DisplayOptions,
         interrupted: Arc<AtomicBool>,
         batch_size: Option<usize>,
     ) -> Self {
@@ -37,15 +38,15 @@ impl<'a> Executor<'a> {
             processors,
             parallel,
             verbose,
-            file_names,
+            display_opts,
             interrupted,
             batch_size,
         }
     }
 
-    /// Display a product at the current file-names detail level.
+    /// Display a product with the current display options.
     fn product_display(&self, product: &crate::graph::Product) -> String {
-        product.display(self.file_names)
+        product.display(self.display_opts)
     }
 
     /// Execute all products in the graph that need rebuilding
@@ -131,7 +132,7 @@ impl<'a> Executor<'a> {
             silenced_processors: &mut HashSet<String>,
             timings: bool,
             keep_going: bool,
-            file_names: u8,
+            display_opts: DisplayOptions,
             batch_size: Option<usize>,
         | -> Result<()> {
             if pending_batch.is_empty() {
@@ -173,7 +174,7 @@ impl<'a> Executor<'a> {
                     if !silenced && !crate::json_output::is_json_mode() {
                         let displays: Vec<String> = chunk.iter().map(|pw| {
                             let product = graph.get_product(pw.product_id).unwrap();
-                            product.display(file_names)
+                            product.display(display_opts)
                         }).collect();
                         println!("[{}] {} {} files: {}",
                             proc_name,
@@ -203,7 +204,7 @@ impl<'a> Executor<'a> {
 
                                 // Emit JSON complete event for batch item
                                 crate::json_output::emit_product_complete(
-                                    &product.display(file_names),
+                                    &product.display(display_opts),
                                     &proc_name,
                                     "success",
                                     Some(per_product_duration),
@@ -219,7 +220,7 @@ impl<'a> Executor<'a> {
                             Err(e) => {
                                 // Emit JSON failed event for batch item
                                 crate::json_output::emit_product_complete(
-                                    &product.display(file_names),
+                                    &product.display(display_opts),
                                     &proc_name,
                                     "failed",
                                     Some(per_product_duration),
@@ -232,7 +233,7 @@ impl<'a> Executor<'a> {
                                 stats.failed += 1;
                                 failed_products.insert(pw.product_id);
                                 if keep_going {
-                                    let msg = format!("[{}] {}: {}", proc_name, product.display(file_names), e);
+                                    let msg = format!("[{}] {}: {}", proc_name, product.display(display_opts), e);
                                     println!("{}", color::red(&format!("Error: {}", msg)));
                                     failed_messages.push(msg);
                                 } else {
@@ -274,13 +275,13 @@ impl<'a> Executor<'a> {
                             .unwrap_or_default();
                         println!("[{}{}] {} {}", proc_name, variant_tag,
                             color::green("Processing:"),
-                            product.display(file_names));
+                            product.display(display_opts));
                     }
 
                     // Emit JSON start event (if not silenced)
                     if !silenced {
                         crate::json_output::emit_product_start(
-                            &product.display(file_names),
+                            &product.display(display_opts),
                             &proc_name,
                             &product.inputs,
                             &product.outputs,
@@ -295,7 +296,7 @@ impl<'a> Executor<'a> {
 
                             // Emit JSON complete event
                             crate::json_output::emit_product_complete(
-                                &product.display(file_names),
+                                &product.display(display_opts),
                                 &proc_name,
                                 "success",
                                 Some(duration),
@@ -310,7 +311,7 @@ impl<'a> Executor<'a> {
                             stats.duration += duration;
                             if timings && !silenced {
                                 stats.product_timings.push(ProductTiming {
-                                    display: product.display(file_names),
+                                    display: product.display(display_opts),
                                     processor: proc_name.clone(),
                                     duration,
                                 });
@@ -321,7 +322,7 @@ impl<'a> Executor<'a> {
 
                             // Emit JSON failed event
                             crate::json_output::emit_product_complete(
-                                &product.display(file_names),
+                                &product.display(display_opts),
                                 &proc_name,
                                 "failed",
                                 Some(duration),
@@ -334,7 +335,7 @@ impl<'a> Executor<'a> {
                             stats.failed += 1;
                             failed_products.insert(pw.product_id);
                             if keep_going {
-                                let msg = format!("[{}] {}: {}", proc_name, product.display(file_names), e);
+                                let msg = format!("[{}] {}: {}", proc_name, product.display(display_opts), e);
                                 if !crate::json_output::is_json_mode() {
                                     println!("{}", color::red(&format!("Error: {}", msg)));
                                 }
@@ -366,7 +367,7 @@ impl<'a> Executor<'a> {
                     &mut pending_batch, &mut pending_processor, graph, self.processors,
                     object_store, &mut stats_by_processor, &mut failed_products,
                     &mut failed_messages, &mut first_error, &mut silenced_processors,
-                    timings, keep_going, self.file_names, self.batch_size,
+                    timings, keep_going, self.display_opts, self.batch_size,
                 )?;
                 println!("{}", color::yellow("Interrupted, saving progress..."));
                 break;
@@ -437,7 +438,7 @@ impl<'a> Executor<'a> {
                     &mut pending_batch, &mut pending_processor, graph, self.processors,
                     object_store, &mut stats_by_processor, &mut failed_products,
                     &mut failed_messages, &mut first_error, &mut silenced_processors,
-                    timings, keep_going, self.file_names, self.batch_size,
+                    timings, keep_going, self.display_opts, self.batch_size,
                 )?;
             }
 
@@ -455,7 +456,7 @@ impl<'a> Executor<'a> {
             &mut pending_batch, &mut pending_processor, graph, self.processors,
             object_store, &mut stats_by_processor, &mut failed_products,
             &mut failed_messages, &mut first_error, &mut silenced_processors,
-            timings, keep_going, self.file_names, self.batch_size,
+            timings, keep_going, self.display_opts, self.batch_size,
         )?;
 
         // In non-keep-going mode, return the first error after giving

@@ -71,7 +71,7 @@ fn main() -> Result<()> {
                 }
                 // CLI override: -1 = disable batching, 0 = no limit, >0 = max batch size
                 let batch_size_override = batch_size.map(|n| if n < 0 { None } else { Some(n as usize) });
-                builder.build(force, cli.verbose, cli.file_names, jobs, timings, keep_going, Arc::clone(&interrupted), !no_summary, batch_size_override, stop_after)?;
+                builder.build(force, cli.verbose, cli.display_options(), jobs, timings, keep_going, Arc::clone(&interrupted), !no_summary, batch_size_override, stop_after)?;
             }
         }
         Commands::Clean { action } => {
@@ -188,7 +188,7 @@ fn main() -> Result<()> {
         }
         Commands::Watch { jobs, timings, keep_going, no_summary, batch_size } => {
             let batch_size_override = batch_size.map(|n| if n < 0 { None } else { Some(n as usize) });
-            watcher::watch(cli.verbose, cli.file_names, jobs, timings, keep_going, !no_summary, Arc::clone(&interrupted), batch_size_override)?;
+            watcher::watch(cli.verbose, cli.display_options(), jobs, timings, keep_going, !no_summary, Arc::clone(&interrupted), batch_size_override)?;
         }
         Commands::Version => {
             println!("rsb {}", env!("CARGO_PKG_VERSION"));

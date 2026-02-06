@@ -11,9 +11,17 @@ pub struct Cli {
     #[arg(short, long, global = true)]
     pub verbose: bool,
 
-    /// File name detail level in output (0=basename, 1=relative path, 2=+source, 3=+all inputs)
-    #[arg(long, global = true, default_value = "0")]
-    pub file_names: u8,
+    /// What to show for output files (none, basename, path)
+    #[arg(short = 'O', long, global = true, value_enum, default_value = "basename")]
+    pub output_display: OutputDisplay,
+
+    /// What to show for input files (none, source, all)
+    #[arg(short = 'I', long, global = true, value_enum, default_value = "none")]
+    pub input_display: InputDisplay,
+
+    /// Path format for displayed files (basename, path)
+    #[arg(short = 'P', long, global = true, value_enum, default_value = "path")]
+    pub path_format: PathFormat,
 
     /// Print each external command before it is executed
     #[arg(long, global = true)]
@@ -29,6 +37,17 @@ pub struct Cli {
 
     #[command(subcommand)]
     pub command: Commands,
+}
+
+impl Cli {
+    /// Get the display options from CLI arguments
+    pub fn display_options(&self) -> DisplayOptions {
+        DisplayOptions {
+            output: self.output_display,
+            input: self.input_display,
+            path_format: self.path_format,
+        }
+    }
 }
 
 /// Output format for the dependency graph
@@ -69,6 +88,69 @@ pub enum BuildPhase {
     /// Run the full build (default)
     #[default]
     Build,
+}
+
+/// What to show for output files in build messages
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum OutputDisplay {
+    /// Don't show output files
+    None,
+    /// Show only the filename (e.g., "main.elf")
+    #[default]
+    Basename,
+    /// Show full relative path (e.g., "out/cc_single_file/main.elf")
+    Path,
+}
+
+/// What to show for input files in build messages
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum InputDisplay {
+    /// Don't show input files
+    #[default]
+    None,
+    /// Show only the primary source file (first input)
+    Source,
+    /// Show all input files including headers/dependencies
+    All,
+}
+
+/// Path format for displayed files
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum PathFormat {
+    /// Show only the filename (e.g., "main.c")
+    Basename,
+    /// Show full relative path (e.g., "src/main.c")
+    #[default]
+    Path,
+}
+
+/// Display options for product output in build messages
+#[derive(Debug, Clone, Copy)]
+pub struct DisplayOptions {
+    pub output: OutputDisplay,
+    pub input: InputDisplay,
+    pub path_format: PathFormat,
+}
+
+impl Default for DisplayOptions {
+    fn default() -> Self {
+        Self {
+            output: OutputDisplay::Basename,
+            input: InputDisplay::None,
+            path_format: PathFormat::Path,
+        }
+    }
+}
+
+impl DisplayOptions {
+    /// Minimal display: just output basename
+    pub fn minimal() -> Self {
+        Self {
+            output: OutputDisplay::Basename,
+            input: InputDisplay::None,
+            path_format: PathFormat::Basename,
+        }
+    }
 }
 
 #[derive(Subcommand)]

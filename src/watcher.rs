@@ -7,7 +7,7 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use crate::builder::Builder;
-use crate::cli::BuildPhase;
+use crate::cli::{BuildPhase, DisplayOptions};
 use crate::color;
 
 /// Collect directories to watch based on project conventions
@@ -66,14 +66,14 @@ fn should_ignore(path: &Path) -> bool {
     false
 }
 
-pub fn watch(verbose: bool, file_names: u8, jobs: Option<usize>, timings: bool, keep_going: bool, summary: bool, interrupted: Arc<AtomicBool>, batch_size_override: Option<Option<usize>>) -> Result<()> {
+pub fn watch(verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, timings: bool, keep_going: bool, summary: bool, interrupted: Arc<AtomicBool>, batch_size_override: Option<Option<usize>>) -> Result<()> {
     let project_root = std::env::current_dir()?;
 
     // Initial build
     println!("{}", color::bold("Running initial build..."));
     {
         let builder = Builder::new()?;
-        if let Err(e) = builder.build(false, verbose, file_names, jobs, timings, keep_going, Arc::clone(&interrupted), summary, batch_size_override, BuildPhase::Build) {
+        if let Err(e) = builder.build(false, verbose, display_opts, jobs, timings, keep_going, Arc::clone(&interrupted), summary, batch_size_override, BuildPhase::Build) {
             println!("{}", color::red(&format!("Initial build error: {}", e)));
         }
     }
@@ -140,7 +140,7 @@ pub fn watch(verbose: bool, file_names: u8, jobs: Option<usize>, timings: bool, 
         println!("{}", color::bold("Change detected, rebuilding..."));
         {
             let builder = Builder::new()?;
-            if let Err(e) = builder.build(false, verbose, file_names, jobs, timings, keep_going, Arc::clone(&interrupted), summary, batch_size_override, BuildPhase::Build) {
+            if let Err(e) = builder.build(false, verbose, display_opts, jobs, timings, keep_going, Arc::clone(&interrupted), summary, batch_size_override, BuildPhase::Build) {
                 println!("{}", color::red(&format!("Build error: {}", e)));
             }
         }

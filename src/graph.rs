@@ -1,6 +1,8 @@
 use anyhow::{bail, Result};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+use crate::cli::{DisplayOptions, InputDisplay, OutputDisplay, PathFormat};
 
 /// A single build product with concrete inputs and outputs.
 /// All paths are relative to project root.
@@ -44,61 +46,71 @@ impl Product {
         }
     }
 
-    /// Display name for logging at the given verbosity level:
-    ///   0 — basename of output only (for checkers: basename of first input)
-    ///   1 — path of output (for checkers: path of first input)
-    ///   2 — path of output + path of source (first input)
-    ///   3 — path of output + all inputs (source + headers)
+    /// Format a path according to the given format
+    fn format_path(path: &Path, format: PathFormat) -> String {
+        match format {
+            PathFormat::Basename => {
+                path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("?")
+                    .to_string()
+            }
+            PathFormat::Path => path.display().to_string(),
+        }
+    }
+
+    /// Display name for logging with the given display options.
     /// All paths are already relative to project root.
-    pub fn display(&self, level: u8) -> String {
+    pub fn display(&self, opts: DisplayOptions) -> String {
         // For checkers (empty outputs), display the input file instead
         if self.outputs.is_empty() {
-            return match level {
-                0 => {
-                    self.inputs.first()
-                        .and_then(|p| p.file_name())
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("?")
-                        .to_string()
-                }
-                _ => {
-                    self.inputs.first()
-                        .map(|p| p.display().to_string())
-                        .unwrap_or_else(|| "?".to_string())
-                }
-            };
+            return self.inputs.first()
+                .map(|p| Self::format_path(p, opts.path_format))
+                .unwrap_or_else(|| "?".to_string());
         }
 
-        let output_part = match level {
-            0 => {
+        // Format output part
+        let output_part = match opts.output {
+            OutputDisplay::None => String::new(),
+            OutputDisplay::Basename => {
                 let names: Vec<_> = self.outputs.iter()
-                    .map(|p| p.file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("?")
-                        .to_string())
+                    .map(|p| Self::format_path(p, PathFormat::Basename))
                     .collect();
                 names.join(", ")
             }
-            _ => {
+            OutputDisplay::Path => {
                 let paths: Vec<_> = self.outputs.iter()
-                    .map(|p| p.display().to_string())
+                    .map(|p| Self::format_path(p, PathFormat::Path))
                     .collect();
                 paths.join(", ")
             }
         };
 
-        if level <= 1 {
-            output_part
-        } else if level == 2 {
-            let source = self.inputs.first()
-                .map(|p| p.display().to_string())
-                .unwrap_or_else(|| "?".to_string());
-            format!("{} <- {}", output_part, source)
-        } else {
-            let inputs: Vec<_> = self.inputs.iter()
-                .map(|p| p.display().to_string())
-                .collect();
-            format!("{} <- {}", output_part, inputs.join(", "))
+        // Format input part
+        let input_part = match opts.input {
+            InputDisplay::None => None,
+            InputDisplay::Source => {
+                self.inputs.first()
+                    .map(|p| Self::format_path(p, opts.path_format))
+            }
+            InputDisplay::All => {
+                let inputs: Vec<_> = self.inputs.iter()
+                    .map(|p| Self::format_path(p, opts.path_format))
+                    .collect();
+                if inputs.is_empty() {
+                    None
+                } else {
+                    Some(inputs.join(", "))
+                }
+            }
+        };
+
+        // Combine output and input parts
+        match (output_part.is_empty(), input_part) {
+            (true, None) => "?".to_string(),
+            (true, Some(inp)) => inp,
+            (false, None) => output_part,
+            (false, Some(inp)) => format!("{} <- {}", output_part, inp),
         }
     }
 

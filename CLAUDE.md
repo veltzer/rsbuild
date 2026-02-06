@@ -25,6 +25,7 @@ A fast, incremental build tool written in Rust with tera support, Python linting
 - `rsb build --keep-going` - Continue after errors
 - `rsb build --ignore-tool-versions` - Skip tool version verification
 - `rsb build --timings` - Show per-product and total timing info
+- `rsb build -p tera,ruff` - Run only specific processors
 - `rsb clean` - Remove build output files (preserves cache) [default]
 - `rsb clean outputs` - Remove build output files (preserves cache)
 - `rsb clean all` - Remove all build directories (.rsb/ and out/)
@@ -32,6 +33,7 @@ A fast, incremental build tool written in Rust with tera support, Python linting
 - `rsb status` - Show product status (up-to-date, stale, or restorable)
 - `rsb init` - Initialize a new rsb project in the current directory
 - `rsb watch` - Watch source files and auto-rebuild on changes
+- `rsb watch -p tera` - Watch with only specific processors
 - `rsb graph` - Print dependency graph (formats: dot, mermaid, json, text)
 - `rsb graph --view` - Open graph in browser (mermaid) or as SVG (dot)
 - `rsb cache clear` - Clear the entire cache

@@ -75,7 +75,19 @@ impl Builder {
 
     /// Execute an incremental build using the dependency graph
     /// batch_size_override: Some(Some(n)) = use n, Some(None) = disable batching, None = use config
-    pub fn build(&self, force: bool, verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool, batch_size_override: Option<Option<usize>>, stop_after: BuildPhase) -> Result<()> {
+    /// processor_filter: if Some, only run processors in this list
+    pub fn build(&self, force: bool, verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool, batch_size_override: Option<Option<usize>>, stop_after: BuildPhase, processor_filter: Option<&[String]>) -> Result<()> {
+        // Validate processor filter against available processors
+        if let Some(filter) = processor_filter {
+            let processors = self.create_processors(verbose)?;
+            for name in filter {
+                if !processors.contains_key(name) {
+                    let available: Vec<_> = processors.keys().collect();
+                    bail!("Unknown processor '{}'. Available: {:?}", name, available);
+                }
+            }
+        }
+
         // Create processors
         let processors = self.create_processors(verbose)?;
 
@@ -83,7 +95,7 @@ impl Builder {
         self.detect_config_changes(&processors);
 
         // Build the dependency graph (may stop early based on stop_after)
-        let graph = self.build_graph_with_processors_and_phase(&processors, stop_after)?;
+        let graph = self.build_graph_with_processors_and_phase(&processors, stop_after, processor_filter)?;
 
         // If we stopped early, we're done
         if stop_after != BuildPhase::Build {
@@ -509,21 +521,22 @@ impl Builder {
 
     /// Build the dependency graph using provided processors
     fn build_graph_with_processors(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>) -> Result<BuildGraph> {
-        self.build_graph_with_processors_impl(processors, false, BuildPhase::Build)
+        self.build_graph_with_processors_impl(processors, false, BuildPhase::Build, None)
     }
 
     /// Build the dependency graph with optional early stopping
-    fn build_graph_with_processors_and_phase(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, stop_after: BuildPhase) -> Result<BuildGraph> {
-        self.build_graph_with_processors_impl(processors, false, stop_after)
+    fn build_graph_with_processors_and_phase(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, stop_after: BuildPhase, processor_filter: Option<&[String]>) -> Result<BuildGraph> {
+        self.build_graph_with_processors_impl(processors, false, stop_after, processor_filter)
     }
 
     /// Build the dependency graph for clean (skip expensive dependency scanning)
     fn build_graph_for_clean_with_processors(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>) -> Result<BuildGraph> {
-        self.build_graph_with_processors_impl(processors, true, BuildPhase::Build)
+        self.build_graph_with_processors_impl(processors, true, BuildPhase::Build, None)
     }
 
     /// Build the dependency graph using provided processors
-    fn build_graph_with_processors_impl(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, for_clean: bool, stop_after: BuildPhase) -> Result<BuildGraph> {
+    /// processor_filter: if Some, only run processors in this list (in addition to enabled check)
+    fn build_graph_with_processors_impl(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, for_clean: bool, stop_after: BuildPhase, processor_filter: Option<&[String]>) -> Result<BuildGraph> {
         if phases_debug() {
             eprintln!("{}", color::bold("Phase: Building dependency graph..."));
         }
@@ -534,6 +547,12 @@ impl Builder {
         names.sort();
         let active_processors: Vec<&String> = names.into_iter()
             .filter(|name| {
+                // If filter is specified, only include processors in the filter list
+                if let Some(filter) = processor_filter {
+                    if !filter.iter().any(|f| f == *name) {
+                        return false;
+                    }
+                }
                 let in_enabled_list = self.config.processor.is_enabled(name);
                 if !in_enabled_list {
                     return false;

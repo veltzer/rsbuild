@@ -66,14 +66,17 @@ fn should_ignore(path: &Path) -> bool {
     false
 }
 
-pub fn watch(verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, timings: bool, keep_going: bool, summary: bool, interrupted: Arc<AtomicBool>, batch_size_override: Option<Option<usize>>) -> Result<()> {
+pub fn watch(verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, timings: bool, keep_going: bool, summary: bool, interrupted: Arc<AtomicBool>, batch_size_override: Option<Option<usize>>, processor_filter: Option<&[String]>) -> Result<()> {
     let project_root = std::env::current_dir()?;
+
+    // Clone the processor filter for use in the loop
+    let processor_filter_owned: Option<Vec<String>> = processor_filter.map(|f| f.to_vec());
 
     // Initial build
     println!("{}", color::bold("Running initial build..."));
     {
         let builder = Builder::new()?;
-        if let Err(e) = builder.build(false, verbose, display_opts, jobs, timings, keep_going, Arc::clone(&interrupted), summary, batch_size_override, BuildPhase::Build) {
+        if let Err(e) = builder.build(false, verbose, display_opts, jobs, timings, keep_going, Arc::clone(&interrupted), summary, batch_size_override, BuildPhase::Build, processor_filter_owned.as_deref()) {
             println!("{}", color::red(&format!("Initial build error: {}", e)));
         }
     }
@@ -140,7 +143,7 @@ pub fn watch(verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, t
         println!("{}", color::bold("Change detected, rebuilding..."));
         {
             let builder = Builder::new()?;
-            if let Err(e) = builder.build(false, verbose, display_opts, jobs, timings, keep_going, Arc::clone(&interrupted), summary, batch_size_override, BuildPhase::Build) {
+            if let Err(e) = builder.build(false, verbose, display_opts, jobs, timings, keep_going, Arc::clone(&interrupted), summary, batch_size_override, BuildPhase::Build, processor_filter_owned.as_deref()) {
                 println!("{}", color::red(&format!("Build error: {}", e)));
             }
         }

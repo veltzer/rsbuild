@@ -192,6 +192,10 @@ pub enum Commands {
         /// Stop after a specific build phase
         #[arg(long, value_enum, default_value = "build")]
         stop_after: BuildPhase,
+
+        /// Only run specific processors (comma-separated list)
+        #[arg(short, long, value_delimiter = ',')]
+        processors: Option<Vec<String>>,
     },
     /// Clean build artifacts
     Clean {
@@ -234,6 +238,10 @@ pub enum Commands {
         /// Batch size for batch-capable processors (0 = no limit, -1 = disable, omit to use config)
         #[arg(long, allow_negative_numbers = true)]
         batch_size: Option<i32>,
+
+        /// Only run specific processors (comma-separated list)
+        #[arg(short, long, value_delimiter = ',')]
+        processors: Option<Vec<String>>,
     },
     /// Manage processors
     Processors {

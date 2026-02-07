@@ -38,6 +38,8 @@ rsb build --stop-after discover        # Stop after product discovery
 rsb build --stop-after add-dependencies # Stop after dependency scanning
 rsb build --stop-after resolve         # Stop after graph resolution
 rsb build --show-output                # Show compiler/linter output even on success
+rsb build --auto-add-words             # Add misspelled words to .spellcheck-words instead of failing
+rsb build --auto-add-words -p spellcheck # Run only spellcheck and auto-add words
 ```
 
 By default, tool output (compiler messages, linter output) is only shown when a command fails. Use `--show-output` to see all output.
@@ -80,7 +82,8 @@ rsb init
 Watch source files and auto-rebuild on changes.
 
 ```bash
-rsb watch
+rsb watch                              # Watch and rebuild on changes
+rsb watch --auto-add-words             # Watch with spellcheck auto-add words
 ```
 
 ## `rsb graph`

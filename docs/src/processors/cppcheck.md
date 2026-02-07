@@ -1,15 +1,14 @@
-# Cpplint Processor
+# Cppcheck Processor
 
 ## Purpose
 
-Runs static analysis on C/C++ source files using an external checker
-(cppcheck by default).
+Runs cppcheck static analysis on C/C++ source files.
 
 ## How It Works
 
-Discovers `.c` and `.cc` files under the configured source directory, runs the
-checker on each file individually, and creates a stub file on success. A non-zero
-exit code from the checker fails the product.
+Discovers `.c` and `.cc` files under the configured source directory, runs
+cppcheck on each file individually, and creates a stub file on success. A
+non-zero exit code from cppcheck fails the product.
 
 **Note:** This processor does not support batch mode. Each file is checked
 separately because cppcheck performs cross-file analysis (CTU - Cross Translation
@@ -22,21 +21,19 @@ never linked together. Cppcheck has no flag to disable this cross-file analysis
 ## Source Files
 
 - Input: `{source_dir}/**/*.c`, `{source_dir}/**/*.cc`
-- Output: `out/cpplint/{flat_name}.cpplint`
+- Output: `out/cppcheck/{flat_name}.cppcheck`
 
 ## Configuration
 
 ```toml
-[processor.cpplint]
-checker = "cppcheck"                        # Static checker command (default: "cppcheck")
+[processor.cppcheck]
 args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
 extra_inputs = [".cppcheck-suppressions"]   # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `checker` | string | `"cppcheck"` | The checker executable to invoke |
-| `args` | string[] | `["--error-exitcode=1", "--enable=warning,style,performance,portability"]` | Arguments passed to the checker |
+| `args` | string[] | `["--error-exitcode=1", "--enable=warning,style,performance,portability"]` | Arguments passed to cppcheck |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 To use a suppressions file, add `"--suppressions-list=.cppcheck-suppressions"` to `args`.

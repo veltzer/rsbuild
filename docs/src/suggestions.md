@@ -213,7 +213,7 @@ Features that have been implemented and are documented elsewhere:
 - Configuration:
   ```toml
   [alias]
-  lint = ["ruff", "pylint", "shellcheck", "cpplint"]
+  lint = ["ruff", "pylint", "shellcheck", "cppcheck"]
   test = ["pytest", "doctest"]
   check = ["@lint", "@test", "mypy"]  # Aliases can reference other aliases
   fast = ["ruff", "template"]          # Quick feedback loop
@@ -285,7 +285,7 @@ Features that have been implemented and are documented elsewhere:
   ```bash
   rsb init --template=python      # ruff, pylint, mypy, pytest
   rsb init --template=typescript  # eslint, prettier, tsc
-  rsb init --template=cpp         # cc_single_file, cpplint, clang-format
+  rsb init --template=cpp         # cc_single_file, cppcheck, clang-format
   rsb init --template=rust        # rustfmt, clippy
   rsb init --template=docs        # spellcheck, markdownlint, pandoc
   ```
@@ -523,7 +523,7 @@ These are relatively straightforward improvements that would enhance usability.
 
 ### Batch processing for more processors
 - Currently only some processors support batching (running multiple files in a single tool invocation).
-- Adding batch support to `cpplint`, `shellcheck`, and `ruff` could significantly speed up builds with many files.
+- Adding batch support to `cppcheck`, `shellcheck`, and `ruff` could significantly speed up builds with many files.
 - These tools all support multiple file arguments natively.
 - Implementation: extend `ProductDiscovery` trait with optional `batch_capable()` method, group products by processor in executor.
 
@@ -606,7 +606,7 @@ These are relatively straightforward improvements that would enhance usability.
 - Variable substitution from environment for secrets.
 
 ### `rsb lint` — Run only checkers
-- Convenience command to run only checker processors (ruff, pylint, cpplint, shellcheck, spellcheck) without generators:
+- Convenience command to run only checker processors (ruff, pylint, cppcheck, shellcheck, spellcheck) without generators:
   ```bash
   rsb lint              # Run all enabled checkers
   rsb lint --fix        # Run checkers with auto-fix where supported

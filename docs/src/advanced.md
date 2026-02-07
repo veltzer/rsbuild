@@ -128,7 +128,7 @@ extra_inputs = ["pyproject.toml"]
 [processor.pylint]
 extra_inputs = ["pyproject.toml"]
 
-[processor.cpplint]
+[processor.cppcheck]
 extra_inputs = [".cppcheck-suppressions"]
 
 [processor.cc_single_file]

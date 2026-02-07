@@ -16,7 +16,7 @@ project/
 │   ├── cc_single_file/ # Compiled executables
 │   ├── ruff/         # Ruff lint stub files
 │   ├── pylint/       # Pylint lint stub files
-│   ├── cpplint/      # C/C++ lint stub files
+│   ├── cppcheck/      # C/C++ lint stub files
 │   ├── spellcheck/   # Spellcheck stub files
 │   ├── sleep/        # Sleep stub files
 │   └── make/         # Make stub files

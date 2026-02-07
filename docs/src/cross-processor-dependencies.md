@@ -13,11 +13,11 @@ templates/config.py.tera  →  (template processor)  →  config.py
 
 Ideally, ruff should then lint the generated `config.py`. Or a template might
 generate a C++ source file that needs to be compiled by `cc_single_file` and
-linted by `cpplint`. Chains can be arbitrarily deep:
+linted by `cppcheck`. Chains can be arbitrarily deep:
 
 ```
 template  →  generates foo.sh  →  shellcheck lints foo.sh
-template  →  generates bar.c   →  cc_single_file compiles bar.c  →  cpplint lints bar.c
+template  →  generates bar.c   →  cc_single_file compiles bar.c  →  cppcheck lints bar.c
 ```
 
 Currently this does not work. Each processor discovers its inputs by querying

@@ -349,7 +349,7 @@ fn default_true() -> bool {
 fn default_processors() -> Vec<String> {
     vec![
         "tera".into(), "ruff".into(), "pylint".into(),
-        "cc_single_file".into(), "cpplint".into(), "shellcheck".into(), "spellcheck".into(), "make".into(),
+        "cc_single_file".into(), "cppcheck".into(), "shellcheck".into(), "spellcheck".into(), "make".into(),
     ]
 }
 
@@ -368,7 +368,7 @@ pub struct ProcessorConfig {
     #[serde(default)]
     pub cc_single_file: CcConfig,
     #[serde(default)]
-    pub cpplint: CpplintConfig,
+    pub cppcheck: CppcheckConfig,
     #[serde(default)]
     pub spellcheck: SpellcheckConfig,
     #[serde(default)]
@@ -391,7 +391,7 @@ impl Default for ProcessorConfig {
             ruff: RuffConfig::default(),
             pylint: PylintConfig::default(),
             cc_single_file: CcConfig::default(),
-            cpplint: CpplintConfig::default(),
+            cppcheck: CppcheckConfig::default(),
             shellcheck: ShellcheckConfig::default(),
             spellcheck: SpellcheckConfig::default(),
             sleep: SleepConfig::default(),
@@ -414,7 +414,7 @@ impl ProcessorConfig {
         self.ruff.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
         self.pylint.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
         self.cc_single_file.scan.resolve("src", &[".c", ".cc"], &[]);
-        self.cpplint.scan.resolve("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
+        self.cppcheck.scan.resolve("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
         self.shellcheck.scan.resolve("", &[".sh", ".bash"], SHELL_EXCLUDE_DIRS);
         self.spellcheck.scan.resolve("", &[".md"], SPELLCHECK_EXCLUDE_DIRS);
         self.sleep.scan.resolve("sleep", &[".sleep"], &[]);
@@ -512,11 +512,7 @@ impl Default for PylintConfig {
     }
 }
 
-fn default_cpplint_checker() -> String {
-    "cppcheck".into()
-}
-
-fn default_cpplint_args() -> Vec<String> {
+fn default_cppcheck_args() -> Vec<String> {
     vec![
         "--error-exitcode=1".into(),
         "--enable=warning,style,performance,portability".into(),
@@ -524,10 +520,8 @@ fn default_cpplint_args() -> Vec<String> {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct CpplintConfig {
-    #[serde(default = "default_cpplint_checker")]
-    pub checker: String,
-    #[serde(default = "default_cpplint_args")]
+pub struct CppcheckConfig {
+    #[serde(default = "default_cppcheck_args")]
     pub args: Vec<String>,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
@@ -535,11 +529,10 @@ pub struct CpplintConfig {
     pub scan: ScanConfig,
 }
 
-impl Default for CpplintConfig {
+impl Default for CppcheckConfig {
     fn default() -> Self {
         Self {
-            checker: "cppcheck".into(),
-            args: default_cpplint_args(),
+            args: default_cppcheck_args(),
             extra_inputs: Vec::new(),
             scan: ScanConfig {
                 scan_dir: Some("src".into()),

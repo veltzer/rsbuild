@@ -72,7 +72,7 @@ my_excludes = ["/kernel/", "/vendor/"]
 [processor]
 enabled = ["tera"]
 
-[processor.cpplint]
+[processor.cppcheck]
 exclude_dirs = "${my_excludes}"
 "#
     ).unwrap();
@@ -128,7 +128,7 @@ shared_excludes = ["/out/", "/build/"]
 [processor]
 enabled = ["tera"]
 
-[processor.cpplint]
+[processor.cppcheck]
 exclude_dirs = "${shared_excludes}"
 
 [processor.shellcheck]
@@ -157,7 +157,7 @@ fn config_vars_undefined_variable_error() {
 [processor]
 enabled = ["tera"]
 
-[processor.cpplint]
+[processor.cppcheck]
 exclude_dirs = "${undefined_var}"
 "#
     ).unwrap();

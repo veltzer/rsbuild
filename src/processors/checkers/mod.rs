@@ -1,4 +1,4 @@
-mod cpplint;
+mod cppcheck;
 mod make;
 mod pylint;
 mod ruff;
@@ -6,7 +6,7 @@ mod shellcheck;
 mod sleep;
 mod spellcheck;
 
-pub use cpplint::CpplintProcessor;
+pub use cppcheck::CppcheckProcessor;
 pub use make::MakeProcessor;
 pub use pylint::PylintProcessor;
 pub use ruff::RuffProcessor;

@@ -65,7 +65,7 @@ parallel = 1  # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cor
 batch_size = 0  # Max files per batch (0 = no limit, omit to disable batching)
 
 [processor]
-enabled = ["tera", "ruff", "pylint", "sleep", "cc_single_file", "cpplint", "shellcheck", "spellcheck", "make"]
+enabled = ["tera", "ruff", "pylint", "sleep", "cc_single_file", "cppcheck", "shellcheck", "spellcheck", "make"]
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
@@ -88,7 +88,7 @@ Define variables in a `[vars]` section and reference them using `${var_name}` sy
 [vars]
 kernel_excludes = ["/kernel/", "/kernel_standalone/", "/examples_standalone/"]
 
-[processor.cpplint]
+[processor.cppcheck]
 exclude_dirs = "${kernel_excludes}"
 
 [processor.cc_single_file]
@@ -121,7 +121,7 @@ project/
 
 - **Processors** implement `ProductDiscovery` trait — two types:
   - **Generators** (cc_single_file, tera): produce output files, must implement `clean()`
-  - **Checkers** (ruff, pylint, cpplint, shellcheck, spellcheck, make, sleep): validate inputs, no output files
+  - **Checkers** (ruff, pylint, cppcheck, shellcheck, spellcheck, make, sleep): validate inputs, no output files
 - **FileIndex** walks the project once using the `ignore` crate, respecting `.gitignore` and `.rsbignore`
 - **Products** have inputs (source files) and outputs (generated files, empty for checkers)
 - **BuildGraph** manages dependencies between products

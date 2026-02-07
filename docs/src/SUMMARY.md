@@ -14,7 +14,7 @@
     - [Ruff](processors/ruff.md)
     - [Pylint](processors/pylint.md)
     - [CC Single File](processors/cc.md)
-    - [Cpplint](processors/cpplint.md)
+    - [Cppcheck](processors/cppcheck.md)
     - [Spellcheck](processors/spellcheck.md)
     - [Sleep](processors/sleep.md)
     - [Make](processors/make.md)

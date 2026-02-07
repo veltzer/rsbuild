@@ -41,7 +41,7 @@ Available processors:
 - **ruff** — Python linting with ruff (configurable linter binary)
 - **pylint** — Python linting with pylint
 - **cc_single_file** — C/C++ single-file compilation with automatic header dependency tracking
-- **cpplint** — C/C++ static analysis with cppcheck (configurable)
+- **cppcheck** — C/C++ static analysis with cppcheck (configurable)
 - **spellcheck** — documentation spell checking using hunspell dictionaries
 - **sleep** — sleep for testing parallel execution
 - **make** — run make in directories containing Makefiles

@@ -14,7 +14,7 @@ use crate::executor::Executor;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::ObjectStore;
-use crate::processors::{CcProcessor, CpplintProcessor, LuaProcessor, MakeProcessor, PylintProcessor, RuffProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TeraProcessor, log_command};
+use crate::processors::{CcProcessor, CppcheckProcessor, LuaProcessor, MakeProcessor, PylintProcessor, RuffProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TeraProcessor, log_command};
 use crate::remote_cache;
 use crate::tool_lock;
 
@@ -321,9 +321,9 @@ impl Builder {
         let cc_proc = CcProcessor::new(self.project_root.clone(), self.config.processor.cc_single_file.clone(), verbose);
         processors.insert("cc_single_file".to_string(), Box::new(cc_proc));
 
-        // C/C++ lint processor
-        let cpplinter = CpplintProcessor::new(self.project_root.clone(), self.config.processor.cpplint.clone());
-        processors.insert("cpplint".to_string(), Box::new(cpplinter));
+        // C/C++ static analysis processor
+        let cppcheck_proc = CppcheckProcessor::new(self.project_root.clone(), self.config.processor.cppcheck.clone());
+        processors.insert("cppcheck".to_string(), Box::new(cppcheck_proc));
 
         // Shellcheck processor
         let shellcheck_proc = ShellcheckProcessor::new(self.project_root.clone(), self.config.processor.shellcheck.clone());

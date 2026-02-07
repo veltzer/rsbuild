@@ -235,7 +235,7 @@ fn init_project() -> Result<()> {
 
 [processor]
 # auto_detect = true
-# enabled = ["template", "ruff", "pylint", "cc_single_file", "cpplint", "shellcheck", "spellcheck", "make"]
+# enabled = ["template", "ruff", "pylint", "cc_single_file", "cppcheck", "shellcheck", "spellcheck", "make"]
 
 [cache]
 # restore_method = "hardlink"  # or "copy"
@@ -268,8 +268,7 @@ fn init_project() -> Result<()> {
 # extensions = [".c", ".cc"]
 # output_suffix = ".elf"
 
-[processor.cpplint]
-# checker = "cppcheck"
+[processor.cppcheck]
 # args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
 # scan_dir = "src"
 # extensions = [".c", ".cc"]

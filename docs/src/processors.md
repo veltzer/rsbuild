@@ -31,7 +31,7 @@ Enable processors in `rsb.toml`:
 
 ```toml
 [processor]
-enabled = ["tera", "ruff", "pylint", "cc_single_file", "cpplint", "spellcheck", "sleep", "make"]
+enabled = ["tera", "ruff", "pylint", "cc_single_file", "cppcheck", "spellcheck", "sleep", "make"]
 ```
 
 Use `rsb processors list` to see available processors and their status.
@@ -45,7 +45,7 @@ Use `rsb processors files` to see which files each processor discovers.
 - [Ruff](processors/ruff.md) — lints Python files with ruff
 - [Pylint](processors/pylint.md) — lints Python files with pylint
 - [CC Single File](processors/cc.md) — compiles C/C++ source files into executables (single-file)
-- [Cpplint](processors/cpplint.md) — runs static analysis on C/C++ source files
+- [Cpplint](processors/cppcheck.md) — runs static analysis on C/C++ source files
 - [Spellcheck](processors/spellcheck.md) — checks documentation files for spelling errors
 - [Sleep](processors/sleep.md) — sleeps for a duration (for testing)
 - [Make](processors/make.md) — runs make in directories containing Makefiles

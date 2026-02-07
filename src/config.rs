@@ -607,6 +607,9 @@ pub enum IncludeScanner {
 pub struct CompilerProfile {
     /// Profile name (used in output paths, e.g., "gcc", "clang")
     pub name: String,
+    /// Whether this profile is enabled (default: true)
+    #[serde(default = "default_true")]
+    pub enabled: bool,
     #[serde(default = "default_cc_compiler")]
     pub cc: String,
     #[serde(default = "default_cxx_compiler")]
@@ -627,6 +630,7 @@ impl CompilerProfile {
     pub fn default_gcc() -> Self {
         Self {
             name: "gcc".into(),
+            enabled: true,
             cc: "gcc".into(),
             cxx: "g++".into(),
             cflags: Vec::new(),
@@ -670,16 +674,17 @@ pub struct CcConfig {
 }
 
 impl CcConfig {
-    /// Get the list of compiler profiles to use.
-    /// If `compilers` is set, returns those profiles.
+    /// Get the list of enabled compiler profiles to use.
+    /// If `compilers` is set, returns enabled profiles from that list.
     /// Otherwise, creates a single profile from the legacy fields.
     pub fn get_compiler_profiles(&self) -> Vec<CompilerProfile> {
         if !self.compilers.is_empty() {
-            self.compilers.clone()
+            self.compilers.iter().filter(|p| p.enabled).cloned().collect()
         } else {
             // Legacy mode: create single profile from top-level fields
             vec![CompilerProfile {
                 name: String::new(), // Empty name = no subdirectory
+                enabled: true,
                 cc: self.cc.clone(),
                 cxx: self.cxx.clone(),
                 cflags: self.cflags.clone(),

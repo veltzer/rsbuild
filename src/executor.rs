@@ -9,7 +9,7 @@ use std::time::Instant;
 use crate::cli::DisplayOptions;
 use crate::color;
 use crate::graph::BuildGraph;
-use crate::json_output;
+use crate::json_output::{self, emit_product_complete};
 use crate::object_store::ObjectStore;
 use crate::processors::{BuildStats, ProcessStats, ProductDiscovery, ProductTiming};
 
@@ -83,7 +83,20 @@ impl<'a> Executor<'a> {
 
                 Ok(stats)
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                // Emit JSON build summary even on failure
+                let duration = build_start.elapsed();
+                json_output::emit_build_summary(
+                    order.len(),
+                    0,
+                    1,
+                    0,
+                    0,
+                    duration,
+                    &[e.to_string()],
+                );
+                Err(e)
+            }
         }
     }
 
@@ -258,6 +271,13 @@ impl<'a> Executor<'a> {
                                         color::dim("Skipping (unchanged):"),
                                         self.product_display(product));
                                 }
+                                emit_product_complete(
+                                    &self.product_display(product),
+                                    &product.processor,
+                                    "skipped",
+                                    None,
+                                    None,
+                                );
                                 let mut stats = stats_ref.lock();
                                 let proc_stats = stats
                                     .entry(product.processor.clone())
@@ -276,6 +296,13 @@ impl<'a> Executor<'a> {
                                                 color::cyan("Restored from cache:"),
                                                 self.product_display(product));
                                         }
+                                        emit_product_complete(
+                                            &self.product_display(product),
+                                            &product.processor,
+                                            "restored",
+                                            None,
+                                            None,
+                                        );
                                         let mut stats = stats_ref.lock();
                                         let proc_stats = stats
                                             .entry(product.processor.clone())
@@ -346,6 +373,13 @@ impl<'a> Executor<'a> {
                                 match result {
                                     Ok(()) => {
                                         if let Err(e) = object_store.cache_outputs(&cache_key, input_checksum, &product.outputs) {
+                                            emit_product_complete(
+                                                &self.product_display(product),
+                                                &product.processor,
+                                                "failed",
+                                                None,
+                                                Some(&e.to_string()),
+                                            );
                                             if keep_going {
                                                 let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
                                                 println!("{}", color::red(&format!("Error: {}", msg)));
@@ -357,6 +391,13 @@ impl<'a> Executor<'a> {
                                             }
                                             continue;
                                         }
+                                        emit_product_complete(
+                                            &self.product_display(product),
+                                            &product.processor,
+                                            "success",
+                                            None,
+                                            None,
+                                        );
                                         let mut stats = stats_ref.lock();
                                         let proc_stats = stats
                                             .entry(proc_name.clone())
@@ -365,6 +406,13 @@ impl<'a> Executor<'a> {
                                         proc_stats.files_created += product.outputs.len();
                                     }
                                     Err(e) => {
+                                        emit_product_complete(
+                                            &self.product_display(product),
+                                            &product.processor,
+                                            "failed",
+                                            None,
+                                            Some(&e.to_string()),
+                                        );
                                         {
                                             let mut stats = stats_ref.lock();
                                             let proc_stats = stats
@@ -437,6 +485,13 @@ impl<'a> Executor<'a> {
                                             color::dim("Skipping (unchanged):"),
                                             self.product_display(product));
                                     }
+                                    emit_product_complete(
+                                        &self.product_display(product),
+                                        &product.processor,
+                                        "skipped",
+                                        None,
+                                        None,
+                                    );
                                     let mut stats = stats_ref.lock();
                                     let proc_stats = stats
                                         .entry(product.processor.clone())
@@ -455,6 +510,13 @@ impl<'a> Executor<'a> {
                                                     color::cyan("Restored from cache:"),
                                                     self.product_display(product));
                                             }
+                                            emit_product_complete(
+                                                &self.product_display(product),
+                                                &product.processor,
+                                                "restored",
+                                                None,
+                                                None,
+                                            );
                                             let mut stats = stats_ref.lock();
                                             let proc_stats = stats
                                                 .entry(product.processor.clone())
@@ -464,6 +526,13 @@ impl<'a> Executor<'a> {
                                             continue;
                                         }
                                         Err(e) => {
+                                            emit_product_complete(
+                                                &self.product_display(product),
+                                                &product.processor,
+                                                "failed",
+                                                None,
+                                                Some(&e.to_string()),
+                                            );
                                             if keep_going {
                                                 let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
                                                 println!("{}", color::red(&format!("Error: {}", msg)));
@@ -503,6 +572,13 @@ impl<'a> Executor<'a> {
                                             let duration = product_start.elapsed();
 
                                             if let Err(e) = object_store.cache_outputs(&cache_key, input_checksum, &product.outputs) {
+                                                emit_product_complete(
+                                                    &self.product_display(product),
+                                                    &product.processor,
+                                                    "failed",
+                                                    Some(duration),
+                                                    Some(&e.to_string()),
+                                                );
                                                 if keep_going {
                                                     let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
                                                     println!("{}", color::red(&format!("Error: {}", msg)));
@@ -515,6 +591,13 @@ impl<'a> Executor<'a> {
                                                 continue;
                                             }
 
+                                            emit_product_complete(
+                                                &self.product_display(product),
+                                                &product.processor,
+                                                "success",
+                                                Some(duration),
+                                                None,
+                                            );
                                             let mut stats = stats_ref.lock();
                                             let proc_stats = stats
                                                 .entry(product.processor.clone())
@@ -531,6 +614,14 @@ impl<'a> Executor<'a> {
                                             }
                                         }
                                         Err(e) => {
+                                            let duration = product_start.elapsed();
+                                            emit_product_complete(
+                                                &self.product_display(product),
+                                                &product.processor,
+                                                "failed",
+                                                Some(duration),
+                                                Some(&e.to_string()),
+                                            );
                                             {
                                                 let mut stats = stats_ref.lock();
                                                 let proc_stats = stats

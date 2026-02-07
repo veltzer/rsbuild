@@ -1,5 +1,5 @@
 use std::fs;
-use crate::common::{setup_test_project, run_rsb, run_rsb_with_env};
+use crate::common::{setup_test_project, run_rsb, run_rsb_with_env, run_rsb_json};
 
 #[test]
 fn clean_command() {
@@ -53,12 +53,11 @@ fn force_rebuild() {
     // First build
     run_rsb(project_path, &["build"]);
 
-    // Force rebuild
-    let output = run_rsb_with_env(project_path, &["build", "--force"], &[("NO_COLOR", "1")]);
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("Processing:"));
-    assert!(!stdout.contains("Skipping (unchanged)"));
+    // Force rebuild - should process, not skip
+    let result = run_rsb_json(project_path, &["build", "--force"]);
+    assert!(result.exit_success);
+    assert_eq!(result.success, 1, "Should have 1 successful build");
+    assert_eq!(result.skipped, 0, "Should not skip anything with --force");
 }
 
 #[test]
@@ -198,13 +197,12 @@ fn build_stops_on_first_error() {
     ).unwrap();
 
     // Build should fail on aaa.sleep and stop
-    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
-    assert!(!output.status.success(), "Build should fail with bad sleep file");
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let result = run_rsb_json(project_path, &["build"]);
+    assert!(!result.exit_success, "Build should fail with bad sleep file");
+    assert_eq!(result.failed, 1, "Should have exactly 1 failure");
     // zzz.sleep should NOT be processed because we stop on first error
-    assert!(!stdout.contains("zzz.sleep"),
-        "Second file should NOT be processed after first error: {}", stdout);
+    assert!(!result.has_product("zzz.sleep", "success"),
+        "Second file should NOT be processed after first error");
 }
 
 #[test]
@@ -222,27 +220,21 @@ fn keep_going_continues_after_error() {
     ).unwrap();
 
     // First build with --keep-going — should fail but process all files
-    let output1 = run_rsb_with_env(project_path, &["build", "--keep-going"], &[("NO_COLOR", "1")]);
-    assert!(!output1.status.success(), "Build should fail with bad sleep file");
-
-    let stdout1 = String::from_utf8_lossy(&output1.stdout);
-    // Both files should have been processed
-    assert!(stdout1.contains("good.sleep"),
-        "Good sleep file should be processed with --keep-going: {}", stdout1);
+    let result1 = run_rsb_json(project_path, &["build", "--keep-going"]);
+    assert!(!result1.exit_success, "Build should fail with bad sleep file");
+    assert_eq!(result1.failed, 1, "Should have 1 failure");
+    assert_eq!(result1.success, 1, "Should have 1 success (good.sleep)");
+    assert!(result1.has_product("good.sleep", "success"),
+        "Good sleep file should be processed with --keep-going");
 
     // Fix the bad file
     fs::write(project_path.join("sleep/bad.sleep"), "0.01").unwrap();
 
     // Second build — good.sleep should be skipped (cached)
-    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
-    assert!(output2.status.success(),
-        "Second build should succeed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output2.stdout),
-        String::from_utf8_lossy(&output2.stderr));
-
-    let stdout2 = String::from_utf8_lossy(&output2.stdout);
-    assert!(stdout2.contains("Skipping (unchanged):"),
-        "Good sleep file should be skipped on second build: {}", stdout2);
+    let result2 = run_rsb_json(project_path, &["build"]);
+    assert!(result2.exit_success, "Second build should succeed");
+    assert_eq!(result2.skipped, 1, "Good sleep file should be skipped (cached)");
+    assert_eq!(result2.success, 1, "Bad sleep file (now fixed) should be processed");
 }
 
 #[test]
@@ -263,18 +255,10 @@ fn parallel_build_with_j_flag() {
         "[processor]\nenabled = [\"sleep\"]\n"
     ).unwrap();
 
-    let output = run_rsb_with_env(project_path, &["build", "-j2"], &[("NO_COLOR", "1")]);
-    assert!(output.status.success(),
-        "Parallel build with -j2 should succeed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr));
-
-    // Checkers no longer create stub files - verify all were processed via output
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let processing_count = stdout.lines()
-        .filter(|l| l.contains("Processing:"))
-        .count();
-    assert_eq!(processing_count, 4, "Should process all 4 sleep files: {}", stdout);
+    let result = run_rsb_json(project_path, &["build", "-j2"]);
+    assert!(result.exit_success, "Parallel build with -j2 should succeed");
+    assert_eq!(result.success, 4, "Should process all 4 sleep files");
+    assert_eq!(result.total_products, 4);
 }
 
 #[test]
@@ -294,22 +278,12 @@ fn parallel_keep_going_continues_after_failure() {
         "[processor]\nenabled = [\"sleep\"]\n\n[build]\nparallel = 2\n"
     ).unwrap();
 
-    let output = run_rsb_with_env(
-        project_path, &["build", "--keep-going"], &[("NO_COLOR", "1")]
-    );
+    let result = run_rsb_json(project_path, &["build", "--keep-going"]);
 
     // Should fail overall
-    assert!(!output.status.success(),
-        "Build should fail with bad sleep file even with --keep-going");
-
-    // Checkers no longer create stub files - verify via output that good files were processed
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let processing_count = stdout.lines()
-        .filter(|l| l.contains("Processing:"))
-        .count();
-    // All 4 files should be attempted (3 good + 1 bad)
-    assert!(processing_count >= 3,
-        "At least 3 good sleep files should be processed with --keep-going in parallel: {}", stdout);
+    assert!(!result.exit_success, "Build should fail with bad sleep file even with --keep-going");
+    assert_eq!(result.failed, 1, "Should have 1 failure");
+    assert_eq!(result.success, 3, "All 3 good sleep files should be processed with --keep-going");
 }
 
 #[test]
@@ -330,28 +304,15 @@ fn parallel_builds_all_independent_products() {
         "[processor]\nenabled = [\"sleep\"]\n\n[build]\nparallel = 4\n"
     ).unwrap();
 
-    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
-    assert!(output.status.success(),
-        "Parallel build with 8 products and 4 jobs should succeed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr));
-
-    // Checkers no longer create stub files - verify via output that all were processed
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let processing_count = stdout.lines()
-        .filter(|l| l.contains("Processing:"))
-        .count();
-    assert_eq!(processing_count, 8, "Should process all 8 sleep files: {}", stdout);
+    let result = run_rsb_json(project_path, &["build"]);
+    assert!(result.exit_success, "Parallel build with 8 products and 4 jobs should succeed");
+    assert_eq!(result.success, 8, "Should process all 8 sleep files");
+    assert_eq!(result.total_products, 8);
 
     // Incremental: second build should skip everything
-    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
-    assert!(output2.status.success());
-    let stdout2 = String::from_utf8_lossy(&output2.stdout);
-    let skip_count = stdout2.lines()
-        .filter(|l| l.contains("Skipping (unchanged):"))
-        .count();
-    assert_eq!(skip_count, 8,
-        "All 8 products should be skipped on second build: {}", stdout2);
+    let result2 = run_rsb_json(project_path, &["build"]);
+    assert!(result2.exit_success);
+    assert_eq!(result2.skipped, 8, "All 8 products should be skipped on second build");
 }
 
 #[test]

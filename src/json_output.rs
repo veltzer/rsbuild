@@ -47,7 +47,6 @@ pub enum BuildEvent {
     },
 
     /// A product completed successfully
-    #[allow(dead_code)]
     ProductComplete {
         /// Product identifier
         product: String,
@@ -164,7 +163,6 @@ pub fn emit_product_start(
 }
 
 /// Emit a product complete event.
-#[allow(dead_code)]
 pub fn emit_product_complete(
     product: &str,
     processor: &str,

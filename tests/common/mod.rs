@@ -4,6 +4,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 use tempfile::TempDir;
+use serde::Deserialize;
 
 /// Helper to create a test project structure (tera processor only)
 pub fn setup_test_project() -> TempDir {
@@ -50,4 +51,131 @@ pub fn setup_cc_project(project_path: &Path) {
         project_path.join("rsb.toml"),
         "[processor]\nenabled = [\"cc_single_file\"]\n"
     ).unwrap();
+}
+
+// --- JSON output parsing for tests ---
+
+/// Run rsb with --json flag and return parsed build result
+pub fn run_rsb_json(dir: &Path, args: &[&str]) -> BuildResult {
+    let mut full_args = vec!["--json"];
+    full_args.extend(args);
+    let output = run_rsb(dir, &full_args);
+    BuildResult::parse(&output)
+}
+
+/// Run rsb with --json flag and extra environment variables
+pub fn run_rsb_json_with_env(dir: &Path, args: &[&str], env_vars: &[(&str, &str)]) -> BuildResult {
+    let mut full_args = vec!["--json"];
+    full_args.extend(args);
+    let output = run_rsb_with_env(dir, &full_args, env_vars);
+    BuildResult::parse(&output)
+}
+
+/// JSON event from rsb --json output
+#[derive(Debug, Deserialize)]
+#[serde(tag = "event", rename_all = "snake_case")]
+pub enum BuildEvent {
+    BuildStart {
+        total_products: usize,
+    },
+    ProductComplete {
+        product: String,
+        processor: String,
+        status: String,
+        #[serde(default)]
+        duration_ms: Option<u64>,
+        #[serde(default)]
+        error: Option<String>,
+    },
+    BuildSummary {
+        total: usize,
+        success: usize,
+        failed: usize,
+        skipped: usize,
+        restored: usize,
+        duration_ms: u64,
+        #[serde(default)]
+        errors: Vec<String>,
+    },
+}
+
+/// Parsed build result from rsb --json output
+#[derive(Debug, Default)]
+pub struct BuildResult {
+    pub exit_success: bool,
+    pub total_products: usize,
+    pub success: usize,
+    pub failed: usize,
+    pub skipped: usize,
+    pub restored: usize,
+    pub duration_ms: u64,
+    pub errors: Vec<String>,
+    pub products: Vec<ProductResult>,
+}
+
+/// Individual product result
+#[derive(Debug, Clone)]
+pub struct ProductResult {
+    pub product: String,
+    pub processor: String,
+    pub status: String,
+    pub duration_ms: Option<u64>,
+    pub error: Option<String>,
+}
+
+impl BuildResult {
+    /// Parse rsb --json output into structured BuildResult
+    pub fn parse(output: &std::process::Output) -> Self {
+        let mut result = BuildResult {
+            exit_success: output.status.success(),
+            ..Default::default()
+        };
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            if let Ok(event) = serde_json::from_str::<BuildEvent>(line) {
+                match event {
+                    BuildEvent::BuildStart { total_products } => {
+                        result.total_products = total_products;
+                    }
+                    BuildEvent::ProductComplete { product, processor, status, duration_ms, error } => {
+                        result.products.push(ProductResult {
+                            product,
+                            processor,
+                            status,
+                            duration_ms,
+                            error,
+                        });
+                    }
+                    BuildEvent::BuildSummary { total: _, success, failed, skipped, restored, duration_ms, errors } => {
+                        result.success = success;
+                        result.failed = failed;
+                        result.skipped = skipped;
+                        result.restored = restored;
+                        result.duration_ms = duration_ms;
+                        result.errors = errors;
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    /// Count products with a specific status
+    pub fn count_status(&self, status: &str) -> usize {
+        self.products.iter().filter(|p| p.status == status).count()
+    }
+
+    /// Check if a product with given name was processed with given status
+    pub fn has_product(&self, name: &str, status: &str) -> bool {
+        self.products.iter().any(|p| p.product.contains(name) && p.status == status)
+    }
+
+    /// Get all products with a specific status
+    pub fn products_with_status(&self, status: &str) -> Vec<&ProductResult> {
+        self.products.iter().filter(|p| p.status == status).collect()
+    }
 }

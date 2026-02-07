@@ -13,6 +13,7 @@
     - [Tera](processors/tera.md)
     - [Ruff](processors/ruff.md)
     - [Pylint](processors/pylint.md)
+    - [Cargo](processors/cargo.md)
     - [CC Single File](processors/cc.md)
     - [Cppcheck](processors/cppcheck.md)
     - [Clang-Tidy](processors/clang_tidy.md)

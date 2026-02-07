@@ -108,6 +108,14 @@ impl<'a> Executor<'a> {
         let mut first_error: Option<anyhow::Error> = None;
         let mut silenced_processors: HashSet<String> = HashSet::new();
 
+        // Count total products per processor for progress display
+        let mut total_per_processor: HashMap<String, usize> = HashMap::new();
+        for &product_id in order {
+            let product = graph.get_product(product_id).unwrap();
+            *total_per_processor.entry(product.processor.clone()).or_insert(0) += 1;
+        }
+        let mut current_per_processor: HashMap<String, usize> = HashMap::new();
+
         // Pending batch of products awaiting execution
         #[derive(Clone)]
         struct PendingWork {
@@ -134,6 +142,8 @@ impl<'a> Executor<'a> {
             keep_going: bool,
             display_opts: DisplayOptions,
             batch_size: Option<usize>,
+            current_per_processor: &mut HashMap<String, usize>,
+            total_per_processor: &HashMap<String, usize>,
         | -> Result<()> {
             if pending_batch.is_empty() {
                 *pending_processor = None;
@@ -269,11 +279,17 @@ impl<'a> Executor<'a> {
                     let product = graph.get_product(pw.product_id).unwrap();
                     let silenced = !keep_going && silenced_processors.contains(&proc_name);
 
+                    // Update progress counter
+                    let current = current_per_processor.entry(proc_name.clone()).or_insert(0);
+                    *current += 1;
+                    let total = total_per_processor.get(&proc_name).copied().unwrap_or(1);
+
                     if !silenced && !crate::json_output::is_json_mode() {
                         let variant_tag = product.variant.as_ref()
                             .map(|v| format!(":{}", v))
                             .unwrap_or_default();
-                        println!("[{}{}] {} {}", proc_name, variant_tag,
+                        println!("[{}{}] ({}/{}) {} {}", proc_name, variant_tag,
+                            current, total,
                             color::green("Processing:"),
                             product.display(display_opts));
                     }

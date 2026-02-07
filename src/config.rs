@@ -531,14 +531,8 @@ pub struct CpplintConfig {
     pub args: Vec<String>,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
-    #[serde(default = "default_cpplint_batch_size")]
-    pub batch_size: usize,
     #[serde(flatten)]
     pub scan: ScanConfig,
-}
-
-fn default_cpplint_batch_size() -> usize {
-    10
 }
 
 impl Default for CpplintConfig {
@@ -547,7 +541,6 @@ impl Default for CpplintConfig {
             checker: "cppcheck".into(),
             args: default_cpplint_args(),
             extra_inputs: Vec::new(),
-            batch_size: default_cpplint_batch_size(),
             scan: ScanConfig {
                 scan_dir: Some("src".into()),
                 extensions: Some(vec![".c".into(), ".cc".into()]),

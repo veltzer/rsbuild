@@ -1,11 +1,11 @@
 use anyhow::Result;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 
 use crate::config::CpplintConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, discover_checker_products, scan_root, run_command, check_command_output, execute_checker_batch};
+use crate::processors::{ProductDiscovery, discover_checker_products, scan_root, run_command, check_command_output};
 
 pub struct CpplintProcessor {
     project_root: PathBuf,
@@ -23,23 +23,6 @@ impl CpplintProcessor {
     /// Check if C/C++ linting should be enabled
     fn should_lint(&self) -> bool {
         scan_root(&self.cpplint_config.scan).as_os_str().is_empty() || scan_root(&self.cpplint_config.scan).exists()
-    }
-
-    /// Run checker on one or more files
-    fn check_files(&self, files: &[&Path]) -> Result<()> {
-        let mut cmd = Command::new(&self.cpplint_config.checker);
-
-        for arg in &self.cpplint_config.args {
-            cmd.arg(arg);
-        }
-
-        for file in files {
-            cmd.arg(file);
-        }
-        cmd.current_dir(&self.project_root);
-
-        let output = run_command(&mut cmd)?;
-        check_command_output(&output, "cpplint")
     }
 }
 
@@ -71,22 +54,15 @@ impl ProductDiscovery for CpplintProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        self.check_files(&[product.inputs[0].as_path()])
-    }
+        let mut cmd = Command::new(&self.cpplint_config.checker);
+        for arg in &self.cpplint_config.args {
+            cmd.arg(arg);
+        }
+        cmd.arg(&product.inputs[0]);
+        cmd.current_dir(&self.project_root);
 
-    fn supports_batch(&self) -> bool {
-        true
-    }
-
-    fn batch_size(&self) -> Option<usize> {
-        Some(self.cpplint_config.batch_size)
-    }
-
-    fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
-        execute_checker_batch(
-            products,
-            |files| self.check_files(files),
-        )
+        let output = run_command(&mut cmd)?;
+        check_command_output(&output, "cpplint")
     }
 
     fn config_json(&self) -> Option<String> {

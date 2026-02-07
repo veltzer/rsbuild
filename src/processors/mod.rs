@@ -544,12 +544,6 @@ pub trait ProductDiscovery: Sync + Send {
         false
     }
 
-    /// Maximum batch size for this processor. None means use global batch_size config.
-    /// Some(n) overrides the global setting for this processor.
-    fn batch_size(&self) -> Option<usize> {
-        None
-    }
-
     /// Execute multiple products in one invocation.
     /// Returns one Result per product, in the same order as the input.
     /// Default: falls back to per-product execute().

@@ -8,8 +8,16 @@ Runs static analysis on C/C++ source files using an external checker
 ## How It Works
 
 Discovers `.c` and `.cc` files under the configured source directory, runs the
-checker on each file, and creates a stub file on success. A non-zero exit code
-from the checker fails the product.
+checker on each file individually, and creates a stub file on success. A non-zero
+exit code from the checker fails the product.
+
+**Note:** This processor does not support batch mode. Each file is checked
+separately because cppcheck performs cross-file analysis (CTU - Cross Translation
+Unit) which produces false positives when unrelated files are checked together.
+For example, standalone example programs that define classes with the same name
+will trigger `ctuOneDefinitionRuleViolation` errors even though the files are
+never linked together. Cppcheck has no flag to disable this cross-file analysis
+(`--max-ctu-depth=0` does not help), so files must be checked individually.
 
 ## Source Files
 
@@ -23,7 +31,6 @@ from the checker fails the product.
 checker = "cppcheck"                        # Static checker command (default: "cppcheck")
 args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
 extra_inputs = [".cppcheck-suppressions"]   # Additional files that trigger rebuilds when changed
-batch_size = 10                             # Max files per batch (default: 10)
 ```
 
 | Key | Type | Default | Description |
@@ -31,18 +38,5 @@ batch_size = 10                             # Max files per batch (default: 10)
 | `checker` | string | `"cppcheck"` | The checker executable to invoke |
 | `args` | string[] | `["--error-exitcode=1", "--enable=warning,style,performance,portability"]` | Arguments passed to the checker |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
-| `batch_size` | integer | `10` | Maximum files per batch invocation |
 
 To use a suppressions file, add `"--suppressions-list=.cppcheck-suppressions"` to `args`.
-
-## Performance Warning
-
-Avoid using `--check-level=exhaustive` with large codebases. This mode performs
-whole-program cross-file analysis which scales very poorly (O(n²) or worse) with
-file count. On a project with 1000 files, exhaustive mode can take hours instead
-of seconds.
-
-If you need deeper analysis, consider:
-- Using a smaller `batch_size` to limit cross-file analysis scope
-- Running exhaustive checks only on changed files in CI
-- Using the default check level for routine builds

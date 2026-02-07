@@ -78,6 +78,10 @@ impl ProductDiscovery for CpplintProcessor {
         true
     }
 
+    fn batch_size(&self) -> Option<usize> {
+        Some(self.cpplint_config.batch_size)
+    }
+
     fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
         execute_checker_batch(
             products,

@@ -155,10 +155,13 @@ impl<'a> Executor<'a> {
             let use_batch = batch_size.is_some() && processor.supports_batch() && pending_batch.len() > 1;
 
             if use_batch {
-                // Determine chunk size: 0 means no limit
-                let chunk_size = match batch_size {
-                    Some(0) | None => pending_batch.len(),
+                // Determine chunk size: processor-specific batch_size overrides global
+                let chunk_size = match processor.batch_size() {
                     Some(n) => n,
+                    None => match batch_size {
+                        Some(0) | None => pending_batch.len(),
+                        Some(n) => n,
+                    },
                 };
 
                 // Process in chunks
@@ -686,10 +689,13 @@ impl<'a> Executor<'a> {
                             return;
                         }
 
-                        // Determine chunk size: 0 means no limit
-                        let chunk_size = match self.batch_size {
-                            Some(0) | None => to_execute.len(),
+                        // Determine chunk size: processor-specific batch_size overrides global
+                        let chunk_size = match processor.batch_size() {
                             Some(n) => n,
+                            None => match self.batch_size {
+                                Some(0) | None => to_execute.len(),
+                                Some(n) => n,
+                            },
                         };
 
                         // Process in chunks

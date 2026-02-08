@@ -212,6 +212,10 @@ pub enum Commands {
         /// Show why each product is skipped, restored, or rebuilt
         #[arg(long)]
         explain: bool,
+
+        /// Disable mtime pre-check (always compute full checksums)
+        #[arg(long)]
+        no_mtime: bool,
     },
     /// Clean build artifacts
     Clean {
@@ -270,6 +274,10 @@ pub enum Commands {
         /// Show why each product is skipped, restored, or rebuilt
         #[arg(long)]
         explain: bool,
+
+        /// Disable mtime pre-check (always compute full checksums)
+        #[arg(long)]
+        no_mtime: bool,
     },
     /// Manage processors
     Processors {
@@ -422,6 +430,25 @@ pub enum DepsShowFilter {
         #[arg(required = true)]
         analyzers: Vec<String>,
     },
+}
+
+/// Options shared by build and watch commands.
+#[derive(Clone)]
+pub struct BuildOptions {
+    pub force: bool,
+    pub verbose: bool,
+    pub display_opts: DisplayOptions,
+    pub jobs: Option<usize>,
+    pub timings: bool,
+    pub keep_going: bool,
+    pub summary: bool,
+    pub batch_size: Option<Option<usize>>,
+    pub stop_after: BuildPhase,
+    pub processor_filter: Option<Vec<String>>,
+    pub auto_add_words: bool,
+    pub progress: bool,
+    pub explain: bool,
+    pub no_mtime: bool,
 }
 
 /// Parse a shell name string into a Shell enum

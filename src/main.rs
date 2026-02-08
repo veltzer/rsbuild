@@ -17,7 +17,7 @@ mod watcher;
 
 use anyhow::{bail, Result};
 use clap::Parser;
-use cli::{CacheAction, CleanAction, Cli, Commands, parse_shell, print_completions};
+use cli::{BuildOptions, BuildPhase, CacheAction, CleanAction, Cli, Commands, parse_shell, print_completions};
 use config::Config;
 use builder::Builder;
 use exit_code::{RsbExitCode, RsbError, classify_error};
@@ -86,7 +86,7 @@ fn run() -> Result<()> {
     }
 
     match cli.command {
-        Commands::Build { force, jobs, timings, keep_going, dry_run, no_summary, ignore_tool_versions, batch_size, stop_after, ref processors, auto_add_words, progress, explain } => {
+        Commands::Build { force, jobs, timings, keep_going, dry_run, no_summary, ignore_tool_versions, batch_size, stop_after, ref processors, auto_add_words, progress, explain, no_mtime } => {
             if dry_run {
                 let builder = Builder::new()?;
                 builder.dry_run(force, explain)?;
@@ -95,10 +95,23 @@ fn run() -> Result<()> {
                 if !ignore_tool_versions {
                     builder.verify_tool_versions()?;
                 }
-                // CLI override: -1 = disable batching, 0 = no limit, >0 = max batch size
-                let batch_size_override = batch_size.map(|n| if n < 0 { None } else { Some(n as usize) });
-                let processor_filter = processors.as_deref();
-                builder.build(force, cli.verbose, cli.display_options(), jobs, timings, keep_going, Arc::clone(&interrupted), !no_summary, batch_size_override, stop_after, processor_filter, auto_add_words, progress, explain)?;
+                let opts = BuildOptions {
+                    force,
+                    verbose: cli.verbose,
+                    display_opts: cli.display_options(),
+                    jobs,
+                    timings,
+                    keep_going,
+                    summary: !no_summary,
+                    batch_size: batch_size.map(|n| if n < 0 { None } else { Some(n as usize) }),
+                    stop_after,
+                    processor_filter: processors.clone(),
+                    auto_add_words,
+                    progress,
+                    explain,
+                    no_mtime,
+                };
+                builder.build(&opts, Arc::clone(&interrupted))?;
             }
         }
         Commands::Clean { action } => {
@@ -243,9 +256,24 @@ fn run() -> Result<()> {
                 print_completions(shell);
             }
         }
-        Commands::Watch { jobs, timings, keep_going, no_summary, batch_size, ref processors, auto_add_words, progress, explain } => {
-            let batch_size_override = batch_size.map(|n| if n < 0 { None } else { Some(n as usize) });
-            watcher::watch(cli.verbose, cli.display_options(), jobs, timings, keep_going, !no_summary, Arc::clone(&interrupted), batch_size_override, processors.as_deref(), auto_add_words, progress, explain)?;
+        Commands::Watch { jobs, timings, keep_going, no_summary, batch_size, ref processors, auto_add_words, progress, explain, no_mtime } => {
+            let opts = BuildOptions {
+                force: false,
+                verbose: cli.verbose,
+                display_opts: cli.display_options(),
+                jobs,
+                timings,
+                keep_going,
+                summary: !no_summary,
+                batch_size: batch_size.map(|n| if n < 0 { None } else { Some(n as usize) }),
+                stop_after: BuildPhase::Build,
+                processor_filter: processors.clone(),
+                auto_add_words,
+                progress,
+                explain,
+                no_mtime,
+            };
+            watcher::watch(&opts, Arc::clone(&interrupted))?;
         }
         Commands::Version => {
             println!("rsb {}", env!("CARGO_PKG_VERSION"));

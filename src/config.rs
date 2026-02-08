@@ -332,6 +332,9 @@ pub struct CacheConfig {
     /// Whether to pull from remote cache on miss (default: true)
     #[serde(default = "default_true")]
     pub remote_pull: bool,
+    /// Whether to use mtime pre-check to skip unchanged file checksums (default: true)
+    #[serde(default = "default_true")]
+    pub mtime_check: bool,
 }
 
 impl Default for CacheConfig {
@@ -341,6 +344,7 @@ impl Default for CacheConfig {
             remote: None,
             remote_push: true,
             remote_pull: true,
+            mtime_check: true,
         }
     }
 }

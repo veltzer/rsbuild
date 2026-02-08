@@ -14,6 +14,16 @@ use crate::json_output::{self, emit_product_complete};
 use crate::object_store::{ExplainAction, ObjectStore};
 use crate::processors::{BuildStats, ProcessStats, ProductDiscovery, ProductTiming};
 
+/// Options for configuring an Executor instance.
+pub struct ExecutorOptions {
+    pub parallel: usize,
+    pub verbose: bool,
+    pub display_opts: DisplayOptions,
+    pub batch_size: Option<usize>,
+    pub progress: bool,
+    pub explain: bool,
+}
+
 /// Executor handles running products through their processors
 /// It respects dependency order and can parallelize independent products
 pub struct Executor<'a> {
@@ -31,26 +41,20 @@ pub struct Executor<'a> {
 }
 
 impl<'a> Executor<'a> {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         processors: &'a HashMap<String, Box<dyn ProductDiscovery>>,
-        parallel: usize,
-        verbose: bool,
-        display_opts: DisplayOptions,
+        opts: ExecutorOptions,
         interrupted: Arc<AtomicBool>,
-        batch_size: Option<usize>,
-        progress: bool,
-        explain: bool,
     ) -> Self {
         Self {
             processors,
-            parallel,
-            verbose,
-            display_opts,
+            parallel: opts.parallel,
+            verbose: opts.verbose,
+            display_opts: opts.display_opts,
             interrupted,
-            batch_size,
-            progress,
-            explain,
+            batch_size: opts.batch_size,
+            progress: opts.progress,
+            explain: opts.explain,
         }
     }
 

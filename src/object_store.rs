@@ -106,6 +106,8 @@ pub struct ObjectStore {
     remote_push: bool,
     /// Whether to pull from remote cache
     remote_pull: bool,
+    /// Whether to use mtime pre-check to skip unchanged file checksums
+    mtime_check: bool,
 }
 
 /// Information about a cached product
@@ -150,13 +152,17 @@ pub struct CacheListOutput {
     pub exists: bool,
 }
 
+/// Options for configuring an ObjectStore instance.
+pub struct ObjectStoreOptions {
+    pub restore_method: RestoreMethod,
+    pub remote: Option<Box<dyn RemoteCache>>,
+    pub remote_push: bool,
+    pub remote_pull: bool,
+    pub mtime_check: bool,
+}
+
 impl ObjectStore {
-    pub fn new(
-        restore_method: RestoreMethod,
-        remote: Option<Box<dyn RemoteCache>>,
-        remote_push: bool,
-        remote_pull: bool,
-    ) -> Result<Self> {
+    pub fn new(opts: ObjectStoreOptions) -> Result<Self> {
         let rsb_dir = PathBuf::from(RSB_DIR);
         let objects_dir = rsb_dir.join(OBJECTS_DIR);
         let db_path = rsb_dir.join(DB_FILE);
@@ -180,11 +186,17 @@ impl ObjectStore {
             rsb_dir,
             objects_dir,
             db,
-            restore_method,
-            remote,
-            remote_push,
-            remote_pull,
+            restore_method: opts.restore_method,
+            remote: opts.remote,
+            remote_push: opts.remote_push,
+            remote_pull: opts.remote_pull,
+            mtime_check: opts.mtime_check,
         })
+    }
+
+    /// Set whether mtime pre-check is enabled.
+    pub fn set_mtime_check(&mut self, enabled: bool) {
+        self.mtime_check = enabled;
     }
 
     /// Get a cache entry from the database
@@ -1063,7 +1075,12 @@ impl ObjectStore {
     /// Get the combined input checksum using mtime-based caching.
     /// Same semantics as `combined_input_checksum()` but avoids re-reading
     /// unchanged files by checking file modification times first.
+    /// Falls back to full checksums when mtime_check is disabled.
     pub fn combined_input_checksum_fast(&self, inputs: &[PathBuf]) -> Result<String> {
+        if !self.mtime_check {
+            return Self::combined_input_checksum(inputs);
+        }
+
         let mut checksums = Vec::new();
         let mut dirty_entries = Vec::new();
 

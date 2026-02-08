@@ -6,14 +6,14 @@ use std::process::Command;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use crate::analyzers::{CppDepAnalyzer, DepAnalyzer, PythonDepAnalyzer};
-use crate::cli::{BuildPhase, ConfigAction, DepsAction, DisplayOptions, GraphFormat, GraphViewer, ProcessorAction, ToolsAction};
+use crate::cli::{BuildOptions, BuildPhase, ConfigAction, DepsAction, DisplayOptions, GraphFormat, GraphViewer, ProcessorAction, ToolsAction};
 use crate::color;
 use crate::config::Config;
 use crate::deps_cache::DepsCache;
-use crate::executor::Executor;
+use crate::executor::{Executor, ExecutorOptions};
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
-use crate::object_store::ObjectStore;
+use crate::object_store::{ObjectStore, ObjectStoreOptions};
 use crate::processors::{CargoProcessor, CcProcessor, ClangTidyProcessor, CppcheckProcessor, LuaProcessor, MakeProcessor, PylintProcessor, RuffProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TeraProcessor, log_command};
 use crate::remote_cache;
 use crate::tool_lock;
@@ -69,12 +69,13 @@ impl Builder {
             None => None,
         };
 
-        let object_store = ObjectStore::new(
-            config.cache.restore_method,
-            remote_backend,
-            config.cache.remote_push,
-            config.cache.remote_pull,
-        )?;
+        let object_store = ObjectStore::new(ObjectStoreOptions {
+            restore_method: config.cache.restore_method,
+            remote: remote_backend,
+            remote_push: config.cache.remote_push,
+            remote_pull: config.cache.remote_pull,
+            mtime_check: config.cache.mtime_check,
+        })?;
         let file_index = FileIndex::build(&project_root)?;
 
         Ok(Self {
@@ -86,18 +87,22 @@ impl Builder {
     }
 
     /// Execute an incremental build using the dependency graph
-    /// batch_size_override: Some(Some(n)) = use n, Some(None) = disable batching, None = use config
-    /// processor_filter: if Some, only run processors in this list
-    #[allow(clippy::too_many_arguments)]
-    pub fn build(&mut self, force: bool, verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool, batch_size_override: Option<Option<usize>>, stop_after: BuildPhase, processor_filter: Option<&[String]>, auto_add_words: bool, progress: bool, explain: bool) -> Result<()> {
+    pub fn build(&mut self, opts: &BuildOptions, interrupted: Arc<std::sync::atomic::AtomicBool>) -> Result<()> {
         // CLI override for spellcheck auto_add_words
-        if auto_add_words {
+        if opts.auto_add_words {
             self.config.processor.spellcheck.auto_add_words = true;
         }
 
+        // CLI override for mtime pre-check
+        if opts.no_mtime {
+            self.object_store.set_mtime_check(false);
+        }
+
+        let processor_filter = opts.processor_filter.as_deref();
+
         // Validate processor filter against available processors
         if let Some(filter) = processor_filter {
-            let processors = self.create_processors(verbose)?;
+            let processors = self.create_processors(opts.verbose)?;
             for name in filter {
                 if !processors.contains_key(name) {
                     let available: Vec<_> = processors.keys().collect();
@@ -110,28 +115,35 @@ impl Builder {
         }
 
         // Create processors
-        let processors = self.create_processors(verbose)?;
+        let processors = self.create_processors(opts.verbose)?;
 
         // Check for config changes and display diffs
         self.detect_config_changes(&processors);
 
         // Build the dependency graph (may stop early based on stop_after)
-        let graph = self.build_graph_with_processors_and_phase(&processors, stop_after, processor_filter)?;
+        let graph = self.build_graph_with_processors_and_phase(&processors, opts.stop_after, processor_filter)?;
 
         // If we stopped early, we're done
-        if stop_after != BuildPhase::Build {
-            println!("Stopped after {:?} phase.", stop_after);
+        if opts.stop_after != BuildPhase::Build {
+            println!("Stopped after {:?} phase.", opts.stop_after);
             return Ok(());
         }
 
         // Create executor with parallelism from command line or config
-        let parallel = jobs.unwrap_or(self.config.build.parallel);
+        let parallel = opts.jobs.unwrap_or(self.config.build.parallel);
         // CLI overrides config for batch_size
-        let batch_size = batch_size_override.unwrap_or(self.config.build.batch_size);
-        let executor = Executor::new(&processors, parallel, verbose, display_opts, Arc::clone(&interrupted), batch_size, progress, explain);
+        let batch_size = opts.batch_size.unwrap_or(self.config.build.batch_size);
+        let executor = Executor::new(&processors, ExecutorOptions {
+            parallel,
+            verbose: opts.verbose,
+            display_opts: opts.display_opts,
+            batch_size,
+            progress: opts.progress,
+            explain: opts.explain,
+        }, Arc::clone(&interrupted));
 
         // Execute the build
-        let result = executor.execute(&graph, &self.object_store, force, timings, keep_going);
+        let result = executor.execute(&graph, &self.object_store, opts.force, opts.timings, opts.keep_going);
 
         // Always save object store index, even after errors or interrupt
         self.object_store.save()?;
@@ -147,7 +159,7 @@ impl Builder {
         let stats = result?;
 
         // Print summary
-        stats.print_summary(summary, timings);
+        stats.print_summary(opts.summary, opts.timings);
 
         // Return error if there were failures in keep-going mode
         if stats.failed_count > 0 {
@@ -276,7 +288,14 @@ impl Builder {
         let graph = self.build_graph_for_clean_with_processors(&processors)?;
 
         // Use executor to clean (batch_size doesn't matter for clean)
-        let executor = Executor::new(&processors, 1, false, DisplayOptions::minimal(), Arc::new(std::sync::atomic::AtomicBool::new(false)), None, false, false);
+        let executor = Executor::new(&processors, ExecutorOptions {
+            parallel: 1,
+            verbose: false,
+            display_opts: DisplayOptions::minimal(),
+            batch_size: None,
+            progress: false,
+            explain: false,
+        }, Arc::new(std::sync::atomic::AtomicBool::new(false)));
         executor.clean(&graph)?;
 
         // Remove empty subdirectories under out/

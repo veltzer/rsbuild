@@ -7,7 +7,7 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use crate::builder::Builder;
-use crate::cli::{BuildPhase, DisplayOptions};
+use crate::cli::BuildOptions;
 use crate::color;
 
 /// Collect directories to watch based on project conventions
@@ -66,18 +66,14 @@ fn should_ignore(path: &Path) -> bool {
     false
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn watch(verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, timings: bool, keep_going: bool, summary: bool, interrupted: Arc<AtomicBool>, batch_size_override: Option<Option<usize>>, processor_filter: Option<&[String]>, auto_add_words: bool, progress: bool, explain: bool) -> Result<()> {
+pub fn watch(opts: &BuildOptions, interrupted: Arc<AtomicBool>) -> Result<()> {
     let project_root = std::env::current_dir()?;
-
-    // Clone the processor filter for use in the loop
-    let processor_filter_owned: Option<Vec<String>> = processor_filter.map(|f| f.to_vec());
 
     // Initial build
     println!("{}", color::bold("Running initial build..."));
     {
         let mut builder = Builder::new()?;
-        if let Err(e) = builder.build(false, verbose, display_opts, jobs, timings, keep_going, Arc::clone(&interrupted), summary, batch_size_override, BuildPhase::Build, processor_filter_owned.as_deref(), auto_add_words, progress, explain) {
+        if let Err(e) = builder.build(opts, Arc::clone(&interrupted)) {
             println!("{}", color::red(&format!("Initial build error: {}", e)));
         }
     }
@@ -95,7 +91,7 @@ pub fn watch(verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, t
             RecursiveMode::NonRecursive
         };
         if let Err(e) = watcher.watch(path, mode)
-            && verbose {
+            && opts.verbose {
                 println!("Warning: could not watch {}: {}", path.display(), e);
             }
     }
@@ -143,7 +139,7 @@ pub fn watch(verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, t
         println!("{}", color::bold("Change detected, rebuilding..."));
         {
             let mut builder = Builder::new()?;
-            if let Err(e) = builder.build(false, verbose, display_opts, jobs, timings, keep_going, Arc::clone(&interrupted), summary, batch_size_override, BuildPhase::Build, processor_filter_owned.as_deref(), auto_add_words, progress, explain) {
+            if let Err(e) = builder.build(opts, Arc::clone(&interrupted)) {
                 println!("{}", color::red(&format!("Build error: {}", e)));
             }
         }
@@ -158,7 +154,7 @@ pub fn watch(verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, t
                     RecursiveMode::NonRecursive
                 };
                 if let Err(e) = watcher.watch(path, mode)
-                    && verbose {
+                    && opts.verbose {
                         println!("Warning: could not watch {}: {}", path.display(), e);
                     }
             }

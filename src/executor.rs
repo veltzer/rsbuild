@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use indicatif::{ProgressBar, ProgressStyle};
 use parking_lot::Mutex;
@@ -47,6 +47,8 @@ struct SharedState {
     failed_messages: Arc<Mutex<Vec<String>>>,
     failed_processors: Arc<Mutex<HashSet<String>>>,
     unchanged_products: Arc<Mutex<HashSet<usize>>>,
+    global_current: Arc<AtomicUsize>,
+    global_total: usize,
 }
 
 /// Executor handles running products through their processors
@@ -88,6 +90,12 @@ impl<'a> Executor<'a> {
         product.display(self.display_opts)
     }
 
+    /// Increment both the progress bar and the global product counter.
+    fn inc_progress(pb: &ProgressBar, shared: &SharedState) {
+        shared.global_current.fetch_add(1, Ordering::SeqCst);
+        pb.inc(1);
+    }
+
     /// Print an explain line for a product showing what action will be taken and why.
     fn print_explain(&self, product: &crate::graph::Product, action: &ExplainAction) {
         let styled = match action {
@@ -126,7 +134,7 @@ impl<'a> Executor<'a> {
             .entry(product.processor.clone())
             .or_default();
         proc_stats.skipped += 1;
-        pb_ref.inc(1);
+        Self::inc_progress(pb_ref, shared);
     }
 
     /// Handle cache restore for a product.
@@ -170,7 +178,7 @@ impl<'a> Executor<'a> {
                     .or_default();
                 proc_stats.restored += 1;
                 proc_stats.files_restored += product.outputs.len();
-                pb_ref.inc(1);
+                Self::inc_progress(pb_ref, shared);
                 RestoreOutcome::Restored
             }
             Err(e) => {
@@ -192,7 +200,7 @@ impl<'a> Executor<'a> {
                     shared.failed_products.lock().insert(id);
                     shared.errors.lock().push(e);
                 }
-                pb_ref.inc(1);
+                Self::inc_progress(pb_ref, shared);
                 RestoreOutcome::Failed
             }
             Ok(false) => RestoreOutcome::NotRestorable,
@@ -278,7 +286,7 @@ impl<'a> Executor<'a> {
                     shared.failed_products.lock().insert(id);
                     shared.errors.lock().push(e);
                 }
-                pb_ref.inc(1);
+                Self::inc_progress(pb_ref, shared);
                 return false;
             }
         }
@@ -373,6 +381,8 @@ impl<'a> Executor<'a> {
         let total_per_processor = Arc::new(total_per_processor);
         let current_per_processor: Arc<Mutex<HashMap<String, usize>>> =
             Arc::new(Mutex::new(HashMap::new()));
+        let global_total = order.len();
+        let global_current = Arc::new(AtomicUsize::new(0));
 
         // Create progress bar (only shown when --progress is passed, hidden in JSON mode)
         let pb = if !self.progress || json_output::is_json_mode() {
@@ -414,6 +424,7 @@ impl<'a> Executor<'a> {
                 let failed_ref = &failed_products;
                 let failed_msgs_ref = &failed_messages;
                 let failed_procs_ref = &failed_processors;
+                let global_current_ref = &global_current;
                 let interrupted_ref = &self.interrupted;
                 let pb_ref = &pb;
 
@@ -427,6 +438,8 @@ impl<'a> Executor<'a> {
                         failed_messages: Arc::clone(failed_msgs_ref),
                         failed_processors: Arc::clone(failed_procs_ref),
                         unchanged_products: Arc::clone(unchanged_ref),
+                        global_current: Arc::clone(global_current_ref),
+                        global_total,
                     };
 
                     s.spawn(move || {
@@ -490,8 +503,10 @@ impl<'a> Executor<'a> {
                                 .map(|p| self.product_display(p))
                                 .collect::<Vec<_>>()
                                 .join(", ");
-                            println!("[{}] {} {} files: {}",
+                            let gc = shared.global_current.load(Ordering::SeqCst);
+                            println!("[{}] ({}/{}) {} {} files: {}",
                                 proc_name,
+                                gc + 1, shared.global_total,
                                 color::green("Processing batch:"),
                                 product_refs.len(),
                                 display);
@@ -517,7 +532,7 @@ impl<'a> Executor<'a> {
                                         self.handle_error(product, *id, proc_name, e, None, keep_going, &shared);
                                     }
                                 }
-                                pb_ref.inc(1);
+                                Self::inc_progress(pb_ref, &shared);
                             }
 
                             // Record batch timing for this chunk
@@ -551,6 +566,8 @@ impl<'a> Executor<'a> {
                             failed_messages: Arc::clone(failed_msgs_ref),
                             failed_processors: Arc::clone(failed_procs_ref),
                             unchanged_products: Arc::clone(unchanged_ref),
+                            global_current: Arc::clone(global_current_ref),
+                            global_total,
                         };
                         let total_ref = Arc::clone(total_ref);
                         let current_ref = Arc::clone(current_ref);
@@ -597,7 +614,9 @@ impl<'a> Executor<'a> {
                                     let variant_tag = product.variant.as_ref()
                                         .map(|v| format!(":{}", v))
                                         .unwrap_or_default();
-                                    println!("[{}{}] ({}/{}) {} {}", product.processor, variant_tag,
+                                    let gc = shared.global_current.load(Ordering::SeqCst) + 1;
+                                    println!("[{}{}] ({}/{}) ({}/{}) {} {}", product.processor, variant_tag,
+                                        gc, shared.global_total,
                                         current, total,
                                         color::green("Processing:"),
                                         self.product_display(product));
@@ -633,7 +652,7 @@ impl<'a> Executor<'a> {
                                             self.handle_error(product, *id, &product.processor, e, Some(duration), keep_going, &shared);
                                         }
                                     }
-                                    pb_ref.inc(1);
+                                    Self::inc_progress(pb_ref, &shared);
                                 }
                             }
                         });

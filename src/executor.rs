@@ -482,6 +482,9 @@ impl<'a> Executor<'a> {
                             return;
                         }
 
+                        let proc_total = items.len();
+                        let mut proc_current = items.len() - to_execute.len();
+
                         // Determine chunk size: 0 means no limit
                         let chunk_size = match self.batch_size {
                             Some(0) | None => to_execute.len(),
@@ -504,9 +507,11 @@ impl<'a> Executor<'a> {
                                 .collect::<Vec<_>>()
                                 .join(", ");
                             let gc = shared.global_current.load(Ordering::SeqCst);
-                            println!("[{}] ({}/{}) {} {} files: {}",
+                            proc_current += chunk.len();
+                            println!("[{}] ({}/{}) ({}/{}) {} {} files: {}",
                                 proc_name,
                                 gc + 1, shared.global_total,
+                                proc_current, proc_total,
                                 color::green("Processing batch:"),
                                 product_refs.len(),
                                 display);

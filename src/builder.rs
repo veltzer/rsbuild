@@ -293,10 +293,9 @@ impl Builder {
 
         // Per-processor breakdown
         if per_processor.len() > 1 {
-            println!();
             let max_name_len = per_processor.keys().map(|n| n.len()).max().unwrap_or(0);
             for (name, pc) in &per_processor {
-                println!("  {:width$}  {} {}, {} {}, {} {}",
+                println!("{:width$} {} {}, {} {}, {} {}",
                     format!("{}:", name),
                     pc[0], labels.current.1,
                     pc[1], labels.restorable.1,
@@ -304,7 +303,6 @@ impl Builder {
                     width = max_name_len + 1);
             }
         }
-
         println!("{}: {} {}, {} {}, {} {}",
             color::bold("Summary"),
             counts[0], labels.current.1,

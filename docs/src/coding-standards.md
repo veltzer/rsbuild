@@ -47,6 +47,12 @@ mature, well-tested libraries for most tasks. Writing custom implementations
 introduces unnecessary bugs and maintenance burden. If a crate exists for it,
 use it.
 
+## No trailing newlines in output
+
+Output strings passed to `println!`, `pb.println()`, or similar macros must not
+contain trailing newlines. These macros already append a newline. Adding `\n`
+inside the string produces unwanted blank lines in the output.
+
 ## Reject unknown config fields
 
 All config structs that don't intentionally capture extra fields must use

@@ -2,6 +2,7 @@
 
 - [Introduction](introduction.md)
 - [Installation](installation.md)
+- [Getting Started](getting-started.md)
 - [Binary Releases](binary-releases.md)
 - [Commands](commands.md)
 - [Configuration](configuration.md)

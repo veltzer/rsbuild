@@ -289,6 +289,12 @@ impl BuildGraph {
         &self.dependencies[id]
     }
 
+    /// Get dependents of a product (products that depend on this one)
+    #[allow(dead_code)]
+    pub fn get_dependents(&self, id: usize) -> &[usize] {
+        &self.dependents[id]
+    }
+
     /// Get mutable access to a product by id
     pub fn get_product_mut(&mut self, id: usize) -> Option<&mut Product> {
         self.products.get_mut(id)

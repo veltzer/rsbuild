@@ -221,7 +221,7 @@ impl Builder {
         let display_opts = DisplayOptions::minimal();
         for product in products {
             let cache_key = product.cache_key();
-            let input_checksum = match ObjectStore::combined_input_checksum(&product.inputs) {
+            let input_checksum = match self.object_store.combined_input_checksum_fast(&product.inputs) {
                 Ok(cs) => cs,
                 Err(_) => {
                     println!("{} [{}] {}", labels.stale.0, product.processor, product.display(display_opts));

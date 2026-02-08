@@ -168,6 +168,7 @@ impl<'a> Executor<'a> {
         let failed_products: Arc<Mutex<HashSet<usize>>> = Arc::new(Mutex::new(HashSet::new()));
         let failed_messages: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
         let failed_processors: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
+        let unchanged_products: Arc<Mutex<HashSet<usize>>> = Arc::new(Mutex::new(HashSet::new()));
 
         for level in levels {
             // Check for Ctrl+C before starting next level
@@ -219,7 +220,25 @@ impl<'a> Executor<'a> {
                         continue;
                     }
                     let cache_key = product.cache_key();
-                    let input_checksum = match ObjectStore::combined_input_checksum(&product.inputs) {
+
+                    // Early cutoff: if all dependencies produced identical outputs,
+                    // reuse the cached input checksum instead of recomputing
+                    let deps = graph.get_dependencies(id);
+                    let input_checksum = {
+                        let unchanged_guard = unchanged_products.lock();
+                        let all_deps_unchanged = !deps.is_empty()
+                            && deps.iter().all(|d| unchanged_guard.contains(d));
+                        if all_deps_unchanged {
+                            match object_store.get_cached_input_checksum(&cache_key) {
+                                Some(cs) => Ok(cs),
+                                None => object_store.combined_input_checksum_fast(&product.inputs),
+                            }
+                        } else {
+                            object_store.combined_input_checksum_fast(&product.inputs)
+                        }
+                    };
+
+                    let input_checksum = match input_checksum {
                         Ok(cs) => cs,
                         Err(e) => {
                             if keep_going {
@@ -279,12 +298,14 @@ impl<'a> Executor<'a> {
                 let pb_ref = &pb;
 
                 // Spawn one thread per batch group
+                let unchanged_ref = &unchanged_products;
                 for (proc_name, items) in &batch_groups {
                     let stats_ref = Arc::clone(stats_ref);
                     let errors_ref = Arc::clone(errors_ref);
                     let failed_ref = Arc::clone(failed_ref);
                     let failed_msgs_ref = Arc::clone(failed_msgs_ref);
                     let failed_procs_ref = Arc::clone(failed_procs_ref);
+                    let unchanged_ref = Arc::clone(unchanged_ref);
 
                     s.spawn(move || {
                         if interrupted_ref.load(Ordering::SeqCst) {
@@ -418,25 +439,32 @@ impl<'a> Executor<'a> {
 
                                 match result {
                                     Ok(()) => {
-                                        if let Err(e) = object_store.cache_outputs(&cache_key, input_checksum, &product.outputs) {
-                                            emit_product_complete(
-                                                &self.product_display(product),
-                                                &product.processor,
-                                                "failed",
-                                                None,
-                                                Some(&e.to_string()),
-                                            );
-                                            if keep_going {
-                                                let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
-                                                println!("{}", color::red(&format!("Error: {}", msg)));
-                                                failed_ref.lock().insert(*id);
-                                                failed_msgs_ref.lock().push(msg);
-                                            } else {
-                                                failed_ref.lock().insert(*id);
-                                                errors_ref.lock().push(e);
+                                        match object_store.cache_outputs(&cache_key, input_checksum, &product.outputs) {
+                                            Ok(changed) => {
+                                                if !changed {
+                                                    unchanged_ref.lock().insert(*id);
+                                                }
                                             }
-                                            pb_ref.inc(1);
-                                            continue;
+                                            Err(e) => {
+                                                emit_product_complete(
+                                                    &self.product_display(product),
+                                                    &product.processor,
+                                                    "failed",
+                                                    None,
+                                                    Some(&e.to_string()),
+                                                );
+                                                if keep_going {
+                                                    let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
+                                                    println!("{}", color::red(&format!("Error: {}", msg)));
+                                                    failed_ref.lock().insert(*id);
+                                                    failed_msgs_ref.lock().push(msg);
+                                                } else {
+                                                    failed_ref.lock().insert(*id);
+                                                    errors_ref.lock().push(e);
+                                                }
+                                                pb_ref.inc(1);
+                                                continue;
+                                            }
                                         }
                                         emit_product_complete(
                                             &self.product_display(product),
@@ -514,6 +542,7 @@ impl<'a> Executor<'a> {
                         let failed_procs_ref = Arc::clone(failed_procs_ref);
                         let total_ref = Arc::clone(total_ref);
                         let current_ref = Arc::clone(current_ref);
+                        let unchanged_ref = Arc::clone(unchanged_ref);
 
                         s.spawn(move || {
                             for (id, input_checksum, needs_rebuild) in chunk {
@@ -627,25 +656,32 @@ impl<'a> Executor<'a> {
                                         Ok(()) => {
                                             let duration = product_start.elapsed();
 
-                                            if let Err(e) = object_store.cache_outputs(&cache_key, input_checksum, &product.outputs) {
-                                                emit_product_complete(
-                                                    &self.product_display(product),
-                                                    &product.processor,
-                                                    "failed",
-                                                    Some(duration),
-                                                    Some(&e.to_string()),
-                                                );
-                                                if keep_going {
-                                                    let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
-                                                    println!("{}", color::red(&format!("Error: {}", msg)));
-                                                    failed_ref.lock().insert(*id);
-                                                    failed_msgs_ref.lock().push(msg);
-                                                } else {
-                                                    failed_ref.lock().insert(*id);
-                                                    errors_ref.lock().push(e);
+                                            match object_store.cache_outputs(&cache_key, input_checksum, &product.outputs) {
+                                                Ok(changed) => {
+                                                    if !changed {
+                                                        unchanged_ref.lock().insert(*id);
+                                                    }
                                                 }
-                                                pb_ref.inc(1);
-                                                continue;
+                                                Err(e) => {
+                                                    emit_product_complete(
+                                                        &self.product_display(product),
+                                                        &product.processor,
+                                                        "failed",
+                                                        Some(duration),
+                                                        Some(&e.to_string()),
+                                                    );
+                                                    if keep_going {
+                                                        let msg = format!("[{}] {}: {}", product.processor, self.product_display(product), e);
+                                                        println!("{}", color::red(&format!("Error: {}", msg)));
+                                                        failed_ref.lock().insert(*id);
+                                                        failed_msgs_ref.lock().push(msg);
+                                                    } else {
+                                                        failed_ref.lock().insert(*id);
+                                                        errors_ref.lock().push(e);
+                                                    }
+                                                    pb_ref.inc(1);
+                                                    continue;
+                                                }
                                             }
 
                                             emit_product_complete(

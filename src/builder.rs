@@ -276,7 +276,6 @@ impl Builder {
             }
         }
 
-        println!();
         println!("{}: {} {}, {} {}, {} {}",
             color::bold("Summary"),
             counts[0], labels.current.1,

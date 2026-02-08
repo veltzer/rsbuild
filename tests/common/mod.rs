@@ -6,6 +6,16 @@ use std::process::Command;
 use tempfile::TempDir;
 use serde::Deserialize;
 
+/// Check if an external tool is available on PATH
+pub fn tool_available(name: &str) -> bool {
+    Command::new(name)
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success())
+}
+
 /// Helper to create a test project structure (tera processor only)
 pub fn setup_test_project() -> TempDir {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");

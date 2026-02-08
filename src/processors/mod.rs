@@ -393,7 +393,7 @@ where
 
     if input_paths.is_empty() {
         // All products failed validation
-        return results.into_iter().map(|r| r.unwrap()).collect();
+        return results.into_iter().map(|r| r.expect("internal error: unprocessed product")).collect();
     }
 
     // Try batch execution
@@ -404,7 +404,7 @@ where
             if results[i].is_some() {
                 continue; // Already failed validation
             }
-            let (_input, stub) = validated_iter.next().unwrap();
+            let (_input, stub) = validated_iter.next().expect("internal error: validation count mismatch");
             results[i] = Some(write_stub(stub, "linted"));
         }
     } else {
@@ -414,12 +414,12 @@ where
             if results[i].is_some() {
                 continue; // Already failed validation
             }
-            let (input, stub) = validated_iter.next().unwrap();
+            let (input, stub) = validated_iter.next().expect("internal error: validation count mismatch");
             results[i] = Some(single_fn(input, stub));
         }
     }
 
-    results.into_iter().map(|r| r.unwrap()).collect()
+    results.into_iter().map(|r| r.expect("internal error: unprocessed product")).collect()
 }
 
 /// Shared helper for checker processors that support batch execution (no stub files).

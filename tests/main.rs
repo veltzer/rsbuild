@@ -26,7 +26,14 @@ mod tools;
 mod watch;
 
 mod processors {
+    pub mod cargo;
     pub mod cc_single_file;
+    pub mod clang_tidy;
+    pub mod cppcheck;
+    pub mod make;
+    pub mod pylint;
+    pub mod ruff;
+    pub mod shellcheck;
     pub mod sleep;
     pub mod spellcheck;
     pub mod tera;

@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use indicatif::{ProgressBar, ProgressStyle};
 use parking_lot::Mutex;
 use std::thread;
 use std::time::Instant;
@@ -118,12 +119,26 @@ impl<'a> Executor<'a> {
         // Count total products per processor for progress display
         let mut total_per_processor: HashMap<String, usize> = HashMap::new();
         for &product_id in order {
-            let product = graph.get_product(product_id).unwrap();
+            let product = graph.get_product(product_id).expect("internal error: invalid product id");
             *total_per_processor.entry(product.processor.clone()).or_insert(0) += 1;
         }
         let total_per_processor = Arc::new(total_per_processor);
         let current_per_processor: Arc<Mutex<HashMap<String, usize>>> =
             Arc::new(Mutex::new(HashMap::new()));
+
+        // Create progress bar (hidden in JSON mode or verbose mode)
+        let pb = if json_output::is_json_mode() || self.verbose {
+            ProgressBar::hidden()
+        } else {
+            let pb = ProgressBar::new(order.len() as u64);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("[{elapsed_precise}] {bar:40} {pos}/{len} {msg}")
+                    .expect("internal error: invalid progress bar template")
+                    .progress_chars("=> "),
+            );
+            pb
+        };
 
         let stats_by_processor: Arc<Mutex<HashMap<String, ProcessStats>>> =
             Arc::new(Mutex::new(HashMap::new()));
@@ -148,7 +163,7 @@ impl<'a> Executor<'a> {
                 let failed_guard = failed_products.lock();
                 for &id in &level {
                     if self.has_failed_dependency(graph, id, &failed_guard) {
-                        let product = graph.get_product(id).unwrap();
+                        let product = graph.get_product(id).expect("internal error: invalid product id");
                         if self.verbose {
                             println!("[{}] {} {}", product.processor,
                                 color::yellow("Skipping (dependency failed):"),
@@ -173,7 +188,7 @@ impl<'a> Executor<'a> {
                         continue;
                     }
 
-                    let product = graph.get_product(id).unwrap();
+                    let product = graph.get_product(id).expect("internal error: invalid product id");
 
                     // In non-keep-going mode, silently skip products from a
                     // processor that failed in a previous level
@@ -211,7 +226,7 @@ impl<'a> Executor<'a> {
             // First, group all items by processor name
             let mut by_processor: HashMap<String, Vec<(usize, String, bool)>> = HashMap::new();
             for item in work_items {
-                let product = graph.get_product(item.0).unwrap();
+                let product = graph.get_product(item.0).expect("internal error: invalid product id");
                 by_processor.entry(product.processor.clone()).or_default().push(item);
             }
 
@@ -239,6 +254,7 @@ impl<'a> Executor<'a> {
                 let failed_msgs_ref = &failed_messages;
                 let failed_procs_ref = &failed_processors;
                 let interrupted_ref = &self.interrupted;
+                let pb_ref = &pb;
 
                 // Spawn one thread per batch group
                 for (proc_name, items) in &batch_groups {
@@ -262,7 +278,7 @@ impl<'a> Executor<'a> {
                         let mut to_execute: Vec<&(usize, String, bool)> = Vec::new();
                         for item in items {
                             let (id, input_checksum, needs_rebuild) = item;
-                            let product = graph.get_product(*id).unwrap();
+                            let product = graph.get_product(*id).expect("internal error: invalid product id");
                             let cache_key = product.cache_key();
 
                             if !needs_rebuild {
@@ -283,6 +299,7 @@ impl<'a> Executor<'a> {
                                     .entry(product.processor.clone())
                                     .or_insert_with(ProcessStats::new);
                                 proc_stats.skipped += 1;
+                                pb_ref.inc(1);
                                 continue;
                             }
 
@@ -309,6 +326,7 @@ impl<'a> Executor<'a> {
                                             .or_insert_with(ProcessStats::new);
                                         proc_stats.restored += 1;
                                         proc_stats.files_restored += product.outputs.len();
+                                        pb_ref.inc(1);
                                         continue;
                                     }
                                     Err(e) => {
@@ -321,6 +339,7 @@ impl<'a> Executor<'a> {
                                             failed_ref.lock().insert(*id);
                                             errors_ref.lock().push(e);
                                         }
+                                        pb_ref.inc(1);
                                         continue;
                                     }
                                     Ok(false) => {}
@@ -348,7 +367,7 @@ impl<'a> Executor<'a> {
 
                             // Execute batch chunk
                             let product_refs: Vec<&crate::graph::Product> = chunk.iter()
-                                .map(|(id, _, _)| graph.get_product(*id).unwrap())
+                                .map(|(id, _, _)| graph.get_product(*id).expect("internal error: invalid product id"))
                                 .collect();
 
                             let displays: Vec<String> = product_refs.iter()
@@ -367,7 +386,7 @@ impl<'a> Executor<'a> {
                             // Process per-product results
                             for (item, result) in chunk.iter().zip(results) {
                                 let (id, input_checksum, _) = item;
-                                let product = graph.get_product(*id).unwrap();
+                                let product = graph.get_product(*id).expect("internal error: invalid product id");
                                 let cache_key = product.cache_key();
 
                                 match result {
@@ -389,6 +408,7 @@ impl<'a> Executor<'a> {
                                                 failed_ref.lock().insert(*id);
                                                 errors_ref.lock().push(e);
                                             }
+                                            pb_ref.inc(1);
                                             continue;
                                         }
                                         emit_product_complete(
@@ -432,6 +452,7 @@ impl<'a> Executor<'a> {
                                         }
                                     }
                                 }
+                                pb_ref.inc(1);
                             }
 
                             // Record batch timing for this chunk
@@ -476,7 +497,7 @@ impl<'a> Executor<'a> {
                                     break;
                                 }
 
-                                let product = graph.get_product(*id).unwrap();
+                                let product = graph.get_product(*id).expect("internal error: invalid product id");
                                 let cache_key = product.cache_key();
 
                                 if !needs_rebuild {
@@ -497,6 +518,7 @@ impl<'a> Executor<'a> {
                                         .entry(product.processor.clone())
                                         .or_insert_with(ProcessStats::new);
                                     proc_stats.skipped += 1;
+                                    pb_ref.inc(1);
                                     continue;
                                 }
 
@@ -523,6 +545,7 @@ impl<'a> Executor<'a> {
                                                 .or_insert_with(ProcessStats::new);
                                             proc_stats.restored += 1;
                                             proc_stats.files_restored += product.outputs.len();
+                                            pb_ref.inc(1);
                                             continue;
                                         }
                                         Err(e) => {
@@ -542,6 +565,7 @@ impl<'a> Executor<'a> {
                                                 failed_ref.lock().insert(*id);
                                                 errors_ref.lock().push(e);
                                             }
+                                            pb_ref.inc(1);
                                             continue;
                                         }
                                         Ok(false) => {}
@@ -588,6 +612,7 @@ impl<'a> Executor<'a> {
                                                     failed_ref.lock().insert(*id);
                                                     errors_ref.lock().push(e);
                                                 }
+                                                pb_ref.inc(1);
                                                 continue;
                                             }
 
@@ -639,9 +664,9 @@ impl<'a> Executor<'a> {
                                                 failed_procs_ref.lock().insert(product.processor.clone());
                                                 errors_ref.lock().push(e);
                                             }
-                                            continue;
                                         }
                                     }
+                                    pb_ref.inc(1);
                                 }
                             }
                         });
@@ -660,6 +685,8 @@ impl<'a> Executor<'a> {
                 break;
             }
         }
+
+        pb.finish_and_clear();
 
         // Build aggregated stats
         let final_stats = Arc::try_unwrap(stats_by_processor)
@@ -710,7 +737,7 @@ impl<'a> Executor<'a> {
         let mut product_level: HashMap<usize, usize> = HashMap::new();
 
         for &id in order {
-            let product = graph.get_product(id).unwrap();
+            let product = graph.get_product(id).expect("internal error: invalid product id");
 
             // Find the maximum level of all dependencies
             let max_dep_level = graph.get_dependencies(id)

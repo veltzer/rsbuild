@@ -151,7 +151,7 @@ impl Builder {
         }
 
         let products: Vec<_> = order.iter()
-            .map(|&id| graph.get_product(id).unwrap())
+            .map(|&id| graph.get_product(id).expect("internal error: invalid product id"))
             .collect();
 
         let labels = ProductStatusLabels {

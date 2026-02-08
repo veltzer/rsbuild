@@ -77,7 +77,7 @@ impl Builder {
     /// batch_size_override: Some(Some(n)) = use n, Some(None) = disable batching, None = use config
     /// processor_filter: if Some, only run processors in this list
     #[allow(clippy::too_many_arguments)]
-    pub fn build(&mut self, force: bool, verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool, batch_size_override: Option<Option<usize>>, stop_after: BuildPhase, processor_filter: Option<&[String]>, auto_add_words: bool) -> Result<()> {
+    pub fn build(&mut self, force: bool, verbose: bool, display_opts: DisplayOptions, jobs: Option<usize>, timings: bool, keep_going: bool, interrupted: Arc<std::sync::atomic::AtomicBool>, summary: bool, batch_size_override: Option<Option<usize>>, stop_after: BuildPhase, processor_filter: Option<&[String]>, auto_add_words: bool, progress: bool) -> Result<()> {
         // CLI override for spellcheck auto_add_words
         if auto_add_words {
             self.config.processor.spellcheck.auto_add_words = true;
@@ -89,7 +89,10 @@ impl Builder {
             for name in filter {
                 if !processors.contains_key(name) {
                     let available: Vec<_> = processors.keys().collect();
-                    bail!("Unknown processor '{}'. Available: {:?}", name, available);
+                    return Err(crate::exit_code::RsbError::new(
+                        crate::exit_code::RsbExitCode::ConfigError,
+                        format!("Unknown processor '{}'. Available: {:?}", name, available),
+                    ).into());
                 }
             }
         }
@@ -113,7 +116,7 @@ impl Builder {
         let parallel = jobs.unwrap_or(self.config.build.parallel);
         // CLI overrides config for batch_size
         let batch_size = batch_size_override.unwrap_or(self.config.build.batch_size);
-        let executor = Executor::new(&processors, parallel, verbose, display_opts, Arc::clone(&interrupted), batch_size);
+        let executor = Executor::new(&processors, parallel, verbose, display_opts, Arc::clone(&interrupted), batch_size, progress);
 
         // Execute the build
         let result = executor.execute(&graph, &self.object_store, force, timings, keep_going);
@@ -123,7 +126,10 @@ impl Builder {
 
         // Exit after saving if interrupted
         if interrupted.load(std::sync::atomic::Ordering::SeqCst) {
-            std::process::exit(130);
+            return Err(crate::exit_code::RsbError::new(
+                crate::exit_code::RsbExitCode::Interrupted,
+                "Build interrupted",
+            ).into());
         }
 
         let stats = result?;
@@ -133,7 +139,10 @@ impl Builder {
 
         // Return error if there were failures in keep-going mode
         if stats.failed_count > 0 {
-            anyhow::bail!("Build completed with {} error(s)", stats.failed_count);
+            return Err(crate::exit_code::RsbError::new(
+                crate::exit_code::RsbExitCode::BuildError,
+                format!("Build completed with {} error(s)", stats.failed_count),
+            ).into());
         }
 
         Ok(())
@@ -235,7 +244,7 @@ impl Builder {
         let graph = self.build_graph_for_clean_with_processors(&processors)?;
 
         // Use executor to clean (batch_size doesn't matter for clean)
-        let executor = Executor::new(&processors, 1, false, DisplayOptions::minimal(), Arc::new(std::sync::atomic::AtomicBool::new(false)), None);
+        let executor = Executor::new(&processors, 1, false, DisplayOptions::minimal(), Arc::new(std::sync::atomic::AtomicBool::new(false)), None, false);
         executor.clean(&graph)?;
 
         // Remove empty subdirectories under out/
@@ -766,6 +775,23 @@ impl Builder {
                 let graph = self.build_graph_filtered(name.as_deref(), all)?;
 
                 let products = graph.products();
+
+                if crate::json_output::is_json_mode() {
+                    let entries: Vec<crate::json_output::ProcessorFileEntry> = products.iter()
+                        .map(|p| {
+                            let proc_type = if p.outputs.is_empty() { "checker" } else { "generator" };
+                            crate::json_output::ProcessorFileEntry {
+                                processor: p.processor.clone(),
+                                processor_type: proc_type.to_string(),
+                                inputs: p.inputs.iter().map(|i| i.display().to_string()).collect(),
+                                outputs: p.outputs.iter().map(|o| o.display().to_string()).collect(),
+                            }
+                        })
+                        .collect();
+                    println!("{}", serde_json::to_string_pretty(&entries)?);
+                    return Ok(());
+                }
+
                 if products.is_empty() {
                     if let Some(ref n) = name {
                         println!("[{}] (no files)", n);
@@ -861,7 +887,10 @@ impl Builder {
                     }
                 }
                 if any_missing {
-                    bail!("Some required tools are missing");
+                    return Err(crate::exit_code::RsbError::new(
+                        crate::exit_code::RsbExitCode::ToolError,
+                        "Some required tools are missing",
+                    ).into());
                 }
             }
             ToolsAction::Lock { check } => {

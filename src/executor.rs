@@ -24,6 +24,8 @@ pub struct Executor<'a> {
     interrupted: Arc<AtomicBool>,
     /// Batch size setting: None = disable batching, Some(0) = no limit, Some(n) = max n files per batch
     batch_size: Option<usize>,
+    /// Whether to show a progress bar
+    progress: bool,
 }
 
 impl<'a> Executor<'a> {
@@ -34,6 +36,7 @@ impl<'a> Executor<'a> {
         display_opts: DisplayOptions,
         interrupted: Arc<AtomicBool>,
         batch_size: Option<usize>,
+        progress: bool,
     ) -> Self {
         Self {
             processors,
@@ -42,6 +45,7 @@ impl<'a> Executor<'a> {
             display_opts,
             interrupted,
             batch_size,
+            progress,
         }
     }
 
@@ -126,8 +130,8 @@ impl<'a> Executor<'a> {
         let current_per_processor: Arc<Mutex<HashMap<String, usize>>> =
             Arc::new(Mutex::new(HashMap::new()));
 
-        // Create progress bar (hidden in JSON mode or verbose mode)
-        let pb = if json_output::is_json_mode() || self.verbose {
+        // Create progress bar (only shown when --progress is passed, hidden in JSON mode)
+        let pb = if !self.progress || json_output::is_json_mode() {
             ProgressBar::hidden()
         } else {
             let pb = ProgressBar::new(order.len() as u64);

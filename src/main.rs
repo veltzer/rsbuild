@@ -5,6 +5,7 @@ mod color;
 mod config;
 mod deps_cache;
 mod executor;
+mod exit_code;
 mod file_index;
 mod graph;
 mod json_output;
@@ -19,17 +20,39 @@ use clap::Parser;
 use cli::{CacheAction, CleanAction, Cli, Commands, parse_shell, print_completions};
 use config::Config;
 use builder::Builder;
+use exit_code::{RsbExitCode, RsbError, classify_error};
 use std::env;
 use std::fs;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-fn main() -> Result<()> {
+fn main() -> std::process::ExitCode {
     // Reset SIGPIPE to default so piping to head/more/less exits cleanly
     unsafe {
         libc::signal(libc::SIGPIPE, libc::SIG_DFL);
     }
 
+    match run() {
+        Ok(()) => std::process::ExitCode::from(RsbExitCode::Success.code()),
+        Err(err) => {
+            let exit_code = classify_error(&err);
+            if json_output::is_json_mode() {
+                let error_event = serde_json::json!({
+                    "event": "error",
+                    "exit_code": exit_code.code(),
+                    "exit_code_name": exit_code.name(),
+                    "message": format!("{:#}", err),
+                });
+                eprintln!("{}", error_event);
+            } else {
+                eprintln!("Error [{}]: {:#}", exit_code.name(), err);
+            }
+            std::process::ExitCode::from(exit_code.code())
+        }
+    }
+}
+
+fn run() -> Result<()> {
     let cli = Cli::parse();
 
     // Enable process debug logging if --process flag is set
@@ -63,7 +86,7 @@ fn main() -> Result<()> {
     }
 
     match cli.command {
-        Commands::Build { force, jobs, timings, keep_going, dry_run, no_summary, ignore_tool_versions, batch_size, stop_after, ref processors, auto_add_words } => {
+        Commands::Build { force, jobs, timings, keep_going, dry_run, no_summary, ignore_tool_versions, batch_size, stop_after, ref processors, auto_add_words, progress } => {
             if dry_run {
                 let builder = Builder::new()?;
                 builder.dry_run(force)?;
@@ -75,7 +98,7 @@ fn main() -> Result<()> {
                 // CLI override: -1 = disable batching, 0 = no limit, >0 = max batch size
                 let batch_size_override = batch_size.map(|n| if n < 0 { None } else { Some(n as usize) });
                 let processor_filter = processors.as_deref();
-                builder.build(force, cli.verbose, cli.display_options(), jobs, timings, keep_going, Arc::clone(&interrupted), !no_summary, batch_size_override, stop_after, processor_filter, auto_add_words)?;
+                builder.build(force, cli.verbose, cli.display_options(), jobs, timings, keep_going, Arc::clone(&interrupted), !no_summary, batch_size_override, stop_after, processor_filter, auto_add_words, progress)?;
             }
         }
         Commands::Clean { action } => {
@@ -190,9 +213,9 @@ fn main() -> Result<()> {
                 print_completions(shell);
             }
         }
-        Commands::Watch { jobs, timings, keep_going, no_summary, batch_size, ref processors, auto_add_words } => {
+        Commands::Watch { jobs, timings, keep_going, no_summary, batch_size, ref processors, auto_add_words, progress } => {
             let batch_size_override = batch_size.map(|n| if n < 0 { None } else { Some(n as usize) });
-            watcher::watch(cli.verbose, cli.display_options(), jobs, timings, keep_going, !no_summary, Arc::clone(&interrupted), batch_size_override, processors.as_deref(), auto_add_words)?;
+            watcher::watch(cli.verbose, cli.display_options(), jobs, timings, keep_going, !no_summary, Arc::clone(&interrupted), batch_size_override, processors.as_deref(), auto_add_words, progress)?;
         }
         Commands::Version => {
             println!("rsb {}", env!("CARGO_PKG_VERSION"));
@@ -224,7 +247,10 @@ fn init_project() -> Result<()> {
     let config_path = cwd.join("rsb.toml");
 
     if config_path.exists() {
-        bail!("rsb.toml already exists in the current directory");
+        return Err(RsbError::new(
+            RsbExitCode::ConfigError,
+            "rsb.toml already exists in the current directory",
+        ).into());
     }
 
     // Create rsb.toml with commented defaults
@@ -302,7 +328,26 @@ fn init_project() -> Result<()> {
     fs::write(&config_path, config_content)?;
     println!("Created {}", config_path.display());
 
-println!("{}", color::green("Project initialized successfully!"));
+    // Create .rsbignore if it doesn't exist
+    let rsbignore_path = cwd.join(".rsbignore");
+    if !rsbignore_path.exists() {
+        let rsbignore_content = r#"# .rsbignore - Exclude files from rsb processing
+# Uses .gitignore syntax (glob patterns, one per line)
+# Lines starting with # are comments
+#
+# Examples:
+# /build/           # Exclude a top-level directory
+# *.generated.*     # Exclude generated files by pattern
+# /src/vendor/**    # Exclude vendored source code
+# /experiments/     # Exclude experimental code
+# *.bak             # Exclude backup files
+"#;
+        fs::write(&rsbignore_path, rsbignore_content)?;
+        println!("Created .rsbignore");
+    }
+
+    println!("{}", color::green("Project initialized successfully!"));
+    println!("{}", color::dim("Hint: edit .rsbignore to exclude files from processing"));
     Ok(())
 }
 

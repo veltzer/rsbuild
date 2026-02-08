@@ -162,12 +162,15 @@ impl BuildGraph {
         for output in &outputs {
             if let Some(&existing_id) = self.output_to_product.get(output) {
                 let existing = &self.products[existing_id];
-                bail!(
-                    "Output conflict: {} is produced by both [{}] and [{}]",
-                    output.display(),
-                    existing.processor,
-                    processor,
-                );
+                return Err(crate::exit_code::RsbError::new(
+                    crate::exit_code::RsbExitCode::GraphError,
+                    format!(
+                        "Output conflict: {} is produced by both [{}] and [{}]",
+                        output.display(),
+                        existing.processor,
+                        processor,
+                    ),
+                ).into());
             }
         }
 
@@ -262,7 +265,10 @@ impl BuildGraph {
         }
 
         if result.len() != self.products.len() {
-            bail!("Cycle detected in build graph");
+            return Err(crate::exit_code::RsbError::new(
+                crate::exit_code::RsbExitCode::GraphError,
+                "Cycle detected in build graph",
+            ).into());
         }
 
         Ok(result)

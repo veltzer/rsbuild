@@ -130,6 +130,15 @@ pub struct CacheOutput {
     pub exists: bool,
 }
 
+/// Processor file entry for `rsb processors files --json`.
+#[derive(Debug, Serialize)]
+pub struct ProcessorFileEntry {
+    pub processor: String,
+    pub processor_type: String,
+    pub inputs: Vec<String>,
+    pub outputs: Vec<String>,
+}
+
 /// Emit a JSON event to stdout.
 pub fn emit(event: &BuildEvent) {
     if !is_json_mode() {

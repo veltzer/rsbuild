@@ -107,3 +107,50 @@ fn processors_all_shows_descriptions() {
     // processors all shows descriptions with " — " separator
     assert!(stdout.contains("tera"), "Expected tera processor");
 }
+
+#[test]
+fn processors_files_json_output() {
+    let temp_dir = setup_test_project();
+    let project_path = temp_dir.path();
+
+    // Write a template so there's at least one product
+    fs::write(
+        project_path.join("config/test.py"),
+        "value = 42"
+    ).expect("Failed to write config");
+    fs::write(
+        project_path.join("templates/output.txt.tera"),
+        "{% set c = load_python(path='config/test.py') %}{{ c.value }}"
+    ).expect("Failed to write template");
+
+    let output = run_rsb_with_env(project_path, &["--json", "processors", "files"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "processors files --json failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let entries: Vec<serde_json::Value> = serde_json::from_str(&stdout)
+        .expect("Expected valid JSON array");
+    assert!(!entries.is_empty(), "Expected at least one entry");
+
+    let entry = &entries[0];
+    assert!(entry.get("processor").is_some(), "Entry should have 'processor' field");
+    assert!(entry.get("processor_type").is_some(), "Entry should have 'processor_type' field");
+    assert!(entry.get("inputs").is_some(), "Entry should have 'inputs' field");
+    assert!(entry.get("outputs").is_some(), "Entry should have 'outputs' field");
+    assert_eq!(entry["processor"], "tera");
+    assert_eq!(entry["processor_type"], "generator");
+}
+
+#[test]
+fn processors_files_json_empty() {
+    let temp_dir = setup_test_project();
+    let project_path = temp_dir.path();
+
+    // No template files written, so no products
+    let output = run_rsb_with_env(project_path, &["--json", "processors", "files"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let entries: Vec<serde_json::Value> = serde_json::from_str(&stdout)
+        .expect("Expected valid JSON array");
+    assert!(entries.is_empty(), "Expected empty JSON array, got: {}", stdout);
+}

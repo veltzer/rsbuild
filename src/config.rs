@@ -100,7 +100,10 @@ fn substitute_variables(content: &str) -> Result<String> {
     for captures in var_pattern.captures_iter(content) {
         let var_name = captures.get(1).unwrap().as_str();
         if !defined_vars.contains(&var_name.to_string()) {
-            anyhow::bail!("Undefined variable: ${{{}}}", var_name);
+            return Err(crate::exit_code::RsbError::new(
+                crate::exit_code::RsbExitCode::ConfigError,
+                format!("Undefined variable: ${{{}}}", var_name),
+            ).into());
         }
     }
 
@@ -1027,10 +1030,10 @@ impl Config {
     pub fn require_config(project_root: &Path) -> Result<()> {
         let config_path = project_root.join(CONFIG_FILE);
         if !config_path.exists() {
-            anyhow::bail!(
-                "No rsb.toml found in {}. Run 'rsb init' to create one.",
-                project_root.display()
-            );
+            return Err(crate::exit_code::RsbError::new(
+                crate::exit_code::RsbExitCode::ConfigError,
+                format!("No rsb.toml found in {}. Run 'rsb init' to create one.", project_root.display()),
+            ).into());
         }
         Ok(())
     }

@@ -204,6 +204,10 @@ pub enum Commands {
         /// Automatically add misspelled words to .spellcheck-words instead of failing
         #[arg(long)]
         auto_add_words: bool,
+
+        /// Show a progress bar during the build
+        #[arg(long)]
+        progress: bool,
     },
     /// Clean build artifacts
     Clean {
@@ -254,6 +258,10 @@ pub enum Commands {
         /// Automatically add misspelled words to .spellcheck-words instead of failing
         #[arg(long)]
         auto_add_words: bool,
+
+        /// Show a progress bar during the build
+        #[arg(long)]
+        progress: bool,
     },
     /// Manage processors
     Processors {

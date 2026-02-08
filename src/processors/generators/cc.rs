@@ -25,8 +25,8 @@ fn cached_shell_command(cmd_line: &str, runner: impl FnOnce(&str) -> Result<Vec<
     }
 
     let result = runner(cmd_line)?;
-    cache.insert(cmd_line.to_string(), result.clone());
-    Ok(result)
+    cache.insert(cmd_line.to_string(), result);
+    Ok(cache[cmd_line].clone())
 }
 
 /// Per-file compile/link flags extracted from source comments.

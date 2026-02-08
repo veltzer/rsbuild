@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use regex::Regex;
 use std::collections::HashSet;
 use std::fs;
 use std::io::Write;
@@ -119,55 +120,20 @@ impl SpellcheckProcessor {
         result
     }
 
-    /// Strip markdown syntax from a line
+    /// Strip markdown syntax from a line using a single regex pass.
     fn strip_markdown(line: &str) -> String {
-        let mut result = line.to_string();
+        static MARKDOWN_RE: OnceLock<Regex> = OnceLock::new();
+        let re = MARKDOWN_RE.get_or_init(|| Regex::new(concat!(
+            r"`[^`]*`",                          // inline code spans
+            r"|\[([^\]]*)\]\([^)]*\)",            // [text](url) — capture group 1 = link text
+            r#"|https?://[^\s)>""]+"#,            // bare URLs
+            r"|<[^>]*>",                          // HTML tags
+        )).expect("internal error: invalid markdown strip regex"));
 
-        // Remove inline code spans
-        while let Some(start) = result.find('`') {
-            if let Some(end) = result[start + 1..].find('`') {
-                result = format!("{} {}", &result[..start], &result[start + 1 + end + 1..]);
-            } else {
-                break;
-            }
-        }
-
-        // Remove URLs: [text](url) -> text
-        while let Some(bracket_start) = result.find('[') {
-            if let Some(bracket_end) = result[bracket_start..].find("](") {
-                let abs_bracket_end = bracket_start + bracket_end;
-                if let Some(paren_end) = result[abs_bracket_end + 2..].find(')') {
-                    let link_text = &result[bracket_start + 1..abs_bracket_end];
-                    result = format!("{}{}{}", &result[..bracket_start], link_text, &result[abs_bracket_end + 2 + paren_end + 1..]);
-                } else {
-                    break;
-                }
-            } else {
-                break;
-            }
-        }
-
-        // Remove bare URLs (http/https)
-        let url_patterns = ["https://", "http://"];
-        for pattern in &url_patterns {
-            while let Some(start) = result.find(pattern) {
-                let end = result[start..].find(|c: char| c.is_whitespace() || c == ')' || c == '>' || c == '"')
-                    .map(|e| start + e)
-                    .unwrap_or(result.len());
-                result = format!("{} {}", &result[..start], &result[end..]);
-            }
-        }
-
-        // Remove HTML tags
-        while let Some(start) = result.find('<') {
-            if let Some(end) = result[start..].find('>') {
-                result = format!("{} {}", &result[..start], &result[start + end + 1..]);
-            } else {
-                break;
-            }
-        }
-
-        result
+        re.replace_all(line, |caps: &regex::Captures| {
+            // For markdown links, keep the link text; for everything else, replace with space
+            caps.get(1).map_or(" ".to_string(), |m| m.as_str().to_string())
+        }).into_owned()
     }
 
     /// Check a single file for spelling errors

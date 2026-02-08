@@ -101,7 +101,7 @@ fn substitute_variables(content: &str) -> Result<String> {
     // Check for undefined variable references
     for captures in var_pattern.captures_iter(content) {
         let var_name = captures.get(1).expect("internal error: capture group 1 missing").as_str();
-        if !defined_vars.contains(&var_name.to_string()) {
+        if !defined_vars.iter().any(|v| v == var_name) {
             return Err(crate::exit_code::RsbError::new(
                 crate::exit_code::RsbExitCode::ConfigError,
                 format!("Undefined variable: ${{{}}}", var_name),
@@ -250,6 +250,8 @@ const MAKE_EXCLUDE_DIRS: &[&str] = &["/.git/", "/out/", "/.rsb/", "/build/", "/d
 
 const SHELL_EXCLUDE_DIRS: &[&str] = &["/.git/", "/out/", "/.rsb/", "/node_modules/", "/build/", "/dist/", "/target/"];
 
+const DEFAULT_PLUGINS_DIR: &str = "plugins";
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct PluginsConfig {
@@ -258,12 +260,12 @@ pub struct PluginsConfig {
 }
 
 fn default_plugins_dir() -> String {
-    "plugins".into()
+    DEFAULT_PLUGINS_DIR.into()
 }
 
 impl Default for PluginsConfig {
     fn default() -> Self {
-        Self { dir: "plugins".into() }
+        Self { dir: DEFAULT_PLUGINS_DIR.into() }
     }
 }
 

@@ -242,6 +242,12 @@ fn run() -> Result<()> {
         }
         Commands::Version => {
             println!("rsb {}", env!("CARGO_PKG_VERSION"));
+            println!("git describe: {}", env!("RSB_GIT_DESCRIBE"));
+            println!("commit: {}", env!("VERGEN_GIT_SHA"));
+            println!("branch: {}", env!("VERGEN_GIT_BRANCH"));
+            println!("dirty: {}", env!("VERGEN_GIT_DIRTY"));
+            println!("build date: {}", env!("VERGEN_BUILD_DATE"));
+            println!("rustc: {}", env!("VERGEN_RUSTC_SEMVER"));
         }
         Commands::Config { action } => {
             let builder = Builder::new()?;

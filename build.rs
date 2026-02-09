@@ -25,5 +25,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     println!("cargo:rustc-env=RSB_GIT_DESCRIBE={describe}");
 
+    // Rerun when git state changes (commits, tags, branch switches)
+    println!("cargo:rerun-if-changed=.git/HEAD");
+    println!("cargo:rerun-if-changed=.git/refs/heads/");
+    println!("cargo:rerun-if-changed=.git/refs/tags/");
+    println!("cargo:rerun-if-changed=.git/packed-refs");
+
     Ok(())
 }

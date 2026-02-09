@@ -137,7 +137,7 @@ impl Builder {
         self.detect_config_changes(&processors);
 
         // Build the dependency graph (may stop early based on stop_after)
-        let graph = self.build_graph_with_processors_and_phase(&processors, opts.stop_after, processor_filter)?;
+        let graph = self.build_graph_with_processors_and_phase(&processors, opts.stop_after, processor_filter, opts.verbose)?;
 
         // If we stopped early, we're done
         if opts.stop_after != BuildPhase::Build {
@@ -590,8 +590,8 @@ impl Builder {
     }
 
     /// Run all enabled dependency analyzers on the graph
-    fn run_analyzers(&self, graph: &mut BuildGraph) -> Result<()> {
-        let analyzers = self.create_analyzers(false);
+    fn run_analyzers(&self, graph: &mut BuildGraph, verbose: bool) -> Result<()> {
+        let analyzers = self.create_analyzers(verbose);
         let mut deps_cache = DepsCache::open()?;
 
         // Collect which analyzers should run
@@ -607,7 +607,7 @@ impl Builder {
 
         // Run each analyzer
         for name in &active_analyzers {
-            analyzers[*name].analyze(graph, &mut deps_cache, &self.file_index)?;
+            analyzers[*name].analyze(graph, &mut deps_cache, &self.file_index, verbose)?;
         }
 
         Ok(())
@@ -615,17 +615,17 @@ impl Builder {
 
     /// Build the dependency graph using provided processors
     fn build_graph_with_processors(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>) -> Result<BuildGraph> {
-        self.build_graph_with_processors_impl(processors, GraphBuildMode::Normal, BuildPhase::Build, None)
+        self.build_graph_with_processors_impl(processors, GraphBuildMode::Normal, BuildPhase::Build, None, false)
     }
 
     /// Build the dependency graph with optional early stopping
-    fn build_graph_with_processors_and_phase(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, stop_after: BuildPhase, processor_filter: Option<&[String]>) -> Result<BuildGraph> {
-        self.build_graph_with_processors_impl(processors, GraphBuildMode::Normal, stop_after, processor_filter)
+    fn build_graph_with_processors_and_phase(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, stop_after: BuildPhase, processor_filter: Option<&[String]>, verbose: bool) -> Result<BuildGraph> {
+        self.build_graph_with_processors_impl(processors, GraphBuildMode::Normal, stop_after, processor_filter, verbose)
     }
 
     /// Build the dependency graph for clean (skip expensive dependency scanning)
     fn build_graph_for_clean_with_processors(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>) -> Result<BuildGraph> {
-        self.build_graph_with_processors_impl(processors, GraphBuildMode::ForClean, BuildPhase::Build, None)
+        self.build_graph_with_processors_impl(processors, GraphBuildMode::ForClean, BuildPhase::Build, None, false)
     }
 
     /// Check whether a processor should run based on enabled list and auto-detect.
@@ -638,7 +638,7 @@ impl Builder {
 
     /// Build the dependency graph using provided processors
     /// processor_filter: if Some, only run processors in this list (in addition to enabled check)
-    fn build_graph_with_processors_impl(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, mode: GraphBuildMode, stop_after: BuildPhase, processor_filter: Option<&[String]>) -> Result<BuildGraph> {
+    fn build_graph_with_processors_impl(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, mode: GraphBuildMode, stop_after: BuildPhase, processor_filter: Option<&[String]>, verbose: bool) -> Result<BuildGraph> {
         if phases_debug() {
             eprintln!("{}", color::bold("Phase: Building dependency graph..."));
         }
@@ -676,7 +676,7 @@ impl Builder {
             if phases_debug() {
                 eprintln!("{}", color::dim("  Phase: add_dependencies"));
             }
-            self.run_analyzers(&mut graph)?;
+            self.run_analyzers(&mut graph, verbose)?;
         }
 
         if stop_after == BuildPhase::AddDependencies {
@@ -734,7 +734,7 @@ impl Builder {
         }
 
         // Phase 2: Run dependency analyzers
-        self.run_analyzers(&mut graph)?;
+        self.run_analyzers(&mut graph, false)?;
 
         graph.resolve_dependencies();
         Ok(graph)

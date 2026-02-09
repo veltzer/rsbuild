@@ -122,7 +122,7 @@ impl DepAnalyzer for PythonDepAnalyzer {
         file_index.has_extension(".py")
     }
 
-    fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, file_index: &FileIndex) -> Result<()> {
+    fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, file_index: &FileIndex, verbose: bool) -> Result<()> {
         super::analyze_with_scanner(
             graph,
             deps_cache,
@@ -143,6 +143,7 @@ impl DepAnalyzer for PythonDepAnalyzer {
                 // Python analyzer swallows scan errors (unwrap_or_default in original)
                 Ok(self.scan_imports(source, file_index).unwrap_or_default())
             },
+            verbose,
         )
     }
 }

@@ -86,10 +86,52 @@ impl<'a> Executor<'a> {
         product.display(self.display_opts)
     }
 
+    /// Increment the global product counter only (no progress bar advancement).
+    fn inc_global(shared: &SharedState) {
+        shared.global_current.fetch_add(1, Ordering::SeqCst);
+    }
+
     /// Increment both the progress bar and the global product counter.
     fn inc_progress(pb: &ProgressBar, shared: &SharedState) {
-        shared.global_current.fetch_add(1, Ordering::SeqCst);
+        Self::inc_global(shared);
         pb.inc(1);
+    }
+
+    /// Pre-build classification: count how many products will be skipped, restored, or built.
+    /// This is a fast read-only pass (checksums + cache lookups, no mutations).
+    fn classify_products(
+        &self,
+        graph: &BuildGraph,
+        order: &[usize],
+        object_store: &ObjectStore,
+        force: bool,
+    ) -> (usize, usize, usize) {
+        let mut skip_count = 0;
+        let mut restore_count = 0;
+        let mut build_count = 0;
+
+        for &id in order {
+            let product = graph.get_product(id).expect("internal error: invalid product id");
+            let cache_key = product.cache_key();
+
+            let input_checksum = match object_store.combined_input_checksum_fast(&product.inputs) {
+                Ok(cs) => cs,
+                Err(_) => {
+                    build_count += 1;
+                    continue;
+                }
+            };
+
+            if !force && !object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs) {
+                skip_count += 1;
+            } else if !force && object_store.can_restore(&cache_key, &input_checksum, &product.outputs) {
+                restore_count += 1;
+            } else {
+                build_count += 1;
+            }
+        }
+
+        (skip_count, restore_count, build_count)
     }
 
     /// Print an explain line for a product showing what action will be taken and why.
@@ -106,12 +148,12 @@ impl<'a> Executor<'a> {
     }
 
     /// Handle the "skip (unchanged)" case for a product.
-    /// Logs, emits JSON event, increments stats and progress bar.
+    /// Logs, emits JSON event, increments stats. Does NOT advance the progress bar
+    /// since skips are instant and the bar total excludes them.
     fn handle_skip(
         &self,
         product: &crate::graph::Product,
         shared: &SharedState,
-        pb_ref: &ProgressBar,
     ) {
         if self.verbose {
             println!("[{}] {} {}", product.processor,
@@ -130,7 +172,7 @@ impl<'a> Executor<'a> {
             .entry(product.processor.clone())
             .or_default();
         proc_stats.skipped += 1;
-        Self::inc_progress(pb_ref, shared);
+        Self::inc_global(shared);
     }
 
     /// Handle cache restore for a product.
@@ -380,11 +422,21 @@ impl<'a> Executor<'a> {
         let global_total = order.len();
         let global_current = Arc::new(AtomicUsize::new(0));
 
-        // Create progress bar (shown by default, hidden in verbose or JSON mode)
+        // Pre-build classification: count skip/restore/build for progress bar sizing
+        let (skip_count, restore_count, build_count) = self.classify_products(graph, order, object_store, force);
+        let work_count = restore_count + build_count;
+
+        // Print summary line (unless JSON mode)
+        if !json_output::is_json_mode() {
+            println!("{} products ({} up-to-date, {} to restore, {} to build)",
+                order.len(), skip_count, restore_count, build_count);
+        }
+
+        // Create progress bar sized to actual work (excludes instant skips)
         let pb = if self.verbose || json_output::is_json_mode() {
             ProgressBar::hidden()
         } else {
-            let pb = ProgressBar::new(order.len() as u64);
+            let pb = ProgressBar::new(work_count as u64);
             pb.set_style(
                 ProgressStyle::default_bar()
                     .template("[{elapsed_precise}] {bar:40} {pos}/{len} {msg}")
@@ -461,7 +513,7 @@ impl<'a> Executor<'a> {
                             }
 
                             if !needs_rebuild {
-                                self.handle_skip(product, &shared, pb_ref);
+                                self.handle_skip(product, &shared);
                                 continue;
                             }
 
@@ -595,7 +647,7 @@ impl<'a> Executor<'a> {
                                 }
 
                                 if !needs_rebuild {
-                                    self.handle_skip(product, &shared, pb_ref);
+                                    self.handle_skip(product, &shared);
                                     continue;
                                 }
 

@@ -37,7 +37,7 @@ pub trait DepAnalyzer: Sync + Send {
     /// 2. For each product, scan the primary source file for dependencies
     /// 3. Use deps_cache to avoid re-scanning unchanged files
     /// 4. Add discovered dependencies to the product's inputs
-    fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, file_index: &FileIndex) -> Result<()>;
+    fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, file_index: &FileIndex, verbose: bool) -> Result<()>;
 }
 
 /// Shared helper for analyzer `analyze()` implementations.
@@ -54,6 +54,7 @@ pub fn analyze_with_scanner<F, G>(
     analyzer_name: &str,
     match_product: F,
     scan_deps: G,
+    verbose: bool,
 ) -> Result<()>
 where
     F: Fn(&crate::graph::Product) -> Option<PathBuf>,
@@ -71,17 +72,22 @@ where
         return Ok(());
     }
 
-    // Show progress bar for dependency scanning
-    let pb = indicatif::ProgressBar::new(products.len() as u64);
-    pb.set_style(
-        indicatif::ProgressStyle::default_bar()
-            .template(&format!("[{}] Scanning dependencies {{bar:40}} {{pos}}/{{len}} {{msg}}", analyzer_name))
-            .expect("internal error: invalid progress bar template")
-            .progress_chars("##-")
-    );
+    // Show progress bar (hidden in verbose or JSON mode, matching executor style)
+    let pb = if verbose || crate::json_output::is_json_mode() {
+        indicatif::ProgressBar::hidden()
+    } else {
+        let pb = indicatif::ProgressBar::new(products.len() as u64);
+        pb.set_style(
+            indicatif::ProgressStyle::default_bar()
+                .template("[{elapsed_precise}] {bar:40} {pos}/{len} {msg}")
+                .expect("internal error: invalid progress bar template")
+                .progress_chars("=> "),
+        );
+        pb
+    };
 
     for (id, source) in &products {
-        pb.set_message(source.display().to_string());
+        pb.set_message(format!("[{}] {}", analyzer_name, source.display()));
 
         // Try to get cached dependencies, otherwise scan
         let deps = if let Some(cached) = deps_cache.get(source) {
@@ -108,11 +114,13 @@ where
     }
     pb.finish_and_clear();
 
-    // Show cache stats
-    let stats = deps_cache.stats();
-    if stats.hits > 0 || stats.misses > 0 {
-        eprintln!("[{}] Dependency cache: {} hits, {} recalculated",
-            analyzer_name, stats.hits, stats.misses);
+    // Show cache stats in verbose mode
+    if verbose {
+        let stats = deps_cache.stats();
+        if stats.hits > 0 || stats.misses > 0 {
+            eprintln!("[{}] Dependency cache: {} hits, {} recalculated",
+                analyzer_name, stats.hits, stats.misses);
+        }
     }
 
     Ok(())

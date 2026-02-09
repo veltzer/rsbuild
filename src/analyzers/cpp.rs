@@ -559,7 +559,7 @@ impl DepAnalyzer for CppDepAnalyzer {
         false
     }
 
-    fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, _file_index: &FileIndex) -> Result<()> {
+    fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, _file_index: &FileIndex, verbose: bool) -> Result<()> {
         let cpp_extensions: HashSet<&str> = [".c", ".cc", ".cpp", ".cxx"].iter().copied().collect();
 
         super::analyze_with_scanner(
@@ -587,6 +587,7 @@ impl DepAnalyzer for CppDepAnalyzer {
                 let is_cpp = ext == "cc" || ext == "cpp" || ext == "cxx";
                 self.scan_dependencies(source, is_cpp)
             },
+            verbose,
         )
     }
 }

@@ -17,6 +17,7 @@
 /// - `config_json: true` — emit `config_json()` using `serde_json::to_string`
 /// - `hidden: true` — `hidden()` returns true
 /// - `batch: $batch_method:ident` — method on self for batch execution
+/// - `extra_discover_inputs: $method:ident` — method on self returning `Vec<String>` of extra inputs for discover
 macro_rules! impl_checker {
     // --- @build: generate the impl block ---
     (@build $processor:ty, $config_field:ident, $desc:expr, $name:expr,
@@ -25,6 +26,7 @@ macro_rules! impl_checker {
      config_json: $cj:tt,
      hidden: $hid:tt,
      batch: [$($batch:ident)?],
+     extra_discover: [$($extra_discover:ident)?],
      execute: $execute:ident,
     ) => {
         impl $crate::processors::ProductDiscovery for $processor {
@@ -47,7 +49,7 @@ macro_rules! impl_checker {
                 graph: &mut $crate::graph::BuildGraph,
                 file_index: &$crate::file_index::FileIndex,
             ) -> anyhow::Result<()> {
-                impl_checker!(@discover self, graph, file_index, $config_field, $name, [$($guard)?])
+                impl_checker!(@discover self, graph, file_index, $config_field, $name, [$($guard)?], [$($extra_discover)?])
             }
 
             fn execute(&self, product: &$crate::graph::Product) -> anyhow::Result<()> {
@@ -89,27 +91,38 @@ macro_rules! impl_checker {
     };
 
     // --- discover ---
-    (@discover $self:ident, $graph:ident, $fi:ident, $cfg:ident, $name:expr, [$guard:ident]) => {{
+    // With guard and extra_discover
+    (@discover $self:ident, $graph:ident, $fi:ident, $cfg:ident, $name:expr, [$guard:ident], [$extra:ident]) => {{
+        if !$self.$guard() {
+            return Ok(());
+        }
+        let mut extra_inputs = $self.$cfg.extra_inputs.clone();
+        extra_inputs.extend($self.$extra());
+        $crate::processors::discover_checker_products(
+            $graph, &$self.$cfg.scan, $fi, &extra_inputs, &$self.$cfg, $name,
+        )
+    }};
+    // With guard, no extra_discover
+    (@discover $self:ident, $graph:ident, $fi:ident, $cfg:ident, $name:expr, [$guard:ident], []) => {{
         if !$self.$guard() {
             return Ok(());
         }
         $crate::processors::discover_checker_products(
-            $graph,
-            &$self.$cfg.scan,
-            $fi,
-            &$self.$cfg.extra_inputs,
-            &$self.$cfg,
-            $name,
+            $graph, &$self.$cfg.scan, $fi, &$self.$cfg.extra_inputs, &$self.$cfg, $name,
         )
     }};
-    (@discover $self:ident, $graph:ident, $fi:ident, $cfg:ident, $name:expr, []) => {
+    // No guard, with extra_discover
+    (@discover $self:ident, $graph:ident, $fi:ident, $cfg:ident, $name:expr, [], [$extra:ident]) => {{
+        let mut extra_inputs = $self.$cfg.extra_inputs.clone();
+        extra_inputs.extend($self.$extra());
         $crate::processors::discover_checker_products(
-            $graph,
-            &$self.$cfg.scan,
-            $fi,
-            &$self.$cfg.extra_inputs,
-            &$self.$cfg,
-            $name,
+            $graph, &$self.$cfg.scan, $fi, &extra_inputs, &$self.$cfg, $name,
+        )
+    }};
+    // No guard, no extra_discover
+    (@discover $self:ident, $graph:ident, $fi:ident, $cfg:ident, $name:expr, [], []) => {
+        $crate::processors::discover_checker_products(
+            $graph, &$self.$cfg.scan, $fi, &$self.$cfg.extra_inputs, &$self.$cfg, $name,
         )
     };
 
@@ -148,6 +161,7 @@ macro_rules! impl_checker {
             config_json: false,
             hidden: false,
             batch: [],
+            extra_discover: [],
             ; $($($rest)*)?
         );
     };
@@ -159,6 +173,7 @@ macro_rules! impl_checker {
      config_json: $cj:tt,
      hidden: $hid:tt,
      batch: [$($batch:ident)?],
+     extra_discover: [$($ed:ident)?],
      ; guard: $guard:ident $(, $($rest:tt)*)?
     ) => {
         impl_checker!(@parse $processor, $config_field, $desc, $name, $execute,
@@ -167,6 +182,7 @@ macro_rules! impl_checker {
             config_json: $cj,
             hidden: $hid,
             batch: [$($batch)?],
+            extra_discover: [$($ed)?],
             ; $($($rest)*)?
         );
     };
@@ -178,6 +194,7 @@ macro_rules! impl_checker {
      config_json: $cj:tt,
      hidden: $hid:tt,
      batch: [$($batch:ident)?],
+     extra_discover: [$($ed:ident)?],
      ; tools: [$($tool:expr),+] $(, $($rest:tt)*)?
     ) => {
         impl_checker!(@parse $processor, $config_field, $desc, $name, $execute,
@@ -186,6 +203,7 @@ macro_rules! impl_checker {
             config_json: $cj,
             hidden: $hid,
             batch: [$($batch)?],
+            extra_discover: [$($ed)?],
             ; $($($rest)*)?
         );
     };
@@ -197,6 +215,7 @@ macro_rules! impl_checker {
      config_json: $cj:tt,
      hidden: $hid:tt,
      batch: [$($batch:ident)?],
+     extra_discover: [$($ed:ident)?],
      ; tool_field: $tool_field:ident $(, $($rest:tt)*)?
     ) => {
         impl_checker!(@parse $processor, $config_field, $desc, $name, $execute,
@@ -205,6 +224,7 @@ macro_rules! impl_checker {
             config_json: $cj,
             hidden: $hid,
             batch: [$($batch)?],
+            extra_discover: [$($ed)?],
             ; $($($rest)*)?
         );
     };
@@ -216,6 +236,7 @@ macro_rules! impl_checker {
      config_json: false,
      hidden: $hid:tt,
      batch: [$($batch:ident)?],
+     extra_discover: [$($ed:ident)?],
      ; config_json: true $(, $($rest:tt)*)?
     ) => {
         impl_checker!(@parse $processor, $config_field, $desc, $name, $execute,
@@ -224,6 +245,7 @@ macro_rules! impl_checker {
             config_json: true,
             hidden: $hid,
             batch: [$($batch)?],
+            extra_discover: [$($ed)?],
             ; $($($rest)*)?
         );
     };
@@ -235,6 +257,7 @@ macro_rules! impl_checker {
      config_json: $cj:tt,
      hidden: false,
      batch: [$($batch:ident)?],
+     extra_discover: [$($ed:ident)?],
      ; hidden: true $(, $($rest:tt)*)?
     ) => {
         impl_checker!(@parse $processor, $config_field, $desc, $name, $execute,
@@ -243,6 +266,7 @@ macro_rules! impl_checker {
             config_json: $cj,
             hidden: true,
             batch: [$($batch)?],
+            extra_discover: [$($ed)?],
             ; $($($rest)*)?
         );
     };
@@ -254,6 +278,7 @@ macro_rules! impl_checker {
      config_json: $cj:tt,
      hidden: $hid:tt,
      batch: [],
+     extra_discover: [$($ed:ident)?],
      ; batch: $batch_method:ident $(, $($rest:tt)*)?
     ) => {
         impl_checker!(@parse $processor, $config_field, $desc, $name, $execute,
@@ -262,6 +287,28 @@ macro_rules! impl_checker {
             config_json: $cj,
             hidden: $hid,
             batch: [$batch_method],
+            extra_discover: [$($ed)?],
+            ; $($($rest)*)?
+        );
+    };
+
+    // Parse extra_discover_inputs
+    (@parse $processor:ty, $config_field:ident, $desc:expr, $name:expr, $execute:ident,
+     guard: [$($guard:ident)?],
+     tools_kind: $tk:tt,
+     config_json: $cj:tt,
+     hidden: $hid:tt,
+     batch: [$($batch:ident)?],
+     extra_discover: [],
+     ; extra_discover_inputs: $extra_method:ident $(, $($rest:tt)*)?
+    ) => {
+        impl_checker!(@parse $processor, $config_field, $desc, $name, $execute,
+            guard: [$($guard)?],
+            tools_kind: $tk,
+            config_json: $cj,
+            hidden: $hid,
+            batch: [$($batch)?],
+            extra_discover: [$extra_method],
             ; $($($rest)*)?
         );
     };
@@ -273,6 +320,7 @@ macro_rules! impl_checker {
      config_json: $cj:tt,
      hidden: $hid:tt,
      batch: [$($batch:ident)?],
+     extra_discover: [$($ed:ident)?],
      ;
     ) => {
         impl_checker!(@build $processor, $config_field, $desc, $name,
@@ -281,6 +329,7 @@ macro_rules! impl_checker {
             config_json: $cj,
             hidden: $hid,
             batch: [$($batch)?],
+            extra_discover: [$($ed)?],
             execute: $execute,
         );
     };

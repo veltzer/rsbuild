@@ -234,37 +234,6 @@ pub fn clean_outputs(product: &Product, label: &str) -> Result<()> {
     Ok(())
 }
 
-/// Discover stub-based products: one stub output per source file.
-/// Used by Lua plugins that produce a single stub file per input.
-/// Built-in checkers should use discover_checker_products() instead.
-/// All paths are relative to project root.
-#[allow(dead_code, clippy::too_many_arguments)]
-pub fn discover_stub_products(
-    graph: &mut BuildGraph,
-    stub_dir: &Path,
-    scan: &crate::config::ScanConfig,
-    file_index: &FileIndex,
-    extra_inputs: &[String],
-    cfg_hash: &impl serde::Serialize,
-    processor_name: &str,
-    stub_suffix: &str,
-    recursive: bool,
-) -> Result<()> {
-    let files = file_index.scan(scan, recursive);
-    if files.is_empty() {
-        return Ok(());
-    }
-    let hash = Some(config_hash(cfg_hash));
-    let extra = resolve_extra_inputs(extra_inputs)?;
-    for file in files {
-        let stub = stub_path(stub_dir, &file, stub_suffix);
-        let mut inputs = vec![file];
-        inputs.extend(extra.clone());
-        graph.add_product(inputs, vec![stub], processor_name, hash.clone())?;
-    }
-    Ok(())
-}
-
 /// Options for filtering sibling files in directory-based product discovery.
 #[derive(Debug)]
 pub struct SiblingFilter<'a> {

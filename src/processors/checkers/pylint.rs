@@ -3,9 +3,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::config::PylintConfig;
-use crate::file_index::FileIndex;
-use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, discover_checker_products, run_command, check_command_output, execute_checker_batch};
+use crate::graph::Product;
+use crate::processors::{run_command, check_command_output};
 
 pub struct PylintProcessor {
     project_root: PathBuf,
@@ -17,6 +16,19 @@ impl PylintProcessor {
         Self {
             project_root,
             pylint_config,
+        }
+    }
+
+    fn execute_product(&self, product: &Product) -> Result<()> {
+        self.lint_files(&[product.inputs[0].as_path()])
+    }
+
+    /// Return extra inputs for discover: .pylintrc if it exists
+    fn pylintrc_inputs(&self) -> Vec<String> {
+        if Path::new(".pylintrc").exists() {
+            vec![".pylintrc".to_string()]
+        } else {
+            Vec::new()
         }
     }
 
@@ -38,52 +50,13 @@ impl PylintProcessor {
     }
 }
 
-impl ProductDiscovery for PylintProcessor {
-    fn description(&self) -> &str {
-        "Lint Python files with pylint"
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        !file_index.scan(&self.pylint_config.scan, true).is_empty()
-    }
-
-    fn required_tools(&self) -> Vec<String> {
-        vec!["pylint".to_string()]
-    }
-
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-        let mut extra_inputs = self.pylint_config.extra_inputs.clone();
-        // pylint implicitly reads .pylintrc from the project root if present
-        let pylintrc = Path::new(".pylintrc");
-        if pylintrc.exists() {
-            extra_inputs.push(".pylintrc".to_string());
-        }
-        discover_checker_products(
-            graph,
-            &self.pylint_config.scan,
-            file_index,
-            &extra_inputs,
-            &self.pylint_config,
-            "pylint",
-        )
-    }
-
-    fn execute(&self, product: &Product) -> Result<()> {
-        self.lint_files(&[product.inputs[0].as_path()])
-    }
-
-    fn supports_batch(&self) -> bool {
-        true
-    }
-
-    fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
-        execute_checker_batch(
-            products,
-            |files| self.lint_files(files),
-        )
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.pylint_config).ok()
-    }
-}
+impl_checker!(PylintProcessor,
+    config: pylint_config,
+    description: "Lint Python files with pylint",
+    name: "pylint",
+    execute: execute_product,
+    tools: ["pylint".to_string()],
+    config_json: true,
+    batch: lint_files,
+    extra_discover_inputs: pylintrc_inputs,
+);

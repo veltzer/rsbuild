@@ -1,25 +1,23 @@
 # Suggestions
 
 Ideas for future improvements, organized by category.
+Completed items have been moved to [suggestions-done.md](suggestions-done.md).
 
-## Completed Features
-
-Features that have been implemented and are documented elsewhere:
-
-- **Remote caching** — See [Remote Caching](remote-caching.md). Share build artifacts across machines via S3, HTTP, or filesystem.
-- **Lua plugin system** — See [Lua Plugins](plugins.md). Define custom processors in Lua without forking rsb.
-- **Tool version locking** — See `rsb tools lock`. Lock and verify external tool versions for reproducibility.
-- **JSON output mode** — Use `--json` flag for machine-readable JSON Lines output.
+Grades:
+- **Urgency**: `high` (users need this), `medium` (nice to have), `low` (speculative/future)
+- **Complexity**: `low` (hours), `medium` (days), `high` (weeks+)
 
 ## Missing Test Coverage
 
 ### No ruff/pylint processor tests
 - `tests/processors/` has tests for cc, sleep, spellcheck, and template, but not for ruff or pylint.
 - Add integration tests for both Python linting processors.
+- **Urgency**: high | **Complexity**: low
 
 ### No make processor tests
 - `tests/processors/` has no tests for the make processor.
 - Add integration tests covering Makefile discovery and execution.
+- **Urgency**: high | **Complexity**: low
 
 ## New Processors
 
@@ -29,31 +27,31 @@ Features that have been implemented and are documented elsewhere:
 - Lint YAML files (`.yml`, `.yaml`) using `yamllint`.
 - Catches syntax errors and style violations.
 - Config: `linter` (default `"yamllint"`), `args`, `extra_inputs`, `scan`.
+- **Urgency**: medium | **Complexity**: low
 
 #### jsonlint
 - Validate JSON files (`.json`) for syntax errors.
 - Could use `python3 -m json.tool` or a dedicated tool like `jsonlint`.
 - Config: `linter`, `args`, `extra_inputs`, `scan`.
+- **Urgency**: medium | **Complexity**: low
 
 #### toml-lint
 - Validate TOML files (`.toml`) for syntax errors.
 - Could use `taplo check` or a built-in Rust parser.
 - Config: `linter` (default `"taplo"`), `args`, `extra_inputs`, `scan`.
+- **Urgency**: low | **Complexity**: low
 
 #### markdownlint
 - Lint Markdown files (`.md`) for structural issues (complements spellcheck which only checks spelling).
 - Uses `mdl` or `markdownlint-cli`.
 - Config: `linter` (default `"mdl"`), `args`, `extra_inputs`, `scan`.
-
-#### mypy
-- Python type checking using `mypy`.
-- Batch-capable like ruff/pylint.
-- Config: `args`, `extra_inputs`, `scan`.
+- **Urgency**: low | **Complexity**: low
 
 #### black-check
 - Python formatting verification using `black --check`.
 - Verifies files are formatted without modifying them.
 - Config: `args`, `extra_inputs`, `scan`.
+- **Urgency**: low | **Complexity**: low
 
 ### Compilation / Generation
 
@@ -61,20 +59,24 @@ Features that have been implemented and are documented elsewhere:
 - Compile single-file Rust programs (`.rs`) to executables, like cc_single_file but for Rust.
 - Useful for exercise/example repositories.
 - Config: `rustc` (default `"rustc"`), `flags`, `output_suffix`, `extra_inputs`, `scan`.
+- **Urgency**: medium | **Complexity**: medium
 
 #### sass
 - Compile `.scss`/`.sass` files to `.css`.
 - Single-file transformation using `sass` or `dart-sass`.
 - Config: `compiler` (default `"sass"`), `args`, `extra_inputs`, `scan`.
+- **Urgency**: low | **Complexity**: low
 
 #### protobuf
 - Compile `.proto` files to generated code using `protoc`.
 - Config: `protoc` (default `"protoc"`), `args`, `language` (default `"cpp"`), `extra_inputs`, `scan`.
+- **Urgency**: low | **Complexity**: medium
 
 #### pandoc
 - Convert Markdown (`.md`) to other formats (PDF, HTML, EPUB) using `pandoc`.
 - Single-file transformation.
 - Config: `output_format` (default `"html"`), `args`, `extra_inputs`, `scan`.
+- **Urgency**: low | **Complexity**: low
 
 ### Testing
 
@@ -82,589 +84,199 @@ Features that have been implemented and are documented elsewhere:
 - Run Python test files and produce pass/fail stubs.
 - Each `test_*.py` file becomes a product.
 - Config: `runner` (default `"pytest"`), `args`, `extra_inputs`, `scan` (default extensions `["test_*.py"]`).
+- **Urgency**: medium | **Complexity**: medium
 
 #### doctest
 - Run Python doctests and produce stubs.
 - Each `.py` file with doctests produces a stub.
 - Config: `args`, `extra_inputs`, `scan`.
+- **Urgency**: low | **Complexity**: medium
 
 ## Build Execution
-
-### ~~Remote caching~~ *(Done)*
-- See [Remote Caching](remote-caching.md).
 
 ### Distributed builds
 - Run builds across multiple machines, similar to distcc or icecream for C/C++.
 - A coordinator node distributes work to worker nodes, each running rsb in worker mode.
 - Workers execute products and return outputs to the coordinator, which caches them locally.
-- Complements remote caching: remote cache avoids rebuilding, distributed builds speed up unavoidable rebuilds.
-- Configuration could be:
-  ```toml
-  [build]
-  workers = ["worker1.local:9000", "worker2.local:9000"]
-  ```
-- Challenges include: network overhead for small products, ensuring identical tool versions across workers, and handling products that require local filesystem access.
-- Bazel's remote execution and Pants's remote execution both solve this problem.
+- Challenges: network overhead for small products, identical tool versions across workers, local filesystem access.
+- **Urgency**: low | **Complexity**: high
 
 ### Sandboxed execution
 - Run each processor in an isolated environment where it can only access its declared inputs.
-- Prevents accidental undeclared dependencies (e.g., a linter reading a file that isn't listed as an input).
-- Bazel and Buck2 both enforce this. On Linux, namespaces can provide lightweight sandboxing without container overhead.
+- Prevents accidental undeclared dependencies.
+- On Linux, namespaces can provide lightweight sandboxing.
+- **Urgency**: low | **Complexity**: high
 
 ### Content-addressable outputs (unchanged output pruning)
-- Currently rsb hashes inputs to detect staleness. Hashing outputs too would allow skipping downstream rebuilds when an input changes but produces identical output (e.g., reformatting a comment in a C file that doesn't change the compiled binary).
+- Hash outputs too to skip downstream rebuilds when an input changes but produces identical output.
 - Bazel calls this "unchanged output pruning."
+- **Urgency**: medium | **Complexity**: medium
 
 ### Persistent daemon mode
 - Keep rsb running as a background daemon to avoid startup overhead.
-- Benefits:
-  - **Instant file index**: File tree is kept in memory and updated via inotify/FSEvents
-  - **Warm Lua VMs**: Lua plugin interpreters stay loaded
-  - **Connection pooling**: Remote cache connections stay open
-  - **Faster incremental builds**: No process startup, no config parsing, no dependency graph reconstruction
-- Usage:
-  ```bash
-  rsb daemon start          # Start the daemon
-  rsb build                 # Connects to daemon automatically
-  rsb daemon stop           # Stop the daemon
-  rsb daemon status         # Check if daemon is running
-  ```
-- The daemon listens on a Unix socket (`.rsb/daemon.sock`) or TCP port.
-- Client commands (`rsb build`, `rsb status`, etc.) detect the daemon and delegate to it.
-- File watching is built into the daemon — `rsb watch` becomes just a client that triggers rebuilds on file events.
-- Daemon auto-exits after idle timeout (configurable).
-- Similar to: Watchman (Facebook), Buck2 daemon, Gradle daemon.
-- Configuration:
-  ```toml
-  [daemon]
-  enabled = true
-  idle_timeout = "10m"
-  socket = ".rsb/daemon.sock"
-  ```
+- Benefits: instant file index via inotify, warm Lua VMs, connection pooling, faster incremental builds.
+- Daemon listens on Unix socket (`.rsb/daemon.sock`).
+- `rsb watch` becomes a client that triggers rebuilds on file events.
+- **Urgency**: low | **Complexity**: high
 
 ### Build profiles
-- Named configuration sets for different build scenarios.
-- Define profiles in `rsb.toml`:
-  ```toml
-  [profile.ci]
-  parallel = 0                    # Use all cores
-  cache.remote = "s3://ci-cache"
-  cache.remote_push = true
-  processor.enabled = ["ruff", "pylint", "mypy", "pytest"]
-
-  [profile.dev]
-  parallel = 4
-  cache.remote_push = false       # Don't pollute CI cache
-  processor.enabled = ["ruff"]    # Fast feedback, skip slow linters
-
-  [profile.release]
-  processor.cc_single_file.cflags = ["-O3", "-DNDEBUG"]
-  processor.cc_single_file.ldflags = ["-s"]
-  ```
-- Usage:
-  ```bash
-  rsb build --profile=ci
-  rsb build --profile=dev
-  RSB_PROFILE=ci rsb build       # Environment variable
-  ```
-- Profiles inherit from the base configuration and override specific values.
-- Default profile can be set:
-  ```toml
-  [build]
-  default_profile = "dev"
-  ```
-- Use cases:
-  - CI vs local development settings
-  - Debug vs release builds
-  - Different linter strictness levels
-  - Platform-specific configurations
+- Named configuration sets for different build scenarios (ci, dev, release).
+- Profiles inherit from base configuration and override specific values.
+- Usage: `rsb build --profile=ci`
+- **Urgency**: medium | **Complexity**: medium
 
 ### Conditional processors
-- Enable or disable processors based on conditions.
-- Conditions can check: environment variables, file existence, git branch, or custom commands.
-- Configuration:
-  ```toml
-  [processor.mypy]
-  enabled_if.env = "CI"           # Only in CI
-
-  [processor.pytest]
-  enabled_if.file = "pytest.ini"  # Only if pytest.ini exists
-
-  [processor.integration_tests]
-  enabled_if.branch = "main"      # Only on main branch
-
-  [processor.slow_lint]
-  enabled_if.command = "test -n \"$FULL_BUILD\""  # Custom condition
-  ```
-- Multiple conditions can be combined:
-  ```toml
-  [processor.deploy_check]
-  enabled_if.all = [
-    { env = "CI" },
-    { branch = "main" },
-    { file = ".deploy-ready" }
-  ]
-  ```
-- `rsb processors list` shows which processors are enabled/disabled and why.
-- This avoids needing multiple config files or complex shell scripts around rsb.
+- Enable or disable processors based on conditions (environment variables, file existence, git branch, custom commands).
+- Multiple conditions can be combined with `all`/`any` logic.
+- **Urgency**: low | **Complexity**: medium
 
 ### Target aliases
-- Define named groups of processors or products for easy invocation.
-- Configuration:
-  ```toml
-  [alias]
-  lint = ["ruff", "pylint", "shellcheck", "cppcheck"]
-  test = ["pytest", "doctest"]
-  check = ["@lint", "@test", "mypy"]  # Aliases can reference other aliases
-  fast = ["ruff", "template"]          # Quick feedback loop
-  ```
-- Usage:
-  ```bash
-  rsb build @lint          # Run only linting processors
-  rsb build @test          # Run only test processors
-  rsb build @check         # Run lint + test + mypy
-  rsb build @fast          # Quick iteration
-  ```
-- Special aliases:
-  - `@all` — All enabled processors (default)
-  - `@changed` — Only processors with stale products
-  - `@failed` — Re-run products that failed in the last build
-- File-based targeting:
-  ```bash
-  rsb build src/main.c     # Build products that depend on this file
-  rsb build src/           # Build products for all files in directory
-  ```
-- Combining aliases and files:
-  ```bash
-  rsb build @lint src/     # Lint only files in src/
-  ```
+- Define named groups of processors for easy invocation.
+- Usage: `rsb build @lint`, `rsb build @test`
+- Special aliases: `@all`, `@changed`, `@failed`
+- File-based targeting: `rsb build src/main.c`
+- **Urgency**: medium | **Complexity**: medium
 
 ## Graph & Query
 
 ### Build graph query language
-- Bazel has `bazel query`, `cquery`, and `aquery` for exploring the dependency graph.
-- rsb could support queries like:
-  - `rsb query deps out/template/foo.py` — what does this product depend on?
-  - `rsb query rdeps src/main.c` — what products are affected if this file changes?
-  - `rsb query processor:ruff` — list all ruff products
-- Useful for debugging builds and for CI systems that want to build only affected targets.
+- Support queries like `rsb query deps out/foo`, `rsb query rdeps src/main.c`, `rsb query processor:ruff`.
+- Useful for debugging builds and CI systems that want to build only affected targets.
+- **Urgency**: low | **Complexity**: medium
 
 ### Affected analysis
-- Given a set of changed files (e.g., from `git diff`), determine which products are affected and only build those.
-- Nx and Pants both feature this prominently.
-- Useful for large projects where a full build is expensive but most changes only affect a subset.
+- Given changed files (from `git diff`), determine which products are affected and only build those.
+- Useful for large projects where a full build is expensive.
+- **Urgency**: medium | **Complexity**: medium
 
 ## Extensibility
 
-### ~~Lua plugin system~~ *(Done)*
-- See [Lua Plugins](plugins.md).
-
 ### Plugin registry
 - A central repository of community-contributed Lua plugins.
-- Install plugins with a simple command:
-  ```bash
-  rsb plugin install eslint
-  rsb plugin install prettier
-  rsb plugin search typescript
-  ```
-- Plugins are downloaded to `plugins/` directory and automatically enabled.
-- Registry could be a GitHub repository with a JSON index, or a dedicated service.
-- Each plugin entry includes: name, description, author, version, dependencies (required tools), and the Lua source.
-- Version pinning in `rsb.toml`:
-  ```toml
-  [plugins.registry]
-  eslint = "1.2.0"
-  prettier = "latest"
-  ```
-- `rsb plugin update` fetches newer versions.
-- Security consideration: plugins execute arbitrary Lua code, so the registry should support signatures or checksums.
+- Install with `rsb plugin install eslint`.
+- Registry could be a GitHub repository with a JSON index.
+- Version pinning in `rsb.toml`.
+- **Urgency**: low | **Complexity**: high
 
 ### Project templates
 - Initialize new projects with pre-configured processors and directory structure.
-- Templates for common project types:
-  ```bash
-  rsb init --template=python      # ruff, pylint, mypy, pytest
-  rsb init --template=typescript  # eslint, prettier, tsc
-  rsb init --template=cpp         # cc_single_file, cppcheck, clang-format
-  rsb init --template=rust        # rustfmt, clippy
-  rsb init --template=docs        # spellcheck, markdownlint, pandoc
-  ```
-- Templates define: `rsb.toml` configuration, directory structure, example files, and `.gitignore` entries.
-- Custom templates from local directories or URLs:
-  ```bash
-  rsb init --template=./my-template
-  rsb init --template=https://github.com/user/rsb-template-web
-  ```
-- Templates are just directories with an `rsb-template.toml` manifest describing what to copy and what variables to substitute.
+- `rsb init --template=python`, `rsb init --template=cpp`, etc.
+- Custom templates from local directories or URLs.
+- **Urgency**: low | **Complexity**: medium
 
 ### Rule composition / aspects
-- Bazel's "aspects" let you attach cross-cutting behavior to all targets of a certain type (e.g., "add coverage analysis to every C++ compile").
-- rsb could support something similar — e.g., automatically lint everything that gets compiled.
+- Attach cross-cutting behavior to all targets of a certain type (e.g., "add coverage analysis to every C++ compile").
+- **Urgency**: low | **Complexity**: high
 
 ## Developer Experience
 
-### ~~JSON output mode~~ *(Done)*
-- Machine-readable output for CI integration and tooling.
-- Enable with the `--json` global flag:
-  ```bash
-  rsb build --json
-  ```
-- Output format (JSON Lines, one object per line):
-  ```json
-  {"event":"build_start","total_products":5}
-  {"event":"product_start","product":"test.txt","processor":"template","inputs":["templates/test.txt.tera"],"outputs":["test.txt"]}
-  {"event":"product_complete","product":"test.txt","processor":"template","status":"success","duration_ms":42}
-  {"event":"product_complete","product":"main.py","processor":"ruff","status":"skipped"}
-  {"event":"product_complete","product":"lib.py","processor":"ruff","status":"restored"}
-  {"event":"product_complete","product":"bad.py","processor":"ruff","status":"failed","error":"E501 line too long"}
-  {"event":"build_summary","total":5,"success":1,"failed":1,"skipped":1,"restored":1,"duration_ms":1234,"errors":["..."]}
-  ```
-- Status values: `success`, `failed`, `skipped` (unchanged), `restored` (from cache).
-- When `--json` is enabled, human-readable output is suppressed.
-
 ### Build profiling / tracing
-- Beyond `--timings`, generate a Chrome trace format or flamegraph SVG showing exactly what ran when, including parallel lanes.
-- Bazel generates `--profile` output viewable in Chrome's `chrome://tracing`.
-- Invaluable for diagnosing slow builds.
-- Usage:
-  ```bash
-  rsb build --trace=build.json
-  # Open chrome://tracing and load build.json
-  ```
-- Trace format shows: product start/end times, parallel execution lanes, wait times for dependencies.
+- Generate Chrome trace format or flamegraph SVG showing what ran when, including parallel lanes.
+- Usage: `rsb build --trace=build.json`
+- **Urgency**: medium | **Complexity**: medium
 
 ### Build notifications
-- Desktop notifications when builds complete, especially useful for long builds.
-- Configuration:
-  ```toml
-  [build]
-  notify = true              # Enable notifications
-  notify_on_success = false  # Only notify on failure (default)
-  notify_command = "notify-send"  # Custom command (default: platform-specific)
-  ```
-- Default behavior: notify on failure only, with summary ("Build failed: 3 errors in ruff").
-- On Linux, uses `notify-send`. On macOS, uses `osascript`. On Windows, uses PowerShell toast.
-- Also useful in watch mode: get notified when a rebuild completes after saving a file.
-
-### Progress indicator
-- For parallel builds, show a status line like `[3/17] Building... (2 running)` instead of just streaming output.
-- Ninja and Buck2 both do this well.
-- Implementation options:
-  - Simple: single status line with product count and active jobs
-  - Rich: progress bar with ETA based on historical build times
-  - Interactive: TUI showing all active products in real-time
-- The indicatif crate (already a dependency) provides progress bar primitives.
-- Considerations: must handle interleaved output from parallel processors, should degrade gracefully when stdout is not a TTY.
+- Desktop notifications when builds complete, especially for long builds.
+- Platform-specific: `notify-send` (Linux), `osascript` (macOS).
+- Config: `notify = true`, `notify_on_success = false`.
+- **Urgency**: low | **Complexity**: low
 
 ### Actionable error messages
-- When a product fails, show context: which processor, which input file, the exact command that was run.
-- Include suggestions (e.g., "shellcheck not found — install with `apt install shellcheck`").
+- When a product fails, include suggestions (e.g., "shellcheck not found — install with `apt install shellcheck`").
+- **Urgency**: medium | **Complexity**: low
 
-### Explain commands
-- `rsb why <file>` — Explain why a file needs rebuilding:
-  ```bash
-  $ rsb why out/template/config.py
-  out/template/config.py needs rebuild because:
-    - Input templates/config.py.tera changed (mtime: 2024-01-15 10:30:00)
-    - Input config/settings.py changed (checksum mismatch)
-  ```
-- `rsb deps <file>` — Show dependency tree for a product:
-  ```bash
-  $ rsb deps out/cc_single_file/main.elf
-  out/cc_single_file/main.elf
-  ├── src/main.c
-  ├── src/utils.h (included by main.c)
-  └── src/config.h (included by utils.h)
-  ```
-- These commands help debug unexpected rebuilds and understand the dependency graph.
-- `rsb why` is especially useful when a file keeps rebuilding unexpectedly — it shows exactly which input triggered the rebuild.
+### `rsb build <target>` — Build specific targets
+- Build only specific targets by name or pattern:
+  `rsb build src/main.c`, `rsb build out/cc_single_file/`, `rsb build "*.py"`
+- **Urgency**: medium | **Complexity**: medium
+
+### Parallel dependency analysis
+- The cpp analyzer scans files sequentially, which can be slow for large codebases.
+- Parallelize header scanning using rayon or tokio.
+- **Urgency**: low | **Complexity**: medium
 
 ### IDE / LSP integration
-- Language Server Protocol (LSP) server for IDE integration.
-- Features:
-  - **Diagnostics**: Show build errors inline in the editor
-  - **Code actions**: "Run rsb build" on save, "Clean this product"
-  - **Hover info**: Show product status (up-to-date, stale, building)
-  - **File decorations**: Mark files with build status icons
-- Implementation: `rsb lsp` command starts an LSP server that IDEs connect to.
-- Alternatively, provide plugins for popular editors:
-  - VS Code extension
-  - Neovim plugin (Lua)
-  - Emacs package
-- The LSP server would maintain a persistent connection to rsb, avoiding startup overhead.
+- Language Server Protocol server for IDE integration.
+- Features: diagnostics, code actions, hover info, file decorations.
+- Plugins for VS Code, Neovim, Emacs.
+- **Urgency**: low | **Complexity**: high
 
 ### Build log capture
 - Save stdout/stderr from each product execution to a log file.
-- Useful for debugging failures, especially in CI where output scrolls away.
-- Configuration:
-  ```toml
-  [build]
-  log_dir = ".rsb/logs"  # Directory for build logs
-  log_retention = 10     # Keep logs from last N builds
-  ```
-- Log file naming: `.rsb/logs/<build-id>/<processor>/<product>.log`
-- `rsb log <product>` — View the log from the last build:
-  ```bash
-  rsb log ruff:main.py
-  rsb log --build=2 ruff:main.py  # From 2 builds ago
-  ```
-- Logs are pruned automatically based on `log_retention`.
+- Config: `log_dir = ".rsb/logs"`, `log_retention = 10`.
+- `rsb log ruff:main.py` to view logs.
+- **Urgency**: low | **Complexity**: medium
+
+### Build timing history
+- Store timing data to `.rsb/timings.json` after each build.
+- `rsb timings` shows slowest products, trends, time per processor.
+- **Urgency**: low | **Complexity**: medium
+
+### Remote cache authentication
+- Support authenticated remote caches: S3 (AWS credentials), HTTP (bearer tokens), GCS.
+- Variable substitution from environment for secrets.
+- **Urgency**: medium | **Complexity**: medium
+
+### `rsb lint` — Run only checkers
+- Convenience command to run only checker processors.
+- Equivalent to `rsb build -p ruff,pylint,...` but shorter.
+- **Urgency**: low | **Complexity**: low
+
+### `--quiet` flag
+- Suppress all output except errors.
+- Useful for CI scripts that only care about exit code.
+- **Urgency**: medium | **Complexity**: low
+
+### Watch mode keyboard commands
+- During `rsb watch`, support `r` (rebuild), `c` (clean), `q` (quit), `Enter` (rebuild now), `s` (status).
+- Only activate when stdin is a TTY.
+- **Urgency**: low | **Complexity**: medium
 
 ## Caching & Performance
 
-### ~~Native C/C++ include scanner~~ *(Done)*
-- Implemented as the default `include_scanner = "native"` option in `[processor.cc_single_file]`.
-- Uses regex-based scanning of `#include` directives, recursively following includes.
-- Falls back to `include_scanner = "compiler"` (gcc -MM) for projects with complex needs.
-- See [CC Single File Processor](processors/cc.md) documentation.
-
 ### Lazy file hashing (mtime-based)
-- Currently rsb computes SHA-256 checksums for all input files on every build.
-- For large repositories, this can be slow even when nothing has changed.
-- Optimization: only re-hash files whose mtime has changed since the last build.
-- Implementation:
-  - Store `(path, mtime, checksum)` tuples in the cache database
-  - On build, stat each file and compare mtime
-  - Only compute checksum if mtime differs
-  - Fall back to full hash if mtime resolution is insufficient (some filesystems have 1-second granularity)
-- This is how Make works, but with checksums as the fallback for correctness.
-- Risk: mtime can be unreliable (e.g., after `git checkout`, extracting archives, or on network filesystems). The `--force` flag should bypass this optimization.
-- Configuration:
-  ```toml
-  [cache]
-  mtime_cache = true  # Enable mtime-based caching (default: false)
-  ```
+- Only re-hash files whose mtime has changed since the last build.
+- Store `(path, mtime, checksum)` tuples in cache database.
+- Config: `mtime_cache = true`.
+- Risk: mtime can be unreliable. `--force` bypasses this.
+- **Urgency**: medium | **Complexity**: medium
 
 ### Compressed cache objects
-- Compress cached objects to reduce disk usage and improve remote cache transfer times.
-- Use zstd for fast compression/decompression with good ratios.
-- Implementation:
-  - Objects stored as `.zst` files in `.rsb/objects/`
-  - Transparent compression/decompression in ObjectStore
-  - Remote cache transfers compressed data directly
-- Configuration:
-  ```toml
-  [cache]
-  compression = "zstd"  # Options: "none", "zstd", "lz4"
-  compression_level = 3  # zstd level (1-19, default 3)
-  ```
-- Trade-offs:
-  - CPU cost for compression (mitigated by fast codecs like zstd/lz4)
-  - Disk savings typically 50-80% for text files, less for binaries
-  - Remote cache benefits most (network is usually slower than compression)
-- The zstd crate provides a pure Rust implementation.
+- Compress cached objects with zstd to reduce disk usage and remote transfer times.
+- Config: `compression = "zstd"`, `compression_level = 3`.
+- Typical savings: 50-80% for text files.
+- **Urgency**: low | **Complexity**: medium
 
 ### Deferred materialization
-- Don't write cached outputs to disk until they're actually needed by a downstream product or the final build result.
-- For large graphs with deep caching, this avoids writing files that are never used.
-- Buck2 does this aggressively.
+- Don't write cached outputs to disk until they're actually needed by a downstream product.
+- **Urgency**: low | **Complexity**: high
 
 ### Garbage collection policy
-- Currently `rsb cache trim` removes unreferenced objects.
-- Add time-based or size-based policies: "keep cache under 1GB" or "evict entries older than 30 days."
-- Useful for CI environments with limited disk.
-- Configuration:
-  ```toml
-  [cache]
-  max_size = "1GB"      # Maximum cache size
-  max_age = "30d"       # Maximum age for cache entries
-  gc_policy = "lru"     # Eviction policy: "lru" or "fifo"
-  ```
-- `rsb cache gc` — Run garbage collection manually
-- Automatic GC after builds when cache exceeds limits
+- Time-based or size-based cache policies: "keep cache under 1GB" or "evict entries older than 30 days."
+- Config: `max_size = "1GB"`, `max_age = "30d"`, `gc_policy = "lru"`.
+- `rsb cache gc` for manual garbage collection.
+- **Urgency**: low | **Complexity**: medium
 
 ### Shared cache across branches
-- When switching git branches, products built on another branch should be restorable from cache if their inputs match.
-- This already works implicitly if the input hash matches, but it could be surfaced in `rsb status` ("restorable from branch X").
+- Surface in `rsb status` when products are restorable from another branch.
+- Already works implicitly via input hash matching.
+- **Urgency**: low | **Complexity**: low
 
 ## Reproducibility
 
 ### Hermetic builds
-- Ensure builds are completely reproducible by controlling all inputs, not just tool versions.
-- Beyond tool version locking, hermetic builds would:
-  - **Isolate environment variables**: Only pass explicitly declared env vars to processors
-  - **Control timestamps**: Set deterministic mtimes on output files
-  - **Sandbox network access**: Prevent processors from fetching external resources
-  - **Pin system libraries**: Hash libc and other system dependencies
-- Configuration:
-  ```toml
-  [build]
-  hermetic = true
-  allowed_env = ["HOME", "PATH", "CC", "CXX"]  # Env vars to pass through
-  ```
-- Hermetic mode would:
-  - Clear environment except for allowed variables
-  - Set `SOURCE_DATE_EPOCH` for reproducible timestamps
-  - Optionally use Linux namespaces to restrict network/filesystem access
-- Verification: `rsb build --verify` builds twice and compares outputs
-- This is a spectrum — full hermeticity (like Bazel) requires significant infrastructure, but partial hermeticity still improves reproducibility.
-
-### ~~Tool version locking~~ *(Done)*
-- Each processor declares the tools it needs via `required_tools()` and how to query their version via `tool_version_commands()`.
-- `rsb tools lock` queries each enabled processor's tools for their version, resolves the full binary path, and writes `.tools.versions` (JSON) to the project root. This file should be committed to version control.
-- Lock file format includes schema version, timestamp, and per-tool entries with resolved path, version output, and the arguments used to obtain the version.
-- On every `rsb build`, rsb reads `.tools.versions` and checks that installed tool versions match. Mismatch is a hard error by default; `--ignore-tool-versions` overrides this.
-- If `.tools.versions` does not exist, `rsb build` warns and suggests running `rsb tools lock`.
-- Tool versions are included in the cache key hash for each processor, so upgrading a tool and re-locking automatically invalidates cached outputs.
-- Only tools for enabled processors are included in the lock file. Adding a new processor to `enabled` requires re-locking.
-- Version comparison uses raw output strings (not parsed semver) to handle the wide variety of version output formats across tools.
-- The lock file stores the resolved binary path so switching between system and local installs is detected.
-- `rsb tools lock --check` verifies without writing. Bare `rsb tools lock` writes/updates the lock file.
-- Inspired by Bazel's explicit toolchain management.
+- Control all inputs beyond tool versions: isolate env vars, control timestamps, sandbox network, pin system libraries.
+- Config: `hermetic = true`, `allowed_env = ["HOME", "PATH"]`.
+- Verification: `rsb build --verify` builds twice and compares outputs.
+- **Urgency**: low | **Complexity**: high
 
 ### Determinism verification
-- A `rsb build --verify` mode that builds each product twice and compares outputs.
-- If they differ, the build is non-deterministic.
-- Bazel has `--experimental_check_output_files` for similar purposes.
-
-## Quick Wins
-
-These are relatively straightforward improvements that would enhance usability.
-
-### Batch processing for more processors
-- Currently only some processors support batching (running multiple files in a single tool invocation).
-- Adding batch support to `cppcheck`, `shellcheck`, and `ruff` could significantly speed up builds with many files.
-- These tools all support multiple file arguments natively.
-- Implementation: extend `ProductDiscovery` trait with optional `batch_capable()` method, group products by processor in executor.
-
-### Progress bar for long builds
-- The `indicatif` crate is already a dependency but unused.
-- Show a progress bar during builds with many products: `[=====>    ] 45/100 products`
-- For parallel builds, show active job count: `[=====>    ] 45/100 (4 running)`
-- Degrade gracefully when stdout is not a TTY (fall back to simple line output).
-
-### `rsb why <file>` — Explain rebuilds
-- Show why a file would be rebuilt: which inputs changed, config changed, cache miss, tool version changed, etc.
-- Useful for debugging unexpected rebuilds:
-  ```bash
-  $ rsb why out/template/config.py
-  out/template/config.py needs rebuild because:
-    - Input templates/config.py.tera changed (checksum mismatch)
-    - Processor config changed (template.strict: false → true)
-  ```
-- Implementation: compare current input hashes against cached hashes, diff processor configs.
-
-### `rsb build <target>` — Build specific targets
-- Build only specific targets/products by name or pattern, instead of building everything:
-  ```bash
-  rsb build src/main.c           # Build products that use this input
-  rsb build out/cc_single_file/  # Build products in this output directory
-  rsb build "*.py"               # Build products matching pattern
-  ```
-- Complements `@alias` syntax for processor-based filtering.
-
-### Parallel dependency analysis
-- The cpp analyzer scans files sequentially, which can be slow for large codebases with many headers.
-- Parallelize header scanning using rayon or tokio.
-- Each source file's includes can be scanned independently; only the final graph merge needs synchronization.
-
-### ~~`--processors` flag for build and watch~~ *(Done)*
-- Filter which processors run during build or watch:
-  ```bash
-  rsb build -p tera               # Only run tera processor
-  rsb build --processors=ruff,pylint  # Multiple processors
-  rsb watch -p tera               # Watch with only tera
-  ```
-- Validates processor names and shows available processors on error.
-- Useful for fast feedback loops when iterating on specific file types.
-
-### Build timing history
-- Store timing data to `.rsb/timings.json` after each build.
-- Add `rsb timings` command to show:
-  - Slowest products (average and worst-case)
-  - Trends over time (is the build getting slower?)
-  - Time spent per processor
-  ```bash
-  $ rsb timings
-  Slowest products (last 10 builds):
-    1. cc_single_file:main.elf  avg: 2.3s  max: 4.1s
-    2. pytest:test_api.py       avg: 1.8s  max: 2.5s
-
-  Time by processor:
-    cc_single_file: 45%
-    pytest: 30%
-    ruff: 15%
-    template: 10%
-  ```
-- Helps identify optimization opportunities.
-
-### Remote cache authentication
-- Support for authenticated remote caches:
-  - **S3**: AWS credentials from environment, config file, or IAM role
-  - **HTTP**: Basic auth, bearer tokens, custom headers
-  - **GCS**: Google Cloud credentials
-- Configuration:
-  ```toml
-  [cache]
-  remote = "s3://my-bucket/rsb-cache"
-  remote_auth = "env"  # Use AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-
-  # Or for HTTP:
-  remote = "https://cache.example.com/rsb"
-  remote_headers = { Authorization = "Bearer ${RSB_CACHE_TOKEN}" }
-  ```
-- Variable substitution from environment for secrets.
-
-### `rsb lint` — Run only checkers
-- Convenience command to run only checker processors (ruff, pylint, cppcheck, shellcheck, spellcheck) without generators:
-  ```bash
-  rsb lint              # Run all enabled checkers
-  rsb lint --fix        # Run checkers with auto-fix where supported
-  ```
-- Equivalent to `rsb build @lint` if target aliases are implemented.
-- Useful for pre-commit hooks and quick validation.
-
-### `--quiet` flag
-- Suppress all output except errors.
-- Useful for CI scripts that only care about the exit code, or for wrapping rsb in other tools.
-- Usage:
-  ```bash
-  rsb build --quiet          # Only print errors
-  rsb build -q               # Short form
-  ```
-- When `--quiet` is active:
-  - No "Processing:" lines
-  - No "Skipping:" or "Restored:" lines
-  - No build summary
-  - Error messages still go to stderr
-- Combines with `--json` (suppresses human-readable output, JSON events still emitted).
-- Different from `--no-summary` which only suppresses the final summary line.
-
-### Emit `ProductStart` JSON events
-- The `ProductStart` event struct exists in `json_output.rs` but is marked `#[allow(dead_code)]` and never emitted.
-- Wire it up to emit before each product starts executing.
-- Enables CI dashboards and IDE integrations to show real-time build progress:
-  ```json
-  {"event":"product_start","product":"src/main.c","processor":"cc_single_file","inputs":["src/main.c","src/utils.h"],"outputs":["out/cc_single_file/main.elf"]}
-  ```
-- Pairs with the existing `ProductComplete` event to compute per-product wall-clock time on the consumer side.
-- Useful for progress bars in external tooling that can't use `--progress` (e.g., VS Code extension, web dashboard).
-
-### Watch mode keyboard commands
-- During `rsb watch`, support interactive keyboard commands:
-  - `r` — Force a full rebuild (equivalent to `--force`)
-  - `c` — Clean and rebuild
-  - `q` — Quit watch mode gracefully
-  - `Enter` — Trigger an incremental rebuild immediately
-  - `s` — Show current status summary
-- Implementation: read stdin in a separate thread alongside the file watcher.
-- Only activate when stdin is a TTY (not when piped).
-- Show a hint line after each build: `Press r to rebuild, q to quit`.
-- Similar to: Jest's watch mode, Vite's dev server, webpack-dev-server.
-
-### ~~Colored diff on config changes~~ *(Done)*
-- When config changes trigger rebuilds, rsb now shows what changed:
-  ```bash
-  $ rsb build
-  Config changed for [cc_single_file]:
-    - compilers[0].cflags[0]: "-O2"
-    + compilers[0].cflags[0]: "-O3"
-  ```
-- Helps understand why products are rebuilding when source files haven't changed.
-- Uses colored diff format (red for removed, green for added).
+- `rsb build --verify` mode that builds each product twice and compares outputs.
+- **Urgency**: low | **Complexity**: medium
 
 ## Security
 
 ### Shell command execution from source file comments
-- `src/processors/cc.rs` — `EXTRA_*_SHELL` directives execute arbitrary shell commands parsed from source file comments.
+- `EXTRA_*_SHELL` directives execute arbitrary shell commands parsed from source file comments.
 - Document the security implications clearly.
+- **Urgency**: medium | **Complexity**: low

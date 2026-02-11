@@ -147,6 +147,11 @@ impl<'a> Executor<'a> {
         }
     }
 
+    /// Check if the build was interrupted (Ctrl+C).
+    fn is_interrupted(&self) -> bool {
+        self.interrupted.load(Ordering::SeqCst)
+    }
+
     /// Display a product with the current display options.
     fn product_display(&self, product: &crate::graph::Product) -> String {
         product.display(self.display_opts)

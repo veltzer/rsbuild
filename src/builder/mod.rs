@@ -108,76 +108,46 @@ impl Builder {
         })
     }
 
+    /// Register a processor into the map.
+    fn register(processors: &mut HashMap<String, Box<dyn ProductDiscovery>>, name: &str, proc: impl ProductDiscovery + 'static) {
+        processors.insert(name.to_string(), Box::new(proc));
+    }
+
     /// Create all available processors
     pub fn create_processors(&self, verbose: bool) -> Result<HashMap<String, Box<dyn ProductDiscovery>>> {
         let mut processors: HashMap<String, Box<dyn ProductDiscovery>> = HashMap::new();
+        let root = &self.project_root;
+        let cfg = &self.config.processor;
 
-        // Tera processor
-        if let Ok(tera_proc) = TeraProcessor::new(self.project_root.clone(), self.config.processor.tera.clone()) {
-            processors.insert("tera".to_string(), Box::new(tera_proc));
+        // Tera processor (fallible init — skip if template dir missing)
+        if let Ok(proc) = TeraProcessor::new(root.clone(), cfg.tera.clone()) {
+            Self::register(&mut processors, "tera", proc);
         }
 
-        // Ruff processor
-        let ruff_proc = RuffProcessor::new(self.project_root.clone(), self.config.processor.ruff.clone());
-        processors.insert("ruff".to_string(), Box::new(ruff_proc));
+        Self::register(&mut processors, "ruff", RuffProcessor::new(root.clone(), cfg.ruff.clone()));
+        Self::register(&mut processors, "pylint", PylintProcessor::new(root.clone(), cfg.pylint.clone()));
+        Self::register(&mut processors, "mypy", MypyProcessor::new(root.clone(), cfg.mypy.clone()));
+        Self::register(&mut processors, "cc_single_file", CcProcessor::new(root.clone(), cfg.cc_single_file.clone(), verbose));
+        Self::register(&mut processors, "cppcheck", CppcheckProcessor::new(root.clone(), cfg.cppcheck.clone()));
+        Self::register(&mut processors, "clang_tidy", ClangTidyProcessor::new(root.clone(), cfg.clang_tidy.clone()));
+        Self::register(&mut processors, "shellcheck", ShellcheckProcessor::new(root.clone(), cfg.shellcheck.clone()));
+        Self::register(&mut processors, "rumdl", RumdlProcessor::new(root.clone(), cfg.rumdl.clone()));
+        Self::register(&mut processors, "sleep", SleepProcessor::new(cfg.sleep.clone()));
+        Self::register(&mut processors, "make", MakeProcessor::new(cfg.make.clone()));
+        Self::register(&mut processors, "cargo", CargoProcessor::new(cfg.cargo.clone()));
 
-        // Pylint processor
-        let pylint_proc = PylintProcessor::new(self.project_root.clone(), self.config.processor.pylint.clone());
-        processors.insert("pylint".to_string(), Box::new(pylint_proc));
-
-        // Sleep processor (for testing parallelism)
-        let sleep_proc = SleepProcessor::new(self.config.processor.sleep.clone());
-        processors.insert("sleep".to_string(), Box::new(sleep_proc));
-
-        // C/C++ compiler processor (single-file compilation)
-        let cc_proc = CcProcessor::new(self.project_root.clone(), self.config.processor.cc_single_file.clone(), verbose);
-        processors.insert("cc_single_file".to_string(), Box::new(cc_proc));
-
-        // C/C++ static analysis processor (cppcheck)
-        let cppcheck_proc = CppcheckProcessor::new(self.project_root.clone(), self.config.processor.cppcheck.clone());
-        processors.insert("cppcheck".to_string(), Box::new(cppcheck_proc));
-
-        // C/C++ static analysis processor (clang-tidy)
-        let clang_tidy_proc = ClangTidyProcessor::new(self.project_root.clone(), self.config.processor.clang_tidy.clone());
-        processors.insert("clang_tidy".to_string(), Box::new(clang_tidy_proc));
-
-        // Shellcheck processor
-        let shellcheck_proc = ShellcheckProcessor::new(self.project_root.clone(), self.config.processor.shellcheck.clone());
-        processors.insert("shellcheck".to_string(), Box::new(shellcheck_proc));
-
-        // Spellcheck processor
-        match SpellcheckProcessor::new(self.config.processor.spellcheck.clone()) {
-            Ok(spellcheck_proc) => {
-                processors.insert("spellcheck".to_string(), Box::new(spellcheck_proc));
-            }
-            Err(e) => {
-                if self.config.processor.is_enabled("spellcheck") {
-                    return Err(e);
-                }
-            }
+        // Spellcheck processor (fallible init — propagate error only if enabled)
+        match SpellcheckProcessor::new(cfg.spellcheck.clone()) {
+            Ok(proc) => Self::register(&mut processors, "spellcheck", proc),
+            Err(e) if self.config.processor.is_enabled("spellcheck") => return Err(e),
+            Err(_) => {}
         }
-
-        // Make processor
-        let make_proc = MakeProcessor::new(self.config.processor.make.clone());
-        processors.insert("make".to_string(), Box::new(make_proc));
-
-        // Cargo processor
-        let cargo_proc = CargoProcessor::new(self.config.processor.cargo.clone());
-        processors.insert("cargo".to_string(), Box::new(cargo_proc));
-
-        // Mypy type checker processor
-        let mypy_proc = MypyProcessor::new(self.project_root.clone(), self.config.processor.mypy.clone());
-        processors.insert("mypy".to_string(), Box::new(mypy_proc));
-
-        // Rumdl markdown linter processor
-        let rumdl_proc = RumdlProcessor::new(self.project_root.clone(), self.config.processor.rumdl.clone());
-        processors.insert("rumdl".to_string(), Box::new(rumdl_proc));
 
         // Lua plugin processors
         let lua_plugins = LuaProcessor::discover_plugins(
-            &self.project_root,
+            root,
             &self.config.plugins.dir,
-            &self.config.processor.extra,
+            &cfg.extra,
         )?;
         for (name, proc) in lua_plugins {
             if processors.contains_key(&name) {

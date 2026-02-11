@@ -17,16 +17,19 @@ use crate::remote_cache::RemoteCache;
 /// Number of hex chars used as the subdirectory prefix for object storage (git-style sharding).
 const CHECKSUM_PREFIX_LEN: usize = 2;
 
-/// Recursively collect all files under a directory.
+/// Iteratively collect all files under a directory.
 fn walk_files(dir: &Path) -> Vec<PathBuf> {
     let mut result = Vec::new();
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                result.extend(walk_files(&path));
-            } else if path.is_file() {
-                result.push(path);
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(current) = stack.pop() {
+        if let Ok(entries) = fs::read_dir(&current) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    stack.push(path);
+                } else if path.is_file() {
+                    result.push(path);
+                }
             }
         }
     }

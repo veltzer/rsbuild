@@ -29,7 +29,6 @@ struct LevelContext<'b> {
     force: bool,
     keep_going: bool,
     timings: bool,
-    interrupted: &'b Arc<std::sync::atomic::AtomicBool>,
     shared: &'b SharedState,
     pb: &'b ProgressBar,
 }
@@ -144,7 +143,7 @@ impl<'a> Executor<'a> {
 
         for level in levels {
             // Check for Ctrl+C before starting next level
-            if self.interrupted.load(Ordering::SeqCst) {
+            if self.is_interrupted() {
                 break;
             }
 
@@ -154,7 +153,7 @@ impl<'a> Executor<'a> {
 
             let lctx = LevelContext {
                 graph, object_store, force, keep_going, timings,
-                interrupted: &self.interrupted, shared: &shared, pb: &pb,
+                shared: &shared, pb: &pb,
             };
 
             // Process this level in parallel using thread pool
@@ -186,7 +185,7 @@ impl<'a> Executor<'a> {
             });
 
             // If interrupted, stop processing further levels
-            if self.interrupted.load(Ordering::SeqCst) {
+            if self.is_interrupted() {
                 println!("{}", color::yellow("Interrupted, saving progress..."));
                 break;
             }
@@ -198,7 +197,7 @@ impl<'a> Executor<'a> {
         }
 
         pb.finish_and_clear();
-        Self::collect_build_stats(shared, keep_going, self.interrupted.load(Ordering::SeqCst))
+        Self::collect_build_stats(shared, keep_going, self.is_interrupted())
     }
 
     /// Process a single batch group within a thread.
@@ -208,7 +207,7 @@ impl<'a> Executor<'a> {
         items: &[WorkItem],
         lctx: &LevelContext,
     ) {
-        if lctx.interrupted.load(Ordering::SeqCst) {
+        if self.is_interrupted() {
             return;
         }
 
@@ -247,7 +246,7 @@ impl<'a> Executor<'a> {
             to_execute.push(item);
         }
 
-        if to_execute.is_empty() || lctx.interrupted.load(Ordering::SeqCst) {
+        if to_execute.is_empty() || self.is_interrupted() {
             return;
         }
 
@@ -262,7 +261,7 @@ impl<'a> Executor<'a> {
 
         // Process in chunks
         for chunk in to_execute.chunks(chunk_size) {
-            if lctx.interrupted.load(Ordering::SeqCst) {
+            if self.is_interrupted() {
                 break;
             }
 
@@ -343,7 +342,7 @@ impl<'a> Executor<'a> {
     ) {
         for (id, input_checksum, needs_rebuild) in chunk {
             // Stop if interrupted or if there's an error (non-keep-going mode)
-            if lctx.interrupted.load(Ordering::SeqCst)
+            if self.is_interrupted()
                 || (!lctx.keep_going && !lctx.shared.errors.lock().is_empty())
             {
                 break;

@@ -1,5 +1,6 @@
 use anyhow::{bail, Result};
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
 use crate::cli::{DisplayOptions, InputDisplay, OutputDisplay, PathFormat};
@@ -128,6 +129,7 @@ impl Product {
 }
 
 /// Build graph with dependency resolution
+#[derive(Default)]
 pub struct BuildGraph {
     products: Vec<Product>,
     /// Map from output path to product id
@@ -140,12 +142,7 @@ pub struct BuildGraph {
 
 impl BuildGraph {
     pub fn new() -> Self {
-        Self {
-            products: Vec::new(),
-            output_to_product: HashMap::new(),
-            dependents: Vec::new(),
-            dependencies: Vec::new(),
-        }
+        Self::default()
     }
 
     /// Add a product to the graph.
@@ -286,12 +283,6 @@ impl BuildGraph {
 
 }
 
-impl Default for BuildGraph {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl BuildGraph {
     /// Generate a safe node ID from a path
     fn path_node_id(path: &Path) -> String {
@@ -315,10 +306,9 @@ impl BuildGraph {
 
     /// Format graph as DOT (Graphviz)
     pub fn to_dot(&self) -> String {
-        let mut lines = Vec::new();
-        lines.push("digraph build_graph {".to_string());
-        lines.push("    rankdir=LR;".to_string());
-        lines.push("".to_string());
+        let mut buf = String::new();
+        writeln!(buf, "digraph build_graph {{").unwrap();
+        writeln!(buf, "    rankdir=LR;").unwrap();
 
         // Collect all unique input and output files
         let mut input_files: HashSet<PathBuf> = HashSet::new();
@@ -334,26 +324,24 @@ impl BuildGraph {
         }
 
         // Add file nodes (inputs that are not outputs = source files)
-        lines.push("    // Source files".to_string());
+        writeln!(buf, "\n    // Source files").unwrap();
         for file in &input_files {
             if !output_files.contains(file) {
                 let node_id = Self::path_node_id(file);
                 let label = Self::file_label(file);
-                lines.push(format!("    {} [label=\"{}\" shape=note style=filled fillcolor=white];", node_id, label));
+                writeln!(buf, "    {} [label=\"{}\" shape=note style=filled fillcolor=white];", node_id, label).unwrap();
             }
         }
 
-        lines.push("".to_string());
-        lines.push("    // Generated files".to_string());
+        writeln!(buf, "\n    // Generated files").unwrap();
         for file in &output_files {
             let node_id = Self::path_node_id(file);
             let label = Self::file_label(file);
             let color = if input_files.contains(file) { "lightgreen" } else { "lightyellow" };
-            lines.push(format!("    {} [label=\"{}\" shape=note style=filled fillcolor={}];", node_id, label, color));
+            writeln!(buf, "    {} [label=\"{}\" shape=note style=filled fillcolor={}];", node_id, label, color).unwrap();
         }
 
-        lines.push("".to_string());
-        lines.push("    // Processors".to_string());
+        writeln!(buf, "\n    // Processors").unwrap();
         for product in &self.products {
             let node_id = Self::processor_node_id(product);
             let color = match product.processor.as_str() {
@@ -361,38 +349,37 @@ impl BuildGraph {
                 "cc_single_file" => "lightsalmon",
                 _ => "lightgray",
             };
-            lines.push(format!("    {} [label=\"{}\" shape=box style=filled fillcolor={}];",
-                node_id, product.processor, color));
+            writeln!(buf, "    {} [label=\"{}\" shape=box style=filled fillcolor={}];",
+                node_id, product.processor, color).unwrap();
         }
 
-        lines.push("".to_string());
-        lines.push("    // Edges".to_string());
+        writeln!(buf, "\n    // Edges").unwrap();
         for product in &self.products {
             let proc_id = Self::processor_node_id(product);
 
             // Input files -> processor
             for input in &product.inputs {
                 let input_id = Self::path_node_id(input);
-                lines.push(format!("    {} -> {};", input_id, proc_id));
+                writeln!(buf, "    {} -> {};", input_id, proc_id).unwrap();
             }
 
             // Processor -> output files
             for output in &product.outputs {
                 let output_id = Self::path_node_id(output);
-                lines.push(format!("    {} -> {};", proc_id, output_id));
+                writeln!(buf, "    {} -> {};", proc_id, output_id).unwrap();
             }
         }
 
-        lines.push("}".to_string());
-        lines.join("\n")
+        write!(buf, "}}").unwrap();
+        buf
     }
 
     /// Format graph as Mermaid
     /// Only shows primary source files (first input per product), not headers,
     /// to keep the diagram manageable for large projects.
     pub fn to_mermaid(&self) -> String {
-        let mut lines = Vec::new();
-        lines.push("graph LR".to_string());
+        let mut buf = String::new();
+        writeln!(buf, "graph LR").unwrap();
 
         // Collect primary source files (first input only) and output files
         let mut source_files: HashSet<PathBuf> = HashSet::new();
@@ -407,50 +394,45 @@ impl BuildGraph {
             }
         }
 
-        lines.push("".to_string());
-        lines.push("    %% Source files".to_string());
+        writeln!(buf, "\n    %% Source files").unwrap();
         for file in &source_files {
             if !output_files.contains(file) {
                 let node_id = Self::path_node_id(file);
                 let label = Self::file_label(file);
-                lines.push(format!("    {}[/\"{}\"/]", node_id, label));
+                writeln!(buf, "    {}[/\"{}\"/]", node_id, label).unwrap();
             }
         }
 
-        lines.push("".to_string());
-        lines.push("    %% Generated files".to_string());
+        writeln!(buf, "\n    %% Generated files").unwrap();
         for file in &output_files {
             let node_id = Self::path_node_id(file);
             let label = Self::file_label(file);
-            lines.push(format!("    {}[/\"{}\"/]", node_id, label));
+            writeln!(buf, "    {}[/\"{}\"/]", node_id, label).unwrap();
         }
 
-        lines.push("".to_string());
-        lines.push("    %% Processors".to_string());
+        writeln!(buf, "\n    %% Processors").unwrap();
         for product in &self.products {
             let node_id = Self::processor_node_id(product);
-            lines.push(format!("    {}[\"{}\" ]", node_id, product.processor));
+            writeln!(buf, "    {}[\"{}\" ]", node_id, product.processor).unwrap();
         }
 
-        lines.push("".to_string());
-        lines.push("    %% Edges".to_string());
+        writeln!(buf, "\n    %% Edges").unwrap();
         for product in &self.products {
             let proc_id = Self::processor_node_id(product);
 
             // Only connect primary source file (first input), skip headers
             if let Some(first_input) = product.inputs.first() {
                 let input_id = Self::path_node_id(first_input);
-                lines.push(format!("    {} --> {}", input_id, proc_id));
+                writeln!(buf, "    {} --> {}", input_id, proc_id).unwrap();
             }
 
             for output in &product.outputs {
                 let output_id = Self::path_node_id(output);
-                lines.push(format!("    {} --> {}", proc_id, output_id));
+                writeln!(buf, "    {} --> {}", proc_id, output_id).unwrap();
             }
         }
 
         // Add styling
-        lines.push("".to_string());
         let tera_procs: Vec<_> = self.products.iter()
             .filter(|p| p.processor == "tera")
             .map(Self::processor_node_id)
@@ -461,13 +443,14 @@ impl BuildGraph {
             .collect();
 
         if !tera_procs.is_empty() {
-            lines.push(format!("    style {} fill:#add8e6", tera_procs.join(",")));
+            writeln!(buf, "\n    style {} fill:#add8e6", tera_procs.join(",")).unwrap();
         }
         if !cc_procs.is_empty() {
-            lines.push(format!("    style {} fill:#ffa07a", cc_procs.join(",")));
+            writeln!(buf, "\n    style {} fill:#ffa07a", cc_procs.join(",")).unwrap();
         }
 
-        lines.join("\n")
+        buf.truncate(buf.trim_end().len());
+        buf
     }
 
     /// Format graph as JSON
@@ -496,17 +479,17 @@ impl BuildGraph {
 
     /// Format graph as plain text
     pub fn to_text(&self) -> String {
-        let mut lines = Vec::new();
-        lines.push("Build Dependency Graph".to_string());
-        lines.push("======================".to_string());
-        lines.push("".to_string());
+        let mut buf = String::new();
+        writeln!(buf, "Build Dependency Graph").unwrap();
+        writeln!(buf, "======================").unwrap();
 
         // Get topological order
         let order = match self.topological_sort() {
             Ok(o) => o,
             Err(_) => {
-                lines.push("Error: Cycle detected in graph".to_string());
-                return lines.join("\n");
+                writeln!(buf, "Error: Cycle detected in graph").unwrap();
+                buf.truncate(buf.trim_end().len());
+                return buf;
             }
         };
 
@@ -521,35 +504,34 @@ impl BuildGraph {
                 .filter_map(|n| n.to_str())
                 .collect();
 
-            lines.push(format!("[{}] {} -> {}",
+            writeln!(buf, "[{}] {} -> {}",
                 product.processor,
                 inputs.join(", "),
-                outputs.join(", ")));
+                outputs.join(", ")).unwrap();
 
             // Show dependencies
-            {
-                let deps = &self.dependencies[product.id];
-                if !deps.is_empty() {
-                    let dep_names: Vec<_> = deps.iter()
-                        .map(|&d| {
-                            let dep = &self.products[d];
-                            let out: Vec<_> = dep.outputs.iter()
-                                .filter_map(|p| p.file_name())
-                                .filter_map(|n| n.to_str())
-                                .collect();
-                            out.join(", ")
-                        })
-                        .collect();
-                    lines.push(format!("    depends on: {}", dep_names.join(", ")));
-                }
+            let deps = &self.dependencies[product.id];
+            if !deps.is_empty() {
+                let dep_names: Vec<_> = deps.iter()
+                    .map(|&d| {
+                        let dep = &self.products[d];
+                        let out: Vec<_> = dep.outputs.iter()
+                            .filter_map(|p| p.file_name())
+                            .filter_map(|n| n.to_str())
+                            .collect();
+                        out.join(", ")
+                    })
+                    .collect();
+                writeln!(buf, "    depends on: {}", dep_names.join(", ")).unwrap();
             }
         }
 
         if self.products.is_empty() {
-            lines.push("(empty graph)".to_string());
+            writeln!(buf, "(empty graph)").unwrap();
         }
 
-        lines.join("\n")
+        buf.truncate(buf.trim_end().len());
+        buf
     }
 
     /// Generate SVG by piping DOT through the `dot` command

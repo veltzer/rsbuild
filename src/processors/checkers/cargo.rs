@@ -66,7 +66,7 @@ impl ProductDiscovery for CargoProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        self.execute_cargo(&product.inputs[0])
+        self.execute_cargo(product.primary_input())
     }
 
     fn config_json(&self) -> Option<String> {

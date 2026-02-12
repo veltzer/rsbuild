@@ -74,6 +74,6 @@ impl ProductDiscovery for MakeProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        self.execute_make(&product.inputs[0])
+        self.execute_make(product.primary_input())
     }
 }

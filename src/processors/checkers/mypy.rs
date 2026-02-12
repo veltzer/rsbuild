@@ -1,10 +1,9 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use crate::config::MypyConfig;
 use crate::graph::Product;
-use crate::processors::{run_command, check_command_output};
+use crate::processors::{run_checker, config_file_inputs};
 
 pub struct MypyProcessor {
     project_root: PathBuf,
@@ -20,33 +19,17 @@ impl MypyProcessor {
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
-        self.check_files(&[product.inputs[0].as_path()])
+        self.check_files(&[product.primary_input()])
     }
 
     /// Return extra inputs for discover: mypy.ini if it exists
     fn mypy_ini_inputs(&self) -> Vec<String> {
-        if Path::new("mypy.ini").exists() {
-            vec!["mypy.ini".to_string()]
-        } else {
-            Vec::new()
-        }
+        config_file_inputs("mypy.ini")
     }
 
     /// Run mypy on one or more files
     fn check_files(&self, py_files: &[&Path]) -> Result<()> {
-        let mut cmd = Command::new(&self.config.checker);
-
-        for arg in &self.config.args {
-            cmd.arg(arg);
-        }
-
-        for file in py_files {
-            cmd.arg(file);
-        }
-        cmd.current_dir(&self.project_root);
-
-        let output = run_command(&mut cmd)?;
-        check_command_output(&output, "mypy")
+        run_checker(&self.config.checker, None, &self.config.args, py_files, &self.project_root)
     }
 }
 

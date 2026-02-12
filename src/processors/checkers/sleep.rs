@@ -25,7 +25,7 @@ impl SleepProcessor {
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
-        self.execute_sleep(&product.inputs[0])
+        self.execute_sleep(product.primary_input())
     }
 
     /// Read duration from sleep file and sleep

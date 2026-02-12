@@ -13,7 +13,7 @@ use crate::errors;
 use crate::color;
 use crate::graph::BuildGraph;
 use crate::object_store::{ExplainAction, ObjectStore};
-use crate::processors::{ProcessStats, ProductDiscovery};
+use crate::processors::{ProcessStats, ProcessorMap};
 
 /// Result of the per-item skip/restore pre-check.
 enum PreCheckResult {
@@ -132,7 +132,7 @@ pub fn classify_products(
 /// Executor handles running products through their processors
 /// It respects dependency order and can parallelize independent products
 pub struct Executor<'a> {
-    processors: &'a HashMap<String, Box<dyn ProductDiscovery>>,
+    processors: &'a ProcessorMap,
     parallel: usize,
     verbose: bool,
     display_opts: DisplayOptions,
@@ -147,7 +147,7 @@ pub struct Executor<'a> {
 
 impl<'a> Executor<'a> {
     pub fn new(
-        processors: &'a HashMap<String, Box<dyn ProductDiscovery>>,
+        processors: &'a ProcessorMap,
         opts: ExecutorOptions,
         interrupted: Arc<AtomicBool>,
     ) -> Self {

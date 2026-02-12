@@ -4,6 +4,7 @@
 /// module so that messages stay consistent and are easy to grep for.
 // -- Product / graph lookups --
 pub const INVALID_PRODUCT_ID: &str = "internal error: invalid product id";
+pub const EMPTY_PRODUCT_INPUTS: &str = "internal error: product has no inputs";
 pub const PROCESSOR_NOT_IN_MAP: &str = "internal error: processor not in map";
 pub const PROCESSOR_NOT_IN_TOTALS: &str = "internal error: processor not in total_per_processor map";
 

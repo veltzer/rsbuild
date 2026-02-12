@@ -19,7 +19,7 @@ use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::{ObjectStore, ObjectStoreOptions};
-use crate::processors::{CargoProcessor, CcProcessor, ClangTidyProcessor, CppcheckProcessor, LuaProcessor, MakeProcessor, MypyProcessor, PylintProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TeraProcessor};
+use crate::processors::{CargoProcessor, CcProcessor, ClangTidyProcessor, CppcheckProcessor, LuaProcessor, MakeProcessor, MypyProcessor, ProcessorMap, PylintProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TeraProcessor};
 use crate::remote_cache;
 use crate::tool_lock;
 
@@ -100,13 +100,13 @@ impl Builder {
     }
 
     /// Register a processor into the map.
-    fn register(processors: &mut HashMap<String, Box<dyn ProductDiscovery>>, name: &str, proc: impl ProductDiscovery + 'static) {
+    fn register(processors: &mut ProcessorMap, name: &str, proc: impl ProductDiscovery + 'static) {
         processors.insert(name.to_string(), Box::new(proc));
     }
 
     /// Create all available processors
-    pub fn create_processors(&self) -> Result<HashMap<String, Box<dyn ProductDiscovery>>> {
-        let mut processors: HashMap<String, Box<dyn ProductDiscovery>> = HashMap::new();
+    pub fn create_processors(&self) -> Result<ProcessorMap> {
+        let mut processors: ProcessorMap = HashMap::new();
         let root = &self.project_root;
         let cfg = &self.config.processor;
 
@@ -152,7 +152,7 @@ impl Builder {
 
     /// Detect and display config changes for each processor.
     /// Shows colored diffs when processor configuration has changed since last build.
-    fn detect_config_changes(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>) {
+    fn detect_config_changes(&self, processors: &ProcessorMap) {
         // Don't show config diffs in JSON or quiet mode
         if crate::json_output::is_json_mode() || crate::runtime_flags::quiet() {
             return;
@@ -223,17 +223,17 @@ impl Builder {
     }
 
     /// Build the dependency graph using provided processors
-    fn build_graph_with_processors(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>) -> Result<BuildGraph> {
+    fn build_graph_with_processors(&self, processors: &ProcessorMap) -> Result<BuildGraph> {
         self.build_graph_with_processors_impl(processors, GraphBuildMode::Normal, BuildPhase::Build, None, false)
     }
 
     /// Build the dependency graph with optional early stopping
-    fn build_graph_with_processors_and_phase(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, stop_after: BuildPhase, processor_filter: Option<&[String]>, verbose: bool) -> Result<BuildGraph> {
+    fn build_graph_with_processors_and_phase(&self, processors: &ProcessorMap, stop_after: BuildPhase, processor_filter: Option<&[String]>, verbose: bool) -> Result<BuildGraph> {
         self.build_graph_with_processors_impl(processors, GraphBuildMode::Normal, stop_after, processor_filter, verbose)
     }
 
     /// Build the dependency graph for clean (skip expensive dependency scanning)
-    fn build_graph_for_clean_with_processors(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>) -> Result<BuildGraph> {
+    fn build_graph_for_clean_with_processors(&self, processors: &ProcessorMap) -> Result<BuildGraph> {
         self.build_graph_with_processors_impl(processors, GraphBuildMode::ForClean, BuildPhase::Build, None, false)
     }
 
@@ -247,7 +247,7 @@ impl Builder {
 
     /// Build the dependency graph using provided processors
     /// processor_filter: if Some, only run processors in this list (in addition to enabled check)
-    fn build_graph_with_processors_impl(&self, processors: &HashMap<String, Box<dyn ProductDiscovery>>, mode: GraphBuildMode, stop_after: BuildPhase, processor_filter: Option<&[String]>, verbose: bool) -> Result<BuildGraph> {
+    fn build_graph_with_processors_impl(&self, processors: &ProcessorMap, mode: GraphBuildMode, stop_after: BuildPhase, processor_filter: Option<&[String]>, verbose: bool) -> Result<BuildGraph> {
         if phases_debug() {
             eprintln!("{}", color::bold("Phase: Building dependency graph..."));
         }

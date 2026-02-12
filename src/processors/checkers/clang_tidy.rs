@@ -28,7 +28,7 @@ impl ClangTidyProcessor {
         for arg in &self.config.args {
             cmd.arg(arg);
         }
-        cmd.arg(&product.inputs[0]);
+        cmd.arg(product.primary_input());
         // Add -- to separate clang-tidy args from compiler args
         cmd.arg("--");
         for arg in &self.config.compiler_args {

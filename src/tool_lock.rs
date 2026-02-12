@@ -7,7 +7,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::color;
-use crate::processors::ProductDiscovery;
+use crate::processors::ProcessorMap;
 
 const LOCK_FILE: &str = ".tools.versions";
 const LOCK_VERSION: u32 = 1;
@@ -67,7 +67,7 @@ fn query_tool_version(tool_name: &str, version_args: &[String]) -> Result<Locked
 
 /// Collect tool version commands from all enabled processors, deduplicated.
 pub fn collect_tool_commands(
-    processors: &std::collections::HashMap<String, Box<dyn ProductDiscovery>>,
+    processors: &ProcessorMap,
     enabled: &dyn Fn(&str) -> bool,
 ) -> Vec<(String, Vec<String>)> {
     let mut seen = std::collections::HashSet::new();
@@ -139,7 +139,7 @@ pub fn read_lock_file(project_root: &Path) -> Result<Option<ToolLockFile>> {
 /// If there is no lock file, returns an empty map.
 pub fn processor_tool_hashes(
     project_root: &Path,
-    processors: &std::collections::HashMap<String, Box<dyn ProductDiscovery>>,
+    processors: &ProcessorMap,
     enabled: &dyn Fn(&str) -> bool,
 ) -> Result<std::collections::HashMap<String, String>> {
     use sha2::{Digest, Sha256};

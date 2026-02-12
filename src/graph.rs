@@ -48,6 +48,12 @@ impl Product {
         }
     }
 
+    /// Return the primary (first) input file for this product.
+    /// Panics if the product has no inputs (a programming error — every product must have at least one).
+    pub fn primary_input(&self) -> &Path {
+        self.inputs.first().expect(errors::EMPTY_PRODUCT_INPUTS)
+    }
+
     /// Format a path according to the given format
     fn format_path(path: &Path, format: PathFormat) -> String {
         match format {

@@ -1,10 +1,9 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use crate::config::RumdlConfig;
 use crate::graph::Product;
-use crate::processors::{run_command, check_command_output};
+use crate::processors::run_checker;
 
 pub struct RumdlProcessor {
     project_root: PathBuf,
@@ -20,25 +19,12 @@ impl RumdlProcessor {
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
-        self.lint_files(&[product.inputs[0].as_path()])
+        self.lint_files(&[product.primary_input()])
     }
 
     /// Run rumdl on one or more files
     fn lint_files(&self, files: &[&Path]) -> Result<()> {
-        let mut cmd = Command::new(&self.config.linter);
-        cmd.arg("check");
-
-        for arg in &self.config.args {
-            cmd.arg(arg);
-        }
-
-        for file in files {
-            cmd.arg(file);
-        }
-        cmd.current_dir(&self.project_root);
-
-        let output = run_command(&mut cmd)?;
-        check_command_output(&output, "rumdl")
+        run_checker(&self.config.linter, Some("check"), &self.config.args, files, &self.project_root)
     }
 }
 

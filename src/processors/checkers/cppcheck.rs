@@ -1,10 +1,9 @@
 use anyhow::Result;
 use std::path::PathBuf;
-use std::process::Command;
 
 use crate::config::CppcheckConfig;
 use crate::graph::Product;
-use crate::processors::{scan_root_valid, run_command, check_command_output};
+use crate::processors::{scan_root_valid, run_checker};
 
 pub struct CppcheckProcessor {
     project_root: PathBuf,
@@ -24,15 +23,7 @@ impl CppcheckProcessor {
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
-        let mut cmd = Command::new("cppcheck");
-        for arg in &self.config.args {
-            cmd.arg(arg);
-        }
-        cmd.arg(&product.inputs[0]);
-        cmd.current_dir(&self.project_root);
-
-        let output = run_command(&mut cmd)?;
-        check_command_output(&output, "cppcheck")
+        run_checker("cppcheck", None, &self.config.args, &[product.primary_input()], &self.project_root)
     }
 }
 

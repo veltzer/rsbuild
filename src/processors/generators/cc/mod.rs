@@ -225,7 +225,7 @@ impl ProductDiscovery for CcProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        let source = &product.inputs[0];
+        let source = product.primary_input();
         let executable = &product.outputs[0];
         let is_cpp = source.extension().and_then(|s| s.to_str()) == Some("cc");
         let profile = self.get_profile_from_product(product)?;

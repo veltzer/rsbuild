@@ -259,7 +259,7 @@ impl ProductDiscovery for SpellcheckProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        let result = self.check_file(&product.inputs[0]);
+        let result = self.check_file(product.primary_input());
         // In auto_add_words mode, flush after each file when not batching
         if self.spellcheck_config.auto_add_words {
             self.flush_words_to_file()?;
@@ -274,7 +274,7 @@ impl ProductDiscovery for SpellcheckProcessor {
     fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
         let results: Vec<Result<()>> = products
             .iter()
-            .map(|p| self.check_file(&p.inputs[0]))
+            .map(|p| self.check_file(p.primary_input()))
             .collect();
 
         // Flush all collected words at the end of the batch

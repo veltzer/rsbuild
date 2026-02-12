@@ -1,10 +1,9 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use crate::config::ShellcheckConfig;
 use crate::graph::Product;
-use crate::processors::{scan_root_valid, run_command, check_command_output};
+use crate::processors::{scan_root_valid, run_checker};
 
 pub struct ShellcheckProcessor {
     project_root: PathBuf,
@@ -24,24 +23,12 @@ impl ShellcheckProcessor {
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
-        self.check_files(&[product.inputs[0].as_path()])
+        self.check_files(&[product.primary_input()])
     }
 
     /// Run shellcheck on one or more files
     fn check_files(&self, files: &[&Path]) -> Result<()> {
-        let mut cmd = Command::new(&self.config.checker);
-
-        for arg in &self.config.args {
-            cmd.arg(arg);
-        }
-
-        for file in files {
-            cmd.arg(file);
-        }
-        cmd.current_dir(&self.project_root);
-
-        let output = run_command(&mut cmd)?;
-        check_command_output(&output, "shellcheck")
+        run_checker(&self.config.checker, None, &self.config.args, files, &self.project_root)
     }
 }
 

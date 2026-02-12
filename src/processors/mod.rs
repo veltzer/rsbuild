@@ -3,6 +3,7 @@ mod generators;
 pub mod lua_processor;
 
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -217,6 +218,16 @@ pub fn stub_path(stub_dir: &Path, source: &Path, suffix: &str) -> PathBuf {
     stub_dir.join(stub_name)
 }
 
+/// Check if a config file exists and return it as extra inputs for discover.
+/// Used by processors that auto-detect config files (e.g. mypy.ini, .pylintrc).
+pub fn config_file_inputs(path: &str) -> Vec<String> {
+    if Path::new(path).exists() {
+        vec![path.to_string()]
+    } else {
+        Vec::new()
+    }
+}
+
 /// Clean outputs for a product: remove each output file and print a message.
 pub fn clean_outputs(product: &Product, label: &str) -> Result<()> {
     for output in &product.outputs {
@@ -347,6 +358,32 @@ pub fn ensure_stub_dir(stub_dir: &Path, processor_name: &str) -> Result<()> {
     Ok(())
 }
 
+/// Run a checker tool on one or more files.
+///
+/// Builds a command from the tool name, optional subcommand, config args, and file paths,
+/// then runs it in the project root directory and checks the output.
+pub fn run_checker(
+    tool: &str,
+    subcommand: Option<&str>,
+    args: &[String],
+    files: &[&Path],
+    project_root: &Path,
+) -> Result<()> {
+    let mut cmd = Command::new(tool);
+    if let Some(sub) = subcommand {
+        cmd.arg(sub);
+    }
+    for arg in args {
+        cmd.arg(arg);
+    }
+    for file in files {
+        cmd.arg(file);
+    }
+    cmd.current_dir(project_root);
+    let output = run_command(&mut cmd)?;
+    check_command_output(&output, tool)
+}
+
 /// Shared helper for checker processors that support batch execution (no stub files).
 ///
 /// Runs `batch_fn` with all input paths at once. On success, returns Ok for all products.
@@ -359,7 +396,7 @@ where
     F: Fn(&[&Path]) -> Result<()>,
 {
     let input_paths: Vec<&Path> = products.iter()
-        .filter_map(|p| p.inputs.first().map(|i| i.as_path()))
+        .map(|p| p.primary_input())
         .collect();
 
     match batch_fn(&input_paths) {
@@ -379,6 +416,9 @@ pub use checkers::{
 };
 pub use generators::{CcProcessor, TeraProcessor};
 pub use lua_processor::LuaProcessor;
+
+/// Map from processor name to processor instance. Used throughout the build pipeline.
+pub type ProcessorMap = HashMap<String, Box<dyn ProductDiscovery>>;
 
 /// The type of processor - whether it generates new files or checks existing files.
 ///
@@ -435,7 +475,7 @@ impl ProcessorType {
 ///         discover_checker_products(graph, ..., "mychecker")  // empty outputs
 ///     }
 ///     fn execute(&self, product: &Product) -> Result<()> {
-///         run_mytool(&product.inputs[0])
+///         run_mytool(product.primary_input())
 ///     }
 ///     fn auto_detect(&self, file_index: &FileIndex) -> bool { ... }
 /// }

@@ -35,7 +35,7 @@ impl ShellcheckProcessor {
 impl_checker!(ShellcheckProcessor,
     config: config,
     description: "Lint shell scripts using shellcheck",
-    name: "shellcheck",
+    name: crate::processors::names::SHELLCHECK,
     execute: execute_product,
     guard: should_process,
     tool_field: checker,

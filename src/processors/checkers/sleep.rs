@@ -58,7 +58,7 @@ impl SleepProcessor {
 impl_checker!(SleepProcessor,
     config: config,
     description: "Sleep for a duration (testing)",
-    name: "sleep",
+    name: crate::processors::names::SLEEP,
     execute: execute_product,
     guard: should_process,
     hidden: true,

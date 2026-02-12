@@ -7,14 +7,14 @@ use crate::processors::run_checker;
 
 pub struct RuffProcessor {
     project_root: PathBuf,
-    ruff_config: RuffConfig,
+    config: RuffConfig,
 }
 
 impl RuffProcessor {
-    pub fn new(project_root: PathBuf, ruff_config: RuffConfig) -> Self {
+    pub fn new(project_root: PathBuf, config: RuffConfig) -> Self {
         Self {
             project_root,
-            ruff_config,
+            config,
         }
     }
 
@@ -24,14 +24,14 @@ impl RuffProcessor {
 
     /// Run the configured linter on one or more files
     fn lint_files(&self, py_files: &[&Path]) -> Result<()> {
-        run_checker(&self.ruff_config.linter, Some("check"), &self.ruff_config.args, py_files, &self.project_root)
+        run_checker(&self.config.linter, Some("check"), &self.config.args, py_files, &self.project_root)
     }
 }
 
 impl_checker!(RuffProcessor,
-    config: ruff_config,
+    config: config,
     description: "Lint Python files with ruff",
-    name: "ruff",
+    name: crate::processors::names::RUFF,
     execute: execute_product,
     tool_field: linter,
     config_json: true,

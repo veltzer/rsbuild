@@ -93,3 +93,168 @@ fn cargo_incremental_skip() {
         stdout2
     );
 }
+
+#[test]
+fn cargo_rebuild_on_source_change() {
+    if !tool_available("cargo") {
+        eprintln!("cargo not found, skipping test");
+        return;
+    }
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"cargo\"]\n",
+    )
+    .unwrap();
+
+    fs::create_dir_all(project_path.join("mylib/src")).unwrap();
+
+    fs::write(
+        project_path.join("mylib/Cargo.toml"),
+        "[package]\nname = \"mylib\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+
+    fs::write(
+        project_path.join("mylib/src/lib.rs"),
+        "pub fn add(a: i32, b: i32) -> i32 { a + b }\n",
+    )
+    .unwrap();
+
+    // First build
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success());
+
+    // Modify source file
+    fs::write(
+        project_path.join("mylib/src/lib.rs"),
+        "pub fn add(a: i32, b: i32) -> i32 { a + b }\npub fn sub(a: i32, b: i32) -> i32 { a - b }\n",
+    )
+    .unwrap();
+
+    // Second build should rebuild (not skip)
+    let output2 = run_rsb_with_env(project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success());
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(
+        stdout2.contains("Processing:"),
+        "Should rebuild after source change: {}",
+        stdout2
+    );
+}
+
+#[test]
+fn cargo_no_project_discovered() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"cargo\"]\n",
+    )
+    .unwrap();
+
+    // No Cargo.toml anywhere — should succeed with nothing to build
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(
+        output.status.success(),
+        "Build should succeed with no Cargo.toml: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("0 products"),
+        "Should discover 0 products: {}",
+        stdout
+    );
+}
+
+#[test]
+fn cargo_build_failure() {
+    if !tool_available("cargo") {
+        eprintln!("cargo not found, skipping test");
+        return;
+    }
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"cargo\"]\n",
+    )
+    .unwrap();
+
+    fs::create_dir_all(project_path.join("badlib/src")).unwrap();
+
+    fs::write(
+        project_path.join("badlib/Cargo.toml"),
+        "[package]\nname = \"badlib\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+
+    // Invalid Rust code
+    fs::write(
+        project_path.join("badlib/src/lib.rs"),
+        "this is not valid rust code!!!\n",
+    )
+    .unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(
+        !output.status.success(),
+        "Build should fail with invalid Rust code"
+    );
+}
+
+#[test]
+fn cargo_check_command() {
+    if !tool_available("cargo") {
+        eprintln!("cargo not found, skipping test");
+        return;
+    }
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    // Use "cargo check" instead of "cargo build"
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"cargo\"]\n\n[processor.cargo]\ncommand = \"check\"\n",
+    )
+    .unwrap();
+
+    fs::create_dir_all(project_path.join("mylib/src")).unwrap();
+
+    fs::write(
+        project_path.join("mylib/Cargo.toml"),
+        "[package]\nname = \"mylib\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+
+    fs::write(
+        project_path.join("mylib/src/lib.rs"),
+        "pub fn add(a: i32, b: i32) -> i32 { a + b }\n",
+    )
+    .unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
+    assert!(
+        output.status.success(),
+        "cargo check should succeed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Processing:"),
+        "Should process cargo: {}",
+        stdout
+    );
+}

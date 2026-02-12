@@ -251,9 +251,11 @@ pub(crate) fn default_true() -> bool {
 }
 
 fn default_processors() -> Vec<String> {
+    use crate::processors::names;
     vec![
-        "tera".into(), "ruff".into(), "pylint".into(),
-        "cc_single_file".into(), "cppcheck".into(), "shellcheck".into(), "spellcheck".into(), "make".into(),
+        names::TERA.into(), names::RUFF.into(), names::PYLINT.into(),
+        names::CC_SINGLE_FILE.into(), names::CPPCHECK.into(), names::SHELLCHECK.into(),
+        names::SPELLCHECK.into(), names::MAKE.into(),
     ]
 }
 

@@ -44,7 +44,7 @@ impl ClangTidyProcessor {
 impl_checker!(ClangTidyProcessor,
     config: config,
     description: "Run clang-tidy static analysis on C/C++ source files",
-    name: "clang_tidy",
+    name: crate::processors::names::CLANG_TIDY,
     execute: execute_product,
     guard: should_process,
     tools: ["clang-tidy".to_string()],

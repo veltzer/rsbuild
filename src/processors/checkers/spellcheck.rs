@@ -16,7 +16,7 @@ use crate::processors::{ProductDiscovery, discover_checker_products};
 const DICT_DIR: &str = "/usr/share/hunspell";
 
 pub struct SpellcheckProcessor {
-    spellcheck_config: SpellcheckConfig,
+    config: SpellcheckConfig,
     /// Cached dictionary, built once on first use and reused across all execute() calls
     cached_dict: OnceLock<Result<zspell::Dictionary, String>>,
     /// Custom words, loaded once at initialization
@@ -26,16 +26,16 @@ pub struct SpellcheckProcessor {
 }
 
 impl SpellcheckProcessor {
-    pub fn new(spellcheck_config: SpellcheckConfig) -> Result<Self> {
-        let custom_words = if spellcheck_config.use_words_file {
-            let words_path = Path::new(&spellcheck_config.words_file);
+    pub fn new(config: SpellcheckConfig) -> Result<Self> {
+        let custom_words = if config.use_words_file {
+            let words_path = Path::new(&config.words_file);
             Self::load_custom_words(words_path)
                 .with_context(|| format!("Custom words file not found: {}", words_path.display()))?
         } else {
             HashSet::new()
         };
         Ok(Self {
-            spellcheck_config,
+            config,
             cached_dict: OnceLock::new(),
             custom_words,
             words_to_add: Mutex::new(HashSet::new()),
@@ -57,7 +57,7 @@ impl SpellcheckProcessor {
 
     /// Build a zspell Dictionary from system hunspell files
     fn build_dictionary(&self) -> Result<zspell::Dictionary> {
-        let lang = &self.spellcheck_config.language;
+        let lang = &self.config.language;
         let aff_path = Path::new(DICT_DIR).join(format!("{}.aff", lang));
         let dic_path = Path::new(DICT_DIR).join(format!("{}.dic", lang));
 
@@ -168,7 +168,7 @@ impl SpellcheckProcessor {
         }
 
         if !misspelled.is_empty() {
-            if self.spellcheck_config.auto_add_words {
+            if self.config.auto_add_words {
                 // Collect words to add to the words file
                 let mut words_to_add = self.words_to_add.lock();
                 for word in &misspelled {
@@ -195,7 +195,7 @@ impl SpellcheckProcessor {
             return Ok(());
         }
 
-        let words_path = Path::new(&self.spellcheck_config.words_file);
+        let words_path = Path::new(&self.config.words_file);
 
         // Read existing words if file exists
         let mut all_words: HashSet<String> = if words_path.exists() {
@@ -235,40 +235,40 @@ impl ProductDiscovery for SpellcheckProcessor {
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        !file_index.scan(&self.spellcheck_config.scan, true).is_empty()
+        !file_index.scan(&self.config.scan, true).is_empty()
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-        let mut extra_inputs = self.spellcheck_config.extra_inputs.clone();
+        let mut extra_inputs = self.config.extra_inputs.clone();
         // If custom words are enabled, add the words file as an input so
         // changes to it invalidate all spellcheck products.
-        if self.spellcheck_config.use_words_file {
-            let words_path = Path::new(&self.spellcheck_config.words_file);
+        if self.config.use_words_file {
+            let words_path = Path::new(&self.config.words_file);
             if words_path.exists() {
-                extra_inputs.push(self.spellcheck_config.words_file.clone());
+                extra_inputs.push(self.config.words_file.clone());
             }
         }
         discover_checker_products(
             graph,
-            &self.spellcheck_config.scan,
+            &self.config.scan,
             file_index,
             &extra_inputs,
-            &self.spellcheck_config,
-            "spellcheck",
+            &self.config,
+            crate::processors::names::SPELLCHECK,
         )
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
         let result = self.check_file(product.primary_input());
         // In auto_add_words mode, flush after each file when not batching
-        if self.spellcheck_config.auto_add_words {
+        if self.config.auto_add_words {
             self.flush_words_to_file()?;
         }
         result
     }
 
     fn supports_batch(&self) -> bool {
-        self.spellcheck_config.auto_add_words
+        self.config.auto_add_words
     }
 
     fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
@@ -278,7 +278,7 @@ impl ProductDiscovery for SpellcheckProcessor {
             .collect();
 
         // Flush all collected words at the end of the batch
-        if self.spellcheck_config.auto_add_words
+        if self.config.auto_add_words
             && let Err(e) = self.flush_words_to_file() {
                 // Return the flush error for all products
                 return products.iter().map(|_| Err(anyhow::anyhow!("{}", e))).collect();

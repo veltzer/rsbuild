@@ -118,7 +118,7 @@ impl CcProcessor {
 
         if crate::runtime_flags::show_child_processes() {
             let profile_tag = if profile.name.is_empty() { String::new() } else { format!(":{}", profile.name) };
-            println!("[cc_single_file{}] {}", profile_tag, format_command(&cmd));
+            println!("[{}{}] {}", crate::processors::names::CC_SINGLE_FILE, profile_tag, format_command(&cmd));
         }
 
         let output = run_command(&mut cmd)?;
@@ -181,7 +181,7 @@ impl CcProcessor {
                 graph.add_product_with_variant(
                     inputs,
                     vec![executable],
-                    "cc_single_file",
+                    crate::processors::names::CC_SINGLE_FILE,
                     cfg_hash.clone(),
                     variant,
                 )?;
@@ -233,7 +233,7 @@ impl ProductDiscovery for CcProcessor {
     }
 
     fn clean(&self, product: &Product) -> Result<()> {
-        clean_outputs(product, "cc_single_file")
+        clean_outputs(product, crate::processors::names::CC_SINGLE_FILE)
     }
 
     fn config_json(&self) -> Option<String> {

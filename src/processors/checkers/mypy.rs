@@ -36,7 +36,7 @@ impl MypyProcessor {
 impl_checker!(MypyProcessor,
     config: config,
     description: "Type-check Python files with mypy",
-    name: "mypy",
+    name: crate::processors::names::MYPY,
     execute: execute_product,
     tool_field: checker,
     config_json: true,

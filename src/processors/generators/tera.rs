@@ -142,7 +142,7 @@ impl ProductDiscovery for TeraProcessor {
             graph.add_product(
                 inputs,
                 vec![item.output_path.clone()],
-                "tera",
+                crate::processors::names::TERA,
                 Some(config_hash(&self.config)),
             )?;
         }

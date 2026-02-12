@@ -31,7 +31,7 @@ impl RumdlProcessor {
 impl_checker!(RumdlProcessor,
     config: config,
     description: "Lint Markdown files using rumdl",
-    name: "rumdl",
+    name: crate::processors::names::RUMDL,
     execute: execute_product,
     tool_field: linter,
     config_json: true,

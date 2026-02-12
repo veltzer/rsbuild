@@ -65,7 +65,7 @@ impl ProductDiscovery for MakeProcessor {
                 extensions: &[""],       // match all extensions
                 excludes: &["/.git/", "/out/", "/.rsb/"],
             },
-            "make",
+            crate::processors::names::MAKE,
         )
     }
 

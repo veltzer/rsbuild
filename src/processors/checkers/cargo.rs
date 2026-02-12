@@ -61,7 +61,7 @@ impl ProductDiscovery for CargoProcessor {
                 extensions: &[".rs", ".toml"], // Match Rust sources and Cargo files
                 excludes: &["/.git/", "/target/", "/.rsb/"],
             },
-            "cargo",
+            crate::processors::names::CARGO,
         )
     }
 

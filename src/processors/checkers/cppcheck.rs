@@ -30,7 +30,7 @@ impl CppcheckProcessor {
 impl_checker!(CppcheckProcessor,
     config: config,
     description: "Run cppcheck static analysis on C/C++ source files",
-    name: "cppcheck",
+    name: crate::processors::names::CPPCHECK,
     execute: execute_product,
     guard: should_process,
     tools: ["cppcheck".to_string()],

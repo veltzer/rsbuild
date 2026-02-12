@@ -60,24 +60,16 @@ impl ObjectStore {
 
             match cached_output {
                 Some(out) => {
-                    // Check local cache first
-                    if self.has_object(&out.checksum) {
-                        if let Some(parent) = output_path.parent() {
-                            fs::create_dir_all(parent)?;
-                        }
-                        self.restore_file(&out.checksum, output_path)?;
-                    } else if self.remote_pull {
-                        // Try to fetch object from remote
-                        if !self.try_fetch_object_from_remote(&out.checksum)? {
-                            return Ok(false);
-                        }
-                        if let Some(parent) = output_path.parent() {
-                            fs::create_dir_all(parent)?;
-                        }
-                        self.restore_file(&out.checksum, output_path)?;
-                    } else {
+                    // Ensure object is available locally (fetch from remote if needed)
+                    if !self.has_object(&out.checksum)
+                        && (!self.remote_pull || !self.try_fetch_object_from_remote(&out.checksum)?)
+                    {
                         return Ok(false);
                     }
+                    if let Some(parent) = output_path.parent() {
+                        fs::create_dir_all(parent)?;
+                    }
+                    self.restore_file(&out.checksum, output_path)?;
                 }
                 None => return Ok(false),
             }

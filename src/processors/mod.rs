@@ -19,6 +19,23 @@ use crate::config::{config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 
+/// Processor name constants. Using these instead of string literals catches typos at compile time.
+pub mod names {
+    pub const TERA: &str = "tera";
+    pub const RUFF: &str = "ruff";
+    pub const PYLINT: &str = "pylint";
+    pub const MYPY: &str = "mypy";
+    pub const CC_SINGLE_FILE: &str = "cc_single_file";
+    pub const CPPCHECK: &str = "cppcheck";
+    pub const CLANG_TIDY: &str = "clang_tidy";
+    pub const SHELLCHECK: &str = "shellcheck";
+    pub const RUMDL: &str = "rumdl";
+    pub const SLEEP: &str = "sleep";
+    pub const MAKE: &str = "make";
+    pub const CARGO: &str = "cargo";
+    pub const SPELLCHECK: &str = "spellcheck";
+}
+
 /// Global flag: set to true on Ctrl+C so subprocesses can be killed promptly.
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 

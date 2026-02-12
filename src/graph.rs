@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use crate::cli::{DisplayOptions, InputDisplay, OutputDisplay, PathFormat};
 use crate::errors;
+use crate::processors::names as proc_names;
 
 /// A single build product with concrete inputs and outputs.
 /// All paths are relative to project root.
@@ -351,8 +352,8 @@ impl BuildGraph {
         for product in &self.products {
             let node_id = Self::processor_node_id(product);
             let color = match product.processor.as_str() {
-                "tera" => "lightblue",
-                "cc_single_file" => "lightsalmon",
+                proc_names::TERA => "lightblue",
+                proc_names::CC_SINGLE_FILE => "lightsalmon",
                 _ => "lightgray",
             };
             let _ = writeln!(buf, "    {} [label=\"{}\" shape=box style=filled fillcolor={}];",
@@ -440,11 +441,11 @@ impl BuildGraph {
 
         // Add styling
         let tera_procs: Vec<_> = self.products.iter()
-            .filter(|p| p.processor == "tera")
+            .filter(|p| p.processor == proc_names::TERA)
             .map(Self::processor_node_id)
             .collect();
         let cc_procs: Vec<_> = self.products.iter()
-            .filter(|p| p.processor == "cc_single_file")
+            .filter(|p| p.processor == proc_names::CC_SINGLE_FILE)
             .map(Self::processor_node_id)
             .collect();
 

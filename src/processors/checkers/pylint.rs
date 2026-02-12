@@ -7,14 +7,14 @@ use crate::processors::{run_checker, config_file_inputs};
 
 pub struct PylintProcessor {
     project_root: PathBuf,
-    pylint_config: PylintConfig,
+    config: PylintConfig,
 }
 
 impl PylintProcessor {
-    pub fn new(project_root: PathBuf, pylint_config: PylintConfig) -> Self {
+    pub fn new(project_root: PathBuf, config: PylintConfig) -> Self {
         Self {
             project_root,
-            pylint_config,
+            config,
         }
     }
 
@@ -29,14 +29,14 @@ impl PylintProcessor {
 
     /// Run pylint on one or more files
     fn lint_files(&self, py_files: &[&Path]) -> Result<()> {
-        run_checker("pylint", None, &self.pylint_config.args, py_files, &self.project_root)
+        run_checker("pylint", None, &self.config.args, py_files, &self.project_root)
     }
 }
 
 impl_checker!(PylintProcessor,
-    config: pylint_config,
+    config: config,
     description: "Lint Python files with pylint",
-    name: "pylint",
+    name: crate::processors::names::PYLINT,
     execute: execute_product,
     tools: ["pylint".to_string()],
     config_json: true,

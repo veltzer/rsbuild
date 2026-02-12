@@ -19,7 +19,7 @@ use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::{ObjectStore, ObjectStoreOptions};
-use crate::processors::{CargoProcessor, CcProcessor, ClangTidyProcessor, CppcheckProcessor, LuaProcessor, MakeProcessor, MypyProcessor, ProcessorMap, PylintProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TeraProcessor};
+use crate::processors::{CargoProcessor, CcProcessor, ClangTidyProcessor, CppcheckProcessor, LuaProcessor, MakeProcessor, MypyProcessor, ProcessorMap, PylintProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TeraProcessor, names as proc_names};
 use crate::remote_cache;
 use crate::tool_lock;
 
@@ -112,25 +112,25 @@ impl Builder {
 
         // Tera processor (fallible init — skip if template dir missing)
         if let Ok(proc) = TeraProcessor::new(root.clone(), cfg.tera.clone()) {
-            Self::register(&mut processors, "tera", proc);
+            Self::register(&mut processors, proc_names::TERA, proc);
         }
 
-        Self::register(&mut processors, "ruff", RuffProcessor::new(root.clone(), cfg.ruff.clone()));
-        Self::register(&mut processors, "pylint", PylintProcessor::new(root.clone(), cfg.pylint.clone()));
-        Self::register(&mut processors, "mypy", MypyProcessor::new(root.clone(), cfg.mypy.clone()));
-        Self::register(&mut processors, "cc_single_file", CcProcessor::new(root.clone(), cfg.cc_single_file.clone()));
-        Self::register(&mut processors, "cppcheck", CppcheckProcessor::new(root.clone(), cfg.cppcheck.clone()));
-        Self::register(&mut processors, "clang_tidy", ClangTidyProcessor::new(root.clone(), cfg.clang_tidy.clone()));
-        Self::register(&mut processors, "shellcheck", ShellcheckProcessor::new(root.clone(), cfg.shellcheck.clone()));
-        Self::register(&mut processors, "rumdl", RumdlProcessor::new(root.clone(), cfg.rumdl.clone()));
-        Self::register(&mut processors, "sleep", SleepProcessor::new(cfg.sleep.clone()));
-        Self::register(&mut processors, "make", MakeProcessor::new(cfg.make.clone()));
-        Self::register(&mut processors, "cargo", CargoProcessor::new(cfg.cargo.clone()));
+        Self::register(&mut processors, proc_names::RUFF, RuffProcessor::new(root.clone(), cfg.ruff.clone()));
+        Self::register(&mut processors, proc_names::PYLINT, PylintProcessor::new(root.clone(), cfg.pylint.clone()));
+        Self::register(&mut processors, proc_names::MYPY, MypyProcessor::new(root.clone(), cfg.mypy.clone()));
+        Self::register(&mut processors, proc_names::CC_SINGLE_FILE, CcProcessor::new(root.clone(), cfg.cc_single_file.clone()));
+        Self::register(&mut processors, proc_names::CPPCHECK, CppcheckProcessor::new(root.clone(), cfg.cppcheck.clone()));
+        Self::register(&mut processors, proc_names::CLANG_TIDY, ClangTidyProcessor::new(root.clone(), cfg.clang_tidy.clone()));
+        Self::register(&mut processors, proc_names::SHELLCHECK, ShellcheckProcessor::new(root.clone(), cfg.shellcheck.clone()));
+        Self::register(&mut processors, proc_names::RUMDL, RumdlProcessor::new(root.clone(), cfg.rumdl.clone()));
+        Self::register(&mut processors, proc_names::SLEEP, SleepProcessor::new(cfg.sleep.clone()));
+        Self::register(&mut processors, proc_names::MAKE, MakeProcessor::new(cfg.make.clone()));
+        Self::register(&mut processors, proc_names::CARGO, CargoProcessor::new(cfg.cargo.clone()));
 
         // Spellcheck processor (fallible init — propagate error only if enabled)
         match SpellcheckProcessor::new(cfg.spellcheck.clone()) {
-            Ok(proc) => Self::register(&mut processors, "spellcheck", proc),
-            Err(e) if self.config.processor.is_enabled("spellcheck") => return Err(e),
+            Ok(proc) => Self::register(&mut processors, proc_names::SPELLCHECK, proc),
+            Err(e) if self.config.processor.is_enabled(proc_names::SPELLCHECK) => return Err(e),
             Err(_) => {}
         }
 

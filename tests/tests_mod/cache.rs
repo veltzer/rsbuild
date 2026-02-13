@@ -1,5 +1,5 @@
 use std::fs;
-use crate::common::{setup_test_project, run_rsb, run_rsb_with_env, run_rsb_json};
+use crate::common::{setup_test_project, run_rsb, run_rsb_with_env};
 
 #[test]
 fn cache_operations() {
@@ -175,10 +175,7 @@ fn cache_stats_json() {
     let build = run_rsb(project_path, &["build"]);
     assert!(build.status.success());
 
-    // Check JSON stats
-    let _result = run_rsb_json(project_path, &["cache", "stats"]);
-    // run_rsb_json uses --json, but cache stats outputs its own JSON, not build events.
-    // Just verify it's valid JSON by running with --json directly
+    // Verify cache stats outputs valid JSON
     let output = run_rsb_with_env(project_path, &["--json", "cache", "stats"], &[("NO_COLOR", "1")]);
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);

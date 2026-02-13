@@ -117,7 +117,7 @@ pub fn classify_products(
 
         if !force && !dep_changed && !object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs) {
             skip_count += 1;
-        } else if !force && object_store.can_restore(&cache_key, &input_checksum, &product.outputs) {
+        } else if !force && !dep_changed && object_store.can_restore(&cache_key, &input_checksum, &product.outputs) {
             restore_count += 1;
             will_change.insert(id);
         } else {

@@ -52,7 +52,8 @@ fn dry_run_short_flag() {
     assert!(output.status.success(), "Short flag -n should work: {}", String::from_utf8_lossy(&output.stderr));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("BUILD"), "-n flag should show BUILD: {}", stdout);
-    assert!(!project_path.join("out/sleep/short.done").exists(), "-n should not build");
+    // Verify no output directory was created (dry-run should not execute anything)
+    assert!(!project_path.join("out/sleep").exists(), "-n should not create output directories");
 }
 
 #[test]

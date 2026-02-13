@@ -58,22 +58,17 @@ impl Builder {
         if total_files == 0 && dirs_removed == 0 {
             println!("{}", color::dim("Clean summary: nothing to clean"));
         } else {
-            let mut parts: Vec<String> = stats.iter()
-                .collect::<std::collections::BTreeMap<_, _>>()
-                .into_iter()
-                .map(|(proc, count)| format!("{}: {}", proc, count))
-                .collect();
-            if dirs_removed > 0 {
-                parts.push(format!("{} empty dir(s)", dirs_removed));
+            println!("{}", color::bold("Clean summary:"));
+            let sorted_stats: std::collections::BTreeMap<_, _> = stats.iter().collect();
+            for (proc, count) in &sorted_stats {
+                println!("  {}: {} file(s)", proc, count);
             }
-            let detail = if parts.is_empty() {
-                String::new()
-            } else {
-                format!(" ({})", parts.join(", "))
-            };
+            if dirs_removed > 0 {
+                println!("  {} empty dir(s) removed", dirs_removed);
+            }
             println!("{}", color::green(&format!(
-                "Clean summary: {} file(s) removed{}",
-                total_files, detail,
+                "Total: {} file(s) removed",
+                total_files,
             )));
         }
         Ok(())

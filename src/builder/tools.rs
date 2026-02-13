@@ -57,39 +57,37 @@ impl Builder {
 
         let show_all = matches!(&action, ToolsAction::List { all: true } | ToolsAction::Check { all: true });
 
-        let mut tool_pairs: Vec<(String, String)> = Vec::new();
+        let mut tool_map: std::collections::BTreeMap<String, Vec<String>> = std::collections::BTreeMap::new();
         for name in sorted_keys(&processors) {
             if !show_all && !self.config.processor.is_enabled(name) {
                 continue;
             }
-            let tools = processors[name].required_tools();
-            if !tools.is_empty() {
-                let name_owned = name.clone();
-                for tool in tools {
-                    tool_pairs.push((tool, name_owned.clone()));
+            for tool in processors[name].required_tools() {
+                let procs = tool_map.entry(tool).or_default();
+                if !procs.contains(&name) {
+                    procs.push(name.clone());
                 }
             }
         }
-        tool_pairs.sort();
-        tool_pairs.dedup();
 
         match action {
             ToolsAction::List { .. } => {
-                for (tool, processor) in &tool_pairs {
-                    println!("{} ({})", tool, processor);
+                for (tool, procs) in &tool_map {
+                    println!("{} ({})", tool, procs.join(", "));
                 }
             }
             ToolsAction::Check { .. } => {
                 let mut any_missing = false;
-                for (tool, processor) in &tool_pairs {
+                for (tool, procs) in &tool_map {
+                    let procs_str = procs.join(", ");
                     if let Ok(path) = which::which(tool) {
                         let path_str = path.display().to_string();
-                        println!("{} ({}) {} {}", tool, processor, color::green("found"), color::dim(&path_str));
+                        println!("{} ({}) {} {}", tool, procs_str, color::green("found"), color::dim(&path_str));
                     } else {
                         let hint = install_hint(tool)
                             .map(|h| format!(" — install with: {}", color::dim(h)))
                             .unwrap_or_default();
-                        println!("{} ({}) {}{}", tool, processor, color::red("missing"), hint);
+                        println!("{} ({}) {}{}", tool, procs_str, color::red("missing"), hint);
                         any_missing = true;
                     }
                 }

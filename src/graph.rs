@@ -166,7 +166,7 @@ impl BuildGraph {
         // Check for output conflicts before mutating anything
         for output in &outputs {
             if let Some(&existing_id) = self.output_to_product.get(output) {
-                let existing = &self.products[existing_id];
+                let existing = self.products.get(existing_id).expect(crate::errors::INVALID_PRODUCT_ID);
                 return Err(crate::exit_code::RsbError::new(
                     crate::exit_code::RsbExitCode::GraphError,
                     format!(
@@ -225,8 +225,8 @@ impl BuildGraph {
             .collect();
 
         for (producer_id, consumer_id) in edges {
-            self.dependents[producer_id].push(consumer_id);
-            self.dependencies[consumer_id].push(producer_id);
+            self.dependents.get_mut(producer_id).expect(crate::errors::INVALID_PRODUCT_ID).push(consumer_id);
+            self.dependencies.get_mut(consumer_id).expect(crate::errors::INVALID_PRODUCT_ID).push(producer_id);
         }
     }
 
@@ -250,7 +250,7 @@ impl BuildGraph {
             result.push(id);
 
             // Reduce in-degree of dependents
-            for &dep_id in &self.dependents[id] {
+            for &dep_id in self.dependents.get(id).expect(crate::errors::INVALID_PRODUCT_ID) {
                 in_degree[dep_id] = in_degree[dep_id].saturating_sub(1);
                 if in_degree[dep_id] == 0 {
                     queue.insert(dep_id);

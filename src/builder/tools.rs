@@ -64,7 +64,7 @@ impl Builder {
             }
             for tool in processors[name].required_tools() {
                 let procs = tool_map.entry(tool).or_default();
-                if !procs.contains(&name) {
+                if !procs.contains(name) {
                     procs.push(name.clone());
                 }
             }

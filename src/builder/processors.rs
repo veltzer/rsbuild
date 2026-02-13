@@ -117,7 +117,7 @@ impl Builder {
                             println!();
                         }
                         current_processor = product.processor.as_str();
-                        let n = counts[current_processor];
+                        let n = counts.get(current_processor).copied().unwrap_or(0);
                         println!("[{}] ({} {})", current_processor, n, if n == 1 { "product" } else { "products" });
                     }
                     let inputs: Vec<String> = product.inputs.iter()

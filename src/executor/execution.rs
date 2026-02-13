@@ -314,10 +314,8 @@ impl<'a> Executor<'a> {
                 };
                 match result {
                     Ok(()) => {
-                        if !self.handle_success(&ctx, lctx.object_store, None) {
-                            // cache_outputs failed and error was handled
-                            continue;
-                        }
+                        // handle_success returns false if cache_outputs failed
+                        self.handle_success(&ctx, lctx.object_store, None);
                     }
                     Err(e) => {
                         self.handle_error(&ctx, e, None);

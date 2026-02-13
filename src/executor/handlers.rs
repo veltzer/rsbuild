@@ -159,7 +159,6 @@ impl<'a> Executor<'a> {
                     Some(&e.to_string()),
                 );
                 self.record_failure(ctx, e, false);
-                Self::inc_progress(ctx.pb, ctx.shared);
                 return false;
             }
         }

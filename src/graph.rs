@@ -280,7 +280,7 @@ impl BuildGraph {
 
     /// Get dependencies of a product (products that must be built before this one)
     pub fn get_dependencies(&self, id: usize) -> &[usize] {
-        &self.dependencies[id]
+        self.dependencies.get(id).expect(crate::errors::INVALID_PRODUCT_ID)
     }
 
     /// Get mutable access to a product by id
@@ -475,7 +475,7 @@ impl BuildGraph {
                     "processor": product.processor,
                     "inputs": inputs,
                     "outputs": outputs,
-                    "depends_on": &self.dependencies[product.id],
+                    "depends_on": self.dependencies.get(product.id).expect(errors::INVALID_PRODUCT_ID),
                 })
             })
             .collect();
@@ -501,7 +501,7 @@ impl BuildGraph {
         };
 
         for id in order {
-            let product = &self.products[id];
+            let product = self.products.get(id).expect(errors::INVALID_PRODUCT_ID);
             let inputs: Vec<_> = product.inputs.iter()
                 .filter_map(|p| p.file_name())
                 .filter_map(|n| n.to_str())
@@ -517,11 +517,11 @@ impl BuildGraph {
                 outputs.join(", "));
 
             // Show dependencies
-            let deps = &self.dependencies[product.id];
+            let deps = self.dependencies.get(product.id).expect(errors::INVALID_PRODUCT_ID);
             if !deps.is_empty() {
                 let dep_names: Vec<_> = deps.iter()
                     .map(|&d| {
-                        let dep = &self.products[d];
+                        let dep = self.products.get(d).expect(errors::INVALID_PRODUCT_ID);
                         let out: Vec<_> = dep.outputs.iter()
                             .filter_map(|p| p.file_name())
                             .filter_map(|n| n.to_str())

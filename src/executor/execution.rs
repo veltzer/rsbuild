@@ -162,7 +162,7 @@ impl<'a> Executor<'a> {
 
                 // Spawn threads for non-batch items (chunked across threads)
                 if !non_batch_items.is_empty() {
-                    let chunk_size = non_batch_items.len().div_ceil(self.parallel);
+                    let chunk_size = non_batch_items.len().div_ceil(self.parallel.max(1));
 
                     for chunk in non_batch_items.chunks(chunk_size.max(1)) {
                         let total_ref = Arc::clone(&counters.total_per_processor);

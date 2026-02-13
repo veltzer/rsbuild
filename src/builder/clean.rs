@@ -42,6 +42,15 @@ impl Builder {
                     }
                 }
             }
+            // Remove out/ itself if now empty
+            if fs::read_dir(&out_dir)?.next().is_none() {
+                fs::remove_dir(&out_dir)
+                    .with_context(|| format!("Failed to remove directory {}", out_dir.display()))?;
+                dirs_removed += 1;
+                if verbose {
+                    println!("Removed empty directory: {}", out_dir.display());
+                }
+            }
         }
 
         // Print summary

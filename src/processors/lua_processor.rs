@@ -449,6 +449,7 @@ impl ProductDiscovery for LuaProcessor {
 
     fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
         if self.has_function("clean") {
+            let existed_before = product.outputs.iter().filter(|o| o.exists()).count();
             let lua = self.lua.lock();
             let product_table = Self::product_to_lua(&lua, product)?;
             let clean_fn: LuaFunction = lua_context(
@@ -459,8 +460,8 @@ impl ProductDiscovery for LuaProcessor {
                 clean_fn.call::<()>(product_table),
                 format!("Lua plugin '{}': clean() failed", self.name),
             )?;
-            // Lua plugins handle their own clean; count outputs that were removed
-            Ok(product.outputs.iter().filter(|o| !o.exists()).count())
+            let exist_after = product.outputs.iter().filter(|o| o.exists()).count();
+            Ok(existed_before.saturating_sub(exist_after))
         } else {
             clean_outputs(product, &self.name, verbose)
         }

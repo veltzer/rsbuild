@@ -24,7 +24,7 @@ impl ObjectStore {
             .with_context(|| format!("Failed to get mtime: {}", file_path.display()))?;
         let duration = mtime.duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default();
-        let mtime_secs = duration.as_secs() as i64;
+        let mtime_secs = i64::try_from(duration.as_secs()).unwrap_or(i64::MAX);
         let mtime_nanos = duration.subsec_nanos();
 
         let path_str = file_path.display().to_string();

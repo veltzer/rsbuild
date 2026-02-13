@@ -96,8 +96,8 @@ pub fn watch(opts: &BuildOptions, interrupted: Arc<AtomicBool>) -> Result<()> {
             }
             match rx.recv_timeout(poll_interval) {
                 Ok(Ok(event)) => {
-                    let dominated_by_ignored = event.paths.iter().all(|p| should_ignore(p));
-                    if dominated_by_ignored {
+                    let all_ignored = event.paths.iter().all(|p| should_ignore(p));
+                    if all_ignored {
                         continue;
                     }
                     break true;

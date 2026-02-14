@@ -168,11 +168,13 @@ rsb config show-default   # Show the default configuration (without rsb.toml ove
 
 ```bash
 rsb processors list          # List available processors and their status
-rsb processors all           # Show all processors with descriptions
+rsb processors all           # Show all processors with descriptions (no rsb.toml required)
 rsb processors auto          # Auto-detect which processors are relevant for this project
 rsb processors files         # Show source and target files for each enabled processor
 rsb processors files ruff    # Show files for a specific processor
 ```
+
+The `all` subcommand does not require an `rsb.toml` — it lists every built-in processor with its type, batch capability, and description. This is useful for discovering what rsb supports before initializing a project. All other subcommands require a project configuration.
 
 ## `rsb tools`
 

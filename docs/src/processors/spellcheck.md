@@ -15,6 +15,9 @@ misspelled words on error.
 
 Dictionaries are read from `/usr/share/hunspell/`.
 
+This processor supports batch mode when `auto_add_words` is enabled, collecting
+all misspelled words across files and writing them to the words file at the end.
+
 ## Source Files
 
 - Input: `**/*{extensions}` (default: `**/*.md`)

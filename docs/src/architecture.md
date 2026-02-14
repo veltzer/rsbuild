@@ -13,7 +13,7 @@ Processors implement the `ProductDiscovery` trait. Each processor:
 3. Creates **products** describing what to build
 4. Executes the build for each product
 
-Available processors: `tera`, `ruff`, `pylint`, `cc_single_file`, `cppcheck`, `spellcheck`, `sleep`, `make`.
+Available processors: `tera`, `ruff`, `pylint`, `mypy`, `cc_single_file`, `cppcheck`, `clang_tidy`, `shellcheck`, `spellcheck`, `rumdl`, `sleep`, `make`, `cargo`, `yamllint`, `jsonlint`, `taplo`, `json_schema`.
 
 ### Auto-detection
 
@@ -34,14 +34,23 @@ Detection heuristics per processor:
 
 | Processor | Detected when |
 |---|---|
-| `tera` | `teras/` directory contains files matching configured extensions |
+| `tera` | `templates/` directory contains files matching configured extensions |
 | `ruff` | Project contains `.py` files (excluding `.venv/`, `__pycache__/`, etc.) |
 | `pylint` | Same as `ruff` |
+| `mypy` | Same as `ruff` |
 | `cc_single_file` | Configured source directory contains `.c` or `.cc` files |
 | `cppcheck` | Same as `cc_single_file` |
+| `clang_tidy` | Same as `cc_single_file` |
+| `shellcheck` | Project contains `.sh` or `.bash` files |
 | `spellcheck` | Project contains files matching configured extensions (e.g., `.md`) |
+| `rumdl` | Project contains `.md` files |
 | `sleep` | `sleep/` directory contains `.sleep` files |
 | `make` | Project contains `Makefile` files |
+| `cargo` | Project contains `Cargo.toml` files |
+| `yamllint` | Project contains `.yml` or `.yaml` files |
+| `jsonlint` | Project contains `.json` files |
+| `taplo` | Project contains `.toml` files |
+| `json_schema` | Project contains `.json` files |
 
 Run `rsb processors auto` to see the auto-detection results for the current project.
 

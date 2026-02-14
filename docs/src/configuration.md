@@ -6,17 +6,23 @@ RSB is configured via an `rsb.toml` file in the project root.
 
 ```toml
 [build]
-parallel = 1  # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
+parallel = 1          # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
+batch_size = 0        # Max files per batch for batch-capable processors (0 = no limit, omit to disable)
 
 [processor]
 auto_detect = true
-enabled = ["tera", "ruff", "pylint", "cc_single_file", "cppcheck", "spellcheck", "sleep", "make"]
+enabled = ["tera", "ruff", "pylint", "cc_single_file", "cppcheck", "shellcheck", "spellcheck", "make", "yamllint", "jsonlint", "taplo", "json_schema"]
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
 remote = "s3://my-bucket/rsb-cache"  # Optional: remote cache URL
-remote_push = true   # Push local builds to remote (default: true)
-remote_pull = true   # Pull from remote on cache miss (default: true)
+remote_push = true       # Push local builds to remote (default: true)
+remote_pull = true       # Pull from remote on cache miss (default: true)
+mtime_check = true       # Use mtime pre-check to skip unchanged file checksums (default: true)
+
+[analyzer]
+auto_detect = true
+enabled = ["cpp", "python"]
 
 [graph]
 viewer = "google-chrome"  # Command to open graph files (default: platform-specific)
@@ -55,13 +61,14 @@ Variables are substituted before TOML parsing. The `"${var_name}"` (including qu
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `parallel` | integer | `1` | Number of parallel jobs. `1` = sequential, `0` = auto-detect CPU cores. |
+| `batch_size` | integer | `0` | Maximum files per batch for batch-capable processors. `0` = no limit (all files in one batch). Omit to disable batching entirely. |
 
 ### `[processor]`
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `auto_detect` | boolean | `true` | When `true`, only run enabled processors that auto-detect relevant files. When `false`, run all enabled processors unconditionally. |
-| `enabled` | array of strings | all | List of processors to enable. Built-in: `tera`, `ruff`, `pylint`, `cc_single_file`, `cppcheck`, `spellcheck`, `sleep`, `make`. [Lua plugin](plugins.md) names can also be listed here. |
+| `enabled` | array of strings | (see below) | List of processors to enable. Default: `tera`, `ruff`, `pylint`, `cc_single_file`, `cppcheck`, `shellcheck`, `spellcheck`, `make`, `yamllint`, `jsonlint`, `taplo`, `json_schema`. [Lua plugin](plugins.md) names can also be listed here. |
 
 ### `[cache]`
 
@@ -71,6 +78,14 @@ Variables are substituted before TOML parsing. The `"${var_name}"` (including qu
 | `remote` | string | none | Remote cache URL. See [Remote Caching](remote-caching.md). |
 | `remote_push` | boolean | `true` | Push locally built artifacts to remote cache. |
 | `remote_pull` | boolean | `true` | Pull from remote cache on local cache miss. |
+| `mtime_check` | boolean | `true` | Use mtime pre-check to skip unchanged file checksums. |
+
+### `[analyzer]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `auto_detect` | boolean | `true` | When `true`, only run enabled analyzers that auto-detect relevant files. |
+| `enabled` | array of strings | `["cpp", "python"]` | List of dependency analyzers to enable. |
 
 ### `[graph]`
 

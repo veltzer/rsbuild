@@ -31,7 +31,7 @@ Enable processors in `rsb.toml`:
 
 ```toml
 [processor]
-enabled = ["tera", "ruff", "pylint", "cc_single_file", "cppcheck", "spellcheck", "sleep", "make"]
+enabled = ["tera", "ruff", "pylint", "cc_single_file", "cppcheck", "shellcheck", "spellcheck", "make", "yamllint", "jsonlint", "taplo", "json_schema"]
 ```
 
 Use `rsb processors list` to see available processors and their status.
@@ -44,11 +44,20 @@ Use `rsb processors files` to see which files each processor discovers.
 - [Tera](processors/tera.md) — renders Tera templates into output files
 - [Ruff](processors/ruff.md) — lints Python files with ruff
 - [Pylint](processors/pylint.md) — lints Python files with pylint
+- [Mypy](processors/mypy.md) — type-checks Python files with mypy
 - [CC Single File](processors/cc.md) — compiles C/C++ source files into executables (single-file)
-- [Cpplint](processors/cppcheck.md) — runs static analysis on C/C++ source files
+- [Cppcheck](processors/cppcheck.md) — runs static analysis on C/C++ source files
+- [Clang-Tidy](processors/clang_tidy.md) — runs clang-tidy static analysis on C/C++ source files
+- [Shellcheck](processors/shellcheck.md) — lints shell scripts using shellcheck
 - [Spellcheck](processors/spellcheck.md) — checks documentation files for spelling errors
+- [Rumdl](processors/rumdl.md) — lints Markdown files with rumdl
 - [Sleep](processors/sleep.md) — sleeps for a duration (for testing)
 - [Make](processors/make.md) — runs make in directories containing Makefiles
+- [Cargo](processors/cargo.md) — builds Rust projects using Cargo
+- [Yamllint](processors/yamllint.md) — lints YAML files with yamllint
+- [Jsonlint](processors/jsonlint.md) — lints JSON files with jsonlint
+- [Taplo](processors/taplo.md) — checks TOML files with taplo
+- [Json Schema](processors/json_schema.md) — validates JSON schema propertyOrdering
 
 ## Custom Processors
 

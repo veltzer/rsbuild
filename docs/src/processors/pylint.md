@@ -10,6 +10,12 @@ Discovers `.py` files in the project (excluding common non-source directories),
 runs `pylint` on each file, and creates a stub file on success.
 A non-zero exit code from pylint fails the product.
 
+This processor supports batch mode, allowing multiple files to be checked in a
+single pylint invocation for better performance.
+
+If a `.pylintrc` file exists in the project root, it is automatically added as an
+extra input so that configuration changes trigger rebuilds.
+
 ## Source Files
 
 - Input: `**/*.py`

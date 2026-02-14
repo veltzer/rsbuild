@@ -1,6 +1,6 @@
 use std::fs;
 use tempfile::TempDir;
-use crate::common::{setup_test_project, run_rsb_with_env};
+use crate::common::{setup_test_project, run_rsb_with_env, run_rsb_json_with_env};
 
 #[test]
 fn processors_list_shows_enabled() {
@@ -168,4 +168,53 @@ fn processors_all_works_without_config() {
     assert!(stdout.contains("tera"), "Expected tera processor in output");
     assert!(stdout.contains("ruff"), "Expected ruff processor in output");
     assert!(stdout.contains("shellcheck"), "Expected shellcheck processor in output");
+}
+
+#[test]
+fn per_processor_enabled_false_disables_processor() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    // Create sleep directory and file
+    fs::create_dir_all(project_path.join("sleep")).unwrap();
+    fs::write(project_path.join("sleep/quick.sleep"), "0.01").unwrap();
+
+    // Enable sleep in the enabled list but disable it via per-processor config
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"sleep\"]\n\n[processor.sleep]\nenabled = false\n"
+    ).unwrap();
+
+    // processors list --all should show sleep as disabled (sleep is hidden, needs --all)
+    let output = run_rsb_with_env(project_path, &["processors", "list", "--all"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("sleep"), "Expected sleep in processor list");
+    assert!(stdout.contains("disabled"), "Expected sleep to show as disabled");
+
+    // Build should produce zero products (sleep is disabled)
+    let result = run_rsb_json_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(result.exit_success, "Build should succeed");
+    assert_eq!(result.total_products, 0, "Expected 0 products when processor is disabled");
+}
+
+#[test]
+fn per_processor_enabled_true_is_default() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    // Create sleep directory and file
+    fs::create_dir_all(project_path.join("sleep")).unwrap();
+    fs::write(project_path.join("sleep/quick.sleep"), "0.01").unwrap();
+
+    // Enable sleep in the enabled list without setting per-processor enabled
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"sleep\"]\n"
+    ).unwrap();
+
+    // Build should produce one product (sleep defaults to enabled = true)
+    let result = run_rsb_json_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(result.exit_success, "Build should succeed");
+    assert_eq!(result.total_products, 1, "Expected 1 product when processor defaults to enabled");
 }

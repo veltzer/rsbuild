@@ -12,6 +12,24 @@ pub fn list_all_processors() -> Result<()> {
     let processors = create_builtin_processors(&cfg);
     let proc_names = sorted_keys(&processors);
 
+    if crate::json_output::is_json_mode() {
+        let entries: Vec<crate::json_output::ProcessorListEntry> = proc_names.iter()
+            .map(|name| {
+                let proc = &processors[name.as_str()];
+                crate::json_output::ProcessorListEntry {
+                    name: name.to_string(),
+                    processor_type: proc.processor_type().as_str().to_string(),
+                    enabled: false,
+                    hidden: proc.hidden(),
+                    batch: proc.supports_batch(),
+                    description: proc.description().to_string(),
+                }
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&entries)?);
+        return Ok(());
+    }
+
     for name in &proc_names {
         let proc = &processors[name.as_str()];
         let hidden_status = if proc.hidden() {
@@ -41,6 +59,25 @@ impl Builder {
 
         match action {
             ProcessorAction::List { all } => {
+                if crate::json_output::is_json_mode() {
+                    let entries: Vec<crate::json_output::ProcessorListEntry> = proc_names.iter()
+                        .filter(|name| all || !processors[name.as_str()].hidden())
+                        .map(|name| {
+                            let proc = &processors[name.as_str()];
+                            crate::json_output::ProcessorListEntry {
+                                name: name.to_string(),
+                                processor_type: proc.processor_type().as_str().to_string(),
+                                enabled: self.config.processor.is_enabled(name),
+                                hidden: proc.hidden(),
+                                batch: proc.supports_batch(),
+                                description: proc.description().to_string(),
+                            }
+                        })
+                        .collect();
+                    println!("{}", serde_json::to_string_pretty(&entries)?);
+                    return Ok(());
+                }
+
                 for name in &proc_names {
                     let proc = &processors[name.as_str()];
                     if proc.hidden() && !all {
@@ -62,6 +99,24 @@ impl Builder {
                 }
             }
             ProcessorAction::All => {
+                if crate::json_output::is_json_mode() {
+                    let entries: Vec<crate::json_output::ProcessorListEntry> = proc_names.iter()
+                        .map(|name| {
+                            let proc = &processors[name.as_str()];
+                            crate::json_output::ProcessorListEntry {
+                                name: name.to_string(),
+                                processor_type: proc.processor_type().as_str().to_string(),
+                                enabled: self.config.processor.is_enabled(name),
+                                hidden: proc.hidden(),
+                                batch: proc.supports_batch(),
+                                description: proc.description().to_string(),
+                            }
+                        })
+                        .collect();
+                    println!("{}", serde_json::to_string_pretty(&entries)?);
+                    return Ok(());
+                }
+
                 for name in &proc_names {
                     let proc = &processors[name.as_str()];
                     let enabled_status = if self.config.processor.is_enabled(name) {

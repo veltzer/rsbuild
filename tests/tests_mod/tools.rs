@@ -37,6 +37,26 @@ fn tools_list_all_includes_disabled() {
 }
 
 #[test]
+fn tools_list_json() {
+    let temp_dir = setup_test_project();
+    let project_path = temp_dir.path();
+
+    let output = run_rsb_with_env(project_path, &["--json", "tools", "list"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "tools list --json failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let entries: Vec<serde_json::Value> = serde_json::from_str(&stdout)
+        .expect("Expected valid JSON array");
+
+    // Check that every entry has the expected fields
+    for entry in &entries {
+        assert!(entry.get("tool").is_some(), "Entry should have 'tool' field");
+        assert!(entry.get("processors").is_some(), "Entry should have 'processors' field");
+        assert!(entry["processors"].is_array(), "'processors' should be an array");
+    }
+}
+
+#[test]
 fn tools_check_succeeds() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();

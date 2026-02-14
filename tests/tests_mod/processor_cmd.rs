@@ -220,6 +220,60 @@ fn per_processor_enabled_true_is_default() {
 }
 
 #[test]
+fn processors_list_json() {
+    let temp_dir = setup_test_project();
+    let project_path = temp_dir.path();
+
+    let output = run_rsb_with_env(project_path, &["--json", "processors", "list"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "processors list --json failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let entries: Vec<serde_json::Value> = serde_json::from_str(&stdout)
+        .expect("Expected valid JSON array");
+    assert!(!entries.is_empty(), "Expected at least one entry");
+
+    // Check that every entry has the expected fields
+    for entry in &entries {
+        assert!(entry.get("name").is_some(), "Entry should have 'name' field");
+        assert!(entry.get("processor_type").is_some(), "Entry should have 'processor_type' field");
+        assert!(entry.get("enabled").is_some(), "Entry should have 'enabled' field");
+        assert!(entry.get("hidden").is_some(), "Entry should have 'hidden' field");
+        assert!(entry.get("batch").is_some(), "Entry should have 'batch' field");
+        assert!(entry.get("description").is_some(), "Entry should have 'description' field");
+    }
+
+    // tera should be enabled in setup_test_project
+    let tera = entries.iter().find(|e| e["name"] == "tera").expect("Expected tera in list");
+    assert_eq!(tera["enabled"], true);
+}
+
+#[test]
+fn processors_all_json() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+    let output = run_rsb_with_env(temp_dir.path(), &["--json", "processors", "all"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "processors all --json failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let entries: Vec<serde_json::Value> = serde_json::from_str(&stdout)
+        .expect("Expected valid JSON array");
+    assert!(!entries.is_empty(), "Expected at least one entry");
+
+    // Check that every entry has the expected fields
+    for entry in &entries {
+        assert!(entry.get("name").is_some(), "Entry should have 'name' field");
+        assert!(entry.get("processor_type").is_some(), "Entry should have 'processor_type' field");
+        assert!(entry.get("hidden").is_some(), "Entry should have 'hidden' field");
+        assert!(entry.get("batch").is_some(), "Entry should have 'batch' field");
+        assert!(entry.get("description").is_some(), "Entry should have 'description' field");
+    }
+
+    // Should include both hidden and non-hidden processors
+    let tera = entries.iter().find(|e| e["name"] == "tera").expect("Expected tera in all");
+    assert_eq!(tera["hidden"], false);
+}
+
+#[test]
 fn per_processor_enabled_false_non_hidden_processor() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();

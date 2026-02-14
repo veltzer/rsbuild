@@ -1,3 +1,5 @@
+use std::io::Write;
+use std::process::Command;
 use anyhow::Result;
 use crate::cli::ToolsAction;
 use crate::color;
@@ -56,6 +58,7 @@ impl Builder {
         let processors = self.create_processors()?;
 
         let show_all = matches!(&action, ToolsAction::List { all: true } | ToolsAction::Check { all: true });
+        let install_yes = matches!(&action, ToolsAction::Install { yes: true, .. });
 
         let mut tool_map: std::collections::BTreeMap<String, Vec<String>> = std::collections::BTreeMap::new();
         for name in sorted_keys(&processors) {
@@ -72,6 +75,17 @@ impl Builder {
 
         match action {
             ToolsAction::List { .. } => {
+                if crate::json_output::is_json_mode() {
+                    let entries: Vec<crate::json_output::ToolListEntry> = tool_map.iter()
+                        .map(|(tool, procs)| crate::json_output::ToolListEntry {
+                            tool: tool.clone(),
+                            processors: procs.clone(),
+                        })
+                        .collect();
+                    println!("{}", serde_json::to_string_pretty(&entries)?);
+                    return Ok(());
+                }
+
                 for (tool, procs) in &tool_map {
                     println!("{} ({})", tool, procs.join(", "));
                 }
@@ -116,6 +130,69 @@ impl Builder {
                     }
                     tool_lock::write_lock_file(&lock)?;
                     println!("Wrote {}", color::bold(".tools.versions"));
+                }
+            }
+            ToolsAction::Install { name, .. } => {
+                let to_install: Vec<(String, &str)> = if let Some(ref name) = name {
+                    let hint = install_hint(name).ok_or_else(|| {
+                        anyhow::anyhow!("No install hint known for tool '{}'", name)
+                    })?;
+                    vec![(name.clone(), hint)]
+                } else {
+                    let mut missing = Vec::new();
+                    for tool in tool_map.keys() {
+                        if which::which(tool).is_err() {
+                            if let Some(hint) = install_hint(tool) {
+                                missing.push((tool.clone(), hint));
+                            } else {
+                                println!("{} {} (no install hint known)", tool, color::yellow("skipped"));
+                            }
+                        }
+                    }
+                    if missing.is_empty() {
+                        println!("{}", color::green("All tools are already installed."));
+                        return Ok(());
+                    }
+                    missing
+                };
+
+                println!("The following tools will be installed:");
+                for (tool, hint) in &to_install {
+                    println!("  {} — {}", color::bold(tool), color::dim(hint));
+                }
+
+                if !install_yes {
+                    print!("Proceed? [y/N] ");
+                    std::io::stdout().flush()?;
+                    let mut answer = String::new();
+                    std::io::stdin().read_line(&mut answer)?;
+                    let answer = answer.trim().to_lowercase();
+                    if answer != "y" && answer != "yes" {
+                        println!("Aborted.");
+                        return Ok(());
+                    }
+                }
+
+                let mut any_failed = false;
+                for (tool, hint) in &to_install {
+                    println!("Installing {} — running: {}", color::bold(tool), color::dim(hint));
+                    let status = Command::new("sh")
+                        .arg("-c")
+                        .arg(hint)
+                        .status()?;
+                    if status.success() {
+                        println!("{} {}", tool, color::green("installed"));
+                    } else {
+                        println!("{} {} (exit code {})", tool, color::red("failed"),
+                            status.code().map_or("unknown".to_string(), |c| c.to_string()));
+                        any_failed = true;
+                    }
+                }
+                if any_failed {
+                    return Err(crate::exit_code::RsbError::new(
+                        crate::exit_code::RsbExitCode::ToolError,
+                        "Some tools failed to install",
+                    ).into());
                 }
             }
         }

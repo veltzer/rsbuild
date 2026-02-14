@@ -218,3 +218,33 @@ fn per_processor_enabled_true_is_default() {
     assert!(result.exit_success, "Build should succeed");
     assert_eq!(result.total_products, 1, "Expected 1 product when processor defaults to enabled");
 }
+
+#[test]
+fn per_processor_enabled_false_non_hidden_processor() {
+    let temp_dir = setup_test_project();
+    let project_path = temp_dir.path();
+
+    // Write a template file so tera would normally discover a product
+    fs::write(
+        project_path.join("templates/output.txt.tera"),
+        "hello",
+    ).unwrap();
+
+    // Enable tera in the enabled list but disable it via per-processor config
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"tera\"]\n\n[processor.tera]\nenabled = false\n"
+    ).unwrap();
+
+    // processors list (no --all needed, tera is not hidden) should show tera as disabled
+    let output = run_rsb_with_env(project_path, &["processors", "list"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let tera_line = stdout.lines().find(|l| l.contains("tera")).expect("Expected tera in processor list");
+    assert!(tera_line.contains("disabled"), "Expected tera to show as disabled, got: {}", tera_line);
+
+    // Build should produce zero products (tera is disabled despite being in enabled list)
+    let result = run_rsb_json_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(result.exit_success, "Build should succeed");
+    assert_eq!(result.total_products, 0, "Expected 0 products when tera is disabled via per-processor config");
+}

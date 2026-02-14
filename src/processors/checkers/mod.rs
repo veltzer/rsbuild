@@ -372,6 +372,9 @@ mod rumdl;
 mod shellcheck;
 mod sleep;
 mod spellcheck;
+mod yamllint;
+mod jsonlint;
+mod taplo;
 
 pub use cargo::CargoProcessor;
 pub use clang_tidy::ClangTidyProcessor;
@@ -384,3 +387,6 @@ pub use rumdl::RumdlProcessor;
 pub use shellcheck::ShellcheckProcessor;
 pub use sleep::SleepProcessor;
 pub use spellcheck::SpellcheckProcessor;
+pub use yamllint::YamllintProcessor;
+pub use jsonlint::JsonlintProcessor;
+pub use taplo::TaploProcessor;

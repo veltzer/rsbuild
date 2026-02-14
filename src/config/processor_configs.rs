@@ -462,6 +462,87 @@ impl Default for RumdlConfig {
     }
 }
 
+fn default_yamllint_linter() -> String {
+    "yamllint".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct YamllintConfig {
+    #[serde(default = "default_yamllint_linter")]
+    pub linter: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for YamllintConfig {
+    fn default() -> Self {
+        Self {
+            linter: "yamllint".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            scan: default_scan!(extensions: [".yml", ".yaml"]),
+        }
+    }
+}
+
+fn default_jsonlint_linter() -> String {
+    "jsonlint".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct JsonlintConfig {
+    #[serde(default = "default_jsonlint_linter")]
+    pub linter: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for JsonlintConfig {
+    fn default() -> Self {
+        Self {
+            linter: "jsonlint".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            scan: default_scan!(extensions: [".json"]),
+        }
+    }
+}
+
+fn default_taplo_linter() -> String {
+    "taplo".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TaploConfig {
+    #[serde(default = "default_taplo_linter")]
+    pub linter: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for TaploConfig {
+    fn default() -> Self {
+        Self {
+            linter: "taplo".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            scan: default_scan!(extensions: [".toml"]),
+        }
+    }
+}
+
 fn default_shellcheck_checker() -> String {
     "shellcheck".into()
 }

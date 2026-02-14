@@ -42,5 +42,8 @@ mod processors {
     pub mod shellcheck;
     pub mod sleep;
     pub mod spellcheck;
+    pub mod taplo;
     pub mod tera;
+    pub mod yamllint;
+    pub mod jsonlint;
 }

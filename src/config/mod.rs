@@ -255,7 +255,8 @@ fn default_processors() -> Vec<String> {
     vec![
         names::TERA.into(), names::RUFF.into(), names::PYLINT.into(),
         names::CC_SINGLE_FILE.into(), names::CPPCHECK.into(), names::SHELLCHECK.into(),
-        names::SPELLCHECK.into(), names::MAKE.into(),
+        names::SPELLCHECK.into(), names::MAKE.into(), names::YAMLLINT.into(),
+        names::JSONLINT.into(), names::TAPLO.into(), names::JSON_SCHEMA.into(),
     ]
 }
 

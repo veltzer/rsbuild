@@ -543,6 +543,8 @@ impl Default for TaploConfig {
     }
 }
 
+checker_config!(JsonSchemaConfig, extensions: [".json"]);
+
 fn default_shellcheck_checker() -> String {
     "shellcheck".into()
 }

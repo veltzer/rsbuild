@@ -309,6 +309,8 @@ pub(crate) struct ProcessorConfig {
     pub jsonlint: JsonlintConfig,
     #[serde(default)]
     pub taplo: TaploConfig,
+    #[serde(default)]
+    pub json_schema: JsonSchemaConfig,
     /// Captures unknown [processor.PLUGIN_NAME] sections for Lua plugins
     #[serde(flatten)]
     pub extra: HashMap<String, toml::Value>,
@@ -335,6 +337,7 @@ impl Default for ProcessorConfig {
             yamllint: YamllintConfig::default(),
             jsonlint: JsonlintConfig::default(),
             taplo: TaploConfig::default(),
+            json_schema: JsonSchemaConfig::default(),
             extra: HashMap::new(),
         }
     }
@@ -354,6 +357,7 @@ impl ProcessorConfig {
             &self.shellcheck.scan, &self.spellcheck.scan, &self.sleep.scan,
             &self.make.scan, &self.cargo.scan, &self.rumdl.scan, &self.mypy.scan,
             &self.yamllint.scan, &self.jsonlint.scan, &self.taplo.scan,
+            &self.json_schema.scan,
         ];
         let mut dirs: Vec<String> = scans.iter()
             .filter_map(|s| s.scan_dir.as_deref())
@@ -385,6 +389,7 @@ impl ProcessorConfig {
         self.yamllint.scan.resolve("", &[".yml", ".yaml"], BUILD_TOOL_EXCLUDES);
         self.jsonlint.scan.resolve("", &[".json"], BUILD_TOOL_EXCLUDES);
         self.taplo.scan.resolve("", &[".toml"], BUILD_TOOL_EXCLUDES);
+        self.json_schema.scan.resolve("", &[".json"], BUILD_TOOL_EXCLUDES);
     }
 }
 

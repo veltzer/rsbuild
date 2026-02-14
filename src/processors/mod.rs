@@ -37,6 +37,7 @@ pub mod names {
     pub const YAMLLINT: &str = "yamllint";
     pub const JSONLINT: &str = "jsonlint";
     pub const TAPLO: &str = "taplo";
+    pub const JSON_SCHEMA: &str = "json_schema";
 }
 
 /// Global flag: set to true on Ctrl+C so subprocesses can be killed promptly.
@@ -451,9 +452,9 @@ where
 
 // Re-export from subdirectories
 pub use checkers::{
-    CargoProcessor, ClangTidyProcessor, CppcheckProcessor, JsonlintProcessor, MakeProcessor,
-    MypyProcessor, PylintProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor,
-    SleepProcessor, SpellcheckProcessor, TaploProcessor, YamllintProcessor,
+    CargoProcessor, ClangTidyProcessor, CppcheckProcessor, JsonlintProcessor, JsonSchemaProcessor,
+    MakeProcessor, MypyProcessor, PylintProcessor, RuffProcessor, RumdlProcessor,
+    ShellcheckProcessor, SleepProcessor, SpellcheckProcessor, TaploProcessor, YamllintProcessor,
 };
 pub use generators::{CcProcessor, TeraProcessor};
 pub use lua_processor::LuaProcessor;

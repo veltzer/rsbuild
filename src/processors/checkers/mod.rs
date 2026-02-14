@@ -375,6 +375,7 @@ mod spellcheck;
 mod yamllint;
 mod jsonlint;
 mod taplo;
+mod json_schema;
 
 pub use cargo::CargoProcessor;
 pub use clang_tidy::ClangTidyProcessor;
@@ -390,3 +391,4 @@ pub use spellcheck::SpellcheckProcessor;
 pub use yamllint::YamllintProcessor;
 pub use jsonlint::JsonlintProcessor;
 pub use taplo::TaploProcessor;
+pub use json_schema::JsonSchemaProcessor;

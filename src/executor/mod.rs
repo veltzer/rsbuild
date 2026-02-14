@@ -224,8 +224,6 @@ impl<'a> Executor<'a> {
         let mut product_level: HashMap<usize, usize> = HashMap::new();
 
         for &id in order {
-            let product = graph.get_product(id).expect(errors::INVALID_PRODUCT_ID);
-
             // Find the maximum level of all dependencies
             let max_dep_level = graph.get_dependencies(id)
                 .iter()
@@ -241,7 +239,7 @@ impl<'a> Executor<'a> {
                 max_dep_level + 1
             };
 
-            product_level.insert(product.id, my_level);
+            product_level.insert(id, my_level);
 
             // Ensure we have enough levels
             while levels.len() <= my_level {

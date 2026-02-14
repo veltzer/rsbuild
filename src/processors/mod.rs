@@ -264,12 +264,15 @@ pub(crate) fn config_file_inputs(path: &str) -> Vec<String> {
 pub(crate) fn clean_outputs(product: &Product, label: &str, verbose: bool) -> Result<usize> {
     let mut count = 0;
     for output in &product.outputs {
-        if output.exists() {
-            fs::remove_file(output)?;
-            count += 1;
-            if verbose {
-                println!("Removed {} output: {}", label, output.display());
+        match fs::remove_file(output) {
+            Ok(()) => {
+                count += 1;
+                if verbose {
+                    println!("Removed {} output: {}", label, output.display());
+                }
             }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e.into()),
         }
     }
     Ok(count)

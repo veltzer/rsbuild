@@ -89,11 +89,7 @@ impl Builder {
         let cmd = if let Some(ref viewer) = self.config.graph.viewer {
             viewer.as_str()
         } else {
-            #[cfg(target_os = "linux")]
-            { "xdg-open" }
-
-            #[cfg(target_os = "macos")]
-            { "open" }
+            "xdg-open"
         };
 
         let mut open_cmd = Command::new(cmd);

@@ -319,6 +319,11 @@ impl<'a> Executor<'a> {
             let results = processor.execute_batch(&product_refs);
             let batch_duration = batch_start.elapsed();
 
+            // Validate batch returned correct number of results
+            assert_eq!(results.len(), chunk.len(),
+                "execute_batch returned {} results for {} products (processor: {})",
+                results.len(), chunk.len(), proc_name);
+
             // Process per-product results
             for (item, result) in chunk.iter().zip(results) {
                 let product = lctx.graph.get_product(item.product_id).expect(errors::INVALID_PRODUCT_ID);

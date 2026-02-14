@@ -14,7 +14,8 @@ pub fn open_or_recreate(db_path: &Path, label: &str) -> Result<Database> {
         Ok(db) => Ok(db),
         Err(_) => {
             eprintln!("Warning: {} corrupted, recreating", label);
-            let _ = fs::remove_file(db_path);
+            fs::remove_file(db_path)
+                .with_context(|| format!("Failed to remove corrupted {}", label))?;
             Database::create(db_path)
                 .with_context(|| format!("Failed to create {}", label))
         }

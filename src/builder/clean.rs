@@ -27,15 +27,17 @@ impl Builder {
         let stats = executor.clean(&graph, verbose)?;
 
         // Remove empty subdirectories under out/
+        // Use try-and-ignore pattern to avoid TOCTOU races (directory could be
+        // populated between emptiness check and removal by another process).
         let mut dirs_removed = 0usize;
         let out_dir = std::path::PathBuf::from("out");
         if out_dir.is_dir() {
             for entry in fs::read_dir(&out_dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                if path.is_dir() && fs::read_dir(&path)?.next().is_none() {
-                    fs::remove_dir(&path)
-                        .with_context(|| format!("Failed to remove directory {}", path.display()))?;
+                if path.is_dir()
+                    && let Ok(()) = fs::remove_dir(&path)
+                {
                     dirs_removed += 1;
                     if verbose {
                         println!("Removed empty directory: {}", path.display());
@@ -43,9 +45,7 @@ impl Builder {
                 }
             }
             // Remove out/ itself if now empty
-            if fs::read_dir(&out_dir)?.next().is_none() {
-                fs::remove_dir(&out_dir)
-                    .with_context(|| format!("Failed to remove directory {}", out_dir.display()))?;
+            if let Ok(()) = fs::remove_dir(&out_dir) {
                 dirs_removed += 1;
                 if verbose {
                     println!("Removed empty directory: {}", out_dir.display());

@@ -260,9 +260,12 @@ impl ProductDiscovery for SpellcheckProcessor {
 
     fn execute(&self, product: &Product) -> Result<()> {
         let result = self.check_file(product.primary_input());
-        // In auto_add_words mode, flush after each file when not batching
-        if self.config.auto_add_words {
-            self.flush_words_to_file()?;
+        // In auto_add_words mode, flush after each file when not batching.
+        // Ignore flush errors so they don't mask the actual check result.
+        if self.config.auto_add_words
+            && let Err(e) = self.flush_words_to_file()
+        {
+            eprintln!("Warning: failed to flush spellcheck words file: {}", e);
         }
         result
     }

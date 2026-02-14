@@ -3,7 +3,7 @@ mod clean;
 mod config_cmd;
 mod deps;
 mod graph;
-mod processors;
+pub(crate) mod processors;
 mod tools;
 
 use std::borrow::Cow;
@@ -13,7 +13,7 @@ use anyhow::Result;
 use crate::analyzers::{CppDepAnalyzer, DepAnalyzer, PythonDepAnalyzer};
 use crate::cli::BuildPhase;
 use crate::color;
-use crate::config::Config;
+use crate::config::{Config, ProcessorConfig};
 use crate::deps_cache::DepsCache;
 use crate::errors;
 use crate::file_index::FileIndex;
@@ -63,6 +63,38 @@ struct ProductStatusLabels<'a> {
     stale: (Cow<'a, str>, &'static str),
 }
 
+/// Create all built-in processors from a processor config (no Lua plugins, no spellcheck error propagation).
+pub(crate) fn create_builtin_processors(cfg: &ProcessorConfig) -> ProcessorMap {
+    let mut processors: ProcessorMap = HashMap::new();
+
+    // Tera processor (fallible init — skip if template dir missing)
+    if let Ok(proc) = TeraProcessor::new(cfg.tera.clone()) {
+        Builder::register(&mut processors, proc_names::TERA, proc);
+    }
+
+    Builder::register(&mut processors, proc_names::RUFF, RuffProcessor::new(cfg.ruff.clone()));
+    Builder::register(&mut processors, proc_names::PYLINT, PylintProcessor::new(cfg.pylint.clone()));
+    Builder::register(&mut processors, proc_names::MYPY, MypyProcessor::new(cfg.mypy.clone()));
+    Builder::register(&mut processors, proc_names::CC_SINGLE_FILE, CcProcessor::new(cfg.cc_single_file.clone()));
+    Builder::register(&mut processors, proc_names::CPPCHECK, CppcheckProcessor::new(cfg.cppcheck.clone()));
+    Builder::register(&mut processors, proc_names::CLANG_TIDY, ClangTidyProcessor::new(cfg.clang_tidy.clone()));
+    Builder::register(&mut processors, proc_names::SHELLCHECK, ShellcheckProcessor::new(cfg.shellcheck.clone()));
+    Builder::register(&mut processors, proc_names::RUMDL, RumdlProcessor::new(cfg.rumdl.clone()));
+    Builder::register(&mut processors, proc_names::SLEEP, SleepProcessor::new(cfg.sleep.clone()));
+    Builder::register(&mut processors, proc_names::MAKE, MakeProcessor::new(cfg.make.clone()));
+    Builder::register(&mut processors, proc_names::CARGO, CargoProcessor::new(cfg.cargo.clone()));
+    Builder::register(&mut processors, proc_names::YAMLLINT, YamllintProcessor::new(cfg.yamllint.clone()));
+    Builder::register(&mut processors, proc_names::JSONLINT, JsonlintProcessor::new(cfg.jsonlint.clone()));
+    Builder::register(&mut processors, proc_names::TAPLO, TaploProcessor::new(cfg.taplo.clone()));
+
+    // Spellcheck processor (fallible init — silently skip on error)
+    if let Ok(proc) = SpellcheckProcessor::new(cfg.spellcheck.clone()) {
+        Builder::register(&mut processors, proc_names::SPELLCHECK, proc);
+    }
+
+    processors
+}
+
 pub struct Builder {
     object_store: ObjectStore,
     config: Config,
@@ -103,28 +135,8 @@ impl Builder {
 
     /// Create all available processors
     pub fn create_processors(&self) -> Result<ProcessorMap> {
-        let mut processors: ProcessorMap = HashMap::new();
         let cfg = &self.config.processor;
-
-        // Tera processor (fallible init — skip if template dir missing)
-        if let Ok(proc) = TeraProcessor::new(cfg.tera.clone()) {
-            Self::register(&mut processors, proc_names::TERA, proc);
-        }
-
-        Self::register(&mut processors, proc_names::RUFF, RuffProcessor::new(cfg.ruff.clone()));
-        Self::register(&mut processors, proc_names::PYLINT, PylintProcessor::new(cfg.pylint.clone()));
-        Self::register(&mut processors, proc_names::MYPY, MypyProcessor::new(cfg.mypy.clone()));
-        Self::register(&mut processors, proc_names::CC_SINGLE_FILE, CcProcessor::new(cfg.cc_single_file.clone()));
-        Self::register(&mut processors, proc_names::CPPCHECK, CppcheckProcessor::new(cfg.cppcheck.clone()));
-        Self::register(&mut processors, proc_names::CLANG_TIDY, ClangTidyProcessor::new(cfg.clang_tidy.clone()));
-        Self::register(&mut processors, proc_names::SHELLCHECK, ShellcheckProcessor::new(cfg.shellcheck.clone()));
-        Self::register(&mut processors, proc_names::RUMDL, RumdlProcessor::new(cfg.rumdl.clone()));
-        Self::register(&mut processors, proc_names::SLEEP, SleepProcessor::new(cfg.sleep.clone()));
-        Self::register(&mut processors, proc_names::MAKE, MakeProcessor::new(cfg.make.clone()));
-        Self::register(&mut processors, proc_names::CARGO, CargoProcessor::new(cfg.cargo.clone()));
-        Self::register(&mut processors, proc_names::YAMLLINT, YamllintProcessor::new(cfg.yamllint.clone()));
-        Self::register(&mut processors, proc_names::JSONLINT, JsonlintProcessor::new(cfg.jsonlint.clone()));
-        Self::register(&mut processors, proc_names::TAPLO, TaploProcessor::new(cfg.taplo.clone()));
+        let mut processors = create_builtin_processors(cfg);
 
         // Spellcheck processor (fallible init — propagate error only if enabled)
         match SpellcheckProcessor::new(cfg.spellcheck.clone()) {

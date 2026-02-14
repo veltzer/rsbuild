@@ -213,8 +213,15 @@ fn run() -> Result<()> {
             }
         }
         Commands::Processors { action } => {
-            let builder = Builder::new()?;
-            builder.processor(action)?;
+            match action {
+                cli::ProcessorAction::All => {
+                    builder::processors::list_all_processors()?;
+                }
+                action => {
+                    let builder = Builder::new()?;
+                    builder.processor(action)?;
+                }
+            }
         }
         Commands::Tools { action } => {
             let builder = Builder::new()?;

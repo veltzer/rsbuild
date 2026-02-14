@@ -1,4 +1,5 @@
 use std::fs;
+use tempfile::TempDir;
 use crate::common::{setup_test_project, run_rsb_with_env};
 
 #[test]
@@ -153,4 +154,18 @@ fn processors_files_json_empty() {
     let entries: Vec<serde_json::Value> = serde_json::from_str(&stdout)
         .expect("Expected valid JSON array");
     assert!(entries.is_empty(), "Expected empty JSON array, got: {}", stdout);
+}
+
+#[test]
+fn processors_all_works_without_config() {
+    // Run from a temp dir with no rsb.toml
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+    let output = run_rsb_with_env(temp_dir.path(), &["processors", "all"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "processors all should work without rsb.toml: {}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("tera"), "Expected tera processor in output");
+    assert!(stdout.contains("ruff"), "Expected ruff processor in output");
+    assert!(stdout.contains("shellcheck"), "Expected shellcheck processor in output");
 }

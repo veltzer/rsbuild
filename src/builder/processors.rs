@@ -2,7 +2,35 @@ use std::collections::HashMap;
 use anyhow::{Result, bail};
 use crate::cli::ProcessorAction;
 use crate::color;
-use super::{Builder, sorted_keys};
+use crate::config::ProcessorConfig;
+use super::{Builder, create_builtin_processors, sorted_keys};
+
+/// List all built-in processors (works without rsb.toml).
+pub fn list_all_processors() -> Result<()> {
+    let mut cfg = ProcessorConfig::default();
+    cfg.resolve_scan_defaults();
+    let processors = create_builtin_processors(&cfg);
+    let proc_names = sorted_keys(&processors);
+
+    for name in &proc_names {
+        let proc = &processors[name.as_str()];
+        let hidden_status = if proc.hidden() {
+            format!(" {}", color::dim("(hidden)"))
+        } else {
+            String::new()
+        };
+        let type_str = format!("[{}]", proc.processor_type().as_str());
+        let proc_type = color::dim(&type_str);
+        let batch = if proc.supports_batch() {
+            format!(" {}", color::dim("[batch]"))
+        } else {
+            String::new()
+        };
+        println!("{} {}{}{} \u{2014} {}", name, proc_type, batch, hidden_status, color::dim(proc.description()));
+    }
+
+    Ok(())
+}
 
 impl Builder {
     /// Handle `rsb processor` subcommands

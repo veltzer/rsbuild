@@ -24,6 +24,7 @@
     - [Make](processors/make.md)
     - [Rumdl](processors/rumdl.md)
     - [Mypy](processors/mypy.md)
+    - [Pyrefly](processors/pyrefly.md)
     - [Yamllint](processors/yamllint.md)
     - [Jsonlint](processors/jsonlint.md)
     - [Taplo](processors/taplo.md)

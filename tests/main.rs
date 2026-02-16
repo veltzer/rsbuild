@@ -37,6 +37,7 @@ mod processors {
     pub mod make;
     pub mod mypy;
     pub mod pylint;
+    pub mod pyrefly;
     pub mod ruff;
     pub mod rumdl;
     pub mod shellcheck;

@@ -13,7 +13,7 @@ Processors implement the `ProductDiscovery` trait. Each processor:
 3. Creates **products** describing what to build
 4. Executes the build for each product
 
-Available processors: `tera`, `ruff`, `pylint`, `mypy`, `cc_single_file`, `cppcheck`, `clang_tidy`, `shellcheck`, `spellcheck`, `rumdl`, `sleep`, `make`, `cargo`, `yamllint`, `jsonlint`, `taplo`, `json_schema`.
+Available processors: `tera`, `ruff`, `pylint`, `mypy`, `pyrefly`, `cc_single_file`, `cppcheck`, `clang_tidy`, `shellcheck`, `spellcheck`, `rumdl`, `sleep`, `make`, `cargo`, `yamllint`, `jsonlint`, `taplo`, `json_schema`.
 
 ### Auto-detection
 
@@ -38,6 +38,7 @@ Detection heuristics per processor:
 | `ruff` | Project contains `.py` files (excluding `.venv/`, `__pycache__/`, etc.) |
 | `pylint` | Same as `ruff` |
 | `mypy` | Same as `ruff` |
+| `pyrefly` | Same as `ruff` |
 | `cc_single_file` | Configured source directory contains `.c` or `.cc` files |
 | `cppcheck` | Same as `cc_single_file` |
 | `clang_tidy` | Same as `cc_single_file` |

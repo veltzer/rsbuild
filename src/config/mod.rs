@@ -305,6 +305,8 @@ pub(crate) struct ProcessorConfig {
     #[serde(default)]
     pub mypy: MypyConfig,
     #[serde(default)]
+    pub pyrefly: PyreflyConfig,
+    #[serde(default)]
     pub yamllint: YamllintConfig,
     #[serde(default)]
     pub jsonlint: JsonlintConfig,
@@ -335,6 +337,7 @@ impl Default for ProcessorConfig {
             cargo: CargoConfig::default(),
             rumdl: RumdlConfig::default(),
             mypy: MypyConfig::default(),
+            pyrefly: PyreflyConfig::default(),
             yamllint: YamllintConfig::default(),
             jsonlint: JsonlintConfig::default(),
             taplo: TaploConfig::default(),
@@ -360,6 +363,7 @@ impl ProcessorConfig {
             "cargo" => self.cargo.enabled,
             "rumdl" => self.rumdl.enabled,
             "mypy" => self.mypy.enabled,
+            "pyrefly" => self.pyrefly.enabled,
             "yamllint" => self.yamllint.enabled,
             "jsonlint" => self.jsonlint.enabled,
             "taplo" => self.taplo.enabled,
@@ -380,8 +384,8 @@ impl ProcessorConfig {
             &self.cc_single_file.scan, &self.cppcheck.scan, &self.clang_tidy.scan,
             &self.shellcheck.scan, &self.spellcheck.scan, &self.sleep.scan,
             &self.make.scan, &self.cargo.scan, &self.rumdl.scan, &self.mypy.scan,
-            &self.yamllint.scan, &self.jsonlint.scan, &self.taplo.scan,
-            &self.json_schema.scan,
+            &self.pyrefly.scan, &self.yamllint.scan, &self.jsonlint.scan,
+            &self.taplo.scan, &self.json_schema.scan,
         ];
         let mut dirs: Vec<String> = scans.iter()
             .filter_map(|s| s.scan_dir.as_deref())
@@ -410,6 +414,7 @@ impl ProcessorConfig {
         self.cargo.scan.resolve("", &["Cargo.toml"], MAKE_CARGO_EXCLUDES);
         self.rumdl.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
         self.mypy.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
+        self.pyrefly.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
         self.yamllint.scan.resolve("", &[".yml", ".yaml"], BUILD_TOOL_EXCLUDES);
         self.jsonlint.scan.resolve("", &[".json"], BUILD_TOOL_EXCLUDES);
         self.taplo.scan.resolve("", &[".toml"], BUILD_TOOL_EXCLUDES);

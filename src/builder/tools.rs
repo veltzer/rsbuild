@@ -12,6 +12,7 @@ fn install_hint(tool: &str) -> Option<&'static str> {
         "ruff" => Some("pip install ruff"),
         "pylint" => Some("pip install pylint"),
         "mypy" => Some("pip install mypy"),
+        "pyrefly" => Some("pip install pyrefly"),
         "black" => Some("pip install black"),
         "shellcheck" => Some("apt install shellcheck"),
         "cppcheck" => Some("apt install cppcheck"),

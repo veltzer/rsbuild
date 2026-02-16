@@ -471,6 +471,36 @@ impl Default for MypyConfig {
     }
 }
 
+fn default_pyrefly_checker() -> String {
+    "pyrefly".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PyreflyConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_pyrefly_checker")]
+    pub checker: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for PyreflyConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            checker: "pyrefly".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            scan: default_scan!(extensions: [".py"]),
+        }
+    }
+}
+
 fn default_rumdl_linter() -> String {
     "rumdl".into()
 }

@@ -19,7 +19,7 @@ use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::{ObjectStore, ObjectStoreOptions};
-use crate::processors::{CargoProcessor, CcProcessor, ClangTidyProcessor, CppcheckProcessor, JsonlintProcessor, JsonSchemaProcessor, LuaProcessor, MakeProcessor, MypyProcessor, ProcessorMap, PylintProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TaploProcessor, TeraProcessor, YamllintProcessor, names as proc_names};
+use crate::processors::{CargoProcessor, CcProcessor, ClangTidyProcessor, CppcheckProcessor, JsonlintProcessor, JsonSchemaProcessor, LuaProcessor, MakeProcessor, MypyProcessor, ProcessorMap, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TaploProcessor, TeraProcessor, YamllintProcessor, names as proc_names};
 use crate::remote_cache;
 use crate::tool_lock;
 
@@ -75,6 +75,7 @@ pub(crate) fn create_builtin_processors(cfg: &ProcessorConfig) -> ProcessorMap {
     Builder::register(&mut processors, proc_names::RUFF, RuffProcessor::new(cfg.ruff.clone()));
     Builder::register(&mut processors, proc_names::PYLINT, PylintProcessor::new(cfg.pylint.clone()));
     Builder::register(&mut processors, proc_names::MYPY, MypyProcessor::new(cfg.mypy.clone()));
+    Builder::register(&mut processors, proc_names::PYREFLY, PyreflyProcessor::new(cfg.pyrefly.clone()));
     Builder::register(&mut processors, proc_names::CC_SINGLE_FILE, CcProcessor::new(cfg.cc_single_file.clone()));
     Builder::register(&mut processors, proc_names::CPPCHECK, CppcheckProcessor::new(cfg.cppcheck.clone()));
     Builder::register(&mut processors, proc_names::CLANG_TIDY, ClangTidyProcessor::new(cfg.clang_tidy.clone()));

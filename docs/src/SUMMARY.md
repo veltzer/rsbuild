@@ -26,6 +26,7 @@
     - [Mypy](processors/mypy.md)
     - [Pyrefly](processors/pyrefly.md)
     - [Yamllint](processors/yamllint.md)
+    - [Jq](processors/jq.md)
     - [Jsonlint](processors/jsonlint.md)
     - [Taplo](processors/taplo.md)
     - [Json Schema](processors/json_schema.md)

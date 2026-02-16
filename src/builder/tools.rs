@@ -26,6 +26,7 @@ fn install_hint(tool: &str) -> Option<&'static str> {
         "rustc" => Some("curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"),
         "aspell" => Some("apt install aspell"),
         "yamllint" => Some("pip install yamllint"),
+        "jq" => Some("apt install jq"),
         "jsonlint" => Some("npm install -g jsonlint"),
         "taplo" => Some("cargo install taplo-cli"),
         "mdl" => Some("gem install mdl"),

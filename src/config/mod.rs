@@ -256,7 +256,7 @@ fn default_processors() -> Vec<String> {
         names::TERA.into(), names::RUFF.into(), names::PYLINT.into(),
         names::PYREFLY.into(), names::CC_SINGLE_FILE.into(), names::CPPCHECK.into(),
         names::SHELLCHECK.into(), names::SPELLCHECK.into(), names::MAKE.into(),
-        names::YAMLLINT.into(), names::JSONLINT.into(), names::TAPLO.into(),
+        names::YAMLLINT.into(), names::JQ.into(), names::JSONLINT.into(), names::TAPLO.into(),
         names::JSON_SCHEMA.into(),
     ]
 }
@@ -310,6 +310,8 @@ pub(crate) struct ProcessorConfig {
     #[serde(default)]
     pub yamllint: YamllintConfig,
     #[serde(default)]
+    pub jq: JqConfig,
+    #[serde(default)]
     pub jsonlint: JsonlintConfig,
     #[serde(default)]
     pub taplo: TaploConfig,
@@ -340,6 +342,7 @@ impl Default for ProcessorConfig {
             mypy: MypyConfig::default(),
             pyrefly: PyreflyConfig::default(),
             yamllint: YamllintConfig::default(),
+            jq: JqConfig::default(),
             jsonlint: JsonlintConfig::default(),
             taplo: TaploConfig::default(),
             json_schema: JsonSchemaConfig::default(),
@@ -366,6 +369,7 @@ impl ProcessorConfig {
             "mypy" => self.mypy.enabled,
             "pyrefly" => self.pyrefly.enabled,
             "yamllint" => self.yamllint.enabled,
+            "jq" => self.jq.enabled,
             "jsonlint" => self.jsonlint.enabled,
             "taplo" => self.taplo.enabled,
             "json_schema" => self.json_schema.enabled,
@@ -385,7 +389,7 @@ impl ProcessorConfig {
             &self.cc_single_file.scan, &self.cppcheck.scan, &self.clang_tidy.scan,
             &self.shellcheck.scan, &self.spellcheck.scan, &self.sleep.scan,
             &self.make.scan, &self.cargo.scan, &self.rumdl.scan, &self.mypy.scan,
-            &self.pyrefly.scan, &self.yamllint.scan, &self.jsonlint.scan,
+            &self.pyrefly.scan, &self.yamllint.scan, &self.jq.scan, &self.jsonlint.scan,
             &self.taplo.scan, &self.json_schema.scan,
         ];
         let mut dirs: Vec<String> = scans.iter()
@@ -417,6 +421,7 @@ impl ProcessorConfig {
         self.mypy.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
         self.pyrefly.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
         self.yamllint.scan.resolve("", &[".yml", ".yaml"], BUILD_TOOL_EXCLUDES);
+        self.jq.scan.resolve("", &[".json"], BUILD_TOOL_EXCLUDES);
         self.jsonlint.scan.resolve("", &[".json"], BUILD_TOOL_EXCLUDES);
         self.taplo.scan.resolve("", &[".toml"], BUILD_TOOL_EXCLUDES);
         self.json_schema.scan.resolve("", &[".json"], BUILD_TOOL_EXCLUDES);

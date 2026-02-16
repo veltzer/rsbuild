@@ -31,7 +31,7 @@ Enable processors in `rsb.toml`:
 
 ```toml
 [processor]
-enabled = ["tera", "ruff", "pylint", "pyrefly", "cc_single_file", "cppcheck", "shellcheck", "spellcheck", "make", "yamllint", "jsonlint", "taplo", "json_schema"]
+enabled = ["tera", "ruff", "pylint", "pyrefly", "cc_single_file", "cppcheck", "shellcheck", "spellcheck", "make", "yamllint", "jq", "jsonlint", "taplo", "json_schema"]
 ```
 
 Use `rsb processors list` to see available processors and their status.
@@ -56,6 +56,7 @@ Use `rsb processors files` to see which files each processor discovers.
 - [Make](processors/make.md) — runs make in directories containing Makefiles
 - [Cargo](processors/cargo.md) — builds Rust projects using Cargo
 - [Yamllint](processors/yamllint.md) — lints YAML files with yamllint
+- [Jq](processors/jq.md) — validates JSON files with jq
 - [Jsonlint](processors/jsonlint.md) — lints JSON files with jsonlint
 - [Taplo](processors/taplo.md) — checks TOML files with taplo
 - [Json Schema](processors/json_schema.md) — validates JSON schema propertyOrdering

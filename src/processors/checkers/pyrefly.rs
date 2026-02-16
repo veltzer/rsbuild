@@ -18,9 +18,14 @@ impl PyreflyProcessor {
         self.check_files(&[product.primary_input()])
     }
 
-    /// Run pyrefly on one or more files
+    /// Run pyrefly on one or more files.
+    /// We pass --disable-project-excludes-heuristics because pyrefly's default
+    /// project-excludes pattern rejects files in dot-prefixed directories,
+    /// and RSB already handles file filtering via its own scan config.
     fn check_files(&self, py_files: &[&Path]) -> Result<()> {
-        run_checker(&self.config.checker, Some("check"), &self.config.args, py_files)
+        let mut args = vec!["--disable-project-excludes-heuristics".to_string()];
+        args.extend_from_slice(&self.config.args);
+        run_checker(&self.config.checker, Some("check"), &args, py_files)
     }
 }
 

@@ -46,6 +46,7 @@ mod processors {
     pub mod taplo;
     pub mod tera;
     pub mod yamllint;
+    pub mod jq;
     pub mod jsonlint;
     pub mod json_schema;
 }

@@ -35,6 +35,7 @@ pub mod names {
     pub const CARGO: &str = "cargo";
     pub const SPELLCHECK: &str = "spellcheck";
     pub const YAMLLINT: &str = "yamllint";
+    pub const JQ: &str = "jq";
     pub const JSONLINT: &str = "jsonlint";
     pub const TAPLO: &str = "taplo";
     pub const PYREFLY: &str = "pyrefly";
@@ -453,7 +454,7 @@ where
 
 // Re-export from subdirectories
 pub use checkers::{
-    CargoProcessor, ClangTidyProcessor, CppcheckProcessor, JsonlintProcessor, JsonSchemaProcessor,
+    CargoProcessor, ClangTidyProcessor, CppcheckProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
     MakeProcessor, MypyProcessor, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,
     ShellcheckProcessor, SleepProcessor, SpellcheckProcessor, TaploProcessor, YamllintProcessor,
 };

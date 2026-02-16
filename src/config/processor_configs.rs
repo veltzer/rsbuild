@@ -561,6 +561,36 @@ impl Default for YamllintConfig {
     }
 }
 
+fn default_jq_checker() -> String {
+    "jq".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct JqConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_jq_checker")]
+    pub checker: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for JqConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            checker: "jq".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            scan: default_scan!(extensions: [".json"]),
+        }
+    }
+}
+
 fn default_jsonlint_linter() -> String {
     "jsonlint".into()
 }

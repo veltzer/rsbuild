@@ -31,7 +31,7 @@ Enable processors in `rsb.toml`:
 
 ```toml
 [processor]
-enabled = ["tera", "ruff", "pylint", "cc_single_file", "cppcheck", "shellcheck", "spellcheck", "make", "yamllint", "jsonlint", "taplo", "json_schema"]
+enabled = ["tera", "ruff", "pylint", "pyrefly", "cc_single_file", "cppcheck", "shellcheck", "spellcheck", "make", "yamllint", "jsonlint", "taplo", "json_schema"]
 ```
 
 Use `rsb processors list` to see available processors and their status.

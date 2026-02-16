@@ -254,9 +254,10 @@ fn default_processors() -> Vec<String> {
     use crate::processors::names;
     vec![
         names::TERA.into(), names::RUFF.into(), names::PYLINT.into(),
-        names::CC_SINGLE_FILE.into(), names::CPPCHECK.into(), names::SHELLCHECK.into(),
-        names::SPELLCHECK.into(), names::MAKE.into(), names::YAMLLINT.into(),
-        names::JSONLINT.into(), names::TAPLO.into(), names::JSON_SCHEMA.into(),
+        names::PYREFLY.into(), names::CC_SINGLE_FILE.into(), names::CPPCHECK.into(),
+        names::SHELLCHECK.into(), names::SPELLCHECK.into(), names::MAKE.into(),
+        names::YAMLLINT.into(), names::JSONLINT.into(), names::TAPLO.into(),
+        names::JSON_SCHEMA.into(),
     ]
 }
 

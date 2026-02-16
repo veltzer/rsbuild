@@ -11,7 +11,7 @@ batch_size = 0        # Max files per batch for batch-capable processors (0 = no
 
 [processor]
 auto_detect = true
-enabled = ["tera", "ruff", "pylint", "cc_single_file", "cppcheck", "shellcheck", "spellcheck", "make", "yamllint", "jsonlint", "taplo", "json_schema"]
+enabled = ["tera", "ruff", "pylint", "pyrefly", "cc_single_file", "cppcheck", "shellcheck", "spellcheck", "make", "yamllint", "jsonlint", "taplo", "json_schema"]
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
@@ -68,7 +68,7 @@ Variables are substituted before TOML parsing. The `"${var_name}"` (including qu
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `auto_detect` | boolean | `true` | When `true`, only run enabled processors that auto-detect relevant files. When `false`, run all enabled processors unconditionally. |
-| `enabled` | array of strings | (see below) | List of processors to enable. Default: `tera`, `ruff`, `pylint`, `cc_single_file`, `cppcheck`, `shellcheck`, `spellcheck`, `make`, `yamllint`, `jsonlint`, `taplo`, `json_schema`. [Lua plugin](plugins.md) names can also be listed here. |
+| `enabled` | array of strings | (see below) | List of processors to enable. Default: `tera`, `ruff`, `pylint`, `pyrefly`, `cc_single_file`, `cppcheck`, `shellcheck`, `spellcheck`, `make`, `yamllint`, `jsonlint`, `taplo`, `json_schema`. [Lua plugin](plugins.md) names can also be listed here. |
 
 ### `[cache]`
 

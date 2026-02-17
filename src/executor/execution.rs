@@ -276,15 +276,22 @@ impl<'a> Executor<'a> {
         let proc_total = items.len();
         let mut proc_current = items.len() - to_execute.len();
 
-        // Determine chunk size: 0 means no limit
+        // Determine chunk size: 0 means no limit.
+        // In fail-fast mode (default), use chunk_size=1 unless explicitly set,
+        // so we stop after the first file that fails rather than batching all
+        // files into one subprocess invocation.
         let chunk_size = match self.batch_size {
-            Some(0) | None => to_execute.len(),
+            Some(0) => to_execute.len(),
             Some(n) => n,
+            None if lctx.keep_going => to_execute.len(),
+            None => 1,
         };
 
         // Process in chunks
         for chunk in to_execute.chunks(chunk_size) {
-            if self.is_interrupted() {
+            if self.is_interrupted()
+                || (!lctx.keep_going && !lctx.shared.errors.lock().is_empty())
+            {
                 break;
             }
 

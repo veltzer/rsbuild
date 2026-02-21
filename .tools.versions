@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "locked_at": "2026-02-16T06:58:20Z",
+  "locked_at": "2026-02-21T10:34:41Z",
   "tools": {
     "cppcheck": {
       "path": "/usr/bin/cppcheck",
@@ -19,6 +19,13 @@
     "gcc": {
       "path": "/usr/bin/gcc",
       "version_output": "gcc (Ubuntu 15.2.0-4ubuntu4) 15.2.0\nCopyright (C) 2025 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+      "version_args": [
+        "--version"
+      ]
+    },
+    "jq": {
+      "path": "/usr/bin/jq",
+      "version_output": "jq-1.8.1",
       "version_args": [
         "--version"
       ]

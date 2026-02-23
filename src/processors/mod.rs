@@ -120,9 +120,7 @@ pub(crate) fn log_command(cmd: &Command) {
 ///
 /// - `inherit_stdio`: if true, inherit stdout/stderr (for --show-output mode);
 ///   if false, always capture via pipes.
-/// - `print_on_failure`: if true, print captured output on command failure
-///   (only relevant when `inherit_stdio` is false).
-fn run_command_inner(cmd: &mut Command, inherit_stdio: bool, print_on_failure: bool) -> Result<Output> {
+fn run_command_inner(cmd: &mut Command, inherit_stdio: bool) -> Result<Output> {
     log_command(cmd);
 
     // Check if already interrupted before spawning
@@ -179,19 +177,6 @@ fn run_command_inner(cmd: &mut Command, inherit_stdio: bool, print_on_failure: b
             }
             result = child.wait_with_output() => {
                 let output = result.context("Failed to wait for child process")?;
-
-                // Print captured output on failure if requested
-                if print_on_failure && !output.status.success() {
-                    if !output.stdout.is_empty() {
-                        use std::io::Write;
-                        let _ = std::io::stdout().write_all(&output.stdout);
-                    }
-                    if !output.stderr.is_empty() {
-                        use std::io::Write;
-                        let _ = std::io::stderr().write_all(&output.stderr);
-                    }
-                }
-
                 Ok(output)
             }
         }
@@ -205,14 +190,14 @@ fn run_command_inner(cmd: &mut Command, inherit_stdio: bool, print_on_failure: b
 /// to always show tool output.
 pub(crate) fn run_command(cmd: &mut Command) -> Result<Output> {
     let show = crate::runtime_flags::show_output();
-    run_command_inner(cmd, show, !show)
+    run_command_inner(cmd, show)
 }
 
 /// Run a command and capture its stdout/stderr output.
 /// Use this only when you need to parse the output.
 /// For commands where output should go to terminal, use run_command() instead.
 pub(crate) fn run_command_capture(cmd: &mut Command) -> Result<Output> {
-    run_command_inner(cmd, false, false)
+    run_command_inner(cmd, false)
 }
 
 

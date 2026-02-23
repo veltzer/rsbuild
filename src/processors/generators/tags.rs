@@ -1,8 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use redb::{ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::config::{TagsConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
@@ -43,9 +43,15 @@ impl ProductDiscovery for TagsProcessor {
         }
 
         let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
-        let mut inputs = Vec::with_capacity(files.len() + extra.len());
+        let mut inputs = Vec::with_capacity(files.len() + extra.len() + 1);
         inputs.extend(files);
         inputs.extend_from_slice(&extra);
+
+        // If a tags file exists, add it as an input so edits trigger rebuild
+        let tags_file_path = Path::new(&self.config.tags_file);
+        if tags_file_path.exists() {
+            inputs.push(tags_file_path.to_path_buf());
+        }
 
         let output = PathBuf::from(&self.config.output);
         graph.add_product(
@@ -112,6 +118,37 @@ impl ProductDiscovery for TagsProcessor {
                 }
 
                 all_frontmatter.insert(file_key, fm);
+            }
+        }
+
+        // Validate tags against allowed set if tags file exists
+        let tags_file_path = Path::new(&self.config.tags_file);
+        if tags_file_path.exists() {
+            let content = fs::read_to_string(tags_file_path)
+                .with_context(|| format!("Failed to read tags file: {}", tags_file_path.display()))?;
+            let allowed: HashSet<String> = content
+                .lines()
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty() && !line.starts_with('#'))
+                .map(|line| line.to_string())
+                .collect();
+
+            let mut unknown: Vec<(String, Vec<String>)> = Vec::new();
+            for (tag, files) in &tag_to_files {
+                if !allowed.contains(tag) {
+                    unknown.push((tag.clone(), files.clone()));
+                }
+            }
+            if !unknown.is_empty() {
+                unknown.sort_by(|a, b| a.0.cmp(&b.0));
+                let mut msg = String::from("Unknown tags found (not in .tags file):\n");
+                for (tag, files) in &unknown {
+                    msg.push_str(&format!("  {}\n", tag));
+                    for file in files {
+                        msg.push_str(&format!("    - {}\n", file));
+                    }
+                }
+                bail!("{}", msg.trim_end());
             }
         }
 

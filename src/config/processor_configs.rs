@@ -822,12 +822,18 @@ fn default_tags_output() -> String {
     "out/tags/tags.db".into()
 }
 
+fn default_tags_file() -> String {
+    ".tags".into()
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TagsConfig {
     #[serde(default = "default_true")]
     pub enabled: bool,
     #[serde(default = "default_tags_output")]
     pub output: String,
+    #[serde(default = "default_tags_file")]
+    pub tags_file: String,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
     #[serde(flatten)]
@@ -839,6 +845,7 @@ impl Default for TagsConfig {
         Self {
             enabled: true,
             output: "out/tags/tags.db".into(),
+            tags_file: ".tags".into(),
             extra_inputs: Vec::new(),
             scan: default_scan!(extensions: [".md"]),
         }
@@ -848,7 +855,7 @@ impl Default for TagsConfig {
 impl KnownFields for TagsConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "output", "extra_inputs",
+            "enabled", "output", "tags_file", "extra_inputs",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }

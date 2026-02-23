@@ -19,7 +19,7 @@ use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::{ObjectStore, ObjectStoreOptions};
-use crate::processors::{CargoProcessor, CcProcessor, ClangTidyProcessor, CppcheckProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor, LuaProcessor, MakeProcessor, MypyProcessor, ProcessorMap, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, TagsProcessor, TaploProcessor, TeraProcessor, YamllintProcessor, names as proc_names};
+use crate::processors::{CargoProcessor, CcProcessor, ClangTidyProcessor, CppcheckProcessor, GemProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor, LuaProcessor, MakeProcessor, MypyProcessor, NpmProcessor, PipProcessor, ProcessorMap, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, SphinxProcessor, TagsProcessor, TaploProcessor, TeraProcessor, YamllintProcessor, names as proc_names};
 use crate::remote_cache;
 use crate::tool_lock;
 
@@ -90,6 +90,10 @@ pub(crate) fn create_builtin_processors(cfg: &ProcessorConfig) -> ProcessorMap {
     Builder::register(&mut processors, proc_names::TAPLO, TaploProcessor::new(cfg.taplo.clone()));
     Builder::register(&mut processors, proc_names::JSON_SCHEMA, JsonSchemaProcessor::new(cfg.json_schema.clone()));
     Builder::register(&mut processors, proc_names::TAGS, TagsProcessor::new(cfg.tags.clone()));
+    Builder::register(&mut processors, proc_names::PIP, PipProcessor::new(cfg.pip.clone()));
+    Builder::register(&mut processors, proc_names::SPHINX, SphinxProcessor::new(cfg.sphinx.clone()));
+    Builder::register(&mut processors, proc_names::NPM, NpmProcessor::new(cfg.npm.clone()));
+    Builder::register(&mut processors, proc_names::GEM, GemProcessor::new(cfg.gem.clone()));
 
     // Spellcheck processor (fallible init — silently skip on error)
     if let Ok(proc) = SpellcheckProcessor::new(cfg.spellcheck.clone()) {

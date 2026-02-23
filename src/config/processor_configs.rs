@@ -903,3 +903,180 @@ impl KnownFields for ShellcheckConfig {
         ]
     }
 }
+
+fn default_pip() -> String {
+    "pip".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PipConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_pip")]
+    pub pip: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for PipConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            pip: "pip".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            scan: default_scan!(extensions: ["requirements.txt"]),
+        }
+    }
+}
+
+impl KnownFields for PipConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "pip", "args", "extra_inputs",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}
+
+fn default_sphinx_build() -> String {
+    "sphinx-build".into()
+}
+
+fn default_sphinx_output_dir() -> String {
+    "_build".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SphinxConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_sphinx_build")]
+    pub sphinx_build: String,
+    #[serde(default = "default_sphinx_output_dir")]
+    pub output_dir: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for SphinxConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            sphinx_build: "sphinx-build".into(),
+            output_dir: "_build".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            scan: default_scan!(extensions: ["conf.py"]),
+        }
+    }
+}
+
+impl KnownFields for SphinxConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "sphinx_build", "output_dir", "args", "extra_inputs",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}
+
+fn default_npm() -> String {
+    "npm".into()
+}
+
+fn default_npm_command() -> String {
+    "install".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct NpmConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_npm")]
+    pub npm: String,
+    #[serde(default = "default_npm_command")]
+    pub command: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for NpmConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            npm: "npm".into(),
+            command: "install".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            scan: default_scan!(extensions: ["package.json"]),
+        }
+    }
+}
+
+impl KnownFields for NpmConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "npm", "command", "args", "extra_inputs",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}
+
+fn default_bundler() -> String {
+    "bundle".into()
+}
+
+fn default_bundler_command() -> String {
+    "install".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct GemConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_bundler")]
+    pub bundler: String,
+    #[serde(default = "default_bundler_command")]
+    pub command: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for GemConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            bundler: "bundle".into(),
+            command: "install".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            scan: default_scan!(extensions: ["Gemfile"]),
+        }
+    }
+}
+
+impl KnownFields for GemConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "bundler", "command", "args", "extra_inputs",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}

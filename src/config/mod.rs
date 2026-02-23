@@ -260,11 +260,14 @@ fn default_processors() -> Vec<String> {
     use crate::processors::names;
     vec![
         names::TERA.into(), names::RUFF.into(), names::PYLINT.into(),
-        names::PYREFLY.into(), names::CC_SINGLE_FILE.into(), names::CPPCHECK.into(),
+        names::MYPY.into(), names::PYREFLY.into(), names::CC_SINGLE_FILE.into(),
+        names::CPPCHECK.into(), names::CLANG_TIDY.into(),
         names::SHELLCHECK.into(), names::SPELLCHECK.into(), names::MAKE.into(),
+        names::CARGO.into(), names::RUMDL.into(),
         names::YAMLLINT.into(), names::JQ.into(), names::JSONLINT.into(), names::TAPLO.into(),
         names::JSON_SCHEMA.into(),
         names::TAGS.into(),
+        names::PIP.into(), names::SPHINX.into(), names::NPM.into(), names::GEM.into(),
     ]
 }
 
@@ -326,6 +329,14 @@ pub(crate) struct ProcessorConfig {
     pub json_schema: JsonSchemaConfig,
     #[serde(default)]
     pub tags: TagsConfig,
+    #[serde(default)]
+    pub pip: PipConfig,
+    #[serde(default)]
+    pub sphinx: SphinxConfig,
+    #[serde(default)]
+    pub npm: NpmConfig,
+    #[serde(default)]
+    pub gem: GemConfig,
     /// Captures unknown [processor.PLUGIN_NAME] sections for Lua plugins
     #[serde(flatten)]
     pub extra: HashMap<String, toml::Value>,
@@ -356,6 +367,10 @@ impl Default for ProcessorConfig {
             taplo: TaploConfig::default(),
             json_schema: JsonSchemaConfig::default(),
             tags: TagsConfig::default(),
+            pip: PipConfig::default(),
+            sphinx: SphinxConfig::default(),
+            npm: NpmConfig::default(),
+            gem: GemConfig::default(),
             extra: HashMap::new(),
         }
     }
@@ -384,6 +399,10 @@ impl ProcessorConfig {
             "taplo" => self.taplo.enabled,
             "json_schema" => self.json_schema.enabled,
             "tags" => self.tags.enabled,
+            "pip" => self.pip.enabled,
+            "sphinx" => self.sphinx.enabled,
+            "npm" => self.npm.enabled,
+            "gem" => self.gem.enabled,
             _ => true, // unknown processors (plugins) default to enabled
         }
     }
@@ -402,6 +421,7 @@ impl ProcessorConfig {
             &self.make.scan, &self.cargo.scan, &self.rumdl.scan, &self.mypy.scan,
             &self.pyrefly.scan, &self.yamllint.scan, &self.jq.scan, &self.jsonlint.scan,
             &self.taplo.scan, &self.json_schema.scan, &self.tags.scan,
+            &self.pip.scan, &self.sphinx.scan, &self.npm.scan, &self.gem.scan,
         ];
         let mut dirs: Vec<String> = scans.iter()
             .filter_map(|s| s.scan_dir.as_deref())
@@ -437,6 +457,10 @@ impl ProcessorConfig {
         self.taplo.scan.resolve("", &[".toml"], BUILD_TOOL_EXCLUDES);
         self.json_schema.scan.resolve("", &[".json"], BUILD_TOOL_EXCLUDES);
         self.tags.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+        self.pip.scan.resolve("", &["requirements.txt"], MAKE_CARGO_EXCLUDES);
+        self.sphinx.scan.resolve("", &["conf.py"], BUILD_TOOL_EXCLUDES);
+        self.npm.scan.resolve("", &["package.json"], MAKE_CARGO_EXCLUDES);
+        self.gem.scan.resolve("", &["Gemfile"], MAKE_CARGO_EXCLUDES);
     }
 }
 

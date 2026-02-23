@@ -50,7 +50,7 @@ impl AspellProcessor {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            anyhow::bail!("aspell failed for {}: {}", file.display(), stderr.trim_end());
+            anyhow::bail!("[aspell] failed for {}: {}", file.display(), stderr.trim_end());
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -61,7 +61,7 @@ impl AspellProcessor {
 
         if !misspelled.is_empty() {
             anyhow::bail!(
-                "Misspelled words in {}:\n{}",
+                "[aspell] Misspelled words in {}:\n{}",
                 file.display(),
                 misspelled.join("\n"),
             );

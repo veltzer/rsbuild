@@ -379,16 +379,18 @@ pub enum DepsShowFilter {
 
 #[derive(Subcommand)]
 pub enum TagsAction {
-    /// Search for an exact tag
+    /// Search for a tag and list matching files (e.g. "docker" or "level=advanced")
     Search {
-        /// Tag name to search for
+        /// Tag to search for: bare value (e.g. "docker") or key=value (e.g. "level=advanced")
         query: String,
     },
     /// List all unique tags
     List,
-    /// List files that have a given tag
+    /// Show statistics about the tags database
+    Stats,
+    /// List files that have a given tag (e.g. "docker" or "level=advanced")
     Files {
-        /// Tag name to search for
+        /// Tag: bare value (e.g. "docker") or key=value (e.g. "level=advanced")
         tag: String,
     },
 }

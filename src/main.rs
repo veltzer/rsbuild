@@ -283,6 +283,7 @@ fn run() -> Result<()> {
                 cli::TagsAction::List => processors::tags_cmd::list_tags(db_path)?,
                 cli::TagsAction::Search { query } => processors::tags_cmd::search_tags(db_path, &query)?,
                 cli::TagsAction::Files { tag } => processors::tags_cmd::files_for_tag(db_path, &tag)?,
+                cli::TagsAction::Stats => processors::tags_cmd::stats_tags(db_path)?,
             }
         }
     }

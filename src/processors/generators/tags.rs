@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use redb::{ReadableTable, ReadableDatabase, TableDefinition};
+use redb::{ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -85,13 +85,28 @@ impl ProductDiscovery for TagsProcessor {
             if let Some(fm) = parse_frontmatter(&content) {
                 let file_key = input.display().to_string();
 
-                // Extract tags for the tag index
-                if let Some(tags) = fm.get("tags").and_then(|v| v.as_array()) {
-                    for tag in tags {
-                        if let Some(tag_str) = tag.as_str() {
-                            tag_to_files.entry(tag_str.to_string())
-                                .or_default()
-                                .push(file_key.clone());
+                // Index all frontmatter fields:
+                // - list fields: each item becomes a tag (e.g. "docker" from tags: [docker])
+                // - scalar fields: indexed as "key=value" (e.g. "level=intermediate")
+                if let Some(obj) = fm.as_object() {
+                    for (key, value) in obj {
+                        match value {
+                            serde_json::Value::Array(items) => {
+                                for item in items {
+                                    if let Some(s) = item.as_str() {
+                                        tag_to_files.entry(s.to_string())
+                                            .or_default()
+                                            .push(file_key.clone());
+                                    }
+                                }
+                            }
+                            serde_json::Value::String(s) => {
+                                let tag = format!("{}={}", key, s);
+                                tag_to_files.entry(tag)
+                                    .or_default()
+                                    .push(file_key.clone());
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -267,6 +282,37 @@ pub fn files_for_tag(db_path: &str, tag: &str) -> Result<()> {
             println!("No files found with tag: {}", tag);
         }
     }
+
+    Ok(())
+}
+
+/// Show statistics about the tags database.
+pub fn stats_tags(db_path: &str) -> Result<()> {
+    let db = open_tags_db(db_path)?;
+    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
+
+    // Count indexed files
+    let fm_table = read_txn.open_table(FRONTMATTER).context("Failed to open frontmatter table")?;
+    let file_count = fm_table.len().context("Failed to count frontmatter entries")?;
+
+    // Count and classify tags
+    let tag_table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
+    let mut bare_count: u64 = 0;
+    let mut kv_count: u64 = 0;
+    let iter = tag_table.iter().context("Failed to iterate tag_index")?;
+    for entry in iter {
+        let (key, _) = entry.context("Failed to read tag entry")?;
+        if key.value().contains('=') {
+            kv_count += 1;
+        } else {
+            bare_count += 1;
+        }
+    }
+
+    println!("Files indexed: {}", file_count);
+    println!("Total tags:    {}", bare_count + kv_count);
+    println!("  bare tags:   {} (e.g. \"docker\")", bare_count);
+    println!("  key=value:   {} (e.g. \"level=intermediate\")", kv_count);
 
     Ok(())
 }

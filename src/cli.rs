@@ -389,7 +389,7 @@ pub enum TagsAction {
         or: bool,
     },
     /// Search for tags containing a substring
-    GrepTags {
+    Grep {
         /// Text to search for in tag names
         text: String,
     },
@@ -403,6 +403,11 @@ pub enum TagsAction {
     Stats,
     /// List all tags for a specific file
     ForFile {
+        /// Path to the file
+        path: String,
+    },
+    /// Show the raw frontmatter for a specific file
+    Frontmatter {
         /// Path to the file
         path: String,
     },

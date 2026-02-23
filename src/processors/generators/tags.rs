@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, bail};
 use redb::{ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -78,7 +78,7 @@ impl ProductDiscovery for TagsProcessor {
 
         // Collect frontmatter from all input .md files
         let mut all_frontmatter: HashMap<String, serde_json::Value> = HashMap::new();
-        let mut tag_to_files: HashMap<String, Vec<String>> = HashMap::new();
+        let mut tag_to_files: HashMap<String, BTreeSet<String>> = HashMap::new();
 
         for input in &product.inputs {
             let ext = input.extension().and_then(|e| e.to_str()).unwrap_or("");
@@ -102,7 +102,7 @@ impl ProductDiscovery for TagsProcessor {
                                     if let Some(s) = item.as_str() {
                                         tag_to_files.entry(s.to_string())
                                             .or_default()
-                                            .push(file_key.clone());
+                                            .insert(file_key.clone());
                                     }
                                 }
                             }
@@ -110,7 +110,7 @@ impl ProductDiscovery for TagsProcessor {
                                 let tag = format!("{}={}", key, s);
                                 tag_to_files.entry(tag)
                                     .or_default()
-                                    .push(file_key.clone());
+                                    .insert(file_key.clone());
                             }
                             _ => {}
                         }
@@ -129,7 +129,7 @@ impl ProductDiscovery for TagsProcessor {
             let mut unknown: Vec<(String, Vec<String>)> = Vec::new();
             for (tag, files) in &tag_to_files {
                 if !tag_matches_allowed(tag, &allowed) {
-                    unknown.push((tag.clone(), files.clone()));
+                    unknown.push((tag.clone(), files.iter().cloned().collect()));
                 }
             }
             if !unknown.is_empty() {
@@ -169,7 +169,8 @@ impl ProductDiscovery for TagsProcessor {
             let mut tag_table = write_txn.open_table(TAG_INDEX)
                 .context("Failed to open tag_index table")?;
             for (tag, files) in &tag_to_files {
-                let json = serde_json::to_string(files).expect(crate::errors::JSON_SERIALIZE);
+                let files_vec: Vec<&String> = files.iter().collect();
+                let json = serde_json::to_string(&files_vec).expect(crate::errors::JSON_SERIALIZE);
                 tag_table.insert(tag.as_str(), json.as_str())
                     .context("Failed to insert tag index")?;
             }
@@ -205,9 +206,22 @@ fn parse_frontmatter(content: &str) -> Option<serde_json::Value> {
     Some(parse_simple_yaml(yaml_block))
 }
 
+/// Strip surrounding quotes (single or double) from a YAML value.
+fn strip_yaml_quotes(s: &str) -> &str {
+    if s.len() >= 2 {
+        if (s.starts_with('"') && s.ends_with('"'))
+            || (s.starts_with('\'') && s.ends_with('\''))
+        {
+            return &s[1..s.len() - 1];
+        }
+    }
+    s
+}
+
 /// Parse simple YAML key-value pairs and lists.
 /// Supports:
 ///   key: value
+///   key: "quoted value"
 ///   key:
 ///     - item1
 ///     - item2
@@ -224,7 +238,8 @@ fn parse_simple_yaml(block: &str) -> serde_json::Value {
         if let Some(item) = stripped.strip_prefix(|c: char| c == ' ' || c == '\t') {
             if let Some(item) = item.trim_start().strip_prefix("- ") {
                 if in_list {
-                    current_list.push(serde_json::Value::String(item.trim().to_string()));
+                    let val = strip_yaml_quotes(item.trim());
+                    current_list.push(serde_json::Value::String(val.to_string()));
                     continue;
                 }
             }
@@ -249,7 +264,8 @@ fn parse_simple_yaml(block: &str) -> serde_json::Value {
                 in_list = true;
                 current_list.clear();
             } else {
-                map.insert(key, serde_json::Value::String(value.to_string()));
+                let val = strip_yaml_quotes(value);
+                map.insert(key, serde_json::Value::String(val.to_string()));
             }
         }
     }
@@ -276,46 +292,30 @@ pub fn open_tags_db(db_path: &str) -> Result<redb::Database> {
 
 /// List all unique tags from the database.
 pub fn list_tags(db_path: &str) -> Result<()> {
-    let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
-    let table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
-
-    let mut tags: Vec<String> = Vec::new();
-    let iter = table.iter().context("Failed to iterate tag_index")?;
-    for entry in iter {
-        let (key, _) = entry.context("Failed to read tag entry")?;
-        tags.push(key.value().to_string());
+    let tags = load_all_tags_sorted(db_path)?;
+    if crate::json_output::is_json_mode() {
+        println!("{}", serde_json::to_string(&tags).expect(crate::errors::JSON_SERIALIZE));
+    } else {
+        for tag in &tags {
+            println!("{}", tag);
+        }
     }
-    tags.sort();
-
-    for tag in &tags {
-        println!("{}", tag);
-    }
-
     Ok(())
 }
 
-/// List tags containing the given substring.
+/// Search for tags containing a substring.
 pub fn grep_tags(db_path: &str, text: &str) -> Result<()> {
-    let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
-    let table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
-
-    let mut matches: Vec<String> = Vec::new();
-    let iter = table.iter().context("Failed to iterate tag_index")?;
-    for entry in iter {
-        let (key, _) = entry.context("Failed to read tag entry")?;
-        let tag = key.value();
-        if tag.contains(text) {
-            matches.push(tag.to_string());
+    let all_tags = load_all_tags_sorted(db_path)?;
+    let matches: Vec<&String> = all_tags.iter()
+        .filter(|t| t.contains(text))
+        .collect();
+    if crate::json_output::is_json_mode() {
+        println!("{}", serde_json::to_string(&matches).expect(crate::errors::JSON_SERIALIZE));
+    } else {
+        for tag in &matches {
+            println!("{}", tag);
         }
     }
-    matches.sort();
-
-    for tag in &matches {
-        println!("{}", tag);
-    }
-
     Ok(())
 }
 
@@ -325,16 +325,16 @@ pub fn files_for_tags(db_path: &str, tags: &[String], use_or: bool) -> Result<()
     let read_txn = db.begin_read().context("Failed to begin read transaction")?;
     let table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
 
-    let mut result: Option<std::collections::BTreeSet<String>> = None;
+    let mut result: Option<BTreeSet<String>> = None;
 
     for tag in tags {
-        let files: std::collections::BTreeSet<String> = match table.get(tag.as_str()).context("Failed to query tag")? {
+        let files: BTreeSet<String> = match table.get(tag.as_str()).context("Failed to query tag")? {
             Some(value) => {
                 let v: Vec<String> = serde_json::from_str(value.value())
                     .context("Failed to parse tag file list")?;
                 v.into_iter().collect()
             }
-            None => std::collections::BTreeSet::new(),
+            None => BTreeSet::new(),
         };
         result = Some(match result {
             Some(acc) => {
@@ -348,8 +348,10 @@ pub fn files_for_tags(db_path: &str, tags: &[String], use_or: bool) -> Result<()
         });
     }
 
-    let files = result.unwrap_or_default();
-    if files.is_empty() {
+    let files: Vec<String> = result.unwrap_or_default().into_iter().collect();
+    if crate::json_output::is_json_mode() {
+        println!("{}", serde_json::to_string(&files).expect(crate::errors::JSON_SERIALIZE));
+    } else if files.is_empty() {
         let mode = if use_or { "any" } else { "all" };
         println!("No files found matching {} tags: {}", mode, tags.join(", "));
     } else {
@@ -367,8 +369,15 @@ pub fn count_tags(db_path: &str) -> Result<()> {
     let mut entries: Vec<(String, usize)> = tag_counts.into_iter().collect();
     entries.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
 
-    for (tag, count) in &entries {
-        println!("{:>4}  {}", count, tag);
+    if crate::json_output::is_json_mode() {
+        let json_entries: Vec<serde_json::Value> = entries.iter()
+            .map(|(tag, count)| serde_json::json!({"tag": tag, "count": count}))
+            .collect();
+        println!("{}", serde_json::to_string(&json_entries).expect(crate::errors::JSON_SERIALIZE));
+    } else {
+        for (tag, count) in &entries {
+            println!("{:>4}  {}", count, tag);
+        }
     }
 
     Ok(())
@@ -379,7 +388,7 @@ pub fn tree_tags(db_path: &str) -> Result<()> {
     let tag_counts = load_tag_counts(db_path)?;
 
     // Split into key=value groups and bare tags
-    let mut groups: std::collections::BTreeMap<String, Vec<(String, usize)>> = std::collections::BTreeMap::new();
+    let mut groups: BTreeMap<String, Vec<(String, usize)>> = BTreeMap::new();
     let mut bare: Vec<(String, usize)> = Vec::new();
 
     for (tag, count) in &tag_counts {
@@ -392,21 +401,36 @@ pub fn tree_tags(db_path: &str) -> Result<()> {
         }
     }
 
-    // Print key=value groups
-    for (key, mut values) in groups {
-        values.sort_by(|a, b| a.0.cmp(&b.0));
-        println!("{}=", key);
-        for (value, count) in &values {
-            println!("  {:>4}  {}", count, value);
+    if crate::json_output::is_json_mode() {
+        let mut json_groups: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+        for (key, values) in &groups {
+            let entries: Vec<serde_json::Value> = values.iter()
+                .map(|(v, c)| serde_json::json!({"value": v, "count": c}))
+                .collect();
+            json_groups.insert(key.clone(), serde_json::Value::Array(entries));
         }
-    }
+        let bare_entries: Vec<serde_json::Value> = bare.iter()
+            .map(|(t, c)| serde_json::json!({"tag": t, "count": c}))
+            .collect();
+        json_groups.insert("_bare".to_string(), serde_json::Value::Array(bare_entries));
+        println!("{}", serde_json::to_string(&json_groups).expect(crate::errors::JSON_SERIALIZE));
+    } else {
+        // Print key=value groups
+        for (key, mut values) in groups {
+            values.sort_by(|a, b| a.0.cmp(&b.0));
+            println!("{}=", key);
+            for (value, count) in &values {
+                println!("  {:>4}  {}", count, value);
+            }
+        }
 
-    // Print bare tags
-    if !bare.is_empty() {
-        bare.sort_by(|a, b| a.0.cmp(&b.0));
-        println!("(bare tags)");
-        for (tag, count) in &bare {
-            println!("  {:>4}  {}", count, tag);
+        // Print bare tags
+        if !bare.is_empty() {
+            bare.sort_by(|a, b| a.0.cmp(&b.0));
+            println!("(bare tags)");
+            for (tag, count) in &bare {
+                println!("  {:>4}  {}", count, tag);
+            }
         }
     }
 
@@ -418,7 +442,7 @@ pub fn stats_tags(db_path: &str) -> Result<()> {
     let db = open_tags_db(db_path)?;
     let read_txn = db.begin_read().context("Failed to begin read transaction")?;
 
-    // Count indexed files
+    // Count indexed files from the frontmatter table
     let fm_table = read_txn.open_table(FRONTMATTER).context("Failed to open frontmatter table")?;
     let file_count = fm_table.len().context("Failed to count frontmatter entries")?;
 
@@ -441,11 +465,23 @@ pub fn stats_tags(db_path: &str) -> Result<()> {
     }
 
     let unique_tags = bare_count + kv_count;
-    println!("Files indexed:    {}", file_count);
-    println!("Tag assignments:  {}", total_associations);
-    println!("Unique tags:      {}", unique_tags);
-    println!("  bare tags:      {}", bare_count);
-    println!("  key=value:      {}", kv_count);
+
+    if crate::json_output::is_json_mode() {
+        let stats = serde_json::json!({
+            "files_indexed": file_count,
+            "tag_assignments": total_associations,
+            "unique_tags": unique_tags,
+            "bare_tags": bare_count,
+            "kv_tags": kv_count,
+        });
+        println!("{}", serde_json::to_string(&stats).expect(crate::errors::JSON_SERIALIZE));
+    } else {
+        println!("Files indexed:    {}", file_count);
+        println!("Tag assignments:  {}", total_associations);
+        println!("Unique tags:      {}", unique_tags);
+        println!("  bare tags:      {}", bare_count);
+        println!("  key=value:      {}", kv_count);
+    }
 
     Ok(())
 }
@@ -462,17 +498,66 @@ pub fn tags_for_file(db_path: &str, path: &str) -> Result<()> {
         let (key, value) = entry.context("Failed to read tag entry")?;
         let files: Vec<String> = serde_json::from_str(value.value())
             .context("Failed to parse tag file list")?;
-        if files.iter().any(|f| f == path || f.ends_with(path)) {
+        if files.iter().any(|f| path_matches(f, path)) {
             file_tags.push(key.value().to_string());
         }
     }
     file_tags.sort();
 
-    if file_tags.is_empty() {
+    if crate::json_output::is_json_mode() {
+        println!("{}", serde_json::to_string(&file_tags).expect(crate::errors::JSON_SERIALIZE));
+    } else if file_tags.is_empty() {
         println!("No tags found for: {}", path);
     } else {
         for tag in &file_tags {
             println!("{}", tag);
+        }
+    }
+
+    Ok(())
+}
+
+/// Show the raw frontmatter for a specific file.
+pub fn frontmatter_for_file(db_path: &str, path: &str) -> Result<()> {
+    let db = open_tags_db(db_path)?;
+    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
+    let table = read_txn.open_table(FRONTMATTER).context("Failed to open frontmatter table")?;
+
+    // Try exact match first, then suffix match
+    let mut found_key: Option<String> = None;
+    let mut found_value: Option<String> = None;
+
+    if let Some(value) = table.get(path).context("Failed to query frontmatter")? {
+        found_key = Some(path.to_string());
+        found_value = Some(value.value().to_string());
+    } else {
+        // Suffix match with path boundary
+        let iter = table.iter().context("Failed to iterate frontmatter")?;
+        for entry in iter {
+            let (key, value) = entry.context("Failed to read frontmatter entry")?;
+            if path_matches(key.value(), path) {
+                found_key = Some(key.value().to_string());
+                found_value = Some(value.value().to_string());
+                break;
+            }
+        }
+    }
+
+    match (found_key, found_value) {
+        (Some(key), Some(json)) => {
+            if crate::json_output::is_json_mode() {
+                // Already JSON, just print it
+                println!("{}", json);
+            } else {
+                println!("{}:", key);
+                // Pretty-print the JSON
+                let value: serde_json::Value = serde_json::from_str(&json)
+                    .context("Failed to parse stored frontmatter")?;
+                println!("{}", serde_json::to_string_pretty(&value).expect(crate::errors::JSON_SERIALIZE));
+            }
+        }
+        _ => {
+            println!("No frontmatter found for: {}", path);
         }
     }
 
@@ -490,15 +575,18 @@ pub fn unused_tags(db_path: &str, tags_file: &str) -> Result<()> {
     let db_tags = load_all_tags(db_path)?;
 
     let mut unused: Vec<&String> = allowed.iter()
-        .filter(|t| !db_tags.contains(*t))
+        .filter(|t| !pattern_matches_any_tag(t, &db_tags))
         .collect();
     unused.sort();
 
-    if unused.is_empty() {
+    if crate::json_output::is_json_mode() {
+        println!("{}", serde_json::to_string(&unused).expect(crate::errors::JSON_SERIALIZE));
+    } else if unused.is_empty() {
         println!("All tags in {} are in use.", tags_file);
     } else {
+        println!("{} unused tag(s) in {}:", unused.len(), tags_file);
         for tag in &unused {
-            println!("{}", tag);
+            println!("  {}", tag);
         }
     }
 
@@ -513,10 +601,10 @@ pub fn validate_tags(db_path: &str, tags_file: &str) -> Result<()> {
     }
 
     let allowed = load_tags_file(tags_file_path)?;
-    let db_tags = load_all_tags(db_path)?;
+    // Single db open: get both tags and counts in one pass
     let tag_counts = load_tag_counts(db_path)?;
 
-    let mut unknown: Vec<String> = db_tags.iter()
+    let mut unknown: Vec<String> = tag_counts.keys()
         .filter(|t| !tag_matches_allowed(t, &allowed))
         .cloned()
         .collect();
@@ -549,9 +637,7 @@ pub fn init_tags(db_path: &str, tags_file: &str) -> Result<()> {
     }
 
     let tags = load_all_tags_sorted(db_path)?;
-    let content = tags.join("\n") + "\n";
-    fs::write(tags_file_path, content)
-        .with_context(|| format!("Failed to write {}", tags_file))?;
+    write_tags_file(tags_file_path, &tags)?;
     println!("Created {} with {} tags.", tags_file, tags.len());
 
     Ok(())
@@ -601,7 +687,7 @@ pub fn remove_tag(tags_file: &str, tag: &str) -> Result<()> {
 }
 
 /// Sync .tags file with current tag union.
-pub fn sync_tags(db_path: &str, tags_file: &str, prune: bool) -> Result<()> {
+pub fn sync_tags(db_path: &str, tags_file: &str, prune: bool, verbose: bool) -> Result<()> {
     let tags_file_path = Path::new(tags_file);
     let db_tags: HashSet<String> = load_all_tags(db_path)?;
 
@@ -611,22 +697,29 @@ pub fn sync_tags(db_path: &str, tags_file: &str, prune: bool) -> Result<()> {
         HashSet::new()
     };
 
-    let added_count = db_tags.iter().filter(|t| !existing.contains(*t)).count();
-    let removed_count = if prune {
-        existing.iter().filter(|t| !db_tags.contains(*t)).count()
+    let mut added: Vec<String> = db_tags.iter()
+        .filter(|t| !existing.contains(*t))
+        .cloned()
+        .collect();
+    added.sort();
+
+    let mut removed: Vec<String> = if prune {
+        existing.iter()
+            .filter(|t| !pattern_matches_any_tag(t, &db_tags))
+            .cloned()
+            .collect()
     } else {
-        0
+        Vec::new()
     };
+    removed.sort();
 
     // Build final set
     let mut final_tags: HashSet<String> = existing;
-    // Add all db tags
-    for tag in &db_tags {
+    for tag in &added {
         final_tags.insert(tag.clone());
     }
-    // Prune tags not in db
-    if prune {
-        final_tags.retain(|t| db_tags.contains(t));
+    for tag in &removed {
+        final_tags.remove(tag);
     }
 
     let mut sorted: Vec<String> = final_tags.into_iter().collect();
@@ -636,14 +729,41 @@ pub fn sync_tags(db_path: &str, tags_file: &str, prune: bool) -> Result<()> {
     println!("Synced {} ({} tags total, {} added{})",
         tags_file,
         sorted.len(),
-        added_count,
-        if prune { format!(", {} pruned", removed_count) } else { String::new() },
+        added.len(),
+        if prune { format!(", {} pruned", removed.len()) } else { String::new() },
     );
+
+    if verbose {
+        for tag in &added {
+            println!("  + {}", tag);
+        }
+        for tag in &removed {
+            println!("  - {}", tag);
+        }
+    }
 
     Ok(())
 }
 
 // --- Helper functions ---
+
+/// Check if a stored file path matches a user-provided path.
+/// Matches exactly, or as a suffix after a `/` path separator.
+fn path_matches(stored: &str, query: &str) -> bool {
+    if stored == query {
+        return true;
+    }
+    // Suffix match: stored must end with /query
+    if stored.len() > query.len() {
+        let boundary = stored.len() - query.len() - 1;
+        if stored.as_bytes().get(boundary) == Some(&b'/')
+            && stored.ends_with(query)
+        {
+            return true;
+        }
+    }
+    false
+}
 
 /// Load all tags from the database as a HashSet.
 fn load_all_tags(db_path: &str) -> Result<HashSet<String>> {
@@ -729,9 +849,22 @@ fn tag_matches_allowed(tag: &str, allowed: &HashSet<String>) -> bool {
     false
 }
 
+/// Check if a pattern from .tags matches any actual tag in the database.
+/// For literal tags, checks direct membership.
+/// For wildcard patterns like `duration_days=*`, checks if any db tag has that prefix.
+fn pattern_matches_any_tag(pattern: &str, db_tags: &HashSet<String>) -> bool {
+    if let Some(prefix) = pattern.strip_suffix('*') {
+        db_tags.iter().any(|t| t.starts_with(prefix))
+    } else {
+        db_tags.contains(pattern)
+    }
+}
+
 /// Find the most similar tag in the allowed set using Levenshtein distance.
-/// Returns None if no tag is within distance 3.
+/// The threshold scales with tag length to avoid spurious matches on short tags.
 fn find_similar_tag(tag: &str, allowed: &HashSet<String>) -> Option<String> {
+    // Scale threshold: at least 1, at most 3, roughly tag.len()/3
+    let max_dist = (tag.len() / 3).clamp(1, 3);
     let mut best: Option<(String, usize)> = None;
     for candidate in allowed {
         // Skip wildcard patterns
@@ -739,7 +872,7 @@ fn find_similar_tag(tag: &str, allowed: &HashSet<String>) -> Option<String> {
             continue;
         }
         let dist = levenshtein(tag, candidate);
-        if dist > 0 && dist <= 3 {
+        if dist > 0 && dist <= max_dist {
             if best.is_none() || dist < best.as_ref().unwrap().1 {
                 best = Some((candidate.clone(), dist));
             }

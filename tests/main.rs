@@ -49,4 +49,5 @@ mod processors {
     pub mod jq;
     pub mod jsonlint;
     pub mod json_schema;
+    pub mod tags;
 }

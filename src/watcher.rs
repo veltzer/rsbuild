@@ -68,7 +68,7 @@ pub fn watch(opts: &BuildOptions, interrupted: Arc<AtomicBool>) -> Result<()> {
     {
         let mut builder = Builder::new()?;
         watch_paths = builder.watch_paths();
-        if let Err(e) = builder.build(opts, Arc::clone(&interrupted)) {
+        if let Err(e) = builder.build(opts, Arc::clone(&interrupted), Vec::new()) {
             println!("{}", color::red(&format!("Initial build error: {}", e)));
         }
     }
@@ -132,7 +132,7 @@ pub fn watch(opts: &BuildOptions, interrupted: Arc<AtomicBool>) -> Result<()> {
         {
             let mut builder = Builder::new()?;
             let new_paths = builder.watch_paths();
-            if let Err(e) = builder.build(opts, Arc::clone(&interrupted)) {
+            if let Err(e) = builder.build(opts, Arc::clone(&interrupted), Vec::new()) {
                 println!("{}", color::red(&format!("Build error: {}", e)));
             }
 

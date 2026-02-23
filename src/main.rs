@@ -30,6 +30,7 @@ use std::env;
 use std::fs;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::time::Instant;
 
 fn main() -> std::process::ExitCode {
     // SAFETY: Resetting SIGPIPE to default behavior is safe — this is a standard
@@ -60,9 +61,12 @@ fn main() -> std::process::ExitCode {
 }
 
 fn run() -> Result<()> {
+    let t_start = Instant::now();
     let cli = Cli::parse();
+    let cli_parse_dur = t_start.elapsed();
 
     // Initialize runtime flags from CLI arguments (once, before any reads)
+    let t = Instant::now();
     runtime_flags::init(runtime_flags::RuntimeFlags {
         show_child_processes: cli.show_child_processes,
         show_output: cli.show_output,
@@ -91,6 +95,7 @@ fn run() -> Result<()> {
             });
         });
     }
+    let init_dur = t.elapsed();
 
     match cli.command {
         Commands::Build { force, dry_run, ignore_tool_versions, stop_after, ref shared } => {
@@ -98,12 +103,22 @@ fn run() -> Result<()> {
                 let builder = Builder::new()?;
                 builder.dry_run(force, shared.explain)?;
             } else {
+                let t = Instant::now();
                 let mut builder = Builder::new()?;
+                let builder_new_dur = t.elapsed();
+                let t = Instant::now();
                 if !ignore_tool_versions {
                     builder.verify_tool_versions()?;
                 }
+                let verify_tools_dur = t.elapsed();
+                let init_timings = vec![
+                    ("cli_parse".to_string(), cli_parse_dur),
+                    ("init".to_string(), init_dur),
+                    ("builder_new".to_string(), builder_new_dur),
+                    ("verify_tools".to_string(), verify_tools_dur),
+                ];
                 let opts = shared.to_build_options(&cli, force, stop_after);
-                builder.build(&opts, Arc::clone(&interrupted))?;
+                builder.build(&opts, Arc::clone(&interrupted), init_timings)?;
             }
         }
         Commands::Clean { action } => {

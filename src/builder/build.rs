@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use crate::cli::{BuildOptions, BuildPhase, DisplayOptions};
 use crate::color;
 use crate::errors;
@@ -9,7 +9,7 @@ use super::{Builder, ProductStatusLabels, phases_debug};
 
 impl Builder {
     /// Execute an incremental build using the dependency graph
-    pub fn build(&mut self, opts: &BuildOptions, interrupted: Arc<std::sync::atomic::AtomicBool>) -> Result<(), anyhow::Error> {
+    pub fn build(&mut self, opts: &BuildOptions, interrupted: Arc<std::sync::atomic::AtomicBool>, init_timings: Vec<(String, Duration)>) -> Result<(), anyhow::Error> {
         // CLI override for spellcheck auto_add_words
         if opts.auto_add_words {
             self.config.processor.spellcheck.auto_add_words = true;
@@ -46,8 +46,11 @@ impl Builder {
         // Build the dependency graph (may stop early based on stop_after)
         let (graph, mut phase_timings) = self.build_graph_with_processors_and_phase(&processors, opts.stop_after, processor_filter, opts.verbose)?;
 
-        // Prepend create_processors timing
+        // Prepend create_processors and init timings
         phase_timings.insert(0, ("create_processors".to_string(), create_processors_dur));
+        for (i, timing) in init_timings.into_iter().enumerate() {
+            phase_timings.insert(i, timing);
+        }
 
         // If we stopped early (before classify), we're done
         if opts.stop_after != BuildPhase::Build && opts.stop_after != BuildPhase::Classify {

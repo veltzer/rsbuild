@@ -58,8 +58,8 @@ impl ProductDiscovery for PipProcessor {
             &self.config.extra_inputs,
             &self.config,
             &SiblingFilter {
-                extensions: &[".txt", ".py"],
-                excludes: &["/.git/", "/out/", "/.rsb/", "/node_modules/"],
+                extensions: &[],
+                excludes: &[],
             },
             crate::processors::names::PIP,
         )

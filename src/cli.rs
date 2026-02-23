@@ -304,6 +304,16 @@ pub enum ProcessorAction {
         #[arg(short, long)]
         all: bool,
     },
+    /// Show resolved configuration for a processor
+    Config {
+        /// Processor name
+        name: String,
+    },
+    /// Show default configuration for a processor
+    Defconfig {
+        /// Processor name
+        name: String,
+    },
 }
 
 #[derive(Subcommand)]

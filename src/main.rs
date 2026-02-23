@@ -236,6 +236,12 @@ fn run() -> Result<()> {
                         Err(_) => builder::processors::list_processors_no_config(all)?,
                     }
                 }
+                cli::ProcessorAction::Defconfig { ref name } => {
+                    match Builder::new() {
+                        Ok(builder) => builder.processor(action)?,
+                        Err(_) => builder::processors::processor_defconfig(name)?,
+                    }
+                }
                 action => {
                     let builder = Builder::new()?;
                     builder.processor(action)?;

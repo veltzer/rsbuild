@@ -2,7 +2,14 @@ use std::collections::HashMap;
 use anyhow::{Result, bail};
 use crate::cli::ProcessorAction;
 use crate::color;
-use crate::config::ProcessorConfig;
+use crate::config::{
+    ProcessorConfig,
+    TeraConfig, RuffConfig, PylintConfig, CcConfig, CppcheckConfig, ClangTidyConfig,
+    ShellcheckConfig, SpellcheckConfig, SleepConfig, MakeConfig, CargoConfig, RumdlConfig,
+    MypyConfig, PyreflyConfig, YamllintConfig, JqConfig, JsonlintConfig, TaploConfig,
+    JsonSchemaConfig, TagsConfig, PipConfig, SphinxConfig, NpmConfig, GemConfig,
+};
+use crate::processors::names;
 use super::{Builder, create_builtin_processors, sorted_keys};
 
 /// List all built-in processors (works without rsb.toml).
@@ -54,6 +61,49 @@ pub fn list_processors_no_config(all: bool) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Return the default config for a processor as pretty JSON, or None if the name is unknown.
+fn defconfig_json(name: &str) -> Option<String> {
+    let json: serde_json::Value = match name {
+        names::TERA => serde_json::to_value(TeraConfig::default()).ok()?,
+        names::RUFF => serde_json::to_value(RuffConfig::default()).ok()?,
+        names::PYLINT => serde_json::to_value(PylintConfig::default()).ok()?,
+        names::CC_SINGLE_FILE => serde_json::to_value(CcConfig::default()).ok()?,
+        names::CPPCHECK => serde_json::to_value(CppcheckConfig::default()).ok()?,
+        names::CLANG_TIDY => serde_json::to_value(ClangTidyConfig::default()).ok()?,
+        names::SHELLCHECK => serde_json::to_value(ShellcheckConfig::default()).ok()?,
+        names::SPELLCHECK => serde_json::to_value(SpellcheckConfig::default()).ok()?,
+        names::SLEEP => serde_json::to_value(SleepConfig::default()).ok()?,
+        names::MAKE => serde_json::to_value(MakeConfig::default()).ok()?,
+        names::CARGO => serde_json::to_value(CargoConfig::default()).ok()?,
+        names::RUMDL => serde_json::to_value(RumdlConfig::default()).ok()?,
+        names::MYPY => serde_json::to_value(MypyConfig::default()).ok()?,
+        names::PYREFLY => serde_json::to_value(PyreflyConfig::default()).ok()?,
+        names::YAMLLINT => serde_json::to_value(YamllintConfig::default()).ok()?,
+        names::JQ => serde_json::to_value(JqConfig::default()).ok()?,
+        names::JSONLINT => serde_json::to_value(JsonlintConfig::default()).ok()?,
+        names::TAPLO => serde_json::to_value(TaploConfig::default()).ok()?,
+        names::JSON_SCHEMA => serde_json::to_value(JsonSchemaConfig::default()).ok()?,
+        names::TAGS => serde_json::to_value(TagsConfig::default()).ok()?,
+        names::PIP => serde_json::to_value(PipConfig::default()).ok()?,
+        names::SPHINX => serde_json::to_value(SphinxConfig::default()).ok()?,
+        names::NPM => serde_json::to_value(NpmConfig::default()).ok()?,
+        names::GEM => serde_json::to_value(GemConfig::default()).ok()?,
+        _ => return None,
+    };
+    serde_json::to_string_pretty(&json).ok()
+}
+
+/// Show default configuration for a processor (works without rsb.toml).
+pub fn processor_defconfig(name: &str) -> Result<()> {
+    match defconfig_json(name) {
+        Some(json) => {
+            println!("{}", json);
+            Ok(())
+        }
+        None => bail!("Unknown processor: '{}'. Run 'rsb processors list' to see available processors.", name),
+    }
 }
 
 impl Builder {
@@ -112,6 +162,24 @@ impl Builder {
                     };
                     println!("{} {}{} {}{} \u{2014} {}", name, proc_type, batch, status, hidden_tag, color::dim(proc.description()));
                 }
+            }
+            ProcessorAction::Config { ref name } => {
+                if !processors.contains_key(name.as_str()) {
+                    bail!("Unknown processor: '{}'. Run 'rsb processors list' to see available processors.", name);
+                }
+                let proc = &processors[name.as_str()];
+                match proc.config_json() {
+                    Some(json) => {
+                        let value: serde_json::Value = serde_json::from_str(&json)?;
+                        println!("{}", serde_json::to_string_pretty(&value)?);
+                    }
+                    None => {
+                        println!("Processor '{}' does not expose configuration.", name);
+                    }
+                }
+            }
+            ProcessorAction::Defconfig { ref name } => {
+                processor_defconfig(name)?;
             }
             ProcessorAction::Files { name, all } => {
                 if let Some(ref n) = name

@@ -55,13 +55,13 @@ inside the string produces unwanted blank lines in the output.
 
 ## Include processor name in error messages
 
-Error messages from processors must identify the processor so the user can
-immediately tell which processor failed. Processors that use `run_checker()`
-or `check_command_output()` get this automatically (the tool name appears in
-the error). Processors with custom error handling must prefix their `bail!`
-messages with `[processor_name]`, for example
-`[aspell] Misspelled words in README.md` rather than just
-`Misspelled words in README.md`.
+Error messages from processor execution must identify the processor so the
+user can immediately tell which processor failed. The executor's
+`record_failure()` method automatically wraps every error with
+`[processor_name]` before printing or storing it, so processors do not need
+to manually prefix their `bail!` messages. Just write the error naturally
+(e.g. `bail!("Misspelled words in {}", path)`) and the executor will produce
+`[aspell] Misspelled words in README.md`.
 
 ## Reject unknown config fields
 

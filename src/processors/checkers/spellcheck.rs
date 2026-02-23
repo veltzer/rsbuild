@@ -82,7 +82,7 @@ impl SpellcheckProcessor {
         });
         match result {
             Ok(dict) => Ok(dict),
-            Err(msg) => anyhow::bail!("[spellcheck] {}", msg),
+            Err(msg) => anyhow::bail!("{}", msg),
         }
     }
 
@@ -178,7 +178,7 @@ impl SpellcheckProcessor {
             } else {
                 misspelled.sort();
                 Err(anyhow::anyhow!(
-                    "[spellcheck] Spelling errors in {}: {}",
+                    "Spelling errors in {}: {}",
                     doc_file.display(),
                     misspelled.join(", ")
                 ))

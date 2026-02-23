@@ -49,7 +49,7 @@ impl AsciiCheckProcessor {
         if errors.is_empty() {
             Ok(())
         } else {
-            anyhow::bail!("[ascii_check] Non-ASCII characters found:\n{}", errors.join("\n"))
+            anyhow::bail!("Non-ASCII characters found:\n{}", errors.join("\n"))
         }
     }
 }

@@ -26,15 +26,18 @@ impl<'a> Executor<'a> {
         // Always mark the product as failed
         ctx.shared.failed_products.lock().insert(ctx.id);
 
+        // Wrap the error with the processor name so users can always identify the source
+        let prefixed_error = anyhow::anyhow!("[{}] {}", ctx.proc_name, error);
+
         if ctx.keep_going {
-            let msg = format!("[{}] {}: {}", ctx.proc_name, self.product_display(ctx.product), error);
+            let msg = format!("{}: {}", self.product_display(ctx.product), prefixed_error);
             println!("{}", color::red(&format!("Error: {}", msg)));
             ctx.shared.failed_messages.lock().push(msg);
         } else {
             if mark_processor_failed {
                 ctx.shared.failed_processors.lock().insert(ctx.proc_name.to_string());
             }
-            ctx.shared.errors.lock().push(error);
+            ctx.shared.errors.lock().push(prefixed_error);
         }
     }
 

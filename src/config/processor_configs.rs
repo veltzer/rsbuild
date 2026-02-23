@@ -1035,6 +1035,63 @@ impl KnownFields for NpmConfig {
     }
 }
 
+fn default_mdl_bin() -> String {
+    "gems/bin/mdl".into()
+}
+
+fn default_gem_home() -> String {
+    "gems".into()
+}
+
+fn default_mdl_extra_inputs() -> Vec<String> {
+    vec![".mdlrc".into(), ".mdl.style.rb".into()]
+}
+
+fn default_gem_stamp() -> String {
+    "out/gem/root.stamp".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct MdlConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_gem_home")]
+    pub gem_home: String,
+    #[serde(default = "default_mdl_bin")]
+    pub mdl_bin: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default = "default_mdl_extra_inputs")]
+    pub extra_inputs: Vec<String>,
+    #[serde(default = "default_gem_stamp")]
+    pub gem_stamp: String,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for MdlConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            gem_home: "gems".into(),
+            mdl_bin: "gems/bin/mdl".into(),
+            args: Vec::new(),
+            extra_inputs: default_mdl_extra_inputs(),
+            gem_stamp: "out/gem/root.stamp".into(),
+            scan: default_scan!(extensions: [".md"]),
+        }
+    }
+}
+
+impl KnownFields for MdlConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "gem_home", "mdl_bin", "args", "extra_inputs", "gem_stamp",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}
+
 fn default_bundler() -> String {
     "bundle".into()
 }

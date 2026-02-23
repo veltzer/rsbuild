@@ -175,9 +175,9 @@ pub enum Commands {
         #[arg(short = 'n', long)]
         dry_run: bool,
 
-        /// Skip tool version verification against .tools.versions
+        /// Verify tool versions against .tools.versions before building
         #[arg(long)]
-        ignore_tool_versions: bool,
+        verify_tool_versions: bool,
 
         /// Stop after a specific build phase
         #[arg(long, value_enum, default_value = "build")]

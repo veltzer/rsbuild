@@ -51,7 +51,7 @@ rsb build --retry 3                    # Retry failed products up to 3 times
 rsb build --no-mtime                   # Disable mtime pre-check, always compute checksums
 rsb build --no-summary                 # Suppress the build summary
 rsb build --batch-size 10              # Limit batch size for batch-capable processors
-rsb build --ignore-tool-versions       # Skip tool version verification
+rsb build --verify-tool-versions       # Verify tool versions against .tools.versions
 ```
 
 By default, tool output (compiler messages, linter output) is only shown when a command fails. Use `--show-output` to see all output.

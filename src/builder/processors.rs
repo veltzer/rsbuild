@@ -7,7 +7,7 @@ use crate::config::{
     TeraConfig, RuffConfig, PylintConfig, CcConfig, CppcheckConfig, ClangTidyConfig,
     ShellcheckConfig, SpellcheckConfig, SleepConfig, MakeConfig, CargoConfig, RumdlConfig,
     MypyConfig, PyreflyConfig, YamllintConfig, JqConfig, JsonlintConfig, TaploConfig,
-    JsonSchemaConfig, TagsConfig, PipConfig, SphinxConfig, NpmConfig, GemConfig,
+    JsonSchemaConfig, TagsConfig, PipConfig, SphinxConfig, NpmConfig, GemConfig, MdlConfig,
 };
 use crate::processors::names;
 use super::{Builder, create_builtin_processors, sorted_keys};
@@ -90,6 +90,7 @@ fn defconfig_json(name: &str) -> Option<String> {
         names::SPHINX => serde_json::to_value(SphinxConfig::default()).ok()?,
         names::NPM => serde_json::to_value(NpmConfig::default()).ok()?,
         names::GEM => serde_json::to_value(GemConfig::default()).ok()?,
+        names::MDL => serde_json::to_value(MdlConfig::default()).ok()?,
         _ => return None,
     };
     serde_json::to_string_pretty(&json).ok()

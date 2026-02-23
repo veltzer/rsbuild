@@ -364,8 +364,9 @@ macro_rules! impl_checker {
 mod cargo;
 mod clang_tidy;
 mod cppcheck;
-mod gem;
+
 mod make;
+mod mdl;
 mod mypy;
 mod npm;
 mod pip;
@@ -386,8 +387,9 @@ mod json_schema;
 pub use cargo::CargoProcessor;
 pub use clang_tidy::ClangTidyProcessor;
 pub use cppcheck::CppcheckProcessor;
-pub use gem::GemProcessor;
+
 pub use make::MakeProcessor;
+pub use mdl::MdlProcessor;
 pub use mypy::MypyProcessor;
 pub use npm::NpmProcessor;
 pub use pip::PipProcessor;

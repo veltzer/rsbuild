@@ -98,7 +98,7 @@ fn run() -> Result<()> {
     let init_dur = t.elapsed();
 
     match cli.command {
-        Commands::Build { force, dry_run, ignore_tool_versions, stop_after, ref shared } => {
+        Commands::Build { force, dry_run, verify_tool_versions, stop_after, ref shared } => {
             if dry_run {
                 let builder = Builder::new()?;
                 builder.dry_run(force, shared.explain)?;
@@ -107,7 +107,7 @@ fn run() -> Result<()> {
                 let mut builder = Builder::new()?;
                 let builder_new_dur = t.elapsed();
                 let t = Instant::now();
-                if !ignore_tool_versions {
+                if verify_tool_versions {
                     builder.verify_tool_versions()?;
                 }
                 let verify_tools_dur = t.elapsed();
@@ -401,6 +401,14 @@ fn init_project() -> Result<()> {
 # scan_dir = ""
 # extensions = ["Makefile"]
 # exclude_paths = []
+
+[processor.mdl]
+# gem_home = "gems"
+# mdl_bin = "gems/bin/mdl"
+# args = []
+# extra_inputs = [".mdlrc", ".mdl.style.rb"]
+# gem_stamp = "out/gem/root.stamp"
+# extensions = [".md"]
 
 [graph]
 # viewer = "google-chrome"

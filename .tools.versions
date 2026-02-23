@@ -1,7 +1,28 @@
 {
   "version": 1,
-  "locked_at": "2026-02-23T03:17:41Z",
+  "locked_at": "2026-02-23T15:23:34Z",
   "tools": {
+    "bundle": {
+      "path": "/home/mark/install/gems/bin/bundle",
+      "version_output": "Bundler version 2.6.7",
+      "version_args": [
+        "--version"
+      ]
+    },
+    "cargo": {
+      "path": "/home/mark/install/cargo/bin/cargo",
+      "version_output": "cargo 1.93.0 (083ac5135 2025-12-15)",
+      "version_args": [
+        "--version"
+      ]
+    },
+    "clang-tidy": {
+      "path": "/usr/bin/clang-tidy",
+      "version_output": "Ubuntu LLVM version 20.1.8\n  Optimized build.",
+      "version_args": [
+        "--version"
+      ]
+    },
     "cppcheck": {
       "path": "/usr/bin/cppcheck",
       "version_output": "Cppcheck 2.17.1",
@@ -44,6 +65,27 @@
         "--version"
       ]
     },
+    "mypy": {
+      "path": "/home/mark/.venv/bin/mypy",
+      "version_output": "mypy 1.17.1 (compiled: yes)",
+      "version_args": [
+        "--version"
+      ]
+    },
+    "npm": {
+      "path": "/home/mark/install/node/bin/npm",
+      "version_output": "11.5.2",
+      "version_args": [
+        "--version"
+      ]
+    },
+    "pip": {
+      "path": "/home/mark/.venv/bin/pip",
+      "version_output": "pip 25.0 from /home/mark/.venv/lib/python3.13/site-packages/pip (python 3.13)",
+      "version_args": [
+        "--version"
+      ]
+    },
     "pylint": {
       "path": "/home/mark/.venv/bin/pylint",
       "version_output": "pylint 3.3.8\nastroid 3.3.11\nPython 3.13.7 (main, Jan 22 2026, 20:15:57) [GCC 15.2.0]",
@@ -75,6 +117,13 @@
     "shellcheck": {
       "path": "/usr/bin/shellcheck",
       "version_output": "ShellCheck - shell script analysis tool\nversion: 0.10.0\nlicense: GNU General Public License, version 3\nwebsite: https://www.shellcheck.net",
+      "version_args": [
+        "--version"
+      ]
+    },
+    "sphinx-build": {
+      "path": "/home/mark/.venv/bin/sphinx-build",
+      "version_output": "sphinx-build 8.2.3",
       "version_args": [
         "--version"
       ]

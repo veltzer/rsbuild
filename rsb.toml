@@ -3,3 +3,6 @@ use_words_file = true
 
 [processor.make]
 exclude_paths = ["Makefile"]
+
+[processor.rumdl]
+enabled = false

@@ -1043,10 +1043,6 @@ fn default_gem_home() -> String {
     "gems".into()
 }
 
-fn default_mdl_extra_inputs() -> Vec<String> {
-    vec![".mdlrc".into(), ".mdl.style.rb".into()]
-}
-
 fn default_gem_stamp() -> String {
     "out/gem/root.stamp".into()
 }
@@ -1061,7 +1057,7 @@ pub struct MdlConfig {
     pub mdl_bin: String,
     #[serde(default)]
     pub args: Vec<String>,
-    #[serde(default = "default_mdl_extra_inputs")]
+    #[serde(default)]
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_gem_stamp")]
     pub gem_stamp: String,
@@ -1076,7 +1072,7 @@ impl Default for MdlConfig {
             gem_home: "gems".into(),
             mdl_bin: "gems/bin/mdl".into(),
             args: Vec::new(),
-            extra_inputs: default_mdl_extra_inputs(),
+            extra_inputs: Vec::new(),
             gem_stamp: "out/gem/root.stamp".into(),
             scan: default_scan!(extensions: [".md"]),
         }
@@ -1096,10 +1092,6 @@ fn default_markdownlint_bin() -> String {
     "node_modules/.bin/markdownlint".into()
 }
 
-fn default_markdownlint_extra_inputs() -> Vec<String> {
-    vec![".markdownlint.json".into()]
-}
-
 fn default_npm_stamp() -> String {
     "out/npm/root.stamp".into()
 }
@@ -1112,7 +1104,7 @@ pub struct MarkdownlintConfig {
     pub markdownlint_bin: String,
     #[serde(default)]
     pub args: Vec<String>,
-    #[serde(default = "default_markdownlint_extra_inputs")]
+    #[serde(default)]
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_npm_stamp")]
     pub npm_stamp: String,
@@ -1126,7 +1118,7 @@ impl Default for MarkdownlintConfig {
             enabled: true,
             markdownlint_bin: "node_modules/.bin/markdownlint".into(),
             args: Vec::new(),
-            extra_inputs: default_markdownlint_extra_inputs(),
+            extra_inputs: Vec::new(),
             npm_stamp: "out/npm/root.stamp".into(),
             scan: default_scan!(extensions: [".md"]),
         }
@@ -1154,10 +1146,6 @@ fn default_aspell_conf() -> String {
     ".aspell.conf".into()
 }
 
-fn default_aspell_extra_inputs() -> Vec<String> {
-    vec![".aspell.conf".into(), ".aspell.en.pws".into(), ".aspell.en.prepl".into()]
-}
-
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct AspellConfig {
     #[serde(default = "default_true")]
@@ -1170,7 +1158,7 @@ pub struct AspellConfig {
     pub conf_dir: String,
     #[serde(default = "default_aspell_conf")]
     pub conf: String,
-    #[serde(default = "default_aspell_extra_inputs")]
+    #[serde(default)]
     pub extra_inputs: Vec<String>,
     #[serde(flatten)]
     pub scan: ScanConfig,
@@ -1184,7 +1172,7 @@ impl Default for AspellConfig {
             args: Vec::new(),
             conf_dir: ".".into(),
             conf: ".aspell.conf".into(),
-            extra_inputs: default_aspell_extra_inputs(),
+            extra_inputs: Vec::new(),
             scan: default_scan!(extensions: [".md"]),
         }
     }

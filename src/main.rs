@@ -406,14 +406,14 @@ fn init_project() -> Result<()> {
 # gem_home = "gems"
 # mdl_bin = "gems/bin/mdl"
 # args = []
-# extra_inputs = [".mdlrc", ".mdl.style.rb"]
+# extra_inputs = []
 # gem_stamp = "out/gem/root.stamp"
 # extensions = [".md"]
 
 [processor.markdownlint]
 # markdownlint_bin = "node_modules/.bin/markdownlint"
 # args = []
-# extra_inputs = [".markdownlint.json"]
+# extra_inputs = []
 # npm_stamp = "out/npm/root.stamp"
 # extensions = [".md"]
 
@@ -422,7 +422,7 @@ fn init_project() -> Result<()> {
 # conf_dir = "."
 # conf = ".aspell.conf"
 # args = []
-# extra_inputs = [".aspell.conf", ".aspell.en.pws", ".aspell.en.prepl"]
+# extra_inputs = []
 # extensions = [".md"]
 
 [processor.pandoc]

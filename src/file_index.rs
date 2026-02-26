@@ -81,8 +81,12 @@ impl FileIndex {
                 }
 
                 // Check extension match
+                // Extensions starting with "." match suffixes (e.g., ".py" matches "foo.py").
+                // Extensions without a leading "." are exact filenames (e.g., "Makefile", "requirements.txt").
                 let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                if !extensions.iter().any(|ext| name.ends_with(ext)) {
+                if !extensions.iter().any(|ext| {
+                    if ext.starts_with('.') { name.ends_with(ext) } else { name == *ext }
+                }) {
                     return false;
                 }
 

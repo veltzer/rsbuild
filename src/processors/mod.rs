@@ -48,6 +48,7 @@ pub mod names {
     pub const MDL: &str = "mdl";
     pub const MARKDOWNLINT: &str = "markdownlint";
     pub const ASPELL: &str = "aspell";
+    pub const MARP: &str = "marp";
     pub const PANDOC: &str = "pandoc";
     pub const MARKDOWN: &str = "markdown";
     pub const PDFLATEX: &str = "pdflatex";
@@ -460,7 +461,7 @@ pub use checkers::{
     ShellcheckProcessor, SleepProcessor, SpellcheckProcessor, SphinxProcessor,
     TaploProcessor, YamllintProcessor,
 };
-pub use generators::{A2xProcessor, CcProcessor, GemProcessor, MarkdownProcessor, NpmProcessor, PandocProcessor, PdflatexProcessor, PipProcessor, TagsProcessor, TeraProcessor};
+pub use generators::{A2xProcessor, CcProcessor, GemProcessor, MarpProcessor, MarkdownProcessor, NpmProcessor, PandocProcessor, PdflatexProcessor, PipProcessor, TagsProcessor, TeraProcessor};
 pub(crate) use generators::tags as tags_cmd;
 pub use lua_processor::LuaProcessor;
 
@@ -662,6 +663,7 @@ pub fn tool_install_command(tool: &str) -> Option<&'static str> {
         "a2x" => Some("apt install asciidoc"),
         "python3" => Some("apt install python3"),
         // Node tools (npm)
+        "marp" => Some("npm install -g @marp-team/marp-cli"),
         "jsonlint" => Some("npm install -g jsonlint"),
         "npm" => Some("apt install npm"),
         // Ruby tools

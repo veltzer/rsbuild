@@ -269,7 +269,7 @@ fn default_processors() -> Vec<String> {
         names::TAGS.into(),
         names::PIP.into(), names::SPHINX.into(), names::NPM.into(), names::GEM.into(),
         names::MDL.into(), names::MARKDOWNLINT.into(),
-        names::ASPELL.into(), names::PANDOC.into(), names::MARKDOWN.into(),
+        names::ASPELL.into(), names::MARP.into(), names::PANDOC.into(), names::MARKDOWN.into(),
         names::PDFLATEX.into(), names::A2X.into(), names::ASCII_CHECK.into(),
     ]
 }
@@ -347,6 +347,8 @@ pub(crate) struct ProcessorConfig {
     #[serde(default)]
     pub aspell: AspellConfig,
     #[serde(default)]
+    pub marp: MarpConfig,
+    #[serde(default)]
     pub pandoc: PandocConfig,
     #[serde(default)]
     pub markdown: MarkdownGenConfig,
@@ -393,6 +395,7 @@ impl Default for ProcessorConfig {
             mdl: MdlConfig::default(),
             markdownlint: MarkdownlintConfig::default(),
             aspell: AspellConfig::default(),
+            marp: MarpConfig::default(),
             pandoc: PandocConfig::default(),
             markdown: MarkdownGenConfig::default(),
             pdflatex: PdflatexConfig::default(),
@@ -433,6 +436,7 @@ impl ProcessorConfig {
             "mdl" => self.mdl.enabled,
             "markdownlint" => self.markdownlint.enabled,
             "aspell" => self.aspell.enabled,
+            "marp" => self.marp.enabled,
             "pandoc" => self.pandoc.enabled,
             "markdown" => self.markdown.enabled,
             "pdflatex" => self.pdflatex.enabled,
@@ -458,7 +462,7 @@ impl ProcessorConfig {
             &self.taplo.scan, &self.json_schema.scan, &self.tags.scan,
             &self.pip.scan, &self.sphinx.scan, &self.npm.scan, &self.gem.scan,
             &self.mdl.scan, &self.markdownlint.scan,
-            &self.aspell.scan, &self.pandoc.scan, &self.markdown.scan,
+            &self.aspell.scan, &self.marp.scan, &self.pandoc.scan, &self.markdown.scan,
             &self.pdflatex.scan, &self.a2x.scan, &self.ascii_check.scan,
         ];
         let mut dirs: Vec<String> = scans.iter()
@@ -502,6 +506,7 @@ impl ProcessorConfig {
         self.mdl.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
         self.markdownlint.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
         self.aspell.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+        self.marp.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
         self.pandoc.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
         self.markdown.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
         self.pdflatex.scan.resolve("", &[".tex"], BUILD_TOOL_EXCLUDES);
@@ -681,6 +686,9 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         ("markdownlint", "markdownlint_bin" | "npm_stamp") => Some(FieldType::String),
         // aspell
         ("aspell", "aspell" | "conf_dir" | "conf") => Some(FieldType::String),
+        // marp
+        ("marp", "marp_bin" | "output_dir") => Some(FieldType::String),
+        ("marp", "formats") => Some(FieldType::StringArray),
         // pandoc
         ("pandoc", "pandoc" | "from" | "output_dir") => Some(FieldType::String),
         ("pandoc", "formats") => Some(FieldType::StringArray),
@@ -742,6 +750,7 @@ fn validate_processor_fields(raw: &toml::Value) -> Result<()> {
             processor_names::MDL => MdlConfig::known_fields(),
             processor_names::MARKDOWNLINT => MarkdownlintConfig::known_fields(),
             processor_names::ASPELL => AspellConfig::known_fields(),
+            processor_names::MARP => MarpConfig::known_fields(),
             processor_names::PANDOC => PandocConfig::known_fields(),
             processor_names::MARKDOWN => MarkdownGenConfig::known_fields(),
             processor_names::PDFLATEX => PdflatexConfig::known_fields(),

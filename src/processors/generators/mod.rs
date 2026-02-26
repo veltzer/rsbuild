@@ -1,6 +1,7 @@
 mod a2x;
 mod cc;
 mod gem;
+mod marp;
 mod markdown;
 mod npm;
 mod pandoc;
@@ -12,6 +13,7 @@ mod tera;
 pub use a2x::A2xProcessor;
 pub use cc::CcProcessor;
 pub use gem::GemProcessor;
+pub use marp::MarpProcessor;
 pub use markdown::MarkdownProcessor;
 pub use npm::NpmProcessor;
 pub use pandoc::PandocProcessor;

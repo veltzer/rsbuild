@@ -1249,6 +1249,63 @@ impl KnownFields for PandocConfig {
     }
 }
 
+fn default_marp_bin() -> String {
+    "marp".into()
+}
+
+fn default_marp_formats() -> Vec<String> {
+    vec!["pdf".into()]
+}
+
+fn default_marp_args() -> Vec<String> {
+    vec!["--html".into(), "--allow-local-files".into()]
+}
+
+fn default_marp_output_dir() -> String {
+    "out/marp".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct MarpConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_marp_bin")]
+    pub marp_bin: String,
+    #[serde(default = "default_marp_formats")]
+    pub formats: Vec<String>,
+    #[serde(default = "default_marp_args")]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(default = "default_marp_output_dir")]
+    pub output_dir: String,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for MarpConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            marp_bin: "marp".into(),
+            formats: vec!["pdf".into()],
+            args: vec!["--html".into(), "--allow-local-files".into()],
+            extra_inputs: Vec::new(),
+            output_dir: "out/marp".into(),
+            scan: default_scan!(extensions: [".md"]),
+        }
+    }
+}
+
+impl KnownFields for MarpConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "marp_bin", "formats", "args", "extra_inputs", "output_dir",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}
+
 fn default_markdown_bin() -> String {
     "markdown".into()
 }

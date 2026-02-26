@@ -20,7 +20,7 @@ use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::{ObjectStore, ObjectStoreOptions};
-use crate::processors::{A2xProcessor, AsciiCheckProcessor, AspellProcessor, CargoProcessor, CcProcessor, ClangTidyProcessor, CppcheckProcessor, GemProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor, LuaProcessor, MakeProcessor, MarkdownProcessor, MarkdownlintProcessor, MdlProcessor, MypyProcessor, NpmProcessor, PandocProcessor, PdflatexProcessor, PipProcessor, ProcessorMap, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, SphinxProcessor, TagsProcessor, TaploProcessor, TeraProcessor, YamllintProcessor, names as proc_names};
+use crate::processors::{A2xProcessor, AsciiCheckProcessor, AspellProcessor, CargoProcessor, CcProcessor, ClangTidyProcessor, CppcheckProcessor, GemProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor, LuaProcessor, MakeProcessor, MarpProcessor, MarkdownProcessor, MarkdownlintProcessor, MdlProcessor, MypyProcessor, NpmProcessor, PandocProcessor, PdflatexProcessor, PipProcessor, ProcessorMap, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, SphinxProcessor, TagsProcessor, TaploProcessor, TeraProcessor, YamllintProcessor, names as proc_names};
 use crate::remote_cache;
 use crate::tool_lock;
 
@@ -101,6 +101,7 @@ pub(crate) fn create_builtin_processors(cfg: &ProcessorConfig) -> ProcessorMap {
     Builder::register(&mut processors, proc_names::MDL, MdlProcessor::new(cfg.mdl.clone()));
     Builder::register(&mut processors, proc_names::MARKDOWNLINT, MarkdownlintProcessor::new(cfg.markdownlint.clone()));
     Builder::register(&mut processors, proc_names::ASPELL, AspellProcessor::new(cfg.aspell.clone()));
+    Builder::register(&mut processors, proc_names::MARP, MarpProcessor::new(cfg.marp.clone()));
     Builder::register(&mut processors, proc_names::PANDOC, PandocProcessor::new(cfg.pandoc.clone()));
     Builder::register(&mut processors, proc_names::MARKDOWN, MarkdownProcessor::new(cfg.markdown.clone()));
     Builder::register(&mut processors, proc_names::PDFLATEX, PdflatexProcessor::new(cfg.pdflatex.clone()));

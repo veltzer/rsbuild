@@ -278,24 +278,20 @@ fn run() -> Result<()> {
         }
         Commands::Version => {
             println!("rsb {}", env!("CARGO_PKG_VERSION"));
-            println!("git describe: {}", env!("RSB_GIT_DESCRIBE"));
-            println!("commit: {}", env!("VERGEN_GIT_SHA"));
-            println!("branch: {}", env!("VERGEN_GIT_BRANCH"));
-            println!("dirty: {}", env!("VERGEN_GIT_DIRTY"));
-            println!("build date: {}", env!("VERGEN_BUILD_DATE"));
-            println!("rustc: {}", env!("VERGEN_RUSTC_SEMVER"));
+            println!("RSB_GIT_DESCRIBE: {}", env!("RSB_GIT_DESCRIBE"));
+            println!("VERGEN_GIT_SHA: {}", env!("VERGEN_GIT_SHA"));
+            println!("VERGEN_GIT_BRANCH: {}", env!("VERGEN_GIT_BRANCH"));
+            println!("VERGEN_GIT_DIRTY: {}", env!("VERGEN_GIT_DIRTY"));
+            println!("VERGEN_BUILD_TIMESTAMP: {}", env!("VERGEN_BUILD_TIMESTAMP"));
+            println!("VERGEN_RUSTC_SEMVER: {}", env!("VERGEN_RUSTC_SEMVER"));
         }
         Commands::Config { action } => {
             let builder = Builder::new()?;
             builder.config(action)?;
         }
-        Commands::Graph { format, view } => {
+        Commands::Graph { action } => {
             let builder = Builder::new()?;
-            if let Some(viewer) = view {
-                builder.view_graph(viewer)?;
-            } else {
-                builder.print_graph(format)?;
-            }
+            builder.graph(action)?;
         }
         Commands::Deps { action } => {
             let builder = Builder::new()?;

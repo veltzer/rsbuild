@@ -230,13 +230,8 @@ pub enum Commands {
     },
     /// Display the build dependency graph
     Graph {
-        /// Output format (ignored if --view is used)
-        #[arg(short, long, value_enum, default_value = "svg")]
-        format: GraphFormat,
-
-        /// Open graph in viewer
-        #[arg(long, value_enum, num_args = 0..=1, default_missing_value = "svg")]
-        view: Option<GraphViewer>,
+        #[command(subcommand)]
+        action: GraphAction,
     },
     /// Show source file dependencies (e.g., header files for C/C++)
     Deps {
@@ -248,6 +243,24 @@ pub enum Commands {
         #[command(subcommand)]
         action: TagsAction,
     },
+}
+
+#[derive(Subcommand)]
+pub enum GraphAction {
+    /// Print the dependency graph to stdout
+    Show {
+        /// Output format
+        #[arg(short, long, value_enum, default_value = "svg")]
+        format: GraphFormat,
+    },
+    /// Open the dependency graph in a viewer
+    View {
+        /// Viewer to use
+        #[arg(long, value_enum, default_value = "svg")]
+        viewer: GraphViewer,
+    },
+    /// Show graph statistics (products, processors, dependencies)
+    Stats,
 }
 
 #[derive(Subcommand)]

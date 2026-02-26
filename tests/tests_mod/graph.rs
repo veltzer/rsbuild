@@ -22,7 +22,7 @@ fn graph_dot_format() {
     let temp_dir = setup_project_with_template();
     let project_path = temp_dir.path();
 
-    let output = run_rsb_with_env(project_path, &["graph", "--format", "dot"], &[("NO_COLOR", "1")]);
+    let output = run_rsb_with_env(project_path, &["graph", "show", "--format", "dot"], &[("NO_COLOR", "1")]);
     assert!(output.status.success(), "graph --format dot failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -34,7 +34,7 @@ fn graph_mermaid_format() {
     let temp_dir = setup_project_with_template();
     let project_path = temp_dir.path();
 
-    let output = run_rsb_with_env(project_path, &["graph", "--format", "mermaid"], &[("NO_COLOR", "1")]);
+    let output = run_rsb_with_env(project_path, &["graph", "show", "--format", "mermaid"], &[("NO_COLOR", "1")]);
     assert!(output.status.success(), "graph --format mermaid failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -47,7 +47,7 @@ fn graph_json_format() {
     let temp_dir = setup_project_with_template();
     let project_path = temp_dir.path();
 
-    let output = run_rsb_with_env(project_path, &["graph", "--format", "json"], &[("NO_COLOR", "1")]);
+    let output = run_rsb_with_env(project_path, &["graph", "show", "--format", "json"], &[("NO_COLOR", "1")]);
     assert!(output.status.success(), "graph --format json failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -61,7 +61,7 @@ fn graph_text_format() {
     let temp_dir = setup_project_with_template();
     let project_path = temp_dir.path();
 
-    let output = run_rsb_with_env(project_path, &["graph", "--format", "text"], &[("NO_COLOR", "1")]);
+    let output = run_rsb_with_env(project_path, &["graph", "show", "--format", "text"], &[("NO_COLOR", "1")]);
     assert!(output.status.success(), "graph --format text failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -74,6 +74,30 @@ fn graph_empty_project() {
     let project_path = temp_dir.path();
 
     // No template files, so the graph should be empty but command should succeed
-    let output = run_rsb_with_env(project_path, &["graph", "--format", "json"], &[("NO_COLOR", "1")]);
+    let output = run_rsb_with_env(project_path, &["graph", "show", "--format", "json"], &[("NO_COLOR", "1")]);
     assert!(output.status.success(), "graph on empty project failed: {}", String::from_utf8_lossy(&output.stderr));
+}
+
+#[test]
+fn graph_stats() {
+    let temp_dir = setup_project_with_template();
+    let project_path = temp_dir.path();
+
+    let output = run_rsb_with_env(project_path, &["graph", "stats"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "graph stats failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("products"), "Expected 'products' in stats output, got: {}", stdout);
+}
+
+#[test]
+fn graph_stats_json() {
+    let temp_dir = setup_project_with_template();
+    let project_path = temp_dir.path();
+
+    let output = run_rsb_with_env(project_path, &["--json", "graph", "stats"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "graph stats --json failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.starts_with('{'), "Expected JSON output, got: {}", stdout);
 }

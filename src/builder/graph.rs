@@ -1,12 +1,24 @@
+use std::collections::BTreeMap;
 use std::fs;
 use anyhow::{Context, Result};
-use crate::cli::{GraphFormat, GraphViewer};
+use crate::cli::{GraphAction, GraphFormat, GraphViewer};
+use crate::color;
+use crate::json_output;
 use crate::processors::log_command;
 use super::Builder;
 
 impl Builder {
+    /// Dispatch graph subcommands
+    pub fn graph(&self, action: GraphAction) -> Result<()> {
+        match action {
+            GraphAction::Show { format } => self.print_graph(format),
+            GraphAction::View { viewer } => self.view_graph(viewer),
+            GraphAction::Stats => self.graph_stats(),
+        }
+    }
+
     /// Print the dependency graph in the specified format
-    pub fn print_graph(&self, format: GraphFormat) -> Result<()> {
+    fn print_graph(&self, format: GraphFormat) -> Result<()> {
         let graph = self.build_graph()?;
 
         // Output in the requested format
@@ -23,7 +35,7 @@ impl Builder {
     }
 
     /// View the dependency graph in a viewer
-    pub fn view_graph(&self, viewer: GraphViewer) -> Result<()> {
+    fn view_graph(&self, viewer: GraphViewer) -> Result<()> {
         use std::process::Command;
 
         let graph = self.build_graph()?;
@@ -77,6 +89,51 @@ impl Builder {
                 self.open_file(&svg_path)?;
                 println!("Opened graph: {}", svg_path.display());
             }
+        }
+
+        Ok(())
+    }
+
+    /// Show graph statistics (products, processors, dependencies)
+    fn graph_stats(&self) -> Result<()> {
+        let graph = self.build_graph()?;
+        let products = graph.products();
+
+        // Aggregate per-processor stats
+        let mut per_processor: BTreeMap<&str, (usize, usize, usize)> = BTreeMap::new();
+        let mut total_edges = 0usize;
+
+        for product in products {
+            let entry = per_processor.entry(product.processor.as_str()).or_insert((0, 0, 0));
+            entry.0 += 1; // product count
+            entry.1 += product.inputs.len();
+            entry.2 += product.outputs.len();
+            total_edges += graph.get_dependencies(product.id).len();
+        }
+
+        if json_output::is_json_mode() {
+            let stats: Vec<serde_json::Value> = per_processor.iter().map(|(proc, (count, inputs, outputs))| {
+                serde_json::json!({
+                    "processor": proc,
+                    "products": count,
+                    "inputs": inputs,
+                    "outputs": outputs,
+                })
+            }).collect();
+            let json = serde_json::json!({
+                "processors": stats,
+                "total_products": products.len(),
+                "total_edges": total_edges,
+            });
+            println!("{}", serde_json::to_string_pretty(&json)?);
+        } else {
+            for (proc, (count, inputs, outputs)) in &per_processor {
+                println!("{}: {} products, {} inputs, {} outputs",
+                    color::bold(proc), count, inputs, outputs);
+            }
+            println!();
+            println!("{}: {} products, {} dependency edges",
+                color::bold("Total"), products.len(), total_edges);
         }
 
         Ok(())

@@ -62,7 +62,7 @@ impl ProductDiscovery for NpmProcessor {
     }
 
     fn required_tools(&self) -> Vec<String> {
-        vec![self.config.npm.clone()]
+        vec![self.config.npm.clone(), "node".to_string()]
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {

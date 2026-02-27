@@ -50,7 +50,7 @@ impl ProductDiscovery for MarkdownlintProcessor {
     }
 
     fn required_tools(&self) -> Vec<String> {
-        vec![self.config.markdownlint_bin.clone()]
+        vec![self.config.markdownlint_bin.clone(), "node".to_string()]
     }
 
     fn execute(&self, product: &Product) -> Result<()> {

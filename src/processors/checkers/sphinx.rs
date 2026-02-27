@@ -45,7 +45,7 @@ impl ProductDiscovery for SphinxProcessor {
     }
 
     fn required_tools(&self) -> Vec<String> {
-        vec![self.config.sphinx_build.clone()]
+        vec![self.config.sphinx_build.clone(), "python3".to_string()]
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {

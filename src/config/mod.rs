@@ -814,15 +814,15 @@ fn validate_processor_fields(raw: &toml::Value) -> Result<()> {
             }
 
             // Check field type if we know the expected type
-            if let Some(expected) = expected_field_type(name, key) {
-                if !expected.matches(field_value) {
-                    errors.push(format!(
-                        "[processor.{}]: field '{}' must be {}, got {} ({})",
-                        name, key, expected.label(),
-                        FieldType::describe_value(field_value),
-                        field_value,
-                    ));
-                }
+            if let Some(expected) = expected_field_type(name, key)
+                && !expected.matches(field_value)
+            {
+                errors.push(format!(
+                    "[processor.{}]: field '{}' must be {}, got {} ({})",
+                    name, key, expected.label(),
+                    FieldType::describe_value(field_value),
+                    field_value,
+                ));
             }
         }
     }

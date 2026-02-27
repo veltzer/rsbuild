@@ -1,3 +1,6 @@
+#![deny(clippy::all)]
+#![deny(warnings)]
+
 mod analyzers;
 mod builder;
 mod checksum;

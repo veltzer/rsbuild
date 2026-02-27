@@ -43,7 +43,7 @@ impl ProductDiscovery for MarkdownProcessor {
     }
 
     fn required_tools(&self) -> Vec<String> {
-        vec![self.config.markdown_bin.clone()]
+        vec![self.config.markdown_bin.clone(), "perl".to_string()]
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {

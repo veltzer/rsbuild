@@ -28,7 +28,7 @@ impl_checker!(YamllintProcessor,
     description: "Lint YAML files with yamllint",
     name: crate::processors::names::YAMLLINT,
     execute: execute_product,
-    tool_field: linter,
+    tool_field_extra: linter ["python3".to_string()],
     config_json: true,
     batch: lint_files,
 );

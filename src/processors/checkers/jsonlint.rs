@@ -23,6 +23,6 @@ impl_checker!(JsonlintProcessor,
     description: "Lint JSON files with jsonlint",
     name: crate::processors::names::JSONLINT,
     execute: execute_product,
-    tool_field: linter,
+    tool_field_extra: linter ["node".to_string()],
     config_json: true,
 );

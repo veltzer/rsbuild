@@ -69,11 +69,11 @@ impl ProductDiscovery for TagsProcessor {
             .expect(crate::errors::EMPTY_PRODUCT_OUTPUTS);
 
         // Ensure output directory exists
-        if let Some(parent) = output_path.parent() {
-            if !parent.exists() {
-                fs::create_dir_all(parent)
-                    .with_context(|| format!("Failed to create tags output directory: {}", parent.display()))?;
-            }
+        if let Some(parent) = output_path.parent()
+            && !parent.exists()
+        {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create tags output directory: {}", parent.display()))?;
         }
 
         // Collect frontmatter from all input .md files
@@ -205,7 +205,7 @@ fn parse_frontmatter(content: &str) -> Option<serde_json::Value> {
 
     // Find the closing ---
     let after_first = &trimmed[3..];
-    let rest = after_first.trim_start_matches(|c: char| c == '\r' || c == '\n');
+    let rest = after_first.trim_start_matches(['\r', '\n']);
     let end_pos = rest.find("\n---")?;
     let yaml_block = &rest[..end_pos];
 
@@ -214,12 +214,11 @@ fn parse_frontmatter(content: &str) -> Option<serde_json::Value> {
 
 /// Strip surrounding quotes (single or double) from a YAML value.
 fn strip_yaml_quotes(s: &str) -> &str {
-    if s.len() >= 2 {
-        if (s.starts_with('"') && s.ends_with('"'))
-            || (s.starts_with('\'') && s.ends_with('\''))
-        {
-            return &s[1..s.len() - 1];
-        }
+    if s.len() >= 2
+        && ((s.starts_with('"') && s.ends_with('"'))
+            || (s.starts_with('\'') && s.ends_with('\'')))
+    {
+        return &s[1..s.len() - 1];
     }
     s
 }
@@ -245,12 +244,12 @@ fn parse_simple_yaml(block: &str) -> serde_json::Value {
 
         // Check for list item: optional leading whitespace followed by "- "
         let trimmed = stripped.trim_start();
-        if let Some(item) = trimmed.strip_prefix("- ") {
-            if in_list {
-                let val = strip_yaml_quotes(item.trim());
-                current_list.push(serde_json::Value::String(val.to_string()));
-                continue;
-            }
+        if let Some(item) = trimmed.strip_prefix("- ")
+            && in_list
+        {
+            let val = strip_yaml_quotes(item.trim());
+            current_list.push(serde_json::Value::String(val.to_string()));
+            continue;
         }
 
         // If we were building a list, save it
@@ -299,10 +298,10 @@ fn parse_simple_yaml(block: &str) -> serde_json::Value {
     }
 
     // Flush any trailing list
-    if in_list {
-        if let Some(key) = current_key.take() {
-            map.insert(key, serde_json::Value::Array(current_list));
-        }
+    if in_list
+        && let Some(key) = current_key.take()
+    {
+        map.insert(key, serde_json::Value::Array(current_list));
     }
 
     serde_json::Value::Object(map)
@@ -940,10 +939,10 @@ fn tag_matches_allowed(tag: &str, allowed: &HashSet<String>) -> bool {
     }
     // Check wildcard patterns
     for pattern in allowed {
-        if let Some(prefix) = pattern.strip_suffix('*') {
-            if tag.starts_with(prefix) {
-                return true;
-            }
+        if let Some(prefix) = pattern.strip_suffix('*')
+            && tag.starts_with(prefix)
+        {
+            return true;
         }
     }
     false
@@ -972,10 +971,10 @@ fn find_similar_tag(tag: &str, allowed: &HashSet<String>) -> Option<String> {
             continue;
         }
         let dist = levenshtein(tag, candidate);
-        if dist > 0 && dist <= max_dist {
-            if best.is_none() || dist < best.as_ref().unwrap().1 {
-                best = Some((candidate.clone(), dist));
-            }
+        if dist > 0 && dist <= max_dist
+            && (best.is_none() || dist < best.as_ref().unwrap().1)
+        {
+            best = Some((candidate.clone(), dist));
         }
     }
     best.map(|(s, _)| s)

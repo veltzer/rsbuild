@@ -36,15 +36,15 @@ impl ProductDiscovery for PdfuniteProcessor {
         let ext = &self.config.source_ext;
         if let Ok(entries) = fs::read_dir(base) {
             for entry in entries.flatten() {
-                if entry.file_type().is_ok_and(|ft| ft.is_dir()) {
-                    if let Ok(files) = fs::read_dir(entry.path()) {
-                        for file in files.flatten() {
-                            if file.path().extension().is_some_and(|e| {
-                                let dot_ext = format!(".{}", e.to_string_lossy());
-                                dot_ext == *ext
-                            }) {
-                                return true;
-                            }
+                if entry.file_type().is_ok_and(|ft| ft.is_dir())
+                    && let Ok(files) = fs::read_dir(entry.path())
+                {
+                    for file in files.flatten() {
+                        if file.path().extension().is_some_and(|e| {
+                            let dot_ext = format!(".{}", e.to_string_lossy());
+                            dot_ext == *ext
+                        }) {
+                            return true;
                         }
                     }
                 }

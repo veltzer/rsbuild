@@ -50,7 +50,7 @@ impl ProductDiscovery for MdlProcessor {
     }
 
     fn required_tools(&self) -> Vec<String> {
-        vec![self.config.mdl_bin.clone()]
+        vec![self.config.mdl_bin.clone(), "ruby".to_string()]
     }
 
     fn execute(&self, product: &Product) -> Result<()> {

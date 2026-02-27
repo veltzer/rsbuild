@@ -62,7 +62,7 @@ impl ProductDiscovery for GemProcessor {
     }
 
     fn required_tools(&self) -> Vec<String> {
-        vec![self.config.bundler.clone()]
+        vec![self.config.bundler.clone(), "ruby".to_string()]
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {

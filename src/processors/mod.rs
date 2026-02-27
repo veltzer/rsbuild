@@ -3,6 +3,7 @@ mod generators;
 pub mod lua_processor;
 
 use anyhow::{Context, Result};
+#[cfg(debug_assertions)]
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs;
@@ -744,8 +745,12 @@ pub fn tool_install_command(tool: &str) -> Option<&'static str> {
         "mmdc" => Some("npm install -g @mermaid-js/mermaid-cli"),
         "jsonlint" => Some("npm install -g jsonlint"),
         "npm" => Some("apt install npm"),
+        "node" => Some("apt install nodejs"),
         // Ruby tools
         "bundle" => Some("gem install bundler"),
+        "ruby" => Some("apt install ruby"),
+        // Perl
+        "perl" => Some("apt install perl"),
         _ => None,
     }
 }

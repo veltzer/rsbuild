@@ -63,7 +63,7 @@ impl ProductDiscovery for PipProcessor {
     }
 
     fn required_tools(&self) -> Vec<String> {
-        vec![self.config.pip.clone()]
+        vec![self.config.pip.clone(), "python3".to_string()]
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {

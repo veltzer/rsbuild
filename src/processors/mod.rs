@@ -736,6 +736,7 @@ pub fn tool_install_command(tool: &str) -> Option<&'static str> {
         "pdflatex" => Some("apt install texlive-latex-base"),
         "qpdf" => Some("apt install qpdf"),
         "a2x" => Some("apt install asciidoc"),
+        "dot" => Some("apt install graphviz"),
         "drawio" => Some("snap install drawio"),
         "libreoffice" => Some("apt install libreoffice"),
         "flock" => Some("apt install util-linux"),

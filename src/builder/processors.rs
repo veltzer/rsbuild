@@ -5,8 +5,8 @@ use crate::color;
 use crate::config::{
     ProcessorConfig,
     TeraConfig, RuffConfig, PylintConfig, CcSingleFileConfig, CppcheckConfig, ClangTidyConfig,
-    ShellcheckConfig, SpellcheckConfig, SleepConfig, MakeConfig, CargoConfig, RumdlConfig,
-    MypyConfig, PyreflyConfig, YamllintConfig, JqConfig, JsonlintConfig, TaploConfig,
+    ShellcheckConfig, SpellcheckConfig, SleepConfig, MakeConfig, CargoConfig, ClippyConfig,
+    RumdlConfig, MypyConfig, PyreflyConfig, YamllintConfig, JqConfig, JsonlintConfig, TaploConfig,
     JsonSchemaConfig, TagsConfig, PipConfig, SphinxConfig, NpmConfig, GemConfig, MdlConfig,
     MarkdownlintConfig, AspellConfig, PandocConfig, MarkdownConfig, PdflatexConfig,
     A2xConfig, AsciiCheckConfig,
@@ -79,6 +79,7 @@ fn defconfig_json(name: &str) -> Option<String> {
         names::SLEEP => serde_json::to_value(SleepConfig::default()).ok()?,
         names::MAKE => serde_json::to_value(MakeConfig::default()).ok()?,
         names::CARGO => serde_json::to_value(CargoConfig::default()).ok()?,
+        names::CLIPPY => serde_json::to_value(ClippyConfig::default()).ok()?,
         names::RUMDL => serde_json::to_value(RumdlConfig::default()).ok()?,
         names::MYPY => serde_json::to_value(MypyConfig::default()).ok()?,
         names::PYREFLY => serde_json::to_value(PyreflyConfig::default()).ok()?,

@@ -31,6 +31,7 @@ mod watch;
 
 mod processors {
     pub mod cargo;
+    pub mod clippy;
     pub mod cc_single_file;
     pub mod clang_tidy;
     pub mod cppcheck;

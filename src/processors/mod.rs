@@ -35,6 +35,7 @@ pub mod names {
     pub const SLEEP: &str = "sleep";
     pub const MAKE: &str = "make";
     pub const CARGO: &str = "cargo";
+    pub const CLIPPY: &str = "clippy";
     pub const SPELLCHECK: &str = "spellcheck";
     pub const YAMLLINT: &str = "yamllint";
     pub const JQ: &str = "jq";
@@ -528,7 +529,7 @@ where
 // Re-export from subdirectories
 pub use checkers::{
     AsciiCheckProcessor, AspellProcessor,
-    CargoProcessor, ClangTidyProcessor, CppcheckProcessor,
+    CargoProcessor, ClippyProcessor, ClangTidyProcessor, CppcheckProcessor,
     JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
     MakeProcessor, MarkdownlintProcessor, MdbookProcessor, MdlProcessor, MypyProcessor,
     PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,

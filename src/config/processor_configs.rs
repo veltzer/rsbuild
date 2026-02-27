@@ -505,6 +505,48 @@ impl KnownFields for CargoConfig {
     }
 }
 
+fn default_clippy_command() -> String {
+    "clippy".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ClippyConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_cargo")]
+    pub cargo: String,
+    #[serde(default = "default_clippy_command")]
+    pub command: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for ClippyConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            cargo: "cargo".into(),
+            command: "clippy".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            scan: default_scan!(extensions: ["Cargo.toml"]),
+        }
+    }
+}
+
+impl KnownFields for ClippyConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "cargo", "command", "args", "extra_inputs",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MakeConfig {
     #[serde(default = "default_true")]

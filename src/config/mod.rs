@@ -263,7 +263,7 @@ fn default_processors() -> Vec<String> {
         names::MYPY.into(), names::PYREFLY.into(), names::CC_SINGLE_FILE.into(),
         names::CPPCHECK.into(), names::CLANG_TIDY.into(),
         names::SHELLCHECK.into(), names::SPELLCHECK.into(), names::MAKE.into(),
-        names::CARGO.into(), names::RUMDL.into(),
+        names::CARGO.into(), names::CLIPPY.into(), names::RUMDL.into(),
         names::YAMLLINT.into(), names::JQ.into(), names::JSONLINT.into(), names::TAPLO.into(),
         names::JSON_SCHEMA.into(),
         names::TAGS.into(),
@@ -316,6 +316,8 @@ pub(crate) struct ProcessorConfig {
     pub make: MakeConfig,
     #[serde(default)]
     pub cargo: CargoConfig,
+    #[serde(default)]
+    pub clippy: ClippyConfig,
     #[serde(default)]
     pub rumdl: RumdlConfig,
     #[serde(default)]
@@ -391,6 +393,7 @@ impl Default for ProcessorConfig {
             sleep: SleepConfig::default(),
             make: MakeConfig::default(),
             cargo: CargoConfig::default(),
+            clippy: ClippyConfig::default(),
             rumdl: RumdlConfig::default(),
             mypy: MypyConfig::default(),
             pyrefly: PyreflyConfig::default(),
@@ -437,6 +440,7 @@ impl ProcessorConfig {
             "sleep" => self.sleep.enabled,
             "make" => self.make.enabled,
             "cargo" => self.cargo.enabled,
+            "clippy" => self.clippy.enabled,
             "rumdl" => self.rumdl.enabled,
             "mypy" => self.mypy.enabled,
             "pyrefly" => self.pyrefly.enabled,
@@ -479,7 +483,7 @@ impl ProcessorConfig {
             &self.tera.scan, &self.ruff.scan, &self.pylint.scan,
             &self.cc_single_file.scan, &self.cppcheck.scan, &self.clang_tidy.scan,
             &self.shellcheck.scan, &self.spellcheck.scan, &self.sleep.scan,
-            &self.make.scan, &self.cargo.scan, &self.rumdl.scan, &self.mypy.scan,
+            &self.make.scan, &self.cargo.scan, &self.clippy.scan, &self.rumdl.scan, &self.mypy.scan,
             &self.pyrefly.scan, &self.yamllint.scan, &self.jq.scan, &self.jsonlint.scan,
             &self.taplo.scan, &self.json_schema.scan, &self.tags.scan,
             &self.pip.scan, &self.sphinx.scan, &self.mdbook.scan, &self.npm.scan, &self.gem.scan,
@@ -513,6 +517,7 @@ impl ProcessorConfig {
         self.sleep.scan.resolve("sleep", &[".sleep"], &[]);
         self.make.scan.resolve("", &["Makefile"], MAKE_CARGO_EXCLUDES);
         self.cargo.scan.resolve("", &["Cargo.toml"], MAKE_CARGO_EXCLUDES);
+        self.clippy.scan.resolve("", &["Cargo.toml"], MAKE_CARGO_EXCLUDES);
         self.rumdl.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
         self.mypy.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
         self.pyrefly.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
@@ -690,8 +695,8 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         ("spellcheck", "use_words_file" | "auto_add_words") => Some(FieldType::Bool),
         // make
         ("make", "make" | "target") => Some(FieldType::String),
-        // cargo
-        ("cargo", "cargo" | "command") => Some(FieldType::String),
+        // cargo / clippy
+        ("cargo" | "clippy", "cargo" | "command") => Some(FieldType::String),
         // mypy, pyrefly, shellcheck, rumdl, yamllint, jq, jsonlint, taplo
         ("mypy" | "pyrefly" | "shellcheck", "checker") => Some(FieldType::String),
         ("rumdl" | "yamllint" | "jsonlint" | "taplo", "linter") => Some(FieldType::String),
@@ -774,6 +779,7 @@ fn validate_processor_fields(raw: &toml::Value) -> Result<()> {
             processor_names::SLEEP => SleepConfig::known_fields(),
             processor_names::MAKE => MakeConfig::known_fields(),
             processor_names::CARGO => CargoConfig::known_fields(),
+            processor_names::CLIPPY => ClippyConfig::known_fields(),
             processor_names::RUMDL => RumdlConfig::known_fields(),
             processor_names::MYPY => MypyConfig::known_fields(),
             processor_names::PYREFLY => PyreflyConfig::known_fields(),

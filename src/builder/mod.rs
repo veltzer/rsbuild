@@ -20,7 +20,7 @@ use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::{ObjectStore, ObjectStoreOptions};
-use crate::processors::{A2xProcessor, AsciiCheckProcessor, AspellProcessor, CargoProcessor, CcSingleFileProcessor, ClangTidyProcessor, CppcheckProcessor, DrawioProcessor, GemProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor, LibreofficeProcessor, LuaProcessor, MakeProcessor, MarpProcessor, MarkdownProcessor, MarkdownlintProcessor, MdbookProcessor, MdlProcessor, MermaidProcessor, MypyProcessor, NpmProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, PipProcessor, ProcessorMap, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, SphinxProcessor, TagsProcessor, TaploProcessor, TeraProcessor, YamllintProcessor, names as proc_names};
+use crate::processors::{A2xProcessor, AsciiCheckProcessor, AspellProcessor, CargoProcessor, CcSingleFileProcessor, ClangTidyProcessor, ClippyProcessor, CppcheckProcessor, DrawioProcessor, GemProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor, LibreofficeProcessor, LuaProcessor, MakeProcessor, MarpProcessor, MarkdownProcessor, MarkdownlintProcessor, MdbookProcessor, MdlProcessor, MermaidProcessor, MypyProcessor, NpmProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, PipProcessor, ProcessorMap, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, SphinxProcessor, TagsProcessor, TaploProcessor, TeraProcessor, YamllintProcessor, names as proc_names};
 use crate::remote_cache;
 use crate::tool_lock;
 
@@ -88,6 +88,7 @@ pub(crate) fn create_builtin_processors(cfg: &ProcessorConfig) -> ProcessorMap {
     Builder::register(&mut processors, proc_names::SLEEP, SleepProcessor::new(cfg.sleep.clone()));
     Builder::register(&mut processors, proc_names::MAKE, MakeProcessor::new(cfg.make.clone()));
     Builder::register(&mut processors, proc_names::CARGO, CargoProcessor::new(cfg.cargo.clone()));
+    Builder::register(&mut processors, proc_names::CLIPPY, ClippyProcessor::new(cfg.clippy.clone()));
     Builder::register(&mut processors, proc_names::YAMLLINT, YamllintProcessor::new(cfg.yamllint.clone()));
     Builder::register(&mut processors, proc_names::JQ, JqProcessor::new(cfg.jq.clone()));
     Builder::register(&mut processors, proc_names::JSONLINT, JsonlintProcessor::new(cfg.jsonlint.clone()));

@@ -24,7 +24,7 @@ single ruff invocation for better performance.
 [processor.ruff]
 linter = "ruff"                            # The ruff command to run
 args = []                                  # Additional arguments to pass to ruff
-extra_inputs = ["pyproject.toml"]          # Additional files that trigger rebuilds when changed
+extra_inputs = []                          # Additional files that trigger rebuilds (e.g. ["pyproject.toml"])
 ```
 
 | Key | Type | Default | Description |

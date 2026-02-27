@@ -77,6 +77,8 @@ impl Builder {
                         &|name| config.processor.is_enabled(name),
                     ).into_iter().collect();
 
+                let json_mode = crate::json_output::is_json_mode();
+                let mut json_entries = Vec::new();
                 let mut any_missing = false;
                 for (tool, procs) in &tool_map {
                     let procs_str = procs.join(", ");
@@ -85,18 +87,46 @@ impl Builder {
                         let version_str = version_commands.get(tool)
                             .and_then(|args| tool_lock::query_tool_version(tool, args).ok())
                             .and_then(|locked| tool_lock::extract_semver(&locked.version_output).map(String::from));
-                        if let Some(ver) = version_str {
+                        if json_mode {
+                            json_entries.push(crate::json_output::ToolCheckEntry {
+                                tool: tool.clone(),
+                                processors: procs.clone(),
+                                found: true,
+                                version: version_str,
+                                path: Some(path_str),
+                            });
+                        } else if let Some(ver) = version_str {
                             println!("{} ({}) {} {} {}", tool, procs_str, color::green("found"), ver, color::dim(&path_str));
                         } else {
                             println!("{} ({}) {} {}", tool, procs_str, color::green("found"), color::dim(&path_str));
                         }
                     } else {
-                        let hint = install_map.get(tool).and_then(|c| c.as_deref())
-                            .map(|h| format!(" \u{2014} install with: {}", color::dim(h)))
-                            .unwrap_or_default();
-                        println!("{} ({}) {}{}", tool, procs_str, color::red("missing"), hint);
+                        if json_mode {
+                            json_entries.push(crate::json_output::ToolCheckEntry {
+                                tool: tool.clone(),
+                                processors: procs.clone(),
+                                found: false,
+                                version: None,
+                                path: None,
+                            });
+                        } else {
+                            let hint = install_map.get(tool).and_then(|c| c.as_deref())
+                                .map(|h| format!(" \u{2014} install with: {}", color::dim(h)))
+                                .unwrap_or_default();
+                            println!("{} ({}) {}{}", tool, procs_str, color::red("missing"), hint);
+                        }
                         any_missing = true;
                     }
+                }
+                if json_mode {
+                    println!("{}", serde_json::to_string_pretty(&json_entries)?);
+                    if any_missing {
+                        return Err(crate::exit_code::RsbError::new(
+                            crate::exit_code::RsbExitCode::ToolError,
+                            "Some required tools are missing",
+                        ).into());
+                    }
+                    return Ok(());
                 }
                 if any_missing {
                     return Err(crate::exit_code::RsbError::new(

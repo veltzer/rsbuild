@@ -738,6 +738,7 @@ pub fn tool_install_command(tool: &str) -> Option<&'static str> {
         "a2x" => Some("apt install asciidoc"),
         "drawio" => Some("snap install drawio"),
         "libreoffice" => Some("apt install libreoffice"),
+        "flock" => Some("apt install util-linux"),
         "pdfunite" => Some("apt install poppler-utils"),
         "python3" => Some("apt install python3"),
         // Node tools (npm)

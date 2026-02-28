@@ -33,8 +33,9 @@ impl ProductDiscovery for MdlProcessor {
         }
         let hash = Some(config_hash(&self.config));
         let mut extra_inputs = self.config.extra_inputs.clone();
-        extra_inputs.extend(config_file_inputs(".mdlrc"));
-        extra_inputs.extend(config_file_inputs(".mdl.style.rb"));
+        for ai in &self.config.auto_inputs {
+            extra_inputs.extend(config_file_inputs(ai));
+        }
         let extra = resolve_extra_inputs(&extra_inputs)?;
 
         // The gem stamp path is added directly (without existence validation)

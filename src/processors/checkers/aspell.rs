@@ -8,7 +8,7 @@ use parking_lot::Mutex;
 use crate::config::AspellConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, scan_root_valid, log_command, format_command};
+use crate::processors::{ProductDiscovery, config_file_inputs, scan_root_valid, log_command, format_command};
 
 pub struct AspellProcessor {
     config: AspellConfig,
@@ -177,11 +177,15 @@ impl ProductDiscovery for AspellProcessor {
             return Ok(());
         }
 
+        let mut extra_inputs = self.config.extra_inputs.clone();
+        for ai in &self.config.auto_inputs {
+            extra_inputs.extend(config_file_inputs(ai));
+        }
         crate::processors::discover_checker_products(
             graph,
             &self.config.scan,
             file_index,
-            &self.config.extra_inputs,
+            &extra_inputs,
             &self.config,
             crate::processors::names::ASPELL,
         )

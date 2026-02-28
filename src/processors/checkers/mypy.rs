@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::config::MypyConfig;
 use crate::graph::Product;
-use crate::processors::{run_checker, config_file_inputs};
+use crate::processors::run_checker;
 
 pub struct MypyProcessor {
     config: MypyConfig,
@@ -16,11 +16,6 @@ impl MypyProcessor {
 
     fn execute_product(&self, product: &Product) -> Result<()> {
         self.check_files(&[product.primary_input()])
-    }
-
-    /// Return extra inputs for discover: mypy.ini if it exists
-    fn mypy_ini_inputs(&self) -> Vec<String> {
-        config_file_inputs("mypy.ini")
     }
 
     /// Run mypy on one or more files
@@ -37,5 +32,4 @@ impl_checker!(MypyProcessor,
     tool_field_extra: checker ["python3".to_string()],
     config_json: true,
     batch: check_files,
-    extra_discover_inputs: mypy_ini_inputs,
 );

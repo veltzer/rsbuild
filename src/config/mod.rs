@@ -685,6 +685,7 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         "enabled" => return Some(FieldType::Bool),
         "args" => return Some(FieldType::StringArray),
         "extra_inputs" => return Some(FieldType::StringArray),
+        "auto_inputs" => return Some(FieldType::StringArray),
         _ => {}
     }
 

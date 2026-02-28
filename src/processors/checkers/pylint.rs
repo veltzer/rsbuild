@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::config::PylintConfig;
 use crate::graph::Product;
-use crate::processors::{run_checker, config_file_inputs};
+use crate::processors::run_checker;
 
 pub struct PylintProcessor {
     config: PylintConfig,
@@ -16,11 +16,6 @@ impl PylintProcessor {
 
     fn execute_product(&self, product: &Product) -> Result<()> {
         self.lint_files(&[product.primary_input()])
-    }
-
-    /// Return extra inputs for discover: .pylintrc if it exists
-    fn pylintrc_inputs(&self) -> Vec<String> {
-        config_file_inputs(".pylintrc")
     }
 
     /// Run pylint on one or more files
@@ -37,5 +32,4 @@ impl_checker!(PylintProcessor,
     tools: ["pylint".to_string(), "python3".to_string()],
     config_json: true,
     batch: lint_files,
-    extra_discover_inputs: pylintrc_inputs,
 );

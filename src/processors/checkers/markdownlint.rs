@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::{MarkdownlintConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, check_command_output, run_command};
+use crate::processors::{ProductDiscovery, check_command_output, config_file_inputs, run_command};
 
 pub struct MarkdownlintProcessor {
     config: MarkdownlintConfig,
@@ -32,7 +32,11 @@ impl ProductDiscovery for MarkdownlintProcessor {
             return Ok(());
         }
         let hash = Some(config_hash(&self.config));
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let mut extra_inputs = self.config.extra_inputs.clone();
+        for ai in &self.config.auto_inputs {
+            extra_inputs.extend(config_file_inputs(ai));
+        }
+        let extra = resolve_extra_inputs(&extra_inputs)?;
 
         // The npm stamp path is added directly (without existence validation)
         // so that resolve_dependencies() can create the dependency edge to the

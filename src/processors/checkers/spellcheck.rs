@@ -11,7 +11,7 @@ use crate::config::SpellcheckConfig;
 use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, discover_checker_products};
+use crate::processors::{ProductDiscovery, config_file_inputs, discover_checker_products};
 
 const DICT_DIR: &str = "/usr/share/hunspell";
 
@@ -240,6 +240,9 @@ impl ProductDiscovery for SpellcheckProcessor {
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
         let mut extra_inputs = self.config.extra_inputs.clone();
+        for ai in &self.config.auto_inputs {
+            extra_inputs.extend(config_file_inputs(ai));
+        }
         // If custom words are enabled, add the words file as an input so
         // changes to it invalidate all spellcheck products.
         if self.config.use_words_file {

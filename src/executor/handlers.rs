@@ -26,8 +26,9 @@ impl<'a> Executor<'a> {
         // Always mark the product as failed
         ctx.shared.failed_products.lock().insert(ctx.id);
 
-        // Wrap the error with the processor name so users can always identify the source
-        let prefixed_error = anyhow::anyhow!("[{}] {}", ctx.proc_name, error);
+        // Wrap the error with the processor name so users can always identify the source.
+        // Use {:#} to include the full anyhow error chain (e.g. tera rendering details).
+        let prefixed_error = anyhow::anyhow!("[{}] {:#}", ctx.proc_name, error);
 
         if ctx.keep_going {
             let msg = format!("{}: {}", self.product_display(ctx.product), prefixed_error);
@@ -136,7 +137,7 @@ impl<'a> Executor<'a> {
             &ctx.product.processor,
             ProductStatus::Failed,
             duration,
-            Some(&error.to_string()),
+            Some(&format!("{:#}", error)),
         );
         Self::update_stats(ctx.shared, ctx.proc_name, |s| s.failed += 1);
         self.record_failure(ctx, error, true);

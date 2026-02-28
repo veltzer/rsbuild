@@ -28,7 +28,7 @@ impl AspellProcessor {
         scan_root_valid(&self.config.scan)
     }
 
-    /// Load custom words from the words file
+    /// Load custom words from the aspell personal word list (.pws) file
     fn load_custom_words(&self) -> HashSet<String> {
         let words_path = Path::new(&self.config.words_file);
         if !words_path.exists() {
@@ -38,8 +38,9 @@ impl AspellProcessor {
             .map(|content| {
                 content
                     .lines()
+                    .filter(|l| !l.starts_with("personal_ws"))
                     .map(|l| l.trim().to_lowercase())
-                    .filter(|l| !l.is_empty() && !l.starts_with('#'))
+                    .filter(|l| !l.is_empty())
                     .collect()
             })
             .unwrap_or_default()
@@ -105,7 +106,7 @@ impl AspellProcessor {
         }
     }
 
-    /// Write collected words to the words file
+    /// Write collected words to the aspell personal word list (.pws) file
     fn flush_words_to_file(&self) -> Result<()> {
         let words_to_add = self.words_to_add.lock();
         if words_to_add.is_empty() {
@@ -114,14 +115,15 @@ impl AspellProcessor {
 
         let words_path = Path::new(&self.config.words_file);
 
-        // Read existing words if file exists
+        // Read existing words if file exists (skip the pws header line)
         let mut all_words: HashSet<String> = if words_path.exists() {
             std::fs::read_to_string(words_path)
                 .map(|content| {
                     content
                         .lines()
+                        .filter(|l| !l.starts_with("personal_ws"))
                         .map(|l| l.trim().to_string())
-                        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+                        .filter(|l| !l.is_empty())
                         .collect()
                 })
                 .unwrap_or_default()
@@ -143,6 +145,7 @@ impl AspellProcessor {
 
         let mut file = std::fs::File::create(words_path)
             .with_context(|| format!("Failed to create words file: {}", words_path.display()))?;
+        writeln!(file, "personal_ws-1.1 en {}", sorted.len())?;
         for word in &sorted {
             writeln!(file, "{}", word)?;
         }

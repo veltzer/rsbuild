@@ -1279,7 +1279,7 @@ fn default_aspell_conf() -> String {
 }
 
 fn default_aspell_words_file() -> String {
-    ".aspell-words".into()
+    ".aspell.en.pws".into()
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -1313,7 +1313,7 @@ impl Default for AspellConfig {
             conf_dir: ".".into(),
             conf: ".aspell.conf".into(),
             auto_add_words: false,
-            words_file: ".aspell-words".into(),
+            words_file: ".aspell.en.pws".into(),
             extra_inputs: Vec::new(),
             scan: default_scan!(extensions: [".md"]),
         }

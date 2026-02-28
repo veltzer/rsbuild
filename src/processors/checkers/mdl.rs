@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::{MdlConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, check_command_output, run_command};
+use crate::processors::{ProductDiscovery, check_command_output, config_file_inputs, run_command};
 
 pub struct MdlProcessor {
     config: MdlConfig,
@@ -32,7 +32,10 @@ impl ProductDiscovery for MdlProcessor {
             return Ok(());
         }
         let hash = Some(config_hash(&self.config));
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let mut extra_inputs = self.config.extra_inputs.clone();
+        extra_inputs.extend(config_file_inputs(".mdlrc"));
+        extra_inputs.extend(config_file_inputs(".mdl.style.rb"));
+        let extra = resolve_extra_inputs(&extra_inputs)?;
 
         // The gem stamp path is added directly (without existence validation)
         // so that resolve_dependencies() can create the dependency edge to the

@@ -542,7 +542,7 @@ impl ProcessorConfig {
         self.markdownlint.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
         self.aspell.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
         self.marp.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
-        self.pandoc.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+        self.pandoc.scan.resolve("pandoc", &[".md"], MARKDOWN_EXCLUDE_DIRS);
         self.markdown.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
         self.pdflatex.scan.resolve("", &[".tex"], BUILD_TOOL_EXCLUDES);
         self.a2x.scan.resolve("", &[".txt"], BUILD_TOOL_EXCLUDES);

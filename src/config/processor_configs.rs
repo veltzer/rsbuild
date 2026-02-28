@@ -1352,7 +1352,7 @@ impl Default for PandocConfig {
             args: Vec::new(),
             extra_inputs: Vec::new(),
             output_dir: "out/pandoc".into(),
-            scan: default_scan!(extensions: [".md"]),
+            scan: default_scan!(scan_dir: "pandoc", extensions: [".md"]),
         }
     }
 }

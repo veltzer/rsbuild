@@ -46,6 +46,21 @@ A processor's `execute()` must only write to the declared output paths
 (or, for mass generators, to the expected output directory).
 It must not modify source files, other products' outputs, or global state.
 
+## Output directory caching (mass generators)
+
+Mass generators that set `output_dir` on their products get automatic
+directory-level caching. After successful execution, the executor walks
+the output directory, stores every file as a content-addressed object,
+and records a manifest with paths, checksums, and Unix permissions.
+On restore, the entire directory is recreated from cache.
+
+The `cache_output_dir` config option (default `true`) controls this.
+When disabled, mass generators fall back to stamp-file or empty-output
+caching (no directory restore on `rsb clean && rsb build`).
+
+Mass generators that use output_dir caching must implement `clean()` to
+remove the output directory so it can be restored from cache.
+
 ## Error reporting
 
 On failure, `execute()` returns an `Err` with a clear message including

@@ -46,6 +46,7 @@ args = []                # Extra arguments passed to cargo
 scan_dir = ""            # Directory to scan ("" = project root)
 extensions = ["Cargo.toml"]
 extra_inputs = []        # Additional files that trigger rebuilds
+cache_output_dir = true  # Cache the target/ directory for fast restore after clean
 ```
 
 | Key | Type | Default | Description |
@@ -58,6 +59,7 @@ extra_inputs = []        # Additional files that trigger rebuilds
 | `exclude_dirs` | string[] | `["/.git/", "/target/", ...]` | Directory patterns to exclude |
 | `exclude_paths` | string[] | `[]` | Paths (relative to project root) to exclude |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `cache_output_dir` | boolean | `true` | Cache the `target/` directory so `rsb clean && rsb build` restores from cache. Consider disabling for large projects. |
 
 ## Examples
 

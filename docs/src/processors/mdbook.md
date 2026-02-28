@@ -23,6 +23,7 @@ mdbook = "mdbook"                      # The mdbook command to run
 output_dir = "book"                    # Output directory for generated docs
 args = []                              # Additional arguments to pass to mdbook
 extra_inputs = []                      # Additional files that trigger rebuilds when changed
+cache_output_dir = true                # Cache the output directory for fast restore after clean
 ```
 
 | Key | Type | Default | Description |
@@ -31,3 +32,4 @@ extra_inputs = []                      # Additional files that trigger rebuilds 
 | `output_dir` | string | `"book"` | Output directory for generated documentation |
 | `args` | string[] | `[]` | Extra arguments passed to mdbook |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `cache_output_dir` | boolean | `true` | Cache the `book/` directory so `rsb clean && rsb build` restores from cache |

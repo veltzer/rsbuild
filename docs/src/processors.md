@@ -4,10 +4,11 @@ RSB uses **processors** to discover and build products. Each processor scans for
 
 ## Processor Types
 
-Processors are classified into two types:
+Processors are classified into three types:
 
 - **Generators** — produce real output files from input files (e.g., compiling code, rendering templates, transforming file formats)
 - **Checkers** — validate input files without producing output files (e.g., linters, spell checkers, static analyzers). Success is recorded in the cache database.
+- **Mass generators** — produce a directory of output files without enumerating them individually (e.g., sphinx, mdbook, cargo, pip, npm, gem). Output directories can be cached and restored as a whole — see [Output directory caching](#output-directory-caching) below.
 
 The processor type is displayed in `rsb processors list` output:
 
@@ -59,6 +60,42 @@ Use `rsb processors files` to see which files each processor discovers.
 - [Jsonlint](processors/jsonlint.md) — lints JSON files with jsonlint
 - [Taplo](processors/taplo.md) — checks TOML files with taplo
 - [Json Schema](processors/json_schema.md) — validates JSON schema propertyOrdering
+
+## Output Directory Caching
+
+Mass generators (sphinx, mdbook, cargo, pip, npm, gem) produce output in directories
+rather than individual files. RSB can cache these entire directories so that after
+`rsb clean && rsb build`, the output is restored from cache instead of being regenerated.
+
+After a successful build, RSB walks the output directory, stores every file as a
+content-addressed blob in `.rsb/objects/`, and records a manifest (path, checksum,
+Unix permissions) in the cache entry. On restore, the entire directory is recreated
+from cached objects with permissions preserved.
+
+This is controlled by the `cache_output_dir` config option (default `true`) on each
+mass generator:
+
+```toml
+[processor.sphinx]
+cache_output_dir = true    # Cache _build/ directory (default)
+
+[processor.cargo]
+cache_output_dir = false   # Disable for large target/ directories
+```
+
+Output directories cached per processor:
+
+| Processor | Output directory |
+|-----------|-----------------|
+| sphinx    | `_build` (configurable via `output_dir`) |
+| mdbook    | `book` (configurable via `output_dir`) |
+| cargo     | `target` |
+| pip       | `out/pip` |
+| npm       | `node_modules` |
+| gem       | `vendor/bundle` |
+
+When `cache_output_dir` is `false`, the processor falls back to the previous behavior
+(stamp-file or empty-output caching, no directory restore).
 
 ## Custom Processors
 

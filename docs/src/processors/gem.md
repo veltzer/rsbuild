@@ -23,6 +23,7 @@ bundler = "bundle"                     # The bundler command to run
 command = "install"                    # The bundle subcommand to execute
 args = []                              # Additional arguments to pass to bundler
 extra_inputs = []                      # Additional files that trigger rebuilds when changed
+cache_output_dir = true                # Cache the vendor/bundle directory for fast restore after clean
 ```
 
 | Key | Type | Default | Description |
@@ -31,3 +32,4 @@ extra_inputs = []                      # Additional files that trigger rebuilds 
 | `command` | string | `"install"` | The bundle subcommand to execute |
 | `args` | string[] | `[]` | Extra arguments passed to bundler |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `cache_output_dir` | boolean | `true` | Cache the `vendor/bundle/` directory so `rsb clean && rsb build` restores from cache |

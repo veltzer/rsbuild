@@ -51,17 +51,17 @@ Detection heuristics per processor:
 | `markdownlint` | Checker | Project contains `.md` files |
 | `sleep` | Checker | `sleep/` directory contains `.sleep` files |
 | `make` | Checker | Project contains `Makefile` files |
-| `cargo` | Checker | Project contains `Cargo.toml` files |
-| `sphinx` | Checker | Project contains `conf.py` files |
-| `mdbook` | Checker | Project contains `book.toml` files |
+| `cargo` | Mass Generator | Project contains `Cargo.toml` files |
+| `sphinx` | Mass Generator | Project contains `conf.py` files |
+| `mdbook` | Mass Generator | Project contains `book.toml` files |
 | `yamllint` | Checker | Project contains `.yml` or `.yaml` files |
 | `jq` | Checker | Project contains `.json` files |
 | `jsonlint` | Checker | Project contains `.json` files |
 | `json_schema` | Checker | Project contains `.json` files |
 | `taplo` | Checker | Project contains `.toml` files |
-| `pip` | Generator | Project contains `requirements.txt` files |
-| `npm` | Generator | Project contains `package.json` files |
-| `gem` | Generator | Project contains `Gemfile` files |
+| `pip` | Mass Generator | Project contains `requirements.txt` files |
+| `npm` | Mass Generator | Project contains `package.json` files |
+| `gem` | Mass Generator | Project contains `Gemfile` files |
 | `pandoc` | Generator | Project contains `.md` files |
 | `markdown` | Generator | Project contains `.md` files |
 | `marp` | Generator | Project contains `.md` files |
@@ -81,6 +81,7 @@ A product represents a single build unit with:
 
 - **Inputs** — source files that the product depends on
 - **Outputs** — files that the product generates
+- **Output directory** (optional) — for mass generators, the directory whose entire contents are cached and restored as a unit
 
 ### BuildGraph
 
@@ -159,7 +160,9 @@ The cache (`.rsb/`) stores build state to enable fast incremental builds:
 
 - **Checkers**: No output files to cache. The cache entry itself serves as a "success marker". After `rsb clean` (nothing to delete), next `rsb build` sees the cache entry is valid and skips the check entirely (instant).
 
-This ensures `rsb clean && rsb build` is fast for both types — generators restore from cache, checkers skip entirely.
+- **Mass generators**: When `cache_output_dir` is enabled (default), the entire output directory is walked after execution. Each file is stored as a content-addressed object in `.rsb/objects/`, and a manifest records the relative path, checksum, and Unix permissions of every file. After `rsb clean` (which removes the output directory), `rsb build` recreates the directory from cached objects with permissions restored. This makes `rsb clean && rsb build` fast for doc builders like sphinx and mdbook.
+
+This ensures `rsb clean && rsb build` is fast for all types — generators restore from cache, checkers skip entirely, mass generators restore their output directories.
 
 ## Subprocess execution
 

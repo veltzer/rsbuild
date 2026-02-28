@@ -54,6 +54,7 @@ struct LevelContext<'b> {
     timings: bool,
     shared: &'b SharedState,
     pb: &'b ProgressBar,
+    build_start: Instant,
 }
 
 impl<'a> Executor<'a> {
@@ -120,6 +121,7 @@ impl<'a> Executor<'a> {
         timings: bool,
         keep_going: bool,
     ) -> Result<BuildStats> {
+        let build_start = Instant::now();
         // Group products into levels that can run in parallel
         let levels = self.compute_parallel_levels(graph, order);
 
@@ -168,7 +170,7 @@ impl<'a> Executor<'a> {
 
             let lctx = LevelContext {
                 graph, object_store, force, keep_going, timings,
-                shared: &shared, pb: &pb,
+                shared: &shared, pb: &pb, build_start,
             };
 
             // Process this level in parallel using thread pool
@@ -376,6 +378,7 @@ impl<'a> Executor<'a> {
                     display: format!("batch ({} files)", product_refs.len()),
                     processor: proc_name.to_string(),
                     duration: batch_duration,
+                    start_offset: Some(batch_start.duration_since(lctx.build_start)),
                 });
             }
         }
@@ -483,6 +486,7 @@ impl<'a> Executor<'a> {
                                         display: self.product_display(product),
                                         processor: product.processor.clone(),
                                         duration,
+                                        start_offset: Some(product_start.duration_since(lctx.build_start)),
                                     });
                                 }
                             }

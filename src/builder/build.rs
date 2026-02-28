@@ -1,10 +1,12 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use anyhow::Result;
 use crate::cli::{BuildOptions, BuildPhase, DisplayOptions};
 use crate::color;
 use crate::errors;
 use crate::executor::{Executor, ExecutorOptions};
+use crate::processors::BuildStats;
 use super::{Builder, ProductStatusLabels, phases_debug};
 
 impl Builder {
@@ -44,7 +46,12 @@ impl Builder {
         self.detect_config_changes(&processors);
 
         // Build the dependency graph (may stop early based on stop_after)
-        let (graph, mut phase_timings) = self.build_graph_with_processors_and_phase(&processors, opts.stop_after, processor_filter, opts.verbose)?;
+        let (mut graph, mut phase_timings) = self.build_graph_with_processors_and_phase(&processors, opts.stop_after, processor_filter, opts.verbose)?;
+
+        // Filter by target patterns if specified
+        if let Some(ref targets) = opts.targets {
+            graph.filter_by_targets(targets);
+        }
 
         // Prepend create_processors and init timings
         phase_timings.insert(0, ("create_processors".to_string(), create_processors_dur));
@@ -91,9 +98,10 @@ impl Builder {
             retry: opts.retry,
         }, Arc::clone(&interrupted));
 
-        // Execute the build
+        // Execute the build (enable timings collection if trace output is requested)
         let t = Instant::now();
-        let result = executor.execute(&graph, &self.object_store, opts.force, opts.timings, opts.keep_going);
+        let collect_timings = opts.timings || opts.trace.is_some();
+        let result = executor.execute(&graph, &self.object_store, opts.force, collect_timings, opts.keep_going);
         let build_dur = t.elapsed();
 
         // Exit if interrupted
@@ -112,6 +120,11 @@ impl Builder {
 
         // Print summary
         stats.print_summary(opts.summary, opts.timings);
+
+        // Write Chrome trace file if requested
+        if let Some(ref trace_path) = opts.trace {
+            write_trace_file(trace_path, &stats)?;
+        }
 
         // Return error if there were failures in keep-going mode
         if stats.failed_count > 0 {
@@ -264,4 +277,55 @@ impl Builder {
             counts[1], labels.restorable.1,
             counts[2], labels.stale.1);
     }
+}
+
+/// Write a Chrome trace format JSON file from build statistics.
+/// The file can be opened in chrome://tracing or https://ui.perfetto.dev
+fn write_trace_file(path: &str, stats: &BuildStats) -> Result<()> {
+    let mut events: Vec<serde_json::Value> = Vec::new();
+    let mut tid_counter = 1u64;
+
+    // Phase timings on tid=0
+    let mut phase_offset_us = 0i64;
+    for (name, dur) in &stats.phase_timings {
+        let dur_us = dur.as_micros() as i64;
+        events.push(serde_json::json!({
+            "name": name,
+            "cat": "phase",
+            "ph": "X",
+            "ts": phase_offset_us,
+            "dur": dur_us,
+            "pid": 1,
+            "tid": 0
+        }));
+        phase_offset_us += dur_us;
+    }
+
+    // Product timings
+    for cat in &stats.categories {
+        for pt in &cat.product_timings {
+            let dur_us = pt.duration.as_micros() as i64;
+            let ts_us = pt.start_offset
+                .map(|off| off.as_micros() as i64)
+                .unwrap_or(0);
+            let name = format!("{}:{}", pt.processor, pt.display);
+            events.push(serde_json::json!({
+                "name": name,
+                "cat": "build",
+                "ph": "X",
+                "ts": ts_us,
+                "dur": dur_us,
+                "pid": 1,
+                "tid": tid_counter
+            }));
+            tid_counter += 1;
+        }
+    }
+
+    let trace = serde_json::json!({ "traceEvents": events });
+    std::fs::write(path, serde_json::to_string_pretty(&trace)?)?;
+    if !crate::runtime_flags::quiet() {
+        println!("Wrote trace to {}", color::bold(path));
+    }
+    Ok(())
 }

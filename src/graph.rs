@@ -302,6 +302,48 @@ impl BuildGraph {
         self.products.get_mut(id)
     }
 
+    /// Filter the graph to only include products whose input files match any of the target patterns.
+    /// Uses glob matching. Products not matching any pattern are removed.
+    pub fn filter_by_targets(&mut self, patterns: &[String]) {
+        let compiled: Vec<glob::Pattern> = patterns.iter()
+            .filter_map(|p| glob::Pattern::new(p).ok())
+            .collect();
+        if compiled.is_empty() {
+            return;
+        }
+
+        // Collect IDs to keep
+        let keep: HashSet<usize> = self.products.iter()
+            .filter(|product| {
+                product.inputs.iter().any(|input| {
+                    let input_str = input.display().to_string();
+                    compiled.iter().any(|pat| pat.matches(&input_str))
+                })
+            })
+            .map(|p| p.id)
+            .collect();
+
+        // Remove products that don't match (clear their inputs/outputs so they become no-ops)
+        // We can't actually remove elements because IDs are indices, so we rebuild the graph
+        let old_products = std::mem::take(&mut self.products);
+        self.output_to_product.clear();
+        self.dependents.clear();
+        self.dependencies.clear();
+
+        for product in old_products {
+            if keep.contains(&product.id) {
+                let id = self.products.len();
+                for output in &product.outputs {
+                    self.output_to_product.insert(output.clone(), id);
+                }
+                let mut p = product;
+                p.id = id;
+                self.products.push(p);
+                self.dependents.push(Vec::new());
+                self.dependencies.push(Vec::new());
+            }
+        }
+    }
 }
 
 impl BuildGraph {

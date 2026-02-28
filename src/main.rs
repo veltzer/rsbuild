@@ -300,6 +300,10 @@ fn run() -> Result<()> {
             let builder = Builder::new()?;
             builder.deps(action)?;
         }
+        Commands::Doctor => {
+            let builder = Builder::new()?;
+            builder.doctor()?;
+        }
         Commands::Tags { action } => {
             let config = Config::load()?;
             let db_path = &config.processor.tags.output;

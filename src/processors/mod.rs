@@ -798,6 +798,8 @@ pub struct ProductTiming {
     pub display: String,
     pub processor: String,
     pub duration: Duration,
+    /// Offset from the build start time (for trace output)
+    pub start_offset: Option<Duration>,
 }
 
 /// Statistics from processing a category of items

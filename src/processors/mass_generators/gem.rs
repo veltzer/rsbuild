@@ -40,6 +40,9 @@ impl GemProcessor {
     fn execute_gem(&self, gemfile: &Path) -> Result<()> {
         let mut cmd = Command::new(&self.config.bundler);
         cmd.arg(&self.config.command);
+        if self.config.cache_output_dir {
+            cmd.args(["--path", "vendor/bundle"]);
+        }
         for arg in &self.config.args {
             cmd.arg(arg);
         }

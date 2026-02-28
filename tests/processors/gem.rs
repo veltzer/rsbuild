@@ -1,0 +1,120 @@
+use std::fs;
+use tempfile::TempDir;
+use crate::common::{run_rsb_with_env, tool_available};
+
+#[test]
+fn gem_valid_project() {
+    if !tool_available("bundle") {
+        eprintln!("bundle not found, skipping test");
+        return;
+    }
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"gem\"]\n",
+    )
+    .unwrap();
+
+    // Exclude vendor from file index
+    fs::write(project_path.join(".rsbignore"), "vendor/\n").unwrap();
+
+    // Configure bundler to install to vendor/bundle
+    fs::create_dir_all(project_path.join(".bundle")).unwrap();
+    fs::write(
+        project_path.join(".bundle/config"),
+        "---\nBUNDLE_PATH: \"vendor/bundle\"\n",
+    )
+    .unwrap();
+
+    fs::write(
+        project_path.join("Gemfile"),
+        "source 'https://rubygems.org'\ngem 'rake'\n",
+    )
+    .unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
+    assert!(
+        output.status.success(),
+        "Build should succeed with valid Gemfile: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Processing:"),
+        "Should process gem: {}",
+        stdout
+    );
+}
+
+#[test]
+fn gem_incremental_skip() {
+    if !tool_available("bundle") {
+        eprintln!("bundle not found, skipping test");
+        return;
+    }
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"gem\"]\n",
+    )
+    .unwrap();
+
+    fs::write(project_path.join(".rsbignore"), "vendor/\n").unwrap();
+
+    fs::create_dir_all(project_path.join(".bundle")).unwrap();
+    fs::write(
+        project_path.join(".bundle/config"),
+        "---\nBUNDLE_PATH: \"vendor/bundle\"\n",
+    )
+    .unwrap();
+
+    fs::write(
+        project_path.join("Gemfile"),
+        "source 'https://rubygems.org'\ngem 'rake'\n",
+    )
+    .unwrap();
+
+    // First build
+    let output1 = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output1.status.success());
+
+    // Second build should skip
+    let output2 = run_rsb_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(output2.status.success());
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(
+        stdout2.contains("[gem] Skipping (unchanged):"),
+        "Second build should skip: {}",
+        stdout2
+    );
+}
+
+#[test]
+fn gem_no_project_discovered() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"gem\"]\n",
+    )
+    .unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("0 products"),
+        "Should discover 0 products: {}",
+        stdout
+    );
+}

@@ -239,6 +239,8 @@ pub enum Commands {
         #[command(subcommand)]
         action: DepsAction,
     },
+    /// Check build environment: tool availability, config validity, common problems
+    Doctor,
     /// Search and query frontmatter tags from markdown files
     Tags {
         #[command(subcommand)]
@@ -507,6 +509,14 @@ pub struct SharedBuildArgs {
     /// Disable mtime pre-check (always compute full checksums)
     #[arg(long)]
     pub no_mtime: bool,
+
+    /// Only build products matching these file patterns (glob syntax, repeatable)
+    #[arg(short, long = "target")]
+    pub targets: Option<Vec<String>>,
+
+    /// Write a Chrome trace JSON file for build visualization (open in chrome://tracing or Perfetto)
+    #[arg(long, value_name = "FILE")]
+    pub trace: Option<String>,
 }
 
 impl SharedBuildArgs {
@@ -527,6 +537,8 @@ impl SharedBuildArgs {
             explain: self.explain,
             no_mtime: self.no_mtime,
             retry: self.retry,
+            targets: self.targets.clone(),
+            trace: self.trace.clone(),
         }
     }
 }
@@ -548,6 +560,8 @@ pub struct BuildOptions {
     pub explain: bool,
     pub no_mtime: bool,
     pub retry: usize,
+    pub targets: Option<Vec<String>>,
+    pub trace: Option<String>,
 }
 
 /// Parse a shell name string into a Shell enum

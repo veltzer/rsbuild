@@ -788,6 +788,7 @@ pub fn tool_install_command(tool: &str) -> Option<&'static str> {
         "npm" => Some("apt install npm"),
         "node" => Some("apt install nodejs"),
         // Ruby tools
+        "gems/bin/mdl" => Some("gem install mdl"),
         "bundle" => Some("gem install bundler"),
         "ruby" => Some("apt install ruby"),
         // Perl

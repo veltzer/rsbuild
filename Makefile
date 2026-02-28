@@ -5,7 +5,10 @@ all:
 
 .PHONY: test
 test:
-	@./test.sh
+	cargo nextest run --release
+	cargo nextest run
+	# cargo test --release
+	# cargo test
 
 .PHONY: clean
 clean:

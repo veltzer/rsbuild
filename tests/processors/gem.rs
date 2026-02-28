@@ -18,16 +18,8 @@ fn gem_valid_project() {
     )
     .unwrap();
 
-    // Exclude vendor from file index
-    fs::write(project_path.join(".rsbignore"), "vendor/\n").unwrap();
-
-    // Configure bundler to install to vendor/bundle
-    fs::create_dir_all(project_path.join(".bundle")).unwrap();
-    fs::write(
-        project_path.join(".bundle/config"),
-        "---\nBUNDLE_PATH: \"vendor/bundle\"\n",
-    )
-    .unwrap();
+    // Exclude gems from file index
+    fs::write(project_path.join(".rsbignore"), "gems/\n").unwrap();
 
     fs::write(
         project_path.join("Gemfile"),
@@ -67,14 +59,7 @@ fn gem_incremental_skip() {
     )
     .unwrap();
 
-    fs::write(project_path.join(".rsbignore"), "vendor/\n").unwrap();
-
-    fs::create_dir_all(project_path.join(".bundle")).unwrap();
-    fs::write(
-        project_path.join(".bundle/config"),
-        "---\nBUNDLE_PATH: \"vendor/bundle\"\n",
-    )
-    .unwrap();
+    fs::write(project_path.join(".rsbignore"), "gems/\n").unwrap();
 
     fs::write(
         project_path.join("Gemfile"),

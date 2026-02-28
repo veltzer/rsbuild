@@ -13,7 +13,7 @@ fn cache_operations() {
     ).unwrap();
 
     fs::write(
-        project_path.join("templates/cached.txt.tera"),
+        project_path.join("templates.tera/cached.txt.tera"),
         "{% set c = load_python(path='config/cache_test.py') %}{{ c.value }}"
     ).unwrap();
 

@@ -127,7 +127,7 @@ impl Default for TeraConfig {
             strict: true,
             trim_blocks: false,
             extra_inputs: Vec::new(),
-            scan: default_scan!(scan_dir: "templates", extensions: [".tera"]),
+            scan: default_scan!(scan_dir: "templates.tera", extensions: [".tera"]),
         }
     }
 }
@@ -156,7 +156,7 @@ impl Default for MakoConfig {
         Self {
             enabled: true,
             extra_inputs: Vec::new(),
-            scan: default_scan!(scan_dir: "templates", extensions: [".mako"]),
+            scan: default_scan!(scan_dir: "templates.mako", extensions: [".mako"]),
         }
     }
 }

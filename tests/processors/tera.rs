@@ -47,7 +47,7 @@ optimization = 3
 {% endif -%}
 "#;
     fs::write(
-        project_path.join("templates/app.config.tera"),
+        project_path.join("templates.tera/app.config.tera"),
         tera_content
     ).expect("Failed to write tera file");
 
@@ -90,7 +90,7 @@ fn incremental_build() {
     ).expect("Failed to write config");
 
     fs::write(
-        project_path.join("templates/simple.txt.tera"),
+        project_path.join("templates.tera/simple.txt.tera"),
         "{% set c = load_python(path='config/simple.py') %}Name: {{ c.name }}, Count: {{ c.count }}"
     ).expect("Failed to write tera");
 
@@ -121,17 +121,17 @@ fn multiple_templates() {
 
     // Create multiple teras
     fs::write(
-        project_path.join("templates/first.txt.tera"),
+        project_path.join("templates.tera/first.txt.tera"),
         "{% set c = load_python(path='config/shared.py') %}First: {{ c.shared_name }}"
     ).unwrap();
 
     fs::write(
-        project_path.join("templates/second.conf.tera"),
+        project_path.join("templates.tera/second.conf.tera"),
         "{% set c = load_python(path='config/shared.py') %}[config]\nname={{ c.shared_name }}\nvalue={{ c.shared_value }}"
     ).unwrap();
 
     fs::write(
-        project_path.join("templates/third.json.tera"),
+        project_path.join("templates.tera/third.json.tera"),
         r#"{% set c = load_python(path='config/shared.py') %}{"name": "{{ c.shared_name }}", "value": {{ c.shared_value }}}"#
     ).unwrap();
 
@@ -166,7 +166,7 @@ fn extra_inputs_triggers_rebuild() {
 
     // Create a tera
     fs::write(
-        project_path.join("templates/output.txt.tera"),
+        project_path.join("templates.tera/output.txt.tera"),
         "{% set c = load_python(path='config/settings.py') %}Name: {{ c.name }}"
     ).unwrap();
 
@@ -228,7 +228,7 @@ fn extra_inputs_nonexistent_file_fails() {
     ).unwrap();
 
     fs::write(
-        project_path.join("templates/simple.txt.tera"),
+        project_path.join("templates.tera/simple.txt.tera"),
         "{% set c = load_python(path='config/simple.py') %}{{ c.val }}"
     ).unwrap();
 

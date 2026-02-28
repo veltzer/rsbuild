@@ -102,7 +102,7 @@ fn explain_after_clean() {
 
     // Use tera processor which is a generator (produces output files)
     fs::write(
-        project_path.join("templates/explain_clean.txt.tera"),
+        project_path.join("templates.tera/explain_clean.txt.tera"),
         "hello"
     ).unwrap();
 

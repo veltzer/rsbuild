@@ -5,7 +5,7 @@ use tempfile::TempDir;
 /// Set up a test project with the mako processor enabled
 fn setup_mako_project() -> TempDir {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
-    fs::create_dir_all(temp_dir.path().join("templates")).expect("Failed to create templates dir");
+    fs::create_dir_all(temp_dir.path().join("templates.mako")).expect("Failed to create templates.mako dir");
     fs::write(
         temp_dir.path().join("rsb.toml"),
         "[processor]\nenabled = [\"mako\"]\n"
@@ -20,7 +20,7 @@ fn mako_basic_render() {
 
     // Create a simple mako template
     fs::write(
-        project_path.join("templates/hello.txt.mako"),
+        project_path.join("templates.mako/hello.txt.mako"),
         "Hello, ${'World'}!\nCount: ${2 + 3}\n"
     ).expect("Failed to write mako template");
 
@@ -43,16 +43,16 @@ fn mako_subdirectory_output() {
     let project_path = temp_dir.path();
 
     // Create a template in a subdirectory
-    fs::create_dir_all(project_path.join("templates/config")).unwrap();
+    fs::create_dir_all(project_path.join("templates.mako/config")).unwrap();
     fs::write(
-        project_path.join("templates/config/app.conf.mako"),
+        project_path.join("templates.mako/config/app.conf.mako"),
         "[app]\nname = ${'TestApp'}\n"
     ).unwrap();
 
     let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
     assert!(output.status.success(), "rsb build failed: {}", String::from_utf8_lossy(&output.stderr));
 
-    // Output should be at config/app.conf (templates/ prefix stripped)
+    // Output should be at config/app.conf (templates.mako/ prefix stripped)
     let output_file = project_path.join("config/app.conf");
     assert!(output_file.exists(), "Output file config/app.conf was not created");
 
@@ -66,12 +66,12 @@ fn mako_multiple_templates() {
     let project_path = temp_dir.path();
 
     fs::write(
-        project_path.join("templates/first.txt.mako"),
+        project_path.join("templates.mako/first.txt.mako"),
         "First: ${1 + 1}\n"
     ).unwrap();
 
     fs::write(
-        project_path.join("templates/second.conf.mako"),
+        project_path.join("templates.mako/second.conf.mako"),
         "[section]\nvalue = ${'hello'}\n"
     ).unwrap();
 
@@ -94,7 +94,7 @@ fn mako_incremental_build() {
     let project_path = temp_dir.path();
 
     fs::write(
-        project_path.join("templates/simple.txt.mako"),
+        project_path.join("templates.mako/simple.txt.mako"),
         "Value: ${42}\n"
     ).unwrap();
 
@@ -117,7 +117,7 @@ fn mako_clean() {
     let project_path = temp_dir.path();
 
     fs::write(
-        project_path.join("templates/output.txt.mako"),
+        project_path.join("templates.mako/output.txt.mako"),
         "content\n"
     ).unwrap();
 

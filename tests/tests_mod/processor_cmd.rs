@@ -35,7 +35,7 @@ fn processors_auto_detects_tera() {
 
     // Write a template file so the tera processor is detected
     fs::write(
-        project_path.join("templates/test.txt.tera"),
+        project_path.join("templates.tera/test.txt.tera"),
         "hello"
     ).expect("Failed to write template");
 
@@ -58,7 +58,7 @@ fn processors_files_shows_products() {
         "value = 42"
     ).expect("Failed to write config");
     fs::write(
-        project_path.join("templates/output.txt.tera"),
+        project_path.join("templates.tera/output.txt.tera"),
         "{% set c = load_python(path='config/test.py') %}{{ c.value }}"
     ).expect("Failed to write template");
 
@@ -121,7 +121,7 @@ fn processors_files_json_output() {
         "value = 42"
     ).expect("Failed to write config");
     fs::write(
-        project_path.join("templates/output.txt.tera"),
+        project_path.join("templates.tera/output.txt.tera"),
         "{% set c = load_python(path='config/test.py') %}{{ c.value }}"
     ).expect("Failed to write template");
 
@@ -282,7 +282,7 @@ fn per_processor_enabled_false_non_hidden_processor() {
 
     // Write a template file so tera would normally discover a product
     fs::write(
-        project_path.join("templates/output.txt.tera"),
+        project_path.join("templates.tera/output.txt.tera"),
         "hello",
     ).unwrap();
 

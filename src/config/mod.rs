@@ -512,7 +512,7 @@ impl ProcessorConfig {
     /// Called after loading from TOML so that `config show` displays resolved values
     /// and processors can access fields without fallbacks.
     pub(crate) fn resolve_scan_defaults(&mut self) {
-        self.tera.scan.resolve("templates", &[".tera"], &[]);
+        self.tera.scan.resolve("templates.tera", &[".tera"], &[]);
         self.ruff.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
         self.pylint.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
         self.cc_single_file.scan.resolve("src", &[".c", ".cc"], &[]);
@@ -547,7 +547,7 @@ impl ProcessorConfig {
         self.pdflatex.scan.resolve("", &[".tex"], BUILD_TOOL_EXCLUDES);
         self.a2x.scan.resolve("", &[".txt"], BUILD_TOOL_EXCLUDES);
         self.ascii_check.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
-        self.mako.scan.resolve("templates", &[".mako"], &[]);
+        self.mako.scan.resolve("templates.mako", &[".mako"], &[]);
         self.mermaid.scan.resolve("", &[".mmd"], BUILD_TOOL_EXCLUDES);
         self.drawio.scan.resolve("", &[".drawio"], BUILD_TOOL_EXCLUDES);
         self.libreoffice.scan.resolve("", &[".odp"], BUILD_TOOL_EXCLUDES);

@@ -6,13 +6,13 @@ Renders Mako template files into output files using the Python Mako template lib
 
 ## How It Works
 
-Files matching configured extensions in `templates/` are rendered via `python3` using
+Files matching configured extensions in `templates.mako/` are rendered via `python3` using
 the `mako` Python library. Output is written with the extension stripped and the
-`templates/` prefix removed:
+`templates.mako/` prefix removed:
 
 ```
-templates/app.config.mako  →  app.config
-templates/sub/readme.txt.mako  →  sub/readme.txt
+templates.mako/app.config.mako  →  app.config
+templates.mako/sub/readme.txt.mako  →  sub/readme.txt
 ```
 
 Templates use the [Mako](https://www.makotemplates.org/) templating engine. A
@@ -21,8 +21,8 @@ templates can include or inherit from other templates using relative paths.
 
 ## Source Files
 
-- Input: `templates/**/*{extensions}`
-- Output: project root, mirroring the template path (minus `templates/` prefix) with the extension removed
+- Input: `templates.mako/**/*{extensions}`
+- Output: project root, mirroring the template path (minus `templates.mako/` prefix) with the extension removed
 
 ## Configuration
 

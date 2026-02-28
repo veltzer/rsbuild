@@ -356,7 +356,7 @@ fn init_project() -> Result<()> {
 
 [processor.tera]
 # strict = true
-# scan_dir = "templates"
+# scan_dir = "templates.tera"
 # extensions = [".tera"]
 # trim_blocks = false
 

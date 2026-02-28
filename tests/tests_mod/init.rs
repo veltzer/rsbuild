@@ -46,17 +46,17 @@ fn init_ignores_existing_dirs() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
-    // Create templates dir with a file
-    fs::create_dir_all(project_path.join("templates")).unwrap();
-    fs::write(project_path.join("templates/existing.txt"), "do not delete").unwrap();
+    // Create templates.tera dir with a file
+    fs::create_dir_all(project_path.join("templates.tera")).unwrap();
+    fs::write(project_path.join("templates.tera/existing.txt"), "do not delete").unwrap();
 
     let output = run_rsb(project_path, &["init"]);
     assert!(output.status.success());
 
     // Existing file should still be there
-    assert!(project_path.join("templates/existing.txt").exists(),
-        "Existing files in templates/ should be preserved");
-    let content = fs::read_to_string(project_path.join("templates/existing.txt")).unwrap();
+    assert!(project_path.join("templates.tera/existing.txt").exists(),
+        "Existing files in templates.tera/ should be preserved");
+    let content = fs::read_to_string(project_path.join("templates.tera/existing.txt")).unwrap();
     assert_eq!(content, "do not delete");
 }
 

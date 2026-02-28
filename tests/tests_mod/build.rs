@@ -13,7 +13,7 @@ fn clean_command() {
     ).expect("Failed to write config");
 
     fs::write(
-        project_path.join("templates/cleanme.txt.tera"),
+        project_path.join("templates.tera/cleanme.txt.tera"),
         "{% set c = load_python(path='config/clean_test.py') %}{{ c.test }}"
     ).expect("Failed to write template");
 
@@ -46,7 +46,7 @@ fn force_rebuild() {
     ).expect("Failed to write config");
 
     fs::write(
-        project_path.join("templates/force.txt.tera"),
+        project_path.join("templates.tera/force.txt.tera"),
         "{% set c = load_python(path='config/force.py') %}Mode: {{ c.mode }}"
     ).expect("Failed to write template");
 
@@ -417,7 +417,7 @@ fn classify_propagates_through_dependencies() {
         "val = 1"
     ).unwrap();
     fs::write(
-        project_path.join("templates/step1.txt.tera"),
+        project_path.join("templates.tera/step1.txt.tera"),
         "{% set c = load_python(path='config/gen.py') %}step1={{ c.val }}"
     ).unwrap();
 
@@ -456,7 +456,7 @@ fn classify_propagates_through_dependencies() {
 
     // Modify the tera template
     fs::write(
-        project_path.join("templates/step1.txt.tera"),
+        project_path.join("templates.tera/step1.txt.tera"),
         "{% set c = load_python(path='config/gen.py') %}modified={{ c.val }}"
     ).unwrap();
 

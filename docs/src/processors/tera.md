@@ -7,12 +7,12 @@ configuration variables.
 
 ## How It Works
 
-Files matching configured extensions in `templates/` are rendered and written
+Files matching configured extensions in `templates.tera/` are rendered and written
 to the project root with the extension stripped:
 
 ```
-templates/app.config.tera  →  app.config
-templates/sub/readme.txt.tera  →  sub/readme.txt
+templates.tera/app.config.tera  →  app.config
+templates.tera/sub/readme.txt.tera  →  sub/readme.txt
 ```
 
 Templates use the [Tera](https://keats.github.io/tera/) templating engine and can call
@@ -30,7 +30,7 @@ version = "{{ config.version }}"
 
 ## Source Files
 
-- Input: `templates/**/*{extensions}`
+- Input: `templates.tera/**/*{extensions}`
 - Output: project root, mirroring the template path with the extension removed
 
 ## Configuration

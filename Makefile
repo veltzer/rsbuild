@@ -7,8 +7,8 @@ all:
 test:
 	cargo nextest run --release
 	cargo nextest run
-	# cargo test --release
-	# cargo test
+# cargo test --release
+# cargo test
 
 .PHONY: clean
 clean:

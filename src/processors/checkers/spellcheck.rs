@@ -27,10 +27,10 @@ pub struct SpellcheckProcessor {
 
 impl SpellcheckProcessor {
     pub fn new(config: SpellcheckConfig) -> Result<Self> {
-        let custom_words = if config.use_words_file {
-            let words_path = Path::new(&config.words_file);
+        let words_path = Path::new(&config.words_file);
+        let custom_words = if words_path.exists() {
             Self::load_custom_words(words_path)
-                .with_context(|| format!("Custom words file not found: {}", words_path.display()))?
+                .with_context(|| format!("Failed to load custom words file: {}", words_path.display()))?
         } else {
             HashSet::new()
         };
@@ -242,14 +242,6 @@ impl ProductDiscovery for SpellcheckProcessor {
         let mut extra_inputs = self.config.extra_inputs.clone();
         for ai in &self.config.auto_inputs {
             extra_inputs.extend(config_file_inputs(ai));
-        }
-        // If custom words are enabled, add the words file as an input so
-        // changes to it invalidate all spellcheck products.
-        if self.config.use_words_file {
-            let words_path = Path::new(&self.config.words_file);
-            if words_path.exists() {
-                extra_inputs.push(self.config.words_file.clone());
-            }
         }
         discover_checker_products(
             graph,

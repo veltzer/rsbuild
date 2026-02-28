@@ -75,7 +75,7 @@ fn spellcheck_custom_words_file() {
 
     fs::write(
         project_path.join("rsb.toml"),
-        "[processor]\nenabled = [\"spellcheck\"]\n\n[processor.spellcheck]\nuse_words_file = true\n"
+        "[processor]\nenabled = [\"spellcheck\"]\n"
     ).unwrap();
 
     let output = run_rsb_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);

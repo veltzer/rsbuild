@@ -484,8 +484,6 @@ pub struct SpellcheckConfig {
     pub language: String,
     #[serde(default = "default_spellcheck_words_file")]
     pub words_file: String,
-    #[serde(default)]
-    pub use_words_file: bool,
     /// When true, automatically add misspelled words to words_file instead of failing
     #[serde(default)]
     pub auto_add_words: bool,
@@ -507,7 +505,7 @@ impl Default for SpellcheckConfig {
             enabled: true,
             language: "en_US".into(),
             words_file: ".spellcheck-words".into(),
-            use_words_file: false,
+
             auto_add_words: false,
             extra_inputs: Vec::new(),
             auto_inputs: default_spellcheck_auto_inputs(),
@@ -519,7 +517,7 @@ impl Default for SpellcheckConfig {
 impl KnownFields for SpellcheckConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "language", "words_file", "use_words_file", "auto_add_words", "extra_inputs", "auto_inputs",
+            "enabled", "language", "words_file", "auto_add_words", "extra_inputs", "auto_inputs",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }

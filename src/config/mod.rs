@@ -705,7 +705,7 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         ("clang_tidy", "compiler_args") => Some(FieldType::StringArray),
         // spellcheck
         ("spellcheck", "language" | "words_file") => Some(FieldType::String),
-        ("spellcheck", "use_words_file" | "auto_add_words") => Some(FieldType::Bool),
+        ("spellcheck", "auto_add_words") => Some(FieldType::Bool),
         // make
         ("make", "make" | "target") => Some(FieldType::String),
         // cargo / clippy

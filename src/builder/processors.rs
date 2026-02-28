@@ -107,6 +107,26 @@ fn defconfig_json(name: &str) -> Option<String> {
     serde_json::to_string_pretty(&json).ok()
 }
 
+/// Return a JSON value containing only fields that differ from the default config.
+fn config_diff(name: &str, current: &serde_json::Value) -> serde_json::Value {
+    let default_json = defconfig_json(name);
+    let default_value = default_json
+        .and_then(|j| serde_json::from_str::<serde_json::Value>(&j).ok());
+    let (Some(serde_json::Value::Object(default_obj)), serde_json::Value::Object(current_obj)) =
+        (default_value.as_ref(), current)
+    else {
+        return current.clone();
+    };
+    let mut diff = serde_json::Map::new();
+    for (key, val) in current_obj {
+        match default_obj.get(key) {
+            Some(def_val) if def_val == val => {}
+            _ => { diff.insert(key.clone(), val.clone()); }
+        }
+    }
+    serde_json::Value::Object(diff)
+}
+
 /// Show default configuration for a processor (works without rsb.toml).
 pub fn processor_defconfig(name: &str) -> Result<()> {
     match defconfig_json(name) {
@@ -175,7 +195,7 @@ impl Builder {
                     println!("{} {}{} {}{} \u{2014} {}", name, proc_type, batch, status, hidden_tag, color::dim(proc.description()));
                 }
             }
-            ProcessorAction::Config { ref name } => {
+            ProcessorAction::Config { ref name, diff } => {
                 let names: Vec<&str> = if let Some(n) = name {
                     if !processors.contains_key(n.as_str()) {
                         bail!("Unknown processor: '{}'. Run 'rsb processors list' to see available processors.", n);
@@ -187,10 +207,34 @@ impl Builder {
                         .filter(|n| self.config.processor.is_enabled(n))
                         .collect()
                 };
+
+                if crate::json_output::is_json_mode() {
+                    let mut map = serde_json::Map::new();
+                    for n in &names {
+                        let proc = &processors[*n];
+                        if let Some(json) = proc.config_json() {
+                            let value: serde_json::Value = serde_json::from_str(&json)?;
+                            let value = if diff {
+                                config_diff(n, &value)
+                            } else {
+                                value
+                            };
+                            map.insert(n.to_string(), value);
+                        }
+                    }
+                    println!("{}", serde_json::to_string_pretty(&serde_json::Value::Object(map))?);
+                    return Ok(());
+                }
+
                 for (i, n) in names.iter().enumerate() {
                     let proc = &processors[*n];
                     if let Some(json) = proc.config_json() {
                         let value: serde_json::Value = serde_json::from_str(&json)?;
+                        let value = if diff {
+                            config_diff(n, &value)
+                        } else {
+                            value
+                        };
                         if names.len() > 1 {
                             println!("{}:", n);
                         }

@@ -333,6 +333,9 @@ pub enum ProcessorAction {
     Config {
         /// Processor name (omit to show all enabled processors)
         name: Option<String>,
+        /// Show only fields that differ from the default configuration
+        #[arg(short, long)]
+        diff: bool,
     },
     /// Show default configuration for a processor
     Defconfig {

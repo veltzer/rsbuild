@@ -81,7 +81,7 @@ impl ProductDiscovery for GemProcessor {
         let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
 
         let siblings = SiblingFilter {
-            extensions: &[".rb", ".gemspec"],
+            extensions: &[".gemspec"],
             excludes: &["/.git/", "/out/", "/.rsb/", "/gems/"],
         };
 

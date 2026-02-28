@@ -57,6 +57,7 @@ fileindex
 filesystem
 filesystems
 flamegraph
+formatters
 frontmatter
 fsevents
 gb
@@ -84,6 +85,8 @@ ini
 inotify
 io
 isn
+isort
+jinja
 jq
 js
 json
@@ -106,6 +109,7 @@ md
 mdbook
 mdl
 merkle
+misconfigured
 mmdc
 monorepos
 mtime
@@ -144,6 +148,7 @@ repos
 rsb
 rumdl
 runfiles
+rustfmt
 sandboxed
 sandboxing
 semver

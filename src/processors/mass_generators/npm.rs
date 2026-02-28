@@ -6,7 +6,7 @@ use std::process::Command;
 use crate::config::{NpmConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, clean_outputs, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 pub struct NpmProcessor {
     config: NpmConfig,
@@ -105,7 +105,16 @@ impl ProductDiscovery for NpmProcessor {
             }
             inputs.extend_from_slice(&extra);
 
-            graph.add_product(inputs, vec![stamp], crate::processors::names::NPM, hash.clone())?;
+            if self.config.cache_output_dir {
+                let output_dir = if anchor_dir.as_os_str().is_empty() {
+                    PathBuf::from("node_modules")
+                } else {
+                    anchor_dir.join("node_modules")
+                };
+                graph.add_product_with_output_dir(inputs, vec![stamp], crate::processors::names::NPM, hash.clone(), output_dir)?;
+            } else {
+                graph.add_product(inputs, vec![stamp], crate::processors::names::NPM, hash.clone())?;
+            }
         }
 
         Ok(())
@@ -127,7 +136,29 @@ impl ProductDiscovery for NpmProcessor {
     }
 
     fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::NPM, verbose)
+        let mut count = 0;
+        for output in &product.outputs {
+            match fs::remove_file(output) {
+                Ok(()) => {
+                    count += 1;
+                    if verbose {
+                        println!("Removed npm output: {}", output.display());
+                    }
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => return Err(e.into()),
+            }
+        }
+        if let Some(ref output_dir) = product.output_dir
+            && output_dir.exists()
+        {
+            if verbose {
+                println!("Removing npm output directory: {}", output_dir.display());
+            }
+            fs::remove_dir_all(output_dir.as_ref())?;
+            count += 1;
+        }
+        Ok(count)
     }
 
     fn config_json(&self) -> Option<String> {

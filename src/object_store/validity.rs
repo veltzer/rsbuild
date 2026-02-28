@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::{ExplainAction, ObjectStore, RebuildReason};
 
@@ -122,6 +122,62 @@ impl ObjectStore {
         match first_missing {
             Some(path) => ExplainAction::Restore(RebuildReason::OutputMissing(path)),
             None => ExplainAction::Skip,
+        }
+    }
+
+    /// Check if a product with an output directory needs rebuilding.
+    /// Returns true if no cache entry, input checksum differs, or output dir doesn't exist.
+    pub fn needs_rebuild_output_dir(&self, cache_key: &str, input_checksum: &str, dir: &Path) -> bool {
+        let entry = match self.get_entry(cache_key) {
+            Some(e) => e,
+            None => return true,
+        };
+
+        if entry.input_checksum != input_checksum {
+            return true;
+        }
+
+        // If the output directory doesn't exist, we need a rebuild (or restore)
+        !dir.exists()
+    }
+
+    /// Check if an output directory can be restored from cache.
+    /// Returns true if cache entry exists with matching checksum and all objects are available.
+    pub fn can_restore_output_dir(&self, cache_key: &str, input_checksum: &str) -> bool {
+        let entry = match self.get_entry(cache_key) {
+            Some(e) if e.input_checksum == input_checksum => e,
+            _ => return false,
+        };
+
+        entry.outputs.iter().all(|o| self.has_object(&o.checksum))
+    }
+
+    /// Explain what action will be taken for a product with an output directory.
+    pub fn explain_action_output_dir(&self, cache_key: &str, input_checksum: &str, dir: &Path, force: bool) -> ExplainAction {
+        if force {
+            return ExplainAction::Rebuild(RebuildReason::Force);
+        }
+
+        let entry = match self.get_entry(cache_key) {
+            Some(e) => e,
+            None => return ExplainAction::Rebuild(RebuildReason::NoCacheEntry),
+        };
+
+        if entry.input_checksum != input_checksum {
+            return ExplainAction::Rebuild(RebuildReason::InputsChanged);
+        }
+
+        if dir.exists() {
+            return ExplainAction::Skip;
+        }
+
+        // Directory missing — check if all objects are available for restore
+        let all_available = entry.outputs.iter().all(|o| self.has_object(&o.checksum));
+        let dir_display = dir.display().to_string();
+        if all_available {
+            ExplainAction::Restore(RebuildReason::OutputMissing(dir_display))
+        } else {
+            ExplainAction::Rebuild(RebuildReason::OutputMissing(dir_display))
         }
     }
 }

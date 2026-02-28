@@ -367,21 +367,31 @@ pub(crate) struct SiblingFilter<'a> {
     pub excludes: &'a [&'a str],
 }
 
+/// Options for `discover_directory_products`.
+pub(crate) struct DirectoryProductOpts<'a, H: serde::Serialize> {
+    pub scan: &'a crate::config::ScanConfig,
+    pub file_index: &'a FileIndex,
+    pub extra_inputs: &'a [String],
+    pub cfg_hash: &'a H,
+    pub siblings: &'a SiblingFilter<'a>,
+    pub processor_name: &'a str,
+    pub output_dir_name: Option<&'a str>,
+}
+
 /// Discover directory-based products: each discovered file anchors a product whose inputs
 /// include all sibling files under the same directory (filtered by extensions/excludes).
 ///
 /// Used by processors like `make` and `cargo` where a manifest file (Makefile, Cargo.toml)
 /// represents a build unit and all files in its directory are inputs.
 /// All paths are relative to project root.
+///
+/// When `output_dir_name` is `Some("dir_name")`, the product gets an `output_dir` set to
+/// `anchor_parent/dir_name`, enabling directory-level caching for mass generators.
 pub(crate) fn discover_directory_products(
     graph: &mut BuildGraph,
-    scan: &crate::config::ScanConfig,
-    file_index: &FileIndex,
-    extra_inputs: &[String],
-    cfg_hash: &impl serde::Serialize,
-    siblings: &SiblingFilter,
-    processor_name: &str,
+    opts: DirectoryProductOpts<'_, impl serde::Serialize>,
 ) -> Result<()> {
+    let DirectoryProductOpts { scan, file_index, extra_inputs, cfg_hash, siblings, processor_name, output_dir_name } = opts;
     let files = file_index.scan(scan, true);
     if files.is_empty() {
         return Ok(());
@@ -411,8 +421,18 @@ pub(crate) fn discover_directory_products(
             }
         }
         inputs.extend_from_slice(&extra);
-        // Empty outputs: cache entry = success record
-        graph.add_product(inputs, vec![], processor_name, hash.clone())?;
+
+        if let Some(dir_name) = output_dir_name {
+            let output_dir = if anchor_dir.as_os_str().is_empty() {
+                PathBuf::from(dir_name)
+            } else {
+                anchor_dir.join(dir_name)
+            };
+            graph.add_product_with_output_dir(inputs, vec![], processor_name, hash.clone(), output_dir)?;
+        } else {
+            // Empty outputs: cache entry = success record
+            graph.add_product(inputs, vec![], processor_name, hash.clone())?;
+        }
     }
 
     Ok(())

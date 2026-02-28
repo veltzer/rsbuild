@@ -78,7 +78,11 @@ impl<'a> Executor<'a> {
         if force {
             return RestoreOutcome::NotRestorable;
         }
-        let restore_result = object_store.restore_from_cache(&ctx.cache_key, ctx.input_checksum, &ctx.product.outputs);
+        let restore_result = if let Some(ref output_dir) = ctx.product.output_dir {
+            object_store.restore_output_dir(&ctx.cache_key, ctx.input_checksum, output_dir)
+        } else {
+            object_store.restore_from_cache(&ctx.cache_key, ctx.input_checksum, &ctx.product.outputs)
+        };
         match restore_result {
             Ok(true) => {
                 if self.verbose {
@@ -147,7 +151,12 @@ impl<'a> Executor<'a> {
         object_store: &crate::object_store::ObjectStore,
         duration: Option<std::time::Duration>,
     ) -> bool {
-        match object_store.cache_outputs(&ctx.cache_key, ctx.input_checksum, &ctx.product.outputs) {
+        let cache_result = if let Some(ref output_dir) = ctx.product.output_dir {
+            object_store.cache_output_dir(&ctx.cache_key, ctx.input_checksum, output_dir)
+        } else {
+            object_store.cache_outputs(&ctx.cache_key, ctx.input_checksum, &ctx.product.outputs)
+        };
+        match cache_result {
             Ok(changed) => {
                 if !changed {
                     ctx.shared.unchanged_products.lock().insert(ctx.id);

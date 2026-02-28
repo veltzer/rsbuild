@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use super::{CacheEntry, ObjectStore, OutputEntry};
+use super::{CacheEntry, ObjectStore, OutputEntry, walk_files};
 
 impl ObjectStore {
     /// Try to restore outputs from cache (local first, then remote).
@@ -167,6 +167,7 @@ impl ObjectStore {
             outputs.push(OutputEntry {
                 path: rel_path,
                 checksum,
+                mode: None,
             });
         }
 
@@ -247,5 +248,129 @@ impl ObjectStore {
         }
 
         Ok(())
+    }
+
+    /// Cache all files under an output directory.
+    /// Walks the directory, stores each file as an object, and records the manifest.
+    /// Returns `Ok(true)` if any output content changed compared to the previous cache entry.
+    pub fn cache_output_dir(&self, cache_key: &str, input_checksum: &str, dir: &Path) -> Result<bool> {
+        use std::os::unix::fs::PermissionsExt;
+
+        anyhow::ensure!(dir.exists() && dir.is_dir(),
+            "Expected output directory not produced: {}", dir.display());
+
+        let prev_entry = self.get_entry(cache_key);
+
+        let files = walk_files(dir);
+        let mut outputs = Vec::new();
+        let mut any_changed = false;
+
+        for file_path in files {
+            let content = fs::read(&file_path)
+                .with_context(|| format!("Failed to read output file: {}", file_path.display()))?;
+            let checksum = self.store_object(&content)?;
+            let rel_path = file_path.strip_prefix(dir)
+                .with_context(|| format!("File {} is not under dir {}", file_path.display(), dir.display()))?
+                .display().to_string();
+            let mode = fs::metadata(&file_path)
+                .map(|m| m.permissions().mode())
+                .ok();
+
+            if !any_changed {
+                let prev_checksum = prev_entry.as_ref().and_then(|e| {
+                    e.outputs.iter().find(|o| o.path == rel_path).map(|o| &o.checksum)
+                });
+                if prev_checksum != Some(&checksum) {
+                    any_changed = true;
+                }
+            }
+
+            if self.remote_push {
+                self.try_push_object_to_remote(&checksum)?;
+            }
+
+            outputs.push(OutputEntry {
+                path: rel_path,
+                checksum,
+                mode,
+            });
+        }
+
+        // Check if number of outputs changed
+        if !any_changed {
+            if let Some(ref prev) = prev_entry {
+                if prev.outputs.len() != outputs.len() {
+                    any_changed = true;
+                }
+            } else {
+                any_changed = true;
+            }
+        }
+
+        let entry = CacheEntry {
+            input_checksum: input_checksum.to_string(),
+            outputs,
+        };
+
+        self.insert_entry(cache_key, &entry)?;
+
+        if self.remote_push {
+            self.try_push_entry_to_remote(cache_key, &entry)?;
+        }
+
+        Ok(any_changed)
+    }
+
+    /// Restore an output directory from cache.
+    /// Recreates the entire directory structure from cached objects.
+    /// Returns `Ok(true)` if restore succeeded, `Ok(false)` if no matching cache entry.
+    pub fn restore_output_dir(&self, cache_key: &str, input_checksum: &str, dir: &Path) -> Result<bool> {
+        use std::os::unix::fs::PermissionsExt;
+
+        let entry = match self.get_entry(cache_key) {
+            Some(e) if e.input_checksum == input_checksum => Some(e),
+            _ => {
+                if self.remote_pull {
+                    self.try_fetch_from_remote(cache_key, input_checksum)?
+                } else {
+                    None
+                }
+            }
+        };
+
+        let entry = match entry {
+            Some(e) => e,
+            None => return Ok(false),
+        };
+
+        // Clean existing directory for a fresh restore
+        if dir.exists() {
+            fs::remove_dir_all(dir)
+                .with_context(|| format!("Failed to remove existing output dir: {}", dir.display()))?;
+        }
+
+        for output in &entry.outputs {
+            // Ensure object is available locally
+            if !self.has_object(&output.checksum)
+                && (!self.remote_pull || !self.try_fetch_object_from_remote(&output.checksum)?)
+            {
+                return Ok(false);
+            }
+
+            let file_path = dir.join(&output.path);
+            if let Some(parent) = file_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            self.restore_file(&output.checksum, &file_path)?;
+
+            // Restore Unix permissions if stored
+            if let Some(mode) = output.mode {
+                let perms = std::fs::Permissions::from_mode(mode);
+                fs::set_permissions(&file_path, perms)
+                    .with_context(|| format!("Failed to set permissions on {}", file_path.display()))?;
+            }
+        }
+
+        Ok(true)
     }
 }

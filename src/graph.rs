@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use crate::cli::{DisplayOptions, InputDisplay, OutputDisplay, PathFormat};
 use crate::errors;
@@ -23,6 +24,9 @@ pub struct Product {
     pub config_hash: Option<String>,
     /// Optional variant/profile name (e.g., compiler profile name)
     pub variant: Option<String>,
+    /// Optional output directory for mass generators (relative to project root).
+    /// When set, the executor caches/restores the entire directory instead of individual output files.
+    pub output_dir: Option<Arc<PathBuf>>,
 }
 
 impl Product {
@@ -34,6 +38,7 @@ impl Product {
             id,
             config_hash,
             variant: None,
+            output_dir: None,
         }
     }
 
@@ -46,6 +51,7 @@ impl Product {
             id,
             config_hash,
             variant: Some(variant.to_string()),
+            output_dir: None,
         }
     }
 
@@ -193,6 +199,14 @@ impl BuildGraph {
         self.dependents.push(Vec::new());
         self.dependencies.push(Vec::new());
 
+        Ok(id)
+    }
+
+    /// Add a product with an output directory for mass generator caching.
+    /// The output_dir is the directory whose contents will be cached/restored as a whole.
+    pub fn add_product_with_output_dir(&mut self, inputs: Vec<PathBuf>, outputs: Vec<PathBuf>, processor: &str, config_hash: Option<String>, output_dir: PathBuf) -> Result<usize> {
+        let id = self.add_product(inputs, outputs, processor, config_hash)?;
+        self.products[id].output_dir = Some(Arc::new(output_dir));
         Ok(id)
     }
 

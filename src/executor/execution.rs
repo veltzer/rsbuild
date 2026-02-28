@@ -24,7 +24,14 @@ use super::{Executor, HandlerContext, LevelWork, PreCheckResult, RestoreOutcome,
 /// When a restored hardlink exists and a rebuild is needed, the tool cannot
 /// overwrite the read-only file. Removing outputs first ensures the tool
 /// can create fresh files.
+///
+/// For products with an output_dir, removes the entire directory.
 fn remove_stale_outputs(product: &Product) {
+    if let Some(ref output_dir) = product.output_dir
+        && output_dir.exists()
+    {
+        let _ = fs::remove_dir_all(output_dir.as_ref());
+    }
     for output in &product.outputs {
         if output.exists() {
             let _ = fs::remove_file(output);
@@ -225,7 +232,11 @@ impl<'a> Executor<'a> {
         let cache_key = product.cache_key();
 
         if self.explain {
-            let action = lctx.object_store.explain_action(&cache_key, &item.input_checksum, &product.outputs, lctx.force);
+            let action = if let Some(ref output_dir) = product.output_dir {
+                lctx.object_store.explain_action_output_dir(&cache_key, &item.input_checksum, output_dir, lctx.force)
+            } else {
+                lctx.object_store.explain_action(&cache_key, &item.input_checksum, &product.outputs, lctx.force)
+            };
             self.print_explain(product, &action);
         }
 
@@ -628,7 +639,11 @@ impl<'a> Executor<'a> {
                     }
                 };
 
-                let needs_rebuild = force || object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs);
+                let needs_rebuild = force || if let Some(ref output_dir) = product.output_dir {
+                    object_store.needs_rebuild_output_dir(&cache_key, &input_checksum, output_dir)
+                } else {
+                    object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs)
+                };
                 work_items.push(WorkItem { product_id: id, input_checksum, needs_rebuild });
             }
         }

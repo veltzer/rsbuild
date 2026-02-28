@@ -508,6 +508,8 @@ pub struct CargoConfig {
     pub args: Vec<String>,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub cache_output_dir: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -520,6 +522,7 @@ impl Default for CargoConfig {
             command: "build".into(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
+            cache_output_dir: true,
             scan: default_scan!(extensions: ["Cargo.toml"]),
         }
     }
@@ -528,7 +531,7 @@ impl Default for CargoConfig {
 impl KnownFields for CargoConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "cargo", "command", "args", "extra_inputs",
+            "enabled", "cargo", "command", "args", "extra_inputs", "cache_output_dir",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }
@@ -989,6 +992,8 @@ pub struct PipConfig {
     pub args: Vec<String>,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub cache_output_dir: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1000,6 +1005,7 @@ impl Default for PipConfig {
             pip: "pip".into(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
+            cache_output_dir: true,
             scan: default_scan!(extensions: ["requirements.txt"]),
         }
     }
@@ -1008,7 +1014,7 @@ impl Default for PipConfig {
 impl KnownFields for PipConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "pip", "args", "extra_inputs",
+            "enabled", "pip", "args", "extra_inputs", "cache_output_dir",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }
@@ -1034,6 +1040,8 @@ pub struct SphinxConfig {
     pub args: Vec<String>,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub cache_output_dir: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1046,6 +1054,7 @@ impl Default for SphinxConfig {
             output_dir: "_build".into(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
+            cache_output_dir: true,
             scan: default_scan!(extensions: ["conf.py"]),
         }
     }
@@ -1054,7 +1063,7 @@ impl Default for SphinxConfig {
 impl KnownFields for SphinxConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "sphinx_build", "output_dir", "args", "extra_inputs",
+            "enabled", "sphinx_build", "output_dir", "args", "extra_inputs", "cache_output_dir",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }
@@ -1080,6 +1089,8 @@ pub struct MdbookConfig {
     pub args: Vec<String>,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub cache_output_dir: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1092,6 +1103,7 @@ impl Default for MdbookConfig {
             output_dir: "book".into(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
+            cache_output_dir: true,
             scan: default_scan!(extensions: ["book.toml"]),
         }
     }
@@ -1100,7 +1112,7 @@ impl Default for MdbookConfig {
 impl KnownFields for MdbookConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "mdbook", "output_dir", "args", "extra_inputs",
+            "enabled", "mdbook", "output_dir", "args", "extra_inputs", "cache_output_dir",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }
@@ -1126,6 +1138,8 @@ pub struct NpmConfig {
     pub args: Vec<String>,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub cache_output_dir: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1138,6 +1152,7 @@ impl Default for NpmConfig {
             command: "install".into(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
+            cache_output_dir: true,
             scan: default_scan!(extensions: ["package.json"]),
         }
     }
@@ -1146,7 +1161,7 @@ impl Default for NpmConfig {
 impl KnownFields for NpmConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "npm", "command", "args", "extra_inputs",
+            "enabled", "npm", "command", "args", "extra_inputs", "cache_output_dir",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }
@@ -1598,6 +1613,8 @@ pub struct GemConfig {
     pub args: Vec<String>,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub cache_output_dir: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1610,6 +1627,7 @@ impl Default for GemConfig {
             command: "install".into(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
+            cache_output_dir: true,
             scan: default_scan!(extensions: ["Gemfile"]),
         }
     }
@@ -1618,7 +1636,7 @@ impl Default for GemConfig {
 impl KnownFields for GemConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "bundler", "command", "args", "extra_inputs",
+            "enabled", "bundler", "command", "args", "extra_inputs", "cache_output_dir",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }

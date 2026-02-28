@@ -135,6 +135,9 @@ struct OutputEntry {
     path: String,
     /// Checksum of the output content (used as object store key)
     checksum: String,
+    /// Unix file permissions (e.g., 0o755). Used for directory cache restore.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    mode: Option<u32>,
 }
 
 /// Per-processor cache statistics

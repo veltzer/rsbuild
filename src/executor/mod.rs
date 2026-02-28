@@ -115,9 +115,21 @@ pub fn classify_products(
             }
         };
 
-        if !force && !dep_changed && !object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs) {
+        let needs_rebuild = if let Some(ref output_dir) = product.output_dir {
+            object_store.needs_rebuild_output_dir(&cache_key, &input_checksum, output_dir)
+        } else {
+            object_store.needs_rebuild(&cache_key, &input_checksum, &product.outputs)
+        };
+
+        let can_restore = if let Some(ref _output_dir) = product.output_dir {
+            object_store.can_restore_output_dir(&cache_key, &input_checksum)
+        } else {
+            object_store.can_restore(&cache_key, &input_checksum, &product.outputs)
+        };
+
+        if !force && !dep_changed && !needs_rebuild {
             skip_count += 1;
-        } else if !force && !dep_changed && object_store.can_restore(&cache_key, &input_checksum, &product.outputs) {
+        } else if !force && !dep_changed && can_restore {
             restore_count += 1;
             will_change.insert(id);
         } else {

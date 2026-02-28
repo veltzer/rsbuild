@@ -1,11 +1,12 @@
 use anyhow::Result;
+use std::fs;
 use std::path::Path;
 use std::process::Command;
 
 use crate::config::CargoConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, discover_directory_products, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, DirectoryProductOpts, discover_directory_products, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 pub struct CargoProcessor {
     config: CargoConfig,
@@ -55,22 +56,39 @@ impl ProductDiscovery for CargoProcessor {
             return Ok(());
         }
 
-        discover_directory_products(
-            graph,
-            &self.config.scan,
+        discover_directory_products(graph, DirectoryProductOpts {
+            scan: &self.config.scan,
             file_index,
-            &self.config.extra_inputs,
-            &self.config,
-            &SiblingFilter {
-                extensions: &[".rs", ".toml"], // Match Rust sources and Cargo files
+            extra_inputs: &self.config.extra_inputs,
+            cfg_hash: &self.config,
+            siblings: &SiblingFilter {
+                extensions: &[".rs", ".toml"],
                 excludes: &["/.git/", "/target/", "/.rsb/"],
             },
-            crate::processors::names::CARGO,
-        )
+            processor_name: crate::processors::names::CARGO,
+            output_dir_name: if self.config.cache_output_dir {
+                Some("target")
+            } else {
+                None
+            },
+        })
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_cargo(product.primary_input())
+    }
+
+    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
+        if let Some(ref output_dir) = product.output_dir
+            && output_dir.exists()
+        {
+            if verbose {
+                println!("Removing cargo output directory: {}", output_dir.display());
+            }
+            fs::remove_dir_all(output_dir.as_ref())?;
+            return Ok(1);
+        }
+        Ok(0)
     }
 
     fn config_json(&self) -> Option<String> {

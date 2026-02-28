@@ -6,7 +6,7 @@ use std::process::Command;
 use crate::config::{PipConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, clean_outputs, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProductDiscovery, ProcessorType, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 pub struct PipProcessor {
     config: PipConfig,
@@ -83,10 +83,20 @@ impl ProductDiscovery for PipProcessor {
             let stamp = self.stamp_path(&anchor);
 
             let mut inputs: Vec<PathBuf> = Vec::with_capacity(1 + extra.len());
-            inputs.push(anchor);
+            inputs.push(anchor.clone());
             inputs.extend_from_slice(&extra);
 
-            graph.add_product(inputs, vec![stamp], crate::processors::names::PIP, hash.clone())?;
+            if self.config.cache_output_dir {
+                let anchor_dir = anchor.parent().unwrap_or(Path::new(""));
+                let output_dir = if anchor_dir.as_os_str().is_empty() {
+                    self.output_dir.clone()
+                } else {
+                    anchor_dir.join(&self.output_dir)
+                };
+                graph.add_product_with_output_dir(inputs, vec![stamp], crate::processors::names::PIP, hash.clone(), output_dir)?;
+            } else {
+                graph.add_product(inputs, vec![stamp], crate::processors::names::PIP, hash.clone())?;
+            }
         }
 
         Ok(())
@@ -108,7 +118,31 @@ impl ProductDiscovery for PipProcessor {
     }
 
     fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::PIP, verbose)
+        let mut count = 0;
+        // Clean stamp files
+        for output in &product.outputs {
+            match fs::remove_file(output) {
+                Ok(()) => {
+                    count += 1;
+                    if verbose {
+                        println!("Removed pip output: {}", output.display());
+                    }
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => return Err(e.into()),
+            }
+        }
+        // Clean output directory if using directory caching
+        if let Some(ref output_dir) = product.output_dir
+            && output_dir.exists()
+        {
+            if verbose {
+                println!("Removing pip output directory: {}", output_dir.display());
+            }
+            fs::remove_dir_all(output_dir.as_ref())?;
+            count += 1;
+        }
+        Ok(count)
     }
 
     fn config_json(&self) -> Option<String> {

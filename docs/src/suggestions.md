@@ -7,6 +7,17 @@ Grades:
 - **Urgency**: `high` (users need this), `medium` (nice to have), `low` (speculative/future)
 - **Complexity**: `low` (hours), `medium` (days), `high` (weeks+)
 
+## Test Coverage
+
+### Add tests for untested generators
+- 14 out of 17 generator processors have no integration tests: a2x, drawio, gem, libreoffice, markdown, marp, mermaid, npm, pandoc, pdflatex, pdfunite, pip, sphinx.
+- The test pattern is well-established in `tests/processors/` — each test creates a temp project, writes source files, runs `rsb build`, and verifies outputs.
+- **Urgency**: high | **Complexity**: low (per processor)
+
+### Add tests for untested checkers
+- 5 checkers have no integration tests: ascii_check, aspell, markdownlint, mdbook, mdl.
+- **Urgency**: medium | **Complexity**: low (per processor)
+
 ## New Processors
 
 ### Linting / Checking (stub-based)
@@ -65,6 +76,13 @@ Grades:
 - Single-file transformation.
 - Config: `output_format` (default `"html"`), `args`, `extra_inputs`, `scan`.
 - **Urgency**: low | **Complexity**: low
+
+#### jinja2
+- Render Jinja2 templates (`.j2`, `.jinja2`) via `python3 -c` using the `jinja2` library.
+- Similar to the mako and tera processors but using Jinja2 syntax.
+- Scan directory: `templates.jinja2/`, strips prefix and extension for output path.
+- Config: `extra_inputs`, `scan`.
+- **Urgency**: medium | **Complexity**: low
 
 ### Testing
 
@@ -245,6 +263,22 @@ Grades:
 - Support authenticated remote caches: S3 (AWS credentials), HTTP (bearer tokens), GCS.
 - Variable substitution from environment for secrets.
 - **Urgency**: medium | **Complexity**: medium
+
+### `rsb fmt` — Auto-format source files
+- Run formatters (black, isort, clang-format, rustfmt) that modify files in-place.
+- Distinct from checkers which only verify — formatters actually fix formatting.
+- Could be a new processor type (`Formatter`) or a convenience command that runs formatter processors.
+- **Urgency**: medium | **Complexity**: medium
+
+### `rsb why <file>` — Explain why a file is built
+- Show which processors consume a given file, what products it belongs to, and what triggered a rebuild.
+- Useful for debugging unexpected rebuilds or understanding the build graph.
+- **Urgency**: medium | **Complexity**: low
+
+### `rsb doctor` — Diagnose build environment
+- Check for common issues: missing tools, misconfigured processors, stale cache, version mismatches.
+- Report warnings and suggestions for fixing problems.
+- **Urgency**: medium | **Complexity**: low
 
 ### `rsb lint` — Run only checkers
 - Convenience command to run only checker processors.

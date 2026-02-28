@@ -280,7 +280,7 @@ fn run() -> Result<()> {
             watcher::watch(&opts, Arc::clone(&interrupted))?;
         }
         Commands::Version => {
-            println!("rsb {}", env!("CARGO_PKG_VERSION"));
+            println!("rsb {} by {}", env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"));
             println!("RSB_GIT_DESCRIBE: {}", env!("RSB_GIT_DESCRIBE"));
             println!("VERGEN_GIT_SHA: {}", env!("VERGEN_GIT_SHA"));
             println!("VERGEN_GIT_BRANCH: {}", env!("VERGEN_GIT_BRANCH"));

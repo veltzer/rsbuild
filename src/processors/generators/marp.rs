@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -9,23 +8,13 @@ use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, ProcessorType, clean_outputs, scan_root_valid, run_command, check_command_output};
 
-/// Collect current marp-cli-* directories in /tmp.
-fn collect_marp_tmp_dirs() -> HashSet<PathBuf> {
-    let Ok(entries) = fs::read_dir("/tmp") else { return HashSet::new() };
-    entries
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_name().to_string_lossy().starts_with("marp-cli-"))
-        .map(|e| e.path())
-        .collect()
-}
-
-/// Remove any marp-cli-* directories that weren't present before the build.
-fn cleanup_marp_tmp_dirs(before: &HashSet<PathBuf>) {
+/// Remove all marp-cli-* temp directories from /tmp.
+/// Chromium/Puppeteer creates these as user-data-dirs during PDF/image conversion
+/// and marp-cli does not clean them up.
+fn cleanup_marp_tmp_dirs() {
     let Ok(entries) = fs::read_dir("/tmp") else { return };
     for entry in entries.filter_map(|e| e.ok()) {
-        if entry.file_name().to_string_lossy().starts_with("marp-cli-")
-            && !before.contains(&entry.path())
-        {
+        if entry.file_name().to_string_lossy().starts_with("marp-cli-") {
             let _ = fs::remove_dir_all(entry.path());
         }
     }
@@ -111,9 +100,6 @@ impl ProductDiscovery for MarpProcessor {
                 .with_context(|| format!("Failed to create marp output directory: {}", parent.display()))?;
         }
 
-        // Snapshot existing marp-cli temp dirs so we only clean up new ones
-        let before = collect_marp_tmp_dirs();
-
         let mut cmd = Command::new(&self.config.marp_bin);
         // HTML is marp's default output, so no format flag needed for it
         if format != "html" {
@@ -128,8 +114,7 @@ impl ProductDiscovery for MarpProcessor {
         let out = run_command(&mut cmd)?;
         let result = check_command_output(&out, format_args!("marp {}", input.display()));
 
-        // marp-cli (via Chromium/Puppeteer) leaves temp dirs in /tmp/
-        cleanup_marp_tmp_dirs(&before);
+        cleanup_marp_tmp_dirs();
 
         result
     }

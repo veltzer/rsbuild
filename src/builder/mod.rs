@@ -123,11 +123,6 @@ pub(crate) fn create_builtin_processors(cfg: &ProcessorConfig) -> ProcessorMap {
     Builder::register(&mut processors, proc_names::PDFUNITE, PdfuniteProcessor::new(cfg.pdfunite.clone()));
     Builder::register(&mut processors, proc_names::SCRIPT_CHECK, ScriptCheckProcessor::new(cfg.script_check.clone()));
 
-    // Spellcheck processor (fallible init — silently skip on error)
-    if let Ok(proc) = SpellcheckProcessor::new(cfg.spellcheck.clone()) {
-        Builder::register(&mut processors, proc_names::SPELLCHECK, proc);
-    }
-
     processors
 }
 

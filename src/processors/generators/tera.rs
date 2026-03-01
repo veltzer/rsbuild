@@ -5,7 +5,7 @@ use mlua::prelude::*;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value};
 
@@ -14,95 +14,80 @@ use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, clean_outputs, run_command_capture};
 
-/// Represents a single template file to be processed
-struct TemplateItem {
-    /// Path to the .tera template file
-    source_path: PathBuf,
-    /// Path where the rendered output will be written
-    output_path: PathBuf,
-}
+use super::TemplateItem;
 
-impl TemplateItem {
-    fn new(source_path: PathBuf, output_path: PathBuf) -> Self {
-        Self {
-            source_path,
-            output_path,
-        }
+/// Render a template item and write to output
+fn render_template(item: &TemplateItem, config: &TeraConfig) -> Result<()> {
+    // Ensure parent directory of output exists
+    if let Some(parent) = item.output_path.parent()
+        && !parent.as_os_str().is_empty() && !parent.exists()
+    {
+        fs::create_dir_all(parent)?;
     }
 
-    /// Render the template and write to output
-    fn render(&self, config: &TeraConfig) -> Result<()> {
-        // Ensure parent directory of output exists
-        if let Some(parent) = self.output_path.parent()
-            && !parent.as_os_str().is_empty() && !parent.exists()
-        {
-            fs::create_dir_all(parent)?;
+    // Read template content
+    let template_content = fs::read_to_string(&item.source_path)?;
+
+    // Optionally trim blocks (remove first newline after block tags)
+    let template_content = if config.trim_blocks {
+        trim_block_newlines(&template_content)
+    } else {
+        template_content
+    };
+
+    // Create a new Tera instance for this template
+    let mut tera = Tera::default();
+
+    // Register template functions
+    tera.register_function("load_python", LoadPythonFunction);
+    tera.register_function("load_lua", LoadLuaFunction);
+    tera.register_function("version_str", VersionStrFunction);
+    tera.register_function("copyright_years", CopyrightYearsFunction);
+    tera.register_function("git_count_files", GitCountFilesFunction);
+    tera.register_function("workflow_names", WorkflowNamesFunction);
+    tera.register_function("shell_output", ShellOutputFunction);
+
+    // Add the template
+    tera.add_raw_template("template", &template_content)
+        .context("Failed to parse template")?;
+
+    // Register all .tera files in the project so {% include %} can resolve them
+    for entry in glob::glob("**/*.tera")
+        .context("Invalid glob pattern: **/*.tera")?
+    {
+        let path = entry?;
+        // Skip directories and the main template we already registered
+        if !path.is_file() || path == item.source_path {
+            continue;
         }
+        let name = path.to_string_lossy().to_string();
+        let content = fs::read_to_string(&path)
+            .with_context(|| format!("Failed to read template: {}", path.display()))?;
+        tera.add_raw_template(&name, &content)
+            .with_context(|| format!("Failed to parse template: {}", path.display()))?;
+    }
 
-        // Read template content
-        let template_content = fs::read_to_string(&self.source_path)?;
+    // Configure strict mode (fail on undefined variables)
+    tera.set_escape_fn(|s| s.to_string()); // No HTML escaping by default
 
-        // Optionally trim blocks (remove first newline after block tags)
-        let template_content = if config.trim_blocks {
-            trim_block_newlines(&template_content)
-        } else {
-            template_content
-        };
+    // Create an empty context (load_python will be called from within the template)
+    let context = TeraContext::new();
 
-        // Create a new Tera instance for this template
-        let mut tera = Tera::default();
-
-        // Register template functions
-        tera.register_function("load_python", LoadPythonFunction);
-        tera.register_function("load_lua", LoadLuaFunction);
-        tera.register_function("version_str", VersionStrFunction);
-        tera.register_function("copyright_years", CopyrightYearsFunction);
-        tera.register_function("git_count_files", GitCountFilesFunction);
-        tera.register_function("workflow_names", WorkflowNamesFunction);
-        tera.register_function("shell_output", ShellOutputFunction);
-
-        // Add the template
-        tera.add_raw_template("template", &template_content)
-            .context("Failed to parse template")?;
-
-        // Register all .tera files in the project so {% include %} can resolve them
-        for entry in glob::glob("**/*.tera")
-            .context("Invalid glob pattern: **/*.tera")?
-        {
-            let path = entry?;
-            // Skip directories and the main template we already registered
-            if !path.is_file() || path == self.source_path {
-                continue;
+    // Render the template
+    let rendered = tera
+        .render("template", &context)
+        .with_context(|| {
+            if config.strict {
+                format!("Failed to render template (strict mode enabled): {}", item.source_path.display())
+            } else {
+                format!("Failed to render template: {}", item.source_path.display())
             }
-            let name = path.to_string_lossy().to_string();
-            let content = fs::read_to_string(&path)
-                .with_context(|| format!("Failed to read template: {}", path.display()))?;
-            tera.add_raw_template(&name, &content)
-                .with_context(|| format!("Failed to parse template: {}", path.display()))?;
-        }
+        })?;
 
-        // Configure strict mode (fail on undefined variables)
-        tera.set_escape_fn(|s| s.to_string()); // No HTML escaping by default
+    // Write to output file
+    fs::write(&item.output_path, rendered)?;
 
-        // Create an empty context (load_python will be called from within the template)
-        let context = TeraContext::new();
-
-        // Render the template
-        let rendered = tera
-            .render("template", &context)
-            .with_context(|| {
-                if config.strict {
-                    format!("Failed to render template (strict mode enabled): {}", self.source_path.display())
-                } else {
-                    format!("Failed to render template: {}", self.source_path.display())
-                }
-            })?;
-
-        // Write to output file
-        fs::write(&self.output_path, rendered)?;
-
-        Ok(())
-    }
+    Ok(())
 }
 
 /// Remove first newline after block tags ({% ... %})
@@ -121,39 +106,6 @@ impl TeraProcessor {
             config,
         })
     }
-
-    /// Find all template files matching configured extensions
-    fn find_templates(&self, file_index: &FileIndex) -> Result<Vec<TemplateItem>> {
-        let paths = file_index.scan(&self.config.scan, true);
-        let extensions = self.config.scan.extensions();
-        let scan_dir = self.config.scan.scan_dir();
-
-        let mut items = Vec::new();
-        for path in paths {
-            let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            for ext in extensions {
-                if filename.ends_with(ext.as_str()) {
-                    let output_name = &filename[..filename.len() - ext.len()];
-                    if !output_name.is_empty() {
-                        // Strip the scan_dir prefix to get the output path
-                        let output_path = if !scan_dir.is_empty() {
-                            if let Ok(relative) = path.strip_prefix(scan_dir) {
-                                relative.with_file_name(output_name)
-                            } else {
-                                PathBuf::from(output_name)
-                            }
-                        } else {
-                            PathBuf::from(output_name)
-                        };
-                        items.push(TemplateItem::new(path.clone(), output_path));
-                        break;
-                    }
-                }
-            }
-        }
-
-        Ok(items)
-    }
 }
 
 impl ProductDiscovery for TeraProcessor {
@@ -166,7 +118,7 @@ impl ProductDiscovery for TeraProcessor {
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        self.find_templates(file_index).is_ok_and(|t| !t.is_empty())
+        super::find_templates(&self.config.scan, file_index).is_ok_and(|t| !t.is_empty())
     }
 
     fn required_tools(&self) -> Vec<String> {
@@ -174,7 +126,7 @@ impl ProductDiscovery for TeraProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-        let items = self.find_templates(file_index)?;
+        let items = super::find_templates(&self.config.scan, file_index)?;
         let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
 
         for item in items {
@@ -197,7 +149,7 @@ impl ProductDiscovery for TeraProcessor {
             product.primary_input().to_path_buf(),
             product.outputs.first().expect(crate::errors::EMPTY_PRODUCT_OUTPUTS).clone(),
         );
-        item.render(&self.config)
+        render_template(&item, &self.config)
     }
 
     fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {

@@ -720,6 +720,7 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         // make
         ("make", "make" | "target") => Some(FieldType::String),
         // cargo / clippy
+        ("cargo", "profiles") => Some(FieldType::StringArray),
         ("cargo" | "clippy", "cargo" | "command") => Some(FieldType::String),
         // mypy, pyrefly, shellcheck, rumdl, yamllint, jq, jsonlint, taplo
         ("mypy" | "pyrefly" | "shellcheck" | "luacheck" | "script_check", "checker") => Some(FieldType::String),
@@ -770,6 +771,8 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         ("libreoffice", "formats") => Some(FieldType::StringArray),
         // pdfunite
         ("pdfunite", "pdfunite_bin" | "source_dir" | "source_ext" | "source_output_dir" | "output_dir") => Some(FieldType::String),
+        // cache_output_dir — shared by mass generators
+        ("cargo" | "pip" | "sphinx" | "mdbook" | "npm" | "gem", "cache_output_dir") => Some(FieldType::Bool),
         _ => None,
     }
 }

@@ -1,12 +1,14 @@
 use anyhow::{Context, Result};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
-use crate::config::{PdflatexConfig, config_hash, resolve_extra_inputs};
+use crate::config::PdflatexConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, ProcessorType, clean_outputs, scan_root_valid, run_command, check_command_output};
+
+use super::DiscoverParams;
 
 /// Temp file extensions produced by pdflatex that should be cleaned between runs.
 const PDFLATEX_TEMP_EXTENSIONS: &[&str] = &[".log", ".out", ".toc", ".aux", ".nav", ".snm", ".vrb"];
@@ -18,17 +20,6 @@ pub struct PdflatexProcessor {
 impl PdflatexProcessor {
     pub fn new(config: PdflatexConfig) -> Self {
         Self { config }
-    }
-
-    fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan)
-    }
-
-    fn output_path(&self, source: &Path) -> PathBuf {
-        let stem = source.file_stem().unwrap_or_default();
-        let parent = source.parent().unwrap_or(Path::new(""));
-        let output_name = format!("{}.pdf", stem.to_string_lossy());
-        Path::new(&self.config.output_dir).join(parent).join(output_name)
     }
 
     /// Remove temporary files produced by pdflatex in the given directory.
@@ -50,7 +41,7 @@ impl ProductDiscovery for PdflatexProcessor {
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        self.should_process() && !file_index.scan(&self.config.scan, true).is_empty()
+        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
     }
 
     fn required_tools(&self) -> Vec<String> {
@@ -62,29 +53,14 @@ impl ProductDiscovery for PdflatexProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-        if !self.should_process() {
-            return Ok(());
-        }
-
-        let files = file_index.scan(&self.config.scan, true);
-        if files.is_empty() {
-            return Ok(());
-        }
-
-        let hash = Some(config_hash(&self.config));
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
-
-        for source in files {
-            let output = self.output_path(&source);
-
-            let mut inputs = Vec::with_capacity(1 + extra.len());
-            inputs.push(source);
-            inputs.extend_from_slice(&extra);
-
-            graph.add_product(inputs, vec![output], crate::processors::names::PDFLATEX, hash.clone())?;
-        }
-
-        Ok(())
+        let params = DiscoverParams {
+            scan: &self.config.scan,
+            extra_inputs: &self.config.extra_inputs,
+            config: &self.config,
+            output_dir: &self.config.output_dir,
+            processor_name: crate::processors::names::PDFLATEX,
+        };
+        super::discover_single_format(graph, file_index, &params, "pdf")
     }
 
     fn execute(&self, product: &Product) -> Result<()> {

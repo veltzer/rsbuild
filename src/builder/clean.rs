@@ -162,10 +162,15 @@ impl Builder {
             .map(PathBuf::from)
             .collect();
 
-        // Walk the project tree, collecting unknown files
+        // Walk the entire project tree. We disable .gitignore handling because
+        // unknown files often live in gitignored directories (e.g. out/).
+        // We do our own filtering against git-tracked and RSB output sets.
         let mut unknown_files: Vec<PathBuf> = Vec::new();
         let walker = WalkBuilder::new(".")
             .hidden(false)
+            .git_ignore(false)
+            .git_global(false)
+            .git_exclude(false)
             .build();
 
         for entry in walker {

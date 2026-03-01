@@ -9,8 +9,20 @@ use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, ProcessorType, clean_outputs, scan_root_valid, run_command, check_command_output};
 
 /// Remove all marp-cli-* temp directories from /tmp.
-/// Chromium/Puppeteer creates these as user-data-dirs during PDF/image conversion
-/// and marp-cli does not clean them up.
+///
+/// marp-cli creates a unique browser profile directory (named `marp-cli-<random>`)
+/// in /tmp for each invocation. These are Chromium user-data-dirs needed to isolate
+/// the browser environment from the user's regular profile. marp-cli intentionally
+/// does not delete them because the browser may still use the directory for
+/// post-processing after the main conversion finishes (puppeteer/puppeteer#6291).
+/// The marp-cli maintainer considers this the OS's responsibility to clean up.
+///
+/// In practice they accumulate (~18 MB each) and are never cleaned up on Linux.
+/// Since rsb waits for the marp process to fully exit before reaching this point,
+/// it is safe to remove them here.
+///
+/// See: https://github.com/marp-team/marp-cli/issues/678
+/// See: https://github.com/puppeteer/puppeteer/issues/6414
 fn cleanup_marp_tmp_dirs() {
     let Ok(entries) = fs::read_dir("/tmp") else { return };
     for entry in entries.filter_map(|e| e.ok()) {

@@ -9,15 +9,11 @@ use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, scan_roo
 
 pub struct NpmProcessor {
     config: NpmConfig,
-    output_dir: PathBuf,
 }
 
 impl NpmProcessor {
     pub fn new(config: NpmConfig) -> Self {
-        Self {
-            config,
-            output_dir: PathBuf::from("out/npm"),
-        }
+        Self { config }
     }
 
     /// Run npm install in the package.json's directory
@@ -78,8 +74,6 @@ impl ProductDiscovery for NpmProcessor {
                 &[],
             );
 
-            let stamp = super::stamp_path(&self.output_dir, &anchor);
-
             let mut inputs: Vec<PathBuf> = Vec::with_capacity(1 + sibling_files.len() + extra.len());
             inputs.push(anchor.clone());
             for file in &sibling_files {
@@ -95,9 +89,9 @@ impl ProductDiscovery for NpmProcessor {
                 } else {
                     anchor_dir.join("node_modules")
                 };
-                graph.add_product_with_output_dir(inputs, vec![stamp], crate::processors::names::NPM, hash.clone(), output_dir)?;
+                graph.add_product_with_output_dir(inputs, vec![], crate::processors::names::NPM, hash.clone(), output_dir)?;
             } else {
-                graph.add_product(inputs, vec![stamp], crate::processors::names::NPM, hash.clone())?;
+                graph.add_product(inputs, vec![], crate::processors::names::NPM, hash.clone())?;
             }
         }
 
@@ -105,12 +99,20 @@ impl ProductDiscovery for NpmProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        self.execute_npm(product.primary_input())?;
-        super::write_stamp(product, "npm")
+        self.execute_npm(product.primary_input())
     }
 
     fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        super::clean_stamp_and_output_dir(product, "npm", verbose)
+        if let Some(ref output_dir) = product.output_dir
+            && output_dir.exists()
+        {
+            if verbose {
+                println!("Removing npm output directory: {}", output_dir.display());
+            }
+            std::fs::remove_dir_all(output_dir.as_ref())?;
+            return Ok(1);
+        }
+        Ok(0)
     }
 
     fn config_json(&self) -> Option<String> {

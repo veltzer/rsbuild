@@ -9,15 +9,11 @@ use crate::processors::{ProductDiscovery, ProcessorType, scan_root_valid, run_in
 
 pub struct PipProcessor {
     config: PipConfig,
-    output_dir: PathBuf,
 }
 
 impl PipProcessor {
     pub fn new(config: PipConfig) -> Self {
-        Self {
-            config,
-            output_dir: PathBuf::from("out/pip"),
-        }
+        Self { config }
     }
 
     /// Run pip install -r requirements.txt in the file's directory
@@ -64,35 +60,22 @@ impl ProductDiscovery for PipProcessor {
         let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
 
         for anchor in files {
-            let stamp = super::stamp_path(&self.output_dir, &anchor);
-
             let mut inputs: Vec<PathBuf> = Vec::with_capacity(1 + extra.len());
             inputs.push(anchor.clone());
             inputs.extend_from_slice(&extra);
 
-            if self.config.cache_output_dir {
-                let anchor_dir = anchor.parent().unwrap_or(Path::new(""));
-                let output_dir = if anchor_dir.as_os_str().is_empty() {
-                    self.output_dir.clone()
-                } else {
-                    anchor_dir.join(&self.output_dir)
-                };
-                graph.add_product_with_output_dir(inputs, vec![stamp], crate::processors::names::PIP, hash.clone(), output_dir)?;
-            } else {
-                graph.add_product(inputs, vec![stamp], crate::processors::names::PIP, hash.clone())?;
-            }
+            graph.add_product(inputs, vec![], crate::processors::names::PIP, hash.clone())?;
         }
 
         Ok(())
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        self.execute_pip(product.primary_input())?;
-        super::write_stamp(product, "pip")
+        self.execute_pip(product.primary_input())
     }
 
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        super::clean_stamp_and_output_dir(product, "pip", verbose)
+    fn clean(&self, _product: &Product, _verbose: bool) -> Result<usize> {
+        Ok(0)
     }
 
     fn config_json(&self) -> Option<String> {

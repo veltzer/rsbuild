@@ -289,7 +289,6 @@ fn run() -> Result<()> {
             println!("VERGEN_GIT_SHA: {}", env!("VERGEN_GIT_SHA"));
             println!("VERGEN_GIT_BRANCH: {}", env!("VERGEN_GIT_BRANCH"));
             println!("VERGEN_GIT_DIRTY: {}", env!("VERGEN_GIT_DIRTY"));
-            println!("VERGEN_BUILD_TIMESTAMP: {}", env!("VERGEN_BUILD_TIMESTAMP"));
             println!("VERGEN_RUSTC_SEMVER: {}", env!("VERGEN_RUSTC_SEMVER"));
         }
         Commands::Config { action } => {

@@ -1,5 +1,4 @@
-use anyhow::{Context, Result};
-use std::fs;
+use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -19,21 +18,6 @@ impl NpmProcessor {
             config,
             output_dir: PathBuf::from("out/npm"),
         }
-    }
-
-    fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan)
-    }
-
-    /// Compute the stamp file path for a package.json anchor.
-    fn stamp_path(&self, anchor: &Path) -> PathBuf {
-        let anchor_dir = anchor.parent().unwrap_or(Path::new(""));
-        let name = if anchor_dir.as_os_str().is_empty() {
-            "root".to_string()
-        } else {
-            anchor_dir.display().to_string().replace(['/', '\\'], "_")
-        };
-        self.output_dir.join(format!("{}.stamp", name))
     }
 
     /// Run npm install in the package.json's directory
@@ -58,7 +42,7 @@ impl ProductDiscovery for NpmProcessor {
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        self.should_process() && !file_index.scan(&self.config.scan, true).is_empty()
+        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
     }
 
     fn required_tools(&self) -> Vec<String> {
@@ -66,7 +50,7 @@ impl ProductDiscovery for NpmProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-        if !self.should_process() {
+        if !scan_root_valid(&self.config.scan) {
             return Ok(());
         }
 
@@ -94,7 +78,7 @@ impl ProductDiscovery for NpmProcessor {
                 &[],
             );
 
-            let stamp = self.stamp_path(&anchor);
+            let stamp = super::stamp_path(&self.output_dir, &anchor);
 
             let mut inputs: Vec<PathBuf> = Vec::with_capacity(1 + sibling_files.len() + extra.len());
             inputs.push(anchor.clone());
@@ -122,43 +106,11 @@ impl ProductDiscovery for NpmProcessor {
 
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_npm(product.primary_input())?;
-
-        // Create stamp file
-        let stamp = product.outputs.first()
-            .context("npm product has no output stamp")?;
-        if let Some(parent) = stamp.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create npm output directory: {}", parent.display()))?;
-        }
-        fs::write(stamp, "")
-            .with_context(|| format!("Failed to write npm stamp file: {}", stamp.display()))?;
-        Ok(())
+        super::write_stamp(product, "npm")
     }
 
     fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        let mut count = 0;
-        for output in &product.outputs {
-            match fs::remove_file(output) {
-                Ok(()) => {
-                    count += 1;
-                    if verbose {
-                        println!("Removed npm output: {}", output.display());
-                    }
-                }
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-                Err(e) => return Err(e.into()),
-            }
-        }
-        if let Some(ref output_dir) = product.output_dir
-            && output_dir.exists()
-        {
-            if verbose {
-                println!("Removing npm output directory: {}", output_dir.display());
-            }
-            fs::remove_dir_all(output_dir.as_ref())?;
-            count += 1;
-        }
-        Ok(count)
+        super::clean_stamp_and_output_dir(product, "npm", verbose)
     }
 
     fn config_json(&self) -> Option<String> {

@@ -29,6 +29,77 @@ impl Builder {
                     println!("{:<10} {} — {}", name, status, color::dim(analyzer.description()));
                 }
             }
+            DepsAction::Build => {
+                let processors = self.create_processors()?;
+                let mut graph = crate::graph::BuildGraph::new();
+
+                // Phase 1: Discover products
+                for name in sorted_keys(&processors) {
+                    if self.is_processor_active(name, processors[name].as_ref()) {
+                        processors[name].discover(&mut graph, &self.file_index)?;
+                    }
+                }
+
+                let product_count = graph.products().len();
+                if product_count == 0 {
+                    println!("No products discovered.");
+                    return Ok(());
+                }
+
+                // Phase 2: Run dependency analyzers
+                self.run_analyzers(&mut graph, true)?;
+
+                // Show summary from cache
+                let deps_cache = DepsCache::open()?;
+                let stats = deps_cache.stats_by_analyzer();
+                if !stats.is_empty() {
+                    let mut total_files = 0;
+                    let mut total_deps = 0;
+                    for name in sorted_keys(&stats) {
+                        let (files, deps) = stats[name];
+                        total_files += files;
+                        total_deps += deps;
+                        println!("{}: {} files, {} dependencies",
+                            color::bold(name), files, deps);
+                    }
+                    println!("{}: {} files, {} dependencies",
+                        color::bold("Total"), total_files, total_deps);
+                }
+            }
+            DepsAction::Config { name } => {
+                if let Some(name) = name {
+                    match name.as_str() {
+                        "cpp" => {
+                            let toml = toml::to_string_pretty(&self.config.analyzer.cpp)
+                                .context("Failed to serialize cpp analyzer config")?;
+                            println!("[analyzer.cpp]");
+                            print!("{}", toml);
+                        }
+                        "python" => {
+                            let toml = toml::to_string_pretty(&self.config.analyzer.python)
+                                .context("Failed to serialize python analyzer config")?;
+                            println!("[analyzer.python]");
+                            print!("{}", toml);
+                        }
+                        _ => bail!("Unknown analyzer '{}'. Available: cpp, python", name),
+                    }
+                } else {
+                    // Show all analyzer configs
+                    println!("[analyzer]");
+                    println!("auto_detect = {}", self.config.analyzer.auto_detect);
+                    println!("enabled = {:?}", self.config.analyzer.enabled);
+                    println!();
+                    let toml = toml::to_string_pretty(&self.config.analyzer.cpp)
+                        .context("Failed to serialize cpp analyzer config")?;
+                    println!("[analyzer.cpp]");
+                    print!("{}", toml);
+                    println!();
+                    let toml = toml::to_string_pretty(&self.config.analyzer.python)
+                        .context("Failed to serialize python analyzer config")?;
+                    println!("[analyzer.python]");
+                    print!("{}", toml);
+                }
+            }
             DepsAction::Clean { analyzer } => {
                 if let Some(analyzer_name) = analyzer {
                     // Clear only entries from specific analyzer

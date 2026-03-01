@@ -17,10 +17,6 @@ impl SphinxProcessor {
         Self { config }
     }
 
-    fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan)
-    }
-
     /// Run sphinx-build in the conf.py's directory
     fn execute_sphinx(&self, conf_py: &Path) -> Result<()> {
         let mut cmd = Command::new(&self.config.sphinx_build);
@@ -46,7 +42,7 @@ impl ProductDiscovery for SphinxProcessor {
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        self.should_process() && !file_index.scan(&self.config.scan, true).is_empty()
+        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
     }
 
     fn required_tools(&self) -> Vec<String> {
@@ -54,7 +50,7 @@ impl ProductDiscovery for SphinxProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-        if !self.should_process() {
+        if !scan_root_valid(&self.config.scan) {
             return Ok(());
         }
 

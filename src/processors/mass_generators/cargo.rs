@@ -17,11 +17,6 @@ impl CargoProcessor {
         Self { config }
     }
 
-    /// Check if cargo processing should be enabled
-    fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan)
-    }
-
     /// Run cargo build in the Cargo.toml's directory with the given profile
     fn execute_cargo(&self, cargo_toml: &Path, profile: &str) -> Result<()> {
         let mut cmd = Command::new(&self.config.cargo);
@@ -45,7 +40,7 @@ impl ProductDiscovery for CargoProcessor {
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        self.should_process() && !file_index.scan(&self.config.scan, true).is_empty()
+        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
     }
 
     fn required_tools(&self) -> Vec<String> {
@@ -53,7 +48,7 @@ impl ProductDiscovery for CargoProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-        if !self.should_process() {
+        if !scan_root_valid(&self.config.scan) {
             return Ok(());
         }
 

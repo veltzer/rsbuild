@@ -389,6 +389,13 @@ pub enum ToolsAction {
 pub enum DepsAction {
     /// List all available dependency analyzers
     List,
+    /// Run dependency analysis without building (scan headers, imports, etc.)
+    Build,
+    /// Show analyzer configuration
+    Config {
+        /// Analyzer name (e.g., "cpp", "python"); omit to show all
+        name: Option<String>,
+    },
     /// Show cached dependencies
     Show {
         #[command(subcommand)]

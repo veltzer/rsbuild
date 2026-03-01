@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::fs;
@@ -35,8 +35,6 @@ impl JsonSchemaProcessor {
         Ok(())
     }
 }
-
-use anyhow::Context;
 
 /// Recursively check that every object with `type: "object"` has a
 /// `propertyOrdering` array that exactly matches its `properties` keys.

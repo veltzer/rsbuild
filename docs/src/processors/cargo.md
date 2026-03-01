@@ -43,6 +43,7 @@ enabled = ["cargo"]
 cargo = "cargo"          # Cargo binary to use
 command = "build"        # Cargo command (build, check, test, clippy, etc.)
 args = []                # Extra arguments passed to cargo
+profiles = ["dev", "release"]  # Cargo profiles to build
 scan_dir = ""            # Directory to scan ("" = project root)
 extensions = ["Cargo.toml"]
 extra_inputs = []        # Additional files that trigger rebuilds
@@ -54,6 +55,7 @@ cache_output_dir = true  # Cache the target/ directory for fast restore after cl
 | `cargo` | string | `"cargo"` | Path or name of the cargo binary |
 | `command` | string | `"build"` | Cargo subcommand to run |
 | `args` | string[] | `[]` | Extra arguments passed to cargo |
+| `profiles` | string[] | `["dev", "release"]` | Cargo profiles to build (creates one product per profile) |
 | `scan_dir` | string | `""` | Directory to scan for Cargo.toml files |
 | `extensions` | string[] | `["Cargo.toml"]` | File names to match |
 | `exclude_dirs` | string[] | `["/.git/", "/target/", ...]` | Directory patterns to exclude |
@@ -70,14 +72,24 @@ cache_output_dir = true  # Cache the target/ directory for fast restore after cl
 enabled = ["cargo"]
 ```
 
-### Release Build
+### Release Only
 
 ```toml
 [processor]
 enabled = ["cargo"]
 
 [processor.cargo]
-args = ["--release"]
+profiles = ["release"]
+```
+
+### Dev Only
+
+```toml
+[processor]
+enabled = ["cargo"]
+
+[processor.cargo]
+profiles = ["dev"]
 ```
 
 ### Use cargo check Instead of build

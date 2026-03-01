@@ -1,12 +1,12 @@
 use anyhow::Result;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::config::CargoConfig;
+use crate::config::{CargoConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, DirectoryProductOpts, discover_directory_products, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 pub struct CargoProcessor {
     config: CargoConfig,
@@ -22,15 +22,16 @@ impl CargoProcessor {
         scan_root_valid(&self.config.scan)
     }
 
-    /// Run cargo build in the Cargo.toml's directory
-    fn execute_cargo(&self, cargo_toml: &Path) -> Result<()> {
+    /// Run cargo build in the Cargo.toml's directory with the given profile
+    fn execute_cargo(&self, cargo_toml: &Path, profile: &str) -> Result<()> {
         let mut cmd = Command::new(&self.config.cargo);
         cmd.arg(&self.config.command);
+        cmd.args(["--profile", profile]);
         for arg in &self.config.args {
             cmd.arg(arg);
         }
         let output = run_in_anchor_dir(&mut cmd, cargo_toml)?;
-        check_command_output(&output, format_args!("cargo {} in {}", self.config.command, anchor_display_dir(cargo_toml)))
+        check_command_output(&output, format_args!("cargo {} --profile {} in {}", self.config.command, profile, anchor_display_dir(cargo_toml)))
     }
 }
 
@@ -56,26 +57,72 @@ impl ProductDiscovery for CargoProcessor {
             return Ok(());
         }
 
-        discover_directory_products(graph, DirectoryProductOpts {
-            scan: &self.config.scan,
-            file_index,
-            extra_inputs: &self.config.extra_inputs,
-            cfg_hash: &self.config,
-            siblings: &SiblingFilter {
-                extensions: &[".rs", ".toml"],
-                excludes: &["/.git/", "/target/", "/.rsb/"],
-            },
-            processor_name: crate::processors::names::CARGO,
-            output_dir_name: if self.config.cache_output_dir {
-                Some("target")
-            } else {
-                None
-            },
-        })
+        let files = file_index.scan(&self.config.scan, true);
+        if files.is_empty() {
+            return Ok(());
+        }
+
+        let siblings = SiblingFilter {
+            extensions: &[".rs", ".toml"],
+            excludes: &["/.git/", "/target/", "/.rsb/"],
+        };
+        let hash = Some(config_hash(&self.config));
+        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+
+        for anchor in files {
+            let anchor_dir = anchor.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+
+            let sibling_files = file_index.query(
+                &anchor_dir,
+                siblings.extensions,
+                siblings.excludes,
+                &[],
+                &[],
+            );
+
+            let mut base_inputs: Vec<PathBuf> = Vec::with_capacity(1 + sibling_files.len() + extra.len());
+            base_inputs.push(anchor.clone());
+            for file in &sibling_files {
+                if *file != anchor {
+                    base_inputs.push(file.clone());
+                }
+            }
+            base_inputs.extend_from_slice(&extra);
+
+            for profile in &self.config.profiles {
+                let inputs = base_inputs.clone();
+                if self.config.cache_output_dir {
+                    let output_dir = if anchor_dir.as_os_str().is_empty() {
+                        PathBuf::from("target")
+                    } else {
+                        anchor_dir.join("target")
+                    };
+                    graph.add_product_with_output_dir_and_variant(
+                        inputs,
+                        vec![],
+                        crate::processors::names::CARGO,
+                        hash.clone(),
+                        output_dir,
+                        Some(profile),
+                    )?;
+                } else {
+                    graph.add_product_with_variant(
+                        inputs,
+                        vec![],
+                        crate::processors::names::CARGO,
+                        hash.clone(),
+                        Some(profile),
+                    )?;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        self.execute_cargo(product.primary_input())
+        let profile = product.variant.as_deref().unwrap_or("dev");
+        self.execute_cargo(product.primary_input(), profile)
     }
 
     fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {

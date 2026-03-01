@@ -2,6 +2,9 @@ use std::fs;
 use tempfile::TempDir;
 use crate::common::{run_rsb_with_env, tool_available};
 
+/// Config that builds only the dev profile for faster tests
+const SINGLE_PROFILE_CONFIG: &str = "[processor]\nenabled = [\"cargo\"]\n\n[processor.cargo]\nprofiles = [\"dev\"]\n";
+
 #[test]
 fn cargo_valid_project() {
     if !tool_available("cargo") {
@@ -14,7 +17,7 @@ fn cargo_valid_project() {
 
     fs::write(
         project_path.join("rsb.toml"),
-        "[processor]\nenabled = [\"cargo\"]\n",
+        SINGLE_PROFILE_CONFIG,
     )
     .unwrap();
 
@@ -61,7 +64,7 @@ fn cargo_incremental_skip() {
 
     fs::write(
         project_path.join("rsb.toml"),
-        "[processor]\nenabled = [\"cargo\"]\n",
+        SINGLE_PROFILE_CONFIG,
     )
     .unwrap();
 
@@ -106,7 +109,7 @@ fn cargo_rebuild_on_source_change() {
 
     fs::write(
         project_path.join("rsb.toml"),
-        "[processor]\nenabled = [\"cargo\"]\n",
+        SINGLE_PROFILE_CONFIG,
     )
     .unwrap();
 
@@ -186,7 +189,7 @@ fn cargo_build_failure() {
 
     fs::write(
         project_path.join("rsb.toml"),
-        "[processor]\nenabled = [\"cargo\"]\n",
+        SINGLE_PROFILE_CONFIG,
     )
     .unwrap();
 
@@ -222,10 +225,10 @@ fn cargo_check_command() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
-    // Use "cargo check" instead of "cargo build"
+    // Use "cargo check" instead of "cargo build", single profile for speed
     fs::write(
         project_path.join("rsb.toml"),
-        "[processor]\nenabled = [\"cargo\"]\n\n[processor.cargo]\ncommand = \"check\"\n",
+        "[processor]\nenabled = [\"cargo\"]\n\n[processor.cargo]\ncommand = \"check\"\nprofiles = [\"dev\"]\n",
     )
     .unwrap();
 
@@ -255,6 +258,53 @@ fn cargo_check_command() {
     assert!(
         stdout.contains("Processing:"),
         "Should process cargo: {}",
+        stdout
+    );
+}
+
+#[test]
+fn cargo_multi_profile() {
+    if !tool_available("cargo") {
+        eprintln!("cargo not found, skipping test");
+        return;
+    }
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    // Default profiles: dev + release
+    fs::write(
+        project_path.join("rsb.toml"),
+        "[processor]\nenabled = [\"cargo\"]\n",
+    )
+    .unwrap();
+
+    fs::create_dir_all(project_path.join("mylib/src")).unwrap();
+
+    fs::write(
+        project_path.join("mylib/Cargo.toml"),
+        "[package]\nname = \"mylib\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+
+    fs::write(
+        project_path.join("mylib/src/lib.rs"),
+        "pub fn add(a: i32, b: i32) -> i32 { a + b }\n",
+    )
+    .unwrap();
+
+    let output = run_rsb_with_env(project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
+    assert!(
+        output.status.success(),
+        "Multi-profile build should succeed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("2 products"),
+        "Should discover 2 products (dev + release): {}",
         stdout
     );
 }

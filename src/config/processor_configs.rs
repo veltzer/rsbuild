@@ -575,6 +575,10 @@ fn default_cargo_command() -> String {
     "build".into()
 }
 
+fn default_cargo_profiles() -> Vec<String> {
+    vec!["dev".into(), "release".into()]
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CargoConfig {
     #[serde(default = "default_true")]
@@ -589,6 +593,8 @@ pub struct CargoConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default)]
     pub auto_inputs: Vec<String>,
+    #[serde(default = "default_cargo_profiles")]
+    pub profiles: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
     #[serde(flatten)]
@@ -604,6 +610,7 @@ impl Default for CargoConfig {
             args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
+            profiles: default_cargo_profiles(),
             cache_output_dir: true,
             scan: default_scan!(extensions: ["Cargo.toml"]),
         }
@@ -613,8 +620,9 @@ impl Default for CargoConfig {
 impl KnownFields for CargoConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "cargo", "command", "args", "extra_inputs", "auto_inputs", "cache_output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "cargo", "command", "args", "extra_inputs", "auto_inputs", "profiles",
+            "cache_output_dir", "scan_dir", "extensions", "exclude_dirs", "exclude_files",
+            "exclude_paths",
         ]
     }
 }

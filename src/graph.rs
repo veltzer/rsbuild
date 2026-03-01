@@ -205,7 +205,12 @@ impl BuildGraph {
     /// Add a product with an output directory for mass generator caching.
     /// The output_dir is the directory whose contents will be cached/restored as a whole.
     pub fn add_product_with_output_dir(&mut self, inputs: Vec<PathBuf>, outputs: Vec<PathBuf>, processor: &str, config_hash: Option<String>, output_dir: PathBuf) -> Result<usize> {
-        let id = self.add_product(inputs, outputs, processor, config_hash)?;
+        self.add_product_with_output_dir_and_variant(inputs, outputs, processor, config_hash, output_dir, None)
+    }
+
+    /// Add a product with an output directory and an optional variant/profile name.
+    pub fn add_product_with_output_dir_and_variant(&mut self, inputs: Vec<PathBuf>, outputs: Vec<PathBuf>, processor: &str, config_hash: Option<String>, output_dir: PathBuf, variant: Option<&str>) -> Result<usize> {
+        let id = self.add_product_with_variant(inputs, outputs, processor, config_hash, variant)?;
         self.products[id].output_dir = Some(Arc::new(output_dir));
         Ok(id)
     }

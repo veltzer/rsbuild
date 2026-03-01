@@ -33,6 +33,7 @@ pub mod names {
     pub const CPPCHECK: &str = "cppcheck";
     pub const CLANG_TIDY: &str = "clang_tidy";
     pub const SHELLCHECK: &str = "shellcheck";
+    pub const LUACHECK: &str = "luacheck";
     pub const RUMDL: &str = "rumdl";
     pub const SLEEP: &str = "sleep";
     pub const MAKE: &str = "make";
@@ -609,7 +610,7 @@ pub use checkers::{
     AsciiCheckProcessor, AspellProcessor,
     ClippyProcessor, ClangTidyProcessor, CppcheckProcessor,
     JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
-    MakeProcessor, MarkdownlintProcessor, MdlProcessor, MypyProcessor,
+    LuacheckProcessor, MakeProcessor, MarkdownlintProcessor, MdlProcessor, MypyProcessor,
     PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,
     ScriptCheckProcessor, ShellcheckProcessor, SleepProcessor, SpellcheckProcessor,
     TaploProcessor, YamllintProcessor,
@@ -814,6 +815,7 @@ pub fn tool_install_command(tool: &str) -> Option<&'static str> {
         "cargo" | "rustc" => Some("curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"),
         // System packages (apt)
         "shellcheck" => Some("apt install shellcheck"),
+        "luacheck" => Some("apt install lua-check"),
         "cppcheck" => Some("apt install cppcheck"),
         "clang-tidy" => Some("apt install clang-tidy"),
         "gcc" => Some("apt install gcc"),

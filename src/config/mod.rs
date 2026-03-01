@@ -267,7 +267,7 @@ fn default_processors() -> Vec<String> {
         names::TERA.into(), names::RUFF.into(), names::PYLINT.into(),
         names::MYPY.into(), names::PYREFLY.into(), names::CC_SINGLE_FILE.into(),
         names::CPPCHECK.into(), names::CLANG_TIDY.into(),
-        names::SHELLCHECK.into(), names::SPELLCHECK.into(), names::MAKE.into(),
+        names::SHELLCHECK.into(), names::LUACHECK.into(), names::SPELLCHECK.into(), names::MAKE.into(),
         names::CARGO.into(), names::CLIPPY.into(), names::RUMDL.into(),
         names::YAMLLINT.into(), names::JQ.into(), names::JSONLINT.into(), names::TAPLO.into(),
         names::JSON_SCHEMA.into(),
@@ -316,6 +316,8 @@ pub(crate) struct ProcessorConfig {
     pub spellcheck: SpellcheckConfig,
     #[serde(default)]
     pub shellcheck: ShellcheckConfig,
+    #[serde(default)]
+    pub luacheck: LuacheckConfig,
     #[serde(default)]
     pub sleep: SleepConfig,
     #[serde(default)]
@@ -399,6 +401,7 @@ impl Default for ProcessorConfig {
             cppcheck: CppcheckConfig::default(),
             clang_tidy: ClangTidyConfig::default(),
             shellcheck: ShellcheckConfig::default(),
+            luacheck: LuacheckConfig::default(),
             spellcheck: SpellcheckConfig::default(),
             sleep: SleepConfig::default(),
             make: MakeConfig::default(),
@@ -448,6 +451,7 @@ impl ProcessorConfig {
             "cppcheck" => self.cppcheck.enabled,
             "clang_tidy" => self.clang_tidy.enabled,
             "shellcheck" => self.shellcheck.enabled,
+            "luacheck" => self.luacheck.enabled,
             "spellcheck" => self.spellcheck.enabled,
             "sleep" => self.sleep.enabled,
             "make" => self.make.enabled,
@@ -496,7 +500,7 @@ impl ProcessorConfig {
         let scans = [
             &self.tera.scan, &self.ruff.scan, &self.pylint.scan,
             &self.cc_single_file.scan, &self.cppcheck.scan, &self.clang_tidy.scan,
-            &self.shellcheck.scan, &self.spellcheck.scan, &self.sleep.scan,
+            &self.shellcheck.scan, &self.luacheck.scan, &self.spellcheck.scan, &self.sleep.scan,
             &self.make.scan, &self.cargo.scan, &self.clippy.scan, &self.rumdl.scan, &self.mypy.scan,
             &self.pyrefly.scan, &self.yamllint.scan, &self.jq.scan, &self.jsonlint.scan,
             &self.taplo.scan, &self.json_schema.scan, &self.tags.scan,
@@ -529,6 +533,7 @@ impl ProcessorConfig {
         self.cppcheck.scan.resolve("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
         self.clang_tidy.scan.resolve("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
         self.shellcheck.scan.resolve("", &[".sh", ".bash"], SHELL_EXCLUDE_DIRS);
+        self.luacheck.scan.resolve("", &[".lua"], BUILD_TOOL_EXCLUDES);
         self.spellcheck.scan.resolve("", &[".md"], SPELLCHECK_EXCLUDE_DIRS);
         self.sleep.scan.resolve("sleep", &[".sleep"], &[]);
         self.make.scan.resolve("", &["Makefile"], MAKE_CARGO_EXCLUDES);
@@ -717,7 +722,7 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         // cargo / clippy
         ("cargo" | "clippy", "cargo" | "command") => Some(FieldType::String),
         // mypy, pyrefly, shellcheck, rumdl, yamllint, jq, jsonlint, taplo
-        ("mypy" | "pyrefly" | "shellcheck" | "script_check", "checker") => Some(FieldType::String),
+        ("mypy" | "pyrefly" | "shellcheck" | "luacheck" | "script_check", "checker") => Some(FieldType::String),
         ("rumdl" | "yamllint" | "jsonlint" | "taplo", "linter") => Some(FieldType::String),
         ("jq", "checker") => Some(FieldType::String),
         // tags
@@ -795,6 +800,7 @@ fn validate_processor_fields(raw: &toml::Value) -> Result<()> {
             processor_names::CPPCHECK => CppcheckConfig::known_fields(),
             processor_names::CLANG_TIDY => ClangTidyConfig::known_fields(),
             processor_names::SHELLCHECK => ShellcheckConfig::known_fields(),
+            processor_names::LUACHECK => LuacheckConfig::known_fields(),
             processor_names::SPELLCHECK => SpellcheckConfig::known_fields(),
             processor_names::SLEEP => SleepConfig::known_fields(),
             processor_names::MAKE => MakeConfig::known_fields(),

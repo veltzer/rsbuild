@@ -1125,6 +1125,52 @@ impl KnownFields for ShellcheckConfig {
     }
 }
 
+fn default_luacheck_checker() -> String {
+    "luacheck".into()
+}
+
+fn default_luacheck_auto_inputs() -> Vec<String> {
+    vec![".luacheckrc".into()]
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct LuacheckConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_luacheck_checker")]
+    pub checker: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(default = "default_luacheck_auto_inputs")]
+    pub auto_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for LuacheckConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            checker: "luacheck".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            auto_inputs: default_luacheck_auto_inputs(),
+            scan: default_scan!(extensions: [".lua"]),
+        }
+    }
+}
+
+impl KnownFields for LuacheckConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "checker", "args", "extra_inputs", "auto_inputs",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ScriptCheckConfig {
     #[serde(default)]

@@ -22,7 +22,7 @@ use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::{ObjectStore, ObjectStoreOptions};
-use crate::processors::{A2xProcessor, AsciiCheckProcessor, AspellProcessor, CargoProcessor, CcSingleFileProcessor, ClangTidyProcessor, ClippyProcessor, CppcheckProcessor, DrawioProcessor, GemProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor, LibreofficeProcessor, LuaProcessor, MakoProcessor, MakeProcessor, MarpProcessor, MarkdownProcessor, MarkdownlintProcessor, MdbookProcessor, MdlProcessor, MermaidProcessor, MypyProcessor, NpmProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, PipProcessor, ProcessorMap, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor, ScriptCheckProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, SphinxProcessor, TagsProcessor, TaploProcessor, TeraProcessor, YamllintProcessor, names as proc_names};
+use crate::processors::{A2xProcessor, AsciiCheckProcessor, AspellProcessor, CargoProcessor, CcSingleFileProcessor, ClangTidyProcessor, ClippyProcessor, CppcheckProcessor, DrawioProcessor, GemProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor, LibreofficeProcessor, LuaProcessor, LuacheckProcessor, MakoProcessor, MakeProcessor, MarpProcessor, MarkdownProcessor, MarkdownlintProcessor, MdbookProcessor, MdlProcessor, MermaidProcessor, MypyProcessor, NpmProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, PipProcessor, ProcessorMap, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor, ScriptCheckProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, SphinxProcessor, TagsProcessor, TaploProcessor, TeraProcessor, YamllintProcessor, names as proc_names};
 use crate::remote_cache;
 use crate::tool_lock;
 
@@ -86,6 +86,7 @@ pub(crate) fn create_builtin_processors(cfg: &ProcessorConfig) -> ProcessorMap {
     Builder::register(&mut processors, proc_names::CPPCHECK, CppcheckProcessor::new(cfg.cppcheck.clone()));
     Builder::register(&mut processors, proc_names::CLANG_TIDY, ClangTidyProcessor::new(cfg.clang_tidy.clone()));
     Builder::register(&mut processors, proc_names::SHELLCHECK, ShellcheckProcessor::new(cfg.shellcheck.clone()));
+    Builder::register(&mut processors, proc_names::LUACHECK, LuacheckProcessor::new(cfg.luacheck.clone()));
     Builder::register(&mut processors, proc_names::RUMDL, RumdlProcessor::new(cfg.rumdl.clone()));
     Builder::register(&mut processors, proc_names::SLEEP, SleepProcessor::new(cfg.sleep.clone()));
     Builder::register(&mut processors, proc_names::MAKE, MakeProcessor::new(cfg.make.clone()));

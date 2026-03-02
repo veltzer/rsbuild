@@ -90,7 +90,7 @@ impl ProductDiscovery for MakoProcessor {
     fn execute(&self, product: &Product) -> Result<()> {
         let item = TemplateItem::new(
             product.primary_input().to_path_buf(),
-            product.outputs.first().expect(crate::errors::EMPTY_PRODUCT_OUTPUTS).clone(),
+            product.primary_output().to_path_buf(),
         );
         render_mako(&item)
     }

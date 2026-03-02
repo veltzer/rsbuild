@@ -108,8 +108,7 @@ impl ProductDiscovery for PdfuniteProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        let output = product.outputs.first()
-            .context("pdfunite product has no output")?;
+        let output = product.primary_output();
 
         if let Some(parent) = output.parent() {
             fs::create_dir_all(parent)

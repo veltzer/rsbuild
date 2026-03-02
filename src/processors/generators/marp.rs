@@ -73,8 +73,7 @@ impl ProductDiscovery for MarpProcessor {
 
     fn execute(&self, product: &Product) -> Result<()> {
         let input = product.primary_input();
-        let output = product.outputs.first()
-            .context("marp product has no output")?;
+        let output = product.primary_output();
 
         let format = output.extension()
             .context("marp output has no extension")?

@@ -49,8 +49,7 @@ impl ProductDiscovery for PandocProcessor {
 
     fn execute(&self, product: &Product) -> Result<()> {
         let input = product.primary_input();
-        let output = product.outputs.first()
-            .context("pandoc product has no output")?;
+        let output = product.primary_output();
 
         let format = output.extension()
             .context("pandoc output has no extension")?

@@ -1,12 +1,12 @@
 use anyhow::Result;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::config::SphinxConfig;
+use crate::config::{SphinxConfig, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, DirectoryProductOpts, discover_directory_products, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, scan_root_valid, run_command, anchor_display_dir, check_command_output};
 
 pub struct SphinxProcessor {
     config: SphinxConfig,
@@ -17,17 +17,24 @@ impl SphinxProcessor {
         Self { config }
     }
 
-    /// Run sphinx-build in the conf.py's directory
+    /// Run sphinx-build from the project root.
+    /// Source dir is the directory containing conf.py (e.g. "sphinx"),
+    /// output dir is at project root level (e.g. "docs").
     fn execute_sphinx(&self, conf_py: &Path) -> Result<()> {
         let mut cmd = Command::new(&self.config.sphinx_build);
-        // Source dir is the directory containing conf.py
-        cmd.arg(".");
-        // Output dir
+        let anchor_dir = conf_py.parent().unwrap_or(Path::new(""));
+        // Source dir is the directory containing conf.py (e.g. "sphinx")
+        if anchor_dir.as_os_str().is_empty() {
+            cmd.arg(".");
+        } else {
+            cmd.arg(anchor_dir);
+        }
+        // Output dir at project root level (e.g. "docs")
         cmd.arg(&self.config.output_dir);
         for arg in &self.config.args {
             cmd.arg(arg);
         }
-        let output = run_in_anchor_dir(&mut cmd, conf_py)?;
+        let output = run_command(&mut cmd)?;
         check_command_output(&output, format_args!("sphinx-build in {}", anchor_display_dir(conf_py)))
     }
 }
@@ -53,23 +60,38 @@ impl ProductDiscovery for SphinxProcessor {
         if !scan_root_valid(&self.config.scan) {
             return Ok(());
         }
-
-        discover_directory_products(graph, DirectoryProductOpts {
-            scan: &self.config.scan,
-            file_index,
-            extra_inputs: &self.config.extra_inputs,
-            cfg_hash: &self.config,
-            siblings: &SiblingFilter {
-                extensions: &[".rst", ".py", ".md"],
-                excludes: &["/.git/", "/out/", "/.rsb/", "/_build/"],
-            },
-            processor_name: crate::processors::names::SPHINX,
-            output_dir_name: if self.config.cache_output_dir {
-                Some(self.config.output_dir.as_str())
+        let files = file_index.scan(&self.config.scan, true);
+        if files.is_empty() {
+            return Ok(());
+        }
+        let hash = Some(config_hash(&self.config));
+        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let siblings = SiblingFilter {
+            extensions: &[".rst", ".py", ".md"],
+            excludes: &["/.git/", "/out/", "/.rsb/", "/_build/", "/docs/"],
+        };
+        for anchor in files {
+            let anchor_dir = anchor.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+            let sibling_files = file_index.query(
+                &anchor_dir, siblings.extensions, siblings.excludes, &[], &[],
+            );
+            let mut inputs: Vec<PathBuf> = Vec::with_capacity(1 + sibling_files.len() + extra.len());
+            inputs.push(anchor.clone());
+            for file in &sibling_files {
+                if *file != anchor {
+                    inputs.push(file.clone());
+                }
+            }
+            inputs.extend_from_slice(&extra);
+            if self.config.cache_output_dir {
+                // output_dir is at project root, NOT joined with anchor_dir
+                let output_dir = PathBuf::from(&self.config.output_dir);
+                graph.add_product_with_output_dir(inputs, vec![], crate::processors::names::SPHINX, hash.clone(), output_dir)?;
             } else {
-                None
-            },
-        })
+                graph.add_product(inputs, vec![], crate::processors::names::SPHINX, hash.clone())?;
+            }
+        }
+        Ok(())
     }
 
     fn execute(&self, product: &Product) -> Result<()> {

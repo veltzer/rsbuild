@@ -1231,8 +1231,6 @@ pub struct PipConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default)]
     pub auto_inputs: Vec<String>,
-    #[serde(default = "default_true")]
-    pub cache_output_dir: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1245,7 +1243,6 @@ impl Default for PipConfig {
             args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
-            cache_output_dir: true,
             scan: default_scan!(extensions: ["requirements.txt"]),
         }
     }
@@ -1254,7 +1251,7 @@ impl Default for PipConfig {
 impl KnownFields for PipConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "pip", "args", "extra_inputs", "auto_inputs", "cache_output_dir",
+            "enabled", "pip", "args", "extra_inputs", "auto_inputs",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }
@@ -1265,7 +1262,7 @@ fn default_sphinx_build() -> String {
 }
 
 fn default_sphinx_output_dir() -> String {
-    "_build".into()
+    "docs".into()
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -1293,7 +1290,7 @@ impl Default for SphinxConfig {
         Self {
             enabled: true,
             sphinx_build: "sphinx-build".into(),
-            output_dir: "_build".into(),
+            output_dir: "docs".into(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),

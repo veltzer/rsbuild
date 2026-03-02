@@ -65,8 +65,7 @@ impl ProductDiscovery for TagsProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        let output_path = product.outputs.first()
-            .expect(crate::errors::EMPTY_PRODUCT_OUTPUTS);
+        let output_path = product.primary_output();
 
         // Ensure output directory exists
         if let Some(parent) = output_path.parent()

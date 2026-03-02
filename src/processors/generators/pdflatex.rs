@@ -65,8 +65,7 @@ impl ProductDiscovery for PdflatexProcessor {
 
     fn execute(&self, product: &Product) -> Result<()> {
         let input = product.primary_input();
-        let final_output = product.outputs.first()
-            .context("pdflatex product has no output")?;
+        let final_output = product.primary_output();
 
         // pdflatex writes output next to the input or in -output-directory
         // We use a temp directory for the build, then move the PDF to the final output location.

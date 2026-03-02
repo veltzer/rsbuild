@@ -218,7 +218,7 @@ impl ProductDiscovery for CcSingleFileProcessor {
 
     fn execute(&self, product: &Product) -> Result<()> {
         let source = product.primary_input();
-        let executable = product.outputs.first().expect(crate::errors::EMPTY_PRODUCT_OUTPUTS);
+        let executable = product.primary_output();
         let is_cpp = source.extension().and_then(|s| s.to_str()) == Some("cc");
         let profile = self.get_profile_from_product(product)?;
         self.compile_source(source, executable, profile, is_cpp)

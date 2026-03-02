@@ -18,17 +18,18 @@ fn sphinx_valid_project() {
     )
     .unwrap();
 
-    // Create a minimal Sphinx project in a subdirectory
-    fs::create_dir_all(project_path.join("docs")).unwrap();
+    // Create a minimal Sphinx project in a "sphinx" subdirectory.
+    // sphinx-build runs from project root: `sphinx-build sphinx docs`
+    fs::create_dir_all(project_path.join("sphinx")).unwrap();
 
     fs::write(
-        project_path.join("docs/conf.py"),
+        project_path.join("sphinx/conf.py"),
         "project = 'Test'\nextensions = []\n",
     )
     .unwrap();
 
     fs::write(
-        project_path.join("docs/index.rst"),
+        project_path.join("sphinx/index.rst"),
         "Test\n====\n\nHello world.\n",
     )
     .unwrap();

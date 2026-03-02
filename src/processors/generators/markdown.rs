@@ -49,8 +49,7 @@ impl ProductDiscovery for MarkdownProcessor {
 
     fn execute(&self, product: &Product) -> Result<()> {
         let input = product.primary_input();
-        let output = product.outputs.first()
-            .context("markdown product has no output")?;
+        let output = product.primary_output();
 
         if let Some(parent) = output.parent() {
             fs::create_dir_all(parent)

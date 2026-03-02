@@ -49,8 +49,7 @@ impl ProductDiscovery for DrawioProcessor {
 
     fn execute(&self, product: &Product) -> Result<()> {
         let input = product.primary_input();
-        let output = product.outputs.first()
-            .context("drawio product has no output")?;
+        let output = product.primary_output();
 
         let format = output.extension()
             .context("drawio output has no extension")?

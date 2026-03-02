@@ -61,6 +61,12 @@ impl Product {
         self.inputs.first().expect(errors::EMPTY_PRODUCT_INPUTS)
     }
 
+    /// Return the primary (first) output file for this product.
+    /// Panics if the product has no outputs (a programming error — every generator product must have at least one).
+    pub fn primary_output(&self) -> &Path {
+        self.outputs.first().expect(errors::EMPTY_PRODUCT_OUTPUTS)
+    }
+
     /// Format a path according to the given format
     fn format_path(path: &Path, format: PathFormat) -> String {
         match format {

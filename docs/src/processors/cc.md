@@ -10,8 +10,12 @@ processor supports multi-file targets with dependency linking.
 ## How It Works
 
 The processor scans for `cc.yaml` files. Each manifest defines libraries
-and programs to build. Source files are compiled to object files, then linked
-into the final targets:
+and programs to build. All compiler and linker commands run with the working
+directory set to the `cc.yaml` file's directory, so all paths in the manifest
+(sources, include directories, output directory) are relative to that location —
+just like Make operates from the Makefile's directory.
+
+Source files are compiled to object files, then linked into the final targets:
 
 ```
 cc.yaml defines:
@@ -27,6 +31,8 @@ Build produces:
 ```
 
 ## cc.yaml Format
+
+All paths in the manifest are relative to the `cc.yaml` file's location.
 
 ```yaml
 # Global settings (all optional)

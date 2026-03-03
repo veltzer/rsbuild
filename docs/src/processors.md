@@ -46,7 +46,8 @@ Use `rsb processors files` to see which files each processor discovers.
 - [Pylint](processors/pylint.md) — lints Python files with pylint
 - [Mypy](processors/mypy.md) — type-checks Python files with mypy
 - [Pyrefly](processors/pyrefly.md) — type-checks Python files with pyrefly
-- [CC Single File](processors/cc.md) — compiles C/C++ source files into executables (single-file)
+- [CC](processors/cc.md) — builds full C/C++ projects from cc.yaml manifests
+- [CC Single File](processors/cc_single_file.md) — compiles C/C++ source files into executables (single-file)
 - [Cppcheck](processors/cppcheck.md) — runs static analysis on C/C++ source files
 - [Clang-Tidy](processors/clang_tidy.md) — runs clang-tidy static analysis on C/C++ source files
 - [Shellcheck](processors/shellcheck.md) — lints shell scripts using shellcheck

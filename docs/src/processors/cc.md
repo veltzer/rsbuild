@@ -1,310 +1,188 @@
-# CC Single File Processor
+# CC Project Processor
 
 ## Purpose
 
-Compiles C (`.c`) and C++ (`.cc`) source files into executables, one source file per executable.
+Builds full C/C++ projects with multiple targets (libraries and executables)
+defined in a `cc.yaml` manifest file. Unlike the [CC Single File](cc_single_file.md)
+processor which compiles each source file into a standalone executable, this
+processor supports multi-file targets with dependency linking.
 
 ## How It Works
 
-Source files under the configured source directory are compiled into executables
-under `out/cc_single_file/`, mirroring the directory structure:
+The processor scans for `cc.yaml` files. Each manifest defines libraries
+and programs to build. Source files are compiled to object files, then linked
+into the final targets:
 
 ```
-src/main.c       →  out/cc_single_file/main.elf
-src/a/b.c        →  out/cc_single_file/a/b.elf
-src/app.cc       →  out/cc_single_file/app.elf
+cc.yaml defines:
+  library "mymath" (static) from src/math.c, src/utils.c
+  program "main" from src/main.c, links mymath
+
+Build produces:
+  out/cc/obj/mymath/math.o
+  out/cc/obj/mymath/utils.o
+  out/cc/lib/libmymath.a
+  out/cc/obj/main/main.o
+  out/cc/bin/main
 ```
 
-Header dependencies are automatically tracked via compiler-generated `.d` files
-(`-MMD -MF`). When a header changes, all source files that include it are rebuilt.
+## cc.yaml Format
 
-## Source Files
+```yaml
+# Global settings (all optional)
+cc: gcc               # C compiler (default: gcc)
+cxx: g++              # C++ compiler (default: g++)
+cflags: [-Wall]       # Global C flags
+cxxflags: [-Wall]     # Global C++ flags
+ldflags: []           # Global linker flags
+include_dirs: [include]  # Global -I paths
+output_dir: out/cc    # Build output directory (default: out/cc)
 
-- Input: `{source_dir}/**/*.c`, `{source_dir}/**/*.cc`
-- Output: `out/cc_single_file/{relative_path}{output_suffix}`
+# Library definitions
+libraries:
+  - name: mymath
+    lib_type: shared   # shared (.so) | static (.a) | both
+    sources: [src/math.c, src/utils.c]
+    include_dirs: [include]  # Additional -I for this library
+    cflags: []               # Additional C flags
+    cxxflags: []             # Additional C++ flags
+    ldflags: [-lm]           # Linker flags for shared lib
 
-## Per-File Flags
+  - name: myhelper
+    lib_type: static
+    sources: [src/helper.c]
 
-Per-file compile and link flags can be set via special comments in source files.
-This allows individual files to require specific libraries or compiler options
-without affecting the entire project.
+# Program definitions
+programs:
+  - name: main
+    sources: [src/main.c]
+    link: [mymath, myhelper]  # Libraries defined above to link against
+    ldflags: [-lpthread]      # Additional linker flags
 
-### Flag directives
-
-```c
-// EXTRA_COMPILE_FLAGS_BEFORE=-pthread
-// EXTRA_COMPILE_FLAGS_AFTER=-O2 -DNDEBUG
-// EXTRA_LINK_FLAGS_BEFORE=-L/usr/local/lib
-// EXTRA_LINK_FLAGS_AFTER=-lX11
+  - name: tool
+    sources: [src/tool.cc]    # .cc -> uses C++ compiler
+    link: [mymath]
 ```
 
-### Command directives
+## Library Types
 
-Execute a command and use its stdout as flags (no shell):
+| Type | Output | Description |
+|------|--------|-------------|
+| `shared` | `lib/lib<name>.so` | Shared library (default). Sources compiled with `-fPIC`. |
+| `static` | `lib/lib<name>.a` | Static library via `ar rcs`. |
+| `both` | Both `.so` and `.a` | Builds both shared and static variants. |
 
-```c
-// EXTRA_COMPILE_CMD=pkg-config --cflags gtk+-3.0
-// EXTRA_LINK_CMD=pkg-config --libs gtk+-3.0
-```
+## Language Detection
 
-### Shell directives
+The compiler is chosen per source file based on extension:
 
-Execute via `sh -c` (full shell syntax):
+| Extensions | Compiler |
+|-----------|----------|
+| `.c` | C compiler (`cc` field) |
+| `.cc`, `.cpp`, `.cxx`, `.C` | C++ compiler (`cxx` field) |
 
-```c
-// EXTRA_COMPILE_SHELL=echo -DLEVEL2_CACHE_LINESIZE=$(getconf LEVEL2_CACHE_LINESIZE)
-// EXTRA_LINK_SHELL=echo -L$(brew --prefix openssl)/lib
-```
+Global `cflags` are used for C files and `cxxflags` for C++ files.
 
-### Backtick substitution
-
-Flag directives also support backtick substitution for inline command execution:
-
-```c
-// EXTRA_COMPILE_FLAGS_AFTER=`pkg-config --cflags gtk+-3.0`
-// EXTRA_LINK_FLAGS_AFTER=`pkg-config --libs gtk+-3.0`
-```
-
-### Command caching
-
-All command and shell directives (`EXTRA_*_CMD`, `EXTRA_*_SHELL`, and backtick substitutions) are cached in memory during a build. If multiple source files use the same command (e.g., `pkg-config --cflags gtk+-3.0`), it is executed only once. This improves build performance when many files share common dependencies.
-
-### Compiler profile-specific flags
-
-When using multiple compiler profiles, you can specify flags that only apply to a specific compiler by adding `[profile_name]` after the directive name:
-
-```c
-// EXTRA_COMPILE_FLAGS_BEFORE=-g
-// EXTRA_COMPILE_FLAGS_BEFORE[gcc]=-femit-struct-debug-baseonly
-// EXTRA_COMPILE_FLAGS_BEFORE[clang]=-gline-tables-only
-```
-
-In this example:
-- `-g` is applied to all compilers
-- `-femit-struct-debug-baseonly` is only applied when compiling with the "gcc" profile
-- `-gline-tables-only` is only applied when compiling with the "clang" profile
-
-The profile name matches the `name` field in your `[[processor.cc_single_file.compilers]]` configuration:
-
-```toml
-[[processor.cc_single_file.compilers]]
-name = "gcc"      # Matches [gcc] suffix
-cc = "gcc"
-
-[[processor.cc_single_file.compilers]]
-name = "clang"    # Matches [clang] suffix
-cc = "clang"
-```
-
-This works with all directive types:
-- `EXTRA_COMPILE_FLAGS_BEFORE[profile]`
-- `EXTRA_COMPILE_FLAGS_AFTER[profile]`
-- `EXTRA_LINK_FLAGS_BEFORE[profile]`
-- `EXTRA_LINK_FLAGS_AFTER[profile]`
-- `EXTRA_COMPILE_CMD[profile]`
-- `EXTRA_LINK_CMD[profile]`
-- `EXTRA_COMPILE_SHELL[profile]`
-- `EXTRA_LINK_SHELL[profile]`
-
-### Excluding files from specific profiles
-
-To exclude a source file from being compiled with specific compiler profiles, use `EXCLUDE_PROFILE`:
-
-```c
-// EXCLUDE_PROFILE=clang
-```
-
-This is useful when a file uses compiler-specific features that aren't available in other compilers. For example, a file using GCC-only builtins like `__builtin_va_arg_pack_len()`:
-
-```c
-// EXCLUDE_PROFILE=clang
-// This file uses GCC-specific builtins
-#include <stdarg.h>
-
-void example(int first, ...) {
-    int count = __builtin_va_arg_pack_len();  // GCC-only
-    // ...
-}
-```
-
-You can exclude multiple profiles by listing them space-separated:
-
-```c
-// EXCLUDE_PROFILE=clang icc
-```
-
-### Directive summary
-
-| Directive | Execution | Use case |
-|---|---|---|
-| `EXTRA_COMPILE_FLAGS_BEFORE` | Literal flags | Flags before default cflags |
-| `EXTRA_COMPILE_FLAGS_AFTER` | Literal flags | Flags after default cflags |
-| `EXTRA_LINK_FLAGS_BEFORE` | Literal flags | Flags before default ldflags |
-| `EXTRA_LINK_FLAGS_AFTER` | Literal flags | Flags after default ldflags |
-| `EXTRA_COMPILE_CMD` | Subprocess (no shell) | Dynamic compile flags via command |
-| `EXTRA_LINK_CMD` | Subprocess (no shell) | Dynamic link flags via command |
-| `EXTRA_COMPILE_SHELL` | `sh -c` (full shell) | Dynamic compile flags needing shell features |
-| `EXTRA_LINK_SHELL` | `sh -c` (full shell) | Dynamic link flags needing shell features |
-
-### Supported comment styles
-
-Directives can appear in any of these comment styles:
-
-**C++ style:**
-```c
-// EXTRA_LINK_FLAGS_AFTER=-lX11
-```
-
-**C block comment (single line):**
-```c
-/* EXTRA_LINK_FLAGS_AFTER=-lX11 */
-```
-
-**C block comment (multi-line, star-prefixed):**
-```c
-/*
- * EXTRA_LINK_FLAGS_AFTER=-lX11
- */
-```
-
-## Command Line Ordering
-
-The compiler command is constructed in this order:
+## Output Layout
 
 ```
-compiler -MMD -MF deps -I... [compile_before] [cflags/cxxflags] [compile_after] -o output source [link_before] [ldflags] [link_after]
+<output_dir>/
+  obj/<target_name>/    # Object files per target
+    file.o
+  lib/                  # Libraries
+    lib<name>.a
+    lib<name>.so
+  bin/                  # Executables
+    <program_name>
 ```
 
-Link flags come **after** the source file so the linker can resolve symbols correctly.
+## Build Modes
 
-| Position | Source |
-|---|---|
-| `compile_before` | `EXTRA_COMPILE_FLAGS_BEFORE` + `EXTRA_COMPILE_CMD` + `EXTRA_COMPILE_SHELL` |
-| `cflags/cxxflags` | `[processor.cc_single_file]` config `cflags` or `cxxflags` |
-| `compile_after` | `EXTRA_COMPILE_FLAGS_AFTER` |
-| `link_before` | `EXTRA_LINK_FLAGS_BEFORE` + `EXTRA_LINK_CMD` + `EXTRA_LINK_SHELL` |
-| `ldflags` | `[processor.cc_single_file]` config `ldflags` |
-| `link_after` | `EXTRA_LINK_FLAGS_AFTER` |
+### Compile + Link (default)
 
-## Verbosity Levels (`--processor-verbose N`)
+Each source is compiled to a `.o` file, then targets are linked from objects.
+This provides incremental rebuilds — only changed sources are recompiled.
 
-| Level | Output |
-|-------|--------|
-| 0 (default) | Target basename: `main.elf` |
-| 1 | Target path + compiler commands: `out/cc_single_file/main.elf` |
-| 2 | Adds source path: `out/cc_single_file/main.elf <- src/main.c` |
-| 3 | Adds all inputs: `out/cc_single_file/main.elf <- src/main.c, src/utils.h` |
+### Single Invocation
+
+When `single_invocation = true` in `rsb.toml`, programs are built by passing
+all sources directly to the compiler in one command. Libraries still use
+compile+link since `ar` requires object files.
 
 ## Configuration
 
-### Single Compiler (Legacy)
-
 ```toml
-[processor.cc_single_file]
-cc = "gcc"                # C compiler (default: "gcc")
-cxx = "g++"               # C++ compiler (default: "g++")
-cflags = []               # C compiler flags
-cxxflags = []             # C++ compiler flags
-ldflags = []              # Linker flags
-include_paths = []        # Additional -I paths (relative to project root)
-scan_dir = "src"          # Source directory (default: "src")
-output_suffix = ".elf"    # Suffix for output executables (default: ".elf")
-extra_inputs = []         # Additional files that trigger rebuilds when changed
-include_scanner = "native" # Method for scanning header dependencies (default: "native")
+[processor.cc]
+enabled = true            # Enable/disable (default: true)
+cc = "gcc"                # Default C compiler (default: "gcc")
+cxx = "g++"               # Default C++ compiler (default: "g++")
+cflags = []               # Additional global C flags
+cxxflags = []             # Additional global C++ flags
+ldflags = []              # Additional global linker flags
+include_dirs = []         # Additional global -I paths
+output_dir = "out/cc"     # Output directory (default: "out/cc")
+single_invocation = false # Use single-invocation mode (default: false)
+extra_inputs = []         # Extra files that trigger rebuilds
+cache_output_dir = true   # Cache entire output directory (default: true)
 ```
 
-### Multiple Compilers
-
-To compile with multiple compilers (e.g., both GCC and Clang), use the `compilers` array:
-
-```toml
-[processor.cc_single_file]
-scan_dir = "src"
-include_paths = ["include"]  # Shared across all compilers
-
-[[processor.cc_single_file.compilers]]
-name = "gcc"
-cc = "gcc"
-cxx = "g++"
-cflags = ["-Wall", "-Wextra"]
-cxxflags = ["-Wall", "-Wextra"]
-ldflags = []
-output_suffix = ".elf"
-
-[[processor.cc_single_file.compilers]]
-name = "clang"
-cc = "clang"
-cxx = "clang++"
-cflags = ["-Wall", "-Wextra", "-Weverything"]
-cxxflags = ["-Wall", "-Wextra"]
-ldflags = []
-output_suffix = ".elf"
-```
-
-When using multiple compilers, outputs are organized by compiler name:
-
-```
-src/main.c  →  out/cc_single_file/gcc/main.elf
-            →  out/cc_single_file/clang/main.elf
-```
-
-Each source file is compiled once per compiler profile, allowing you to:
-- Test code with multiple compilers to catch different warnings
-- Compare output between compilers
-- Build for different targets (cross-compilation)
+Note: The `cc.yaml` manifest settings override the `rsb.toml` defaults for
+compiler, flags, and output directory.
 
 ### Configuration Reference
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `cc` | string | `"gcc"` | C compiler command |
-| `cxx` | string | `"g++"` | C++ compiler command |
-| `cflags` | string[] | `[]` | Flags passed to the C compiler |
-| `cxxflags` | string[] | `[]` | Flags passed to the C++ compiler |
-| `ldflags` | string[] | `[]` | Flags passed to the linker |
-| `include_paths` | string[] | `[]` | Additional `-I` include paths (shared) |
-| `scan_dir` | string | `"src"` | Directory to scan for source files |
-| `output_suffix` | string | `".elf"` | Suffix appended to output executables |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
-| `include_scanner` | string | `"native"` | Method for scanning header dependencies |
-| `compilers` | array | `[]` | Multiple compiler profiles (overrides single-compiler fields) |
+| `enabled` | bool | `true` | Enable/disable the processor |
+| `cc` | string | `"gcc"` | Default C compiler |
+| `cxx` | string | `"g++"` | Default C++ compiler |
+| `cflags` | string[] | `[]` | Global C compiler flags |
+| `cxxflags` | string[] | `[]` | Global C++ compiler flags |
+| `ldflags` | string[] | `[]` | Global linker flags |
+| `include_dirs` | string[] | `[]` | Global include directories |
+| `output_dir` | string | `"out/cc"` | Build output directory |
+| `single_invocation` | bool | `false` | Build programs in single compiler invocation |
+| `extra_inputs` | string[] | `[]` | Extra files that trigger rebuilds when changed |
+| `cache_output_dir` | bool | `true` | Cache the entire output directory |
+| `scan_dir` | string | `""` | Directory to scan for cc.yaml files |
+| `extensions` | string[] | `["cc.yaml"]` | File patterns to scan for |
 
-### Compiler Profile Fields
+## Example
 
-Each entry in the `compilers` array can have:
+Given this project layout:
 
-| Key | Type | Required | Description |
-|-----|------|----------|-------------|
-| `name` | string | Yes | Profile name (used in output path) |
-| `cc` | string | No | C compiler (default: "gcc") |
-| `cxx` | string | No | C++ compiler (default: "g++") |
-| `cflags` | string[] | No | C compiler flags |
-| `cxxflags` | string[] | No | C++ compiler flags |
-| `ldflags` | string[] | No | Linker flags |
-| `output_suffix` | string | No | Output suffix (default: ".elf") |
+```
+myproject/
+  cc.yaml
+  include/
+    math.h
+  src/
+    math.c
+    main.c
+  rsb.toml
+```
 
-## Include Scanner
+With `cc.yaml`:
 
-The `include_scanner` option controls how header dependencies are discovered:
+```yaml
+include_dirs: [include]
 
-| Value | Description |
-|-------|-------------|
-| `native` | Fast regex-based scanner (default). Parses `#include` directives directly without spawning external processes. Handles `#include "file"` and `#include <file>` forms. |
-| `compiler` | Uses `gcc -MM` / `g++ -MM` to scan dependencies. More accurate for complex cases (computed includes, conditional compilation) but slower as it spawns a compiler process per source file. |
+libraries:
+  - name: math
+    lib_type: static
+    sources: [src/math.c]
 
-### Native scanner behavior
+programs:
+  - name: main
+    sources: [src/main.c]
+    link: [math]
+```
 
-The native scanner:
-- Recursively follows `#include` directives
-- Searches include paths in order: source file directory, configured `include_paths`, project root
-- Skips system headers (`/usr/...`, `/lib/...`)
-- Only tracks project-local headers (relative paths)
+Running `rsb build` produces:
 
-### When to use compiler scanner
-
-Use `include_scanner = "compiler"` if you have:
-- Computed includes: `#include MACRO_THAT_EXPANDS_TO_FILENAME`
-- Complex conditional compilation affecting which headers are included
-- Headers outside the standard search paths that the native scanner misses
-
-The native scanner may occasionally report extra dependencies (false positives), which is safe—it just means some files might rebuild unnecessarily. It will not miss dependencies (false negatives) for standard `#include` patterns.
+```
+out/cc/obj/math/math.o
+out/cc/lib/libmath.a
+out/cc/obj/main/main.o
+out/cc/bin/main
+```

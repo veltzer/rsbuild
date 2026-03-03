@@ -6,7 +6,7 @@ use std::process::Command;
 use crate::config::{CcConfig, CcManifest, config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, scan_root_valid, run_command, check_command_output};
+use crate::processors::{ProductDiscovery, ProcessorType, scan_root_valid, run_command, check_command_output, anchor_display_dir};
 
 pub struct CcProcessor {
     config: CcConfig,
@@ -26,7 +26,7 @@ impl CcProcessor {
     }
 
     /// Choose the compiler for a source file.
-    fn compiler_for(&self, manifest: &CcManifest, source: &Path) -> String {
+    fn compiler_for(manifest: &CcManifest, source: &Path) -> String {
         if Self::is_cxx(source) {
             manifest.cxx.clone()
         } else {
@@ -52,24 +52,33 @@ impl CcProcessor {
         Ok(manifest)
     }
 
+    /// Set the working directory on a command to the anchor directory.
+    /// If anchor_dir is empty (project root), don't set current_dir.
+    fn set_anchor_dir(cmd: &mut Command, anchor_dir: &Path) {
+        if !anchor_dir.as_os_str().is_empty() {
+            cmd.current_dir(anchor_dir);
+        }
+    }
+
     /// Compile a single source file to an object file.
-    fn compile_object(&self, manifest: &CcManifest, source: &Path, obj: &Path, extra_cflags: &[String]) -> Result<()> {
-        if let Some(parent) = obj.parent() {
+    /// All paths (source, obj) are relative to anchor_dir.
+    fn compile_object(manifest: &CcManifest, anchor_dir: &Path, source: &Path, obj: &Path, extra_cflags: &[String]) -> Result<()> {
+        // Ensure object directory exists (relative to anchor_dir)
+        let full_obj = if anchor_dir.as_os_str().is_empty() { obj.to_path_buf() } else { anchor_dir.join(obj) };
+        if let Some(parent) = full_obj.parent() {
             fs::create_dir_all(parent)
                 .with_context(|| format!("Failed to create object directory: {}", parent.display()))?;
         }
-        let compiler = self.compiler_for(manifest, source);
+        let compiler = Self::compiler_for(manifest, source);
         let mut cmd = Command::new(&compiler);
+        Self::set_anchor_dir(&mut cmd, anchor_dir);
         cmd.arg("-c");
-        // Global flags
         for flag in Self::lang_flags_for(manifest, source) {
             cmd.arg(flag);
         }
-        // Extra flags (per-target)
         for flag in extra_cflags {
             cmd.arg(flag);
         }
-        // Include dirs
         for dir in &manifest.include_dirs {
             cmd.arg(format!("-I{}", dir));
         }
@@ -79,11 +88,13 @@ impl CcProcessor {
     }
 
     /// Build a static library from object files.
-    fn build_static_lib(lib_path: &Path, objects: &[PathBuf]) -> Result<()> {
-        if let Some(parent) = lib_path.parent() {
+    fn build_static_lib(anchor_dir: &Path, lib_path: &Path, objects: &[PathBuf]) -> Result<()> {
+        let full_lib = if anchor_dir.as_os_str().is_empty() { lib_path.to_path_buf() } else { anchor_dir.join(lib_path) };
+        if let Some(parent) = full_lib.parent() {
             fs::create_dir_all(parent)?;
         }
         let mut cmd = Command::new("ar");
+        Self::set_anchor_dir(&mut cmd, anchor_dir);
         cmd.arg("rcs").arg(lib_path);
         for obj in objects {
             cmd.arg(obj);
@@ -93,12 +104,14 @@ impl CcProcessor {
     }
 
     /// Build a shared library from object files.
-    fn build_shared_lib(&self, manifest: &CcManifest, lib_path: &Path, objects: &[PathBuf], ldflags: &[String]) -> Result<()> {
-        if let Some(parent) = lib_path.parent() {
+    fn build_shared_lib(manifest: &CcManifest, anchor_dir: &Path, lib_path: &Path, objects: &[PathBuf], ldflags: &[String]) -> Result<()> {
+        let full_lib = if anchor_dir.as_os_str().is_empty() { lib_path.to_path_buf() } else { anchor_dir.join(lib_path) };
+        if let Some(parent) = full_lib.parent() {
             fs::create_dir_all(parent)?;
         }
         let compiler = &manifest.cc;
         let mut cmd = Command::new(compiler);
+        Self::set_anchor_dir(&mut cmd, anchor_dir);
         cmd.arg("-shared").arg("-o").arg(lib_path);
         for obj in objects {
             cmd.arg(obj);
@@ -114,13 +127,14 @@ impl CcProcessor {
     }
 
     /// Link object files into an executable.
-    fn link_program(&self, manifest: &CcManifest, exe_path: &Path, objects: &[PathBuf], lib_dir: &Path, link_libs: &[String], ldflags: &[String]) -> Result<()> {
-        if let Some(parent) = exe_path.parent() {
+    fn link_program(manifest: &CcManifest, anchor_dir: &Path, exe_path: &Path, objects: &[PathBuf], lib_dir: &Path, link_libs: &[String], ldflags: &[String]) -> Result<()> {
+        let full_exe = if anchor_dir.as_os_str().is_empty() { exe_path.to_path_buf() } else { anchor_dir.join(exe_path) };
+        if let Some(parent) = full_exe.parent() {
             fs::create_dir_all(parent)?;
         }
-        // Use C++ compiler if any object came from C++ source
         let compiler = &manifest.cc;
         let mut cmd = Command::new(compiler);
+        Self::set_anchor_dir(&mut cmd, anchor_dir);
         cmd.arg("-o").arg(exe_path);
         for obj in objects {
             cmd.arg(obj);
@@ -142,14 +156,15 @@ impl CcProcessor {
     }
 
     /// Single-invocation build for a program (all sources in one command).
-    fn single_invocation_program(&self, manifest: &CcManifest, exe_path: &Path, sources: &[PathBuf], lib_dir: &Path, link_libs: &[String], ldflags: &[String]) -> Result<()> {
-        if let Some(parent) = exe_path.parent() {
+    fn single_invocation_program(manifest: &CcManifest, anchor_dir: &Path, exe_path: &Path, sources: &[String], lib_dir: &Path, link_libs: &[String], ldflags: &[String]) -> Result<()> {
+        let full_exe = if anchor_dir.as_os_str().is_empty() { exe_path.to_path_buf() } else { anchor_dir.join(exe_path) };
+        if let Some(parent) = full_exe.parent() {
             fs::create_dir_all(parent)?;
         }
-        let has_cxx = sources.iter().any(|s| Self::is_cxx(s));
+        let has_cxx = sources.iter().any(|s| Self::is_cxx(Path::new(s)));
         let compiler = if has_cxx { &manifest.cxx } else { &manifest.cc };
         let mut cmd = Command::new(compiler);
-        // Add global flags
+        Self::set_anchor_dir(&mut cmd, anchor_dir);
         let global_flags = if has_cxx { &manifest.cxxflags } else { &manifest.cflags };
         for flag in global_flags {
             cmd.arg(flag);
@@ -178,14 +193,12 @@ impl CcProcessor {
     }
 
     /// Execute a full cc.yaml build.
+    /// All compiler commands run with cwd set to the cc.yaml's directory.
+    /// Paths in the manifest (sources, include_dirs, output_dir) are relative to that directory.
     fn execute_build(&self, yaml_path: &Path) -> Result<()> {
         let manifest = Self::parse_manifest(yaml_path)?;
-        let project_dir = yaml_path.parent().unwrap_or(Path::new(""));
-        let output_dir = if project_dir.as_os_str().is_empty() {
-            PathBuf::from(&manifest.output_dir)
-        } else {
-            project_dir.join(&manifest.output_dir)
-        };
+        let anchor_dir = yaml_path.parent().unwrap_or(Path::new(""));
+        let output_dir = PathBuf::from(&manifest.output_dir);
         let obj_dir = output_dir.join("obj");
         let lib_dir = output_dir.join("lib");
         let bin_dir = output_dir.join("bin");
@@ -199,64 +212,37 @@ impl CcProcessor {
             if build_shared {
                 extra_cflags.push("-fPIC".into());
             }
-            // Add library-specific include dirs
             for dir in &lib.include_dirs {
                 extra_cflags.push(format!("-I{}", dir));
             }
 
-            // Compile objects
+            // Compile objects — source paths are as written in cc.yaml (relative to anchor)
             let target_obj_dir = obj_dir.join(&lib.name);
             let mut objects = Vec::new();
             for source_str in &lib.sources {
-                let source = if project_dir.as_os_str().is_empty() {
-                    PathBuf::from(source_str)
-                } else {
-                    project_dir.join(source_str)
-                };
+                let source = Path::new(source_str);
                 let obj_name = format!("{}.o", source.file_stem().context("source has no stem")?.to_string_lossy());
                 let obj = target_obj_dir.join(&obj_name);
-                if !self.config.single_invocation {
-                    self.compile_object(&manifest, &source, &obj, &extra_cflags)?;
-                }
+                Self::compile_object(&manifest, anchor_dir, source, &obj, &extra_cflags)?;
                 objects.push(obj);
-            }
-
-            if self.config.single_invocation {
-                // For libraries in single invocation mode, still need to compile objects
-                // since we need .o files for ar/linking
-                for (i, source_str) in lib.sources.iter().enumerate() {
-                    let source = if project_dir.as_os_str().is_empty() {
-                        PathBuf::from(source_str)
-                    } else {
-                        project_dir.join(source_str)
-                    };
-                    self.compile_object(&manifest, &source, &objects[i], &extra_cflags)?;
-                }
             }
 
             if build_static {
                 let lib_path = lib_dir.join(format!("lib{}.a", lib.name));
-                Self::build_static_lib(&lib_path, &objects)?;
+                Self::build_static_lib(anchor_dir, &lib_path, &objects)?;
             }
             if build_shared {
                 let lib_path = lib_dir.join(format!("lib{}.so", lib.name));
-                self.build_shared_lib(&manifest, &lib_path, &objects, &lib.ldflags)?;
+                Self::build_shared_lib(&manifest, anchor_dir, &lib_path, &objects, &lib.ldflags)?;
             }
         }
 
         // Build programs
         for prog in &manifest.programs {
             let exe_path = bin_dir.join(&prog.name);
-            let sources: Vec<PathBuf> = prog.sources.iter().map(|s| {
-                if project_dir.as_os_str().is_empty() {
-                    PathBuf::from(s)
-                } else {
-                    project_dir.join(s)
-                }
-            }).collect();
 
             if self.config.single_invocation {
-                self.single_invocation_program(&manifest, &exe_path, &sources, &lib_dir, &prog.link, &prog.ldflags)?;
+                Self::single_invocation_program(&manifest, anchor_dir, &exe_path, &prog.sources, &lib_dir, &prog.link, &prog.ldflags)?;
             } else {
                 let target_obj_dir = obj_dir.join(&prog.name);
                 let mut objects = Vec::new();
@@ -266,13 +252,14 @@ impl CcProcessor {
                     extra_cflags.push(format!("-I{}", dir));
                 }
 
-                for source in &sources {
+                for source_str in &prog.sources {
+                    let source = Path::new(source_str);
                     let obj_name = format!("{}.o", source.file_stem().context("source has no stem")?.to_string_lossy());
                     let obj = target_obj_dir.join(&obj_name);
-                    self.compile_object(&manifest, source, &obj, &extra_cflags)?;
+                    Self::compile_object(&manifest, anchor_dir, source, &obj, &extra_cflags)?;
                     objects.push(obj);
                 }
-                self.link_program(&manifest, &exe_path, &objects, &lib_dir, &prog.link, &prog.ldflags)?;
+                Self::link_program(&manifest, anchor_dir, &exe_path, &objects, &lib_dir, &prog.link, &prog.ldflags)?;
             }
         }
 
@@ -309,7 +296,6 @@ impl ProductDiscovery for CcProcessor {
         let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
 
         for yaml_path in files {
-            // Parse the manifest to discover source files as inputs
             let manifest = match Self::parse_manifest(&yaml_path) {
                 Ok(m) => m,
                 Err(e) => {
@@ -317,28 +303,29 @@ impl ProductDiscovery for CcProcessor {
                 }
             };
 
-            let project_dir = yaml_path.parent().unwrap_or(Path::new(""));
+            // Source paths in the manifest are relative to the cc.yaml directory.
+            // For the build graph, we need paths relative to the project root.
+            let anchor_dir = yaml_path.parent().unwrap_or(Path::new(""));
 
-            // Collect all source files as inputs
             let mut inputs: Vec<PathBuf> = Vec::new();
-            inputs.push(yaml_path.clone()); // cc.yaml itself is an input
+            inputs.push(yaml_path.clone());
 
             for lib in &manifest.libraries {
                 for source in &lib.sources {
-                    let path = if project_dir.as_os_str().is_empty() {
+                    let path = if anchor_dir.as_os_str().is_empty() {
                         PathBuf::from(source)
                     } else {
-                        project_dir.join(source)
+                        anchor_dir.join(source)
                     };
                     inputs.push(path);
                 }
             }
             for prog in &manifest.programs {
                 for source in &prog.sources {
-                    let path = if project_dir.as_os_str().is_empty() {
+                    let path = if anchor_dir.as_os_str().is_empty() {
                         PathBuf::from(source)
                     } else {
-                        project_dir.join(source)
+                        anchor_dir.join(source)
                     };
                     inputs.push(path);
                 }
@@ -347,10 +334,11 @@ impl ProductDiscovery for CcProcessor {
             inputs.extend_from_slice(&extra);
 
             if self.config.cache_output_dir {
-                let output_dir = if project_dir.as_os_str().is_empty() {
+                // output_dir is relative to the cc.yaml directory
+                let output_dir = if anchor_dir.as_os_str().is_empty() {
                     PathBuf::from(&manifest.output_dir)
                 } else {
-                    project_dir.join(&manifest.output_dir)
+                    anchor_dir.join(&manifest.output_dir)
                 };
                 graph.add_product_with_output_dir(
                     inputs, vec![], crate::processors::names::CC, hash.clone(), output_dir,
@@ -363,7 +351,10 @@ impl ProductDiscovery for CcProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        self.execute_build(product.primary_input())
+        let yaml_path = product.primary_input();
+        let display_dir = anchor_display_dir(yaml_path);
+        self.execute_build(yaml_path)
+            .with_context(|| format!("cc build failed in {}", display_dir))
     }
 
     fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {

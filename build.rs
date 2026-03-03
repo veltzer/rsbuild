@@ -42,9 +42,9 @@ fn main() {
     // Only re-run when the git HEAD or branch ref changes.
     println!("cargo:rerun-if-changed=.git/HEAD");
     // Read .git/HEAD to find the current ref and watch it.
-    if let Ok(head) = std::fs::read_to_string(".git/HEAD") {
-        if let Some(refpath) = head.trim().strip_prefix("ref: ") {
-            println!("cargo:rerun-if-changed=.git/{refpath}");
-        }
+    if let Ok(head) = std::fs::read_to_string(".git/HEAD")
+        && let Some(refpath) = head.trim().strip_prefix("ref: ")
+    {
+        println!("cargo:rerun-if-changed=.git/{refpath}");
     }
 }

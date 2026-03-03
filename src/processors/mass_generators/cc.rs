@@ -199,9 +199,9 @@ impl CcProcessor {
         let lib_dir = output_dir.join("lib");
         let bin_dir = output_dir.join("bin");
 
-        // Resolve include_dirs to project-root-relative paths
+        // include_dirs are relative to the project root (not the cc.yaml directory)
         let resolved_include_flags: Vec<String> = manifest.include_dirs.iter()
-            .map(|dir| format!("-I{}", Self::resolve_path(anchor_dir, dir).display()))
+            .map(|dir| format!("-I{dir}"))
             .collect();
 
         // Build libraries
@@ -214,7 +214,7 @@ impl CcProcessor {
                 extra_cflags.push("-fPIC".into());
             }
             for dir in &lib.include_dirs {
-                extra_cflags.push(format!("-I{}", Self::resolve_path(anchor_dir, dir).display()));
+                extra_cflags.push(format!("-I{dir}"));
             }
             extra_cflags.extend_from_slice(&resolved_include_flags);
 
@@ -255,7 +255,7 @@ impl CcProcessor {
 
                 let mut extra_cflags: Vec<String> = prog.cflags.clone();
                 for dir in &prog.include_dirs {
-                    extra_cflags.push(format!("-I{}", Self::resolve_path(anchor_dir, dir).display()));
+                    extra_cflags.push(format!("-I{dir}"));
                 }
                 extra_cflags.extend_from_slice(&resolved_include_flags);
 

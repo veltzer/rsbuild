@@ -312,9 +312,11 @@ macro_rules! impl_checker {
 
 mod aspell;
 mod ascii_check;
+mod checkpatch;
 mod clippy;
 mod clang_tidy;
 mod cppcheck;
+mod cpplint;
 
 mod make;
 mod markdownlint;
@@ -339,9 +341,11 @@ mod luacheck;
 
 pub use aspell::AspellProcessor;
 pub use ascii_check::AsciiCheckProcessor;
+pub use checkpatch::CheckpatchProcessor;
 pub use clippy::ClippyProcessor;
 pub use clang_tidy::ClangTidyProcessor;
 pub use cppcheck::CppcheckProcessor;
+pub use cpplint::CpplintProcessor;
 
 pub use make::MakeProcessor;
 pub use markdownlint::MarkdownlintProcessor;

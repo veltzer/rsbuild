@@ -584,6 +584,10 @@ pub struct SharedBuildArgs {
     #[arg(short, long = "target")]
     pub targets: Option<Vec<String>>,
 
+    /// Only build products whose inputs are under these directories (repeatable)
+    #[arg(short, long = "dir")]
+    pub dirs: Option<Vec<String>>,
+
     /// Write a Chrome trace JSON file for build visualization (open in chrome://tracing or Perfetto)
     #[arg(long, value_name = "FILE")]
     pub trace: Option<String>,
@@ -592,6 +596,17 @@ pub struct SharedBuildArgs {
 impl SharedBuildArgs {
     /// Convert to BuildOptions with the given overrides for build-only fields.
     pub fn to_build_options(&self, cli: &Cli, force: bool, stop_after: BuildPhase) -> BuildOptions {
+        // Merge --dir values into targets as glob patterns
+        let targets = match (&self.targets, &self.dirs) {
+            (None, None) => None,
+            (Some(t), None) => Some(t.clone()),
+            (None, Some(d)) => Some(d.iter().map(|dir| format!("{dir}/**")).collect()),
+            (Some(t), Some(d)) => {
+                let mut merged = t.clone();
+                merged.extend(d.iter().map(|dir| format!("{dir}/**")));
+                Some(merged)
+            }
+        };
         BuildOptions {
             force,
             verbose: cli.verbose,
@@ -607,7 +622,7 @@ impl SharedBuildArgs {
             explain: self.explain,
             no_mtime: self.no_mtime,
             retry: self.retry,
-            targets: self.targets.clone(),
+            targets,
             trace: self.trace.clone(),
         }
     }

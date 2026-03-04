@@ -280,6 +280,9 @@ pub(crate) fn default_processors() -> Vec<String> {
         names::MERMAID.into(), names::DRAWIO.into(), names::LIBREOFFICE.into(),
         names::PDFUNITE.into(), names::SCRIPT_CHECK.into(),
         names::LINUX_MODULE.into(),
+        names::CPPLINT.into(),
+        names::CHECKPATCH.into(),
+        names::OBJDUMP.into(),
     ]
 }
 
@@ -389,6 +392,12 @@ pub(crate) struct ProcessorConfig {
     pub script_check: ScriptCheckConfig,
     #[serde(default)]
     pub linux_module: LinuxModuleConfig,
+    #[serde(default)]
+    pub cpplint: CpplintConfig,
+    #[serde(default)]
+    pub checkpatch: CheckpatchConfig,
+    #[serde(default)]
+    pub objdump: ObjdumpConfig,
     /// Captures unknown [processor.PLUGIN_NAME] sections for Lua plugins
     #[serde(flatten)]
     pub extra: HashMap<String, toml::Value>,
@@ -443,6 +452,9 @@ impl Default for ProcessorConfig {
             pdfunite: PdfuniteConfig::default(),
             script_check: ScriptCheckConfig::default(),
             linux_module: LinuxModuleConfig::default(),
+            cpplint: CpplintConfig::default(),
+            checkpatch: CheckpatchConfig::default(),
+            objdump: ObjdumpConfig::default(),
             extra: HashMap::new(),
         }
     }
@@ -495,6 +507,9 @@ impl ProcessorConfig {
             "pdfunite" => self.pdfunite.enabled,
             "script_check" => self.script_check.enabled,
             "linux_module" => self.linux_module.enabled,
+            "cpplint" => self.cpplint.enabled,
+            "checkpatch" => self.checkpatch.enabled,
+            "objdump" => self.objdump.enabled,
             _ => true, // unknown processors (plugins) default to enabled
         }
     }
@@ -520,6 +535,7 @@ impl ProcessorConfig {
             &self.mako.scan,
             &self.mermaid.scan, &self.drawio.scan, &self.libreoffice.scan,
             &self.script_check.scan, &self.linux_module.scan,
+            &self.cpplint.scan, &self.checkpatch.scan, &self.objdump.scan,
         ];
         let mut dirs: Vec<String> = scans.iter()
             .filter_map(|s| s.scan_dir.as_deref())
@@ -578,6 +594,9 @@ impl ProcessorConfig {
         self.libreoffice.scan.resolve("", &[".odp"], BUILD_TOOL_EXCLUDES);
         self.script_check.scan.resolve("", &[], &[]);
         self.linux_module.scan.resolve("", &["linux-module.yaml"], BUILD_TOOL_EXCLUDES);
+        self.cpplint.scan.resolve("src", &[".c", ".cc", ".h", ".hh"], CC_EXCLUDE_DIRS);
+        self.checkpatch.scan.resolve("src", &[".c", ".h"], CC_EXCLUDE_DIRS);
+        self.objdump.scan.resolve("out/cc_single_file", &[".elf"], &[]);
     }
 }
 
@@ -786,6 +805,8 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         ("libreoffice", "formats") => Some(FieldType::StringArray),
         // pdfunite
         ("pdfunite", "pdfunite_bin" | "source_dir" | "source_ext" | "source_output_dir" | "output_dir") => Some(FieldType::String),
+        // objdump
+        ("objdump", "output_dir") => Some(FieldType::String),
         // cache_output_dir — shared by mass generators
         ("cargo" | "sphinx" | "mdbook" | "npm" | "gem", "cache_output_dir") => Some(FieldType::Bool),
         _ => None,
@@ -855,6 +876,9 @@ fn validate_processor_fields(raw: &toml::Value) -> Result<()> {
             processor_names::PDFUNITE => PdfuniteConfig::known_fields(),
             processor_names::SCRIPT_CHECK => ScriptCheckConfig::known_fields(),
             processor_names::LINUX_MODULE => LinuxModuleConfig::known_fields(),
+            processor_names::CPPLINT => CpplintConfig::known_fields(),
+            processor_names::CHECKPATCH => CheckpatchConfig::known_fields(),
+            processor_names::OBJDUMP => ObjdumpConfig::known_fields(),
             _ => continue, // unknown processor name = Lua plugin, skip
         };
 

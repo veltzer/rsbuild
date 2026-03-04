@@ -69,6 +69,9 @@ pub mod names {
     pub const PDFUNITE: &str = "pdfunite";
     pub const SCRIPT_CHECK: &str = "script_check";
     pub const LINUX_MODULE: &str = "linux_module";
+    pub const CPPLINT: &str = "cpplint";
+    pub const CHECKPATCH: &str = "checkpatch";
+    pub const OBJDUMP: &str = "objdump";
 }
 
 /// Global flag: set to true on Ctrl+C so subprocesses can be killed promptly.
@@ -610,14 +613,14 @@ where
 // Re-export from subdirectories
 pub use checkers::{
     AsciiCheckProcessor, AspellProcessor,
-    ClippyProcessor, ClangTidyProcessor, CppcheckProcessor,
+    CheckpatchProcessor, ClippyProcessor, ClangTidyProcessor, CppcheckProcessor, CpplintProcessor,
     JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
     LuacheckProcessor, MakeProcessor, MarkdownlintProcessor, MdlProcessor, MypyProcessor,
     PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,
     ScriptCheckProcessor, ShellcheckProcessor, SleepProcessor, SpellcheckProcessor,
     TaploProcessor, YamllintProcessor,
 };
-pub use generators::{A2xProcessor, CcSingleFileProcessor, DrawioProcessor, LibreofficeProcessor, LinuxModuleProcessor, MakoProcessor, MarpProcessor, MarkdownProcessor, MermaidProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, TagsProcessor, TeraProcessor};
+pub use generators::{A2xProcessor, CcSingleFileProcessor, DrawioProcessor, LibreofficeProcessor, LinuxModuleProcessor, MakoProcessor, MarpProcessor, MarkdownProcessor, MermaidProcessor, ObjdumpProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, TagsProcessor, TeraProcessor};
 pub use mass_generators::{CargoProcessor, CcProcessor, GemProcessor, MdbookProcessor, NpmProcessor, PipProcessor, SphinxProcessor};
 pub(crate) use generators::tags as tags_cmd;
 pub use lua_processor::LuaProcessor;
@@ -818,6 +821,7 @@ pub fn tool_install_command(tool: &str) -> Option<&'static str> {
         // System packages (apt)
         "shellcheck" => Some("apt install shellcheck"),
         "luacheck" => Some("apt install lua-check"),
+        "cpplint" => Some("pip install cpplint"),
         "cppcheck" => Some("apt install cppcheck"),
         "clang-tidy" => Some("apt install clang-tidy"),
         "gcc" => Some("apt install gcc"),
@@ -848,6 +852,10 @@ pub fn tool_install_command(tool: &str) -> Option<&'static str> {
         "gems/bin/mdl" => Some("gem install mdl"),
         "bundle" => Some("gem install bundler"),
         "ruby" => Some("apt install ruby"),
+        // Binutils
+        "objdump" => Some("apt install binutils"),
+        // Kernel tools
+        "checkpatch.pl" => Some("install from Linux kernel source: scripts/checkpatch.pl"),
         // Perl
         "perl" => Some("apt install perl"),
         _ => None,

@@ -2343,3 +2343,46 @@ impl KnownFields for PdfuniteConfig {
         ]
     }
 }
+
+checker_config!(CpplintConfig, scan_dir: "src", extensions: [".c", ".cc", ".h", ".hh"]);
+
+checker_config!(CheckpatchConfig, scan_dir: "src", extensions: [".c", ".h"]);
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ObjdumpConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(default = "default_objdump_output_dir")]
+    pub output_dir: String,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+fn default_objdump_output_dir() -> String {
+    "out/objdump".into()
+}
+
+impl Default for ObjdumpConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            output_dir: default_objdump_output_dir(),
+            scan: default_scan!(scan_dir: "out/cc_single_file", extensions: [".elf"]),
+        }
+    }
+}
+
+impl KnownFields for ObjdumpConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "args", "extra_inputs", "output_dir",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}

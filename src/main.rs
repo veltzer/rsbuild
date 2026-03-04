@@ -304,6 +304,7 @@ fn run() -> Result<()> {
             println!("VERGEN_GIT_BRANCH: {}", env!("VERGEN_GIT_BRANCH"));
             println!("VERGEN_GIT_DIRTY: {}", dirty_str);
             println!("VERGEN_RUSTC_SEMVER: {}", env!("VERGEN_RUSTC_SEMVER"));
+            println!("RUST_EDITION: {}", env!("RSB_RUST_EDITION"));
         }
         Commands::Config { action } => {
             let builder = Builder::new()?;

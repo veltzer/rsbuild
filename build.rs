@@ -27,12 +27,21 @@ fn main() {
         })
         .unwrap_or_else(|| "unknown".to_owned());
 
+    let edition = std::fs::read_to_string("Cargo.toml")
+        .ok()
+        .and_then(|s| s.lines()
+            .find(|l| l.starts_with("edition"))
+            .and_then(|l| l.split('=').nth(1))
+            .map(|v| v.trim().trim_matches('"').to_owned()))
+        .unwrap_or_else(|| "unknown".to_owned());
+    println!("cargo:rustc-env=RSB_RUST_EDITION={edition}");
     println!("cargo:rustc-env=VERGEN_GIT_SHA={sha}");
     println!("cargo:rustc-env=VERGEN_GIT_BRANCH={branch}");
     println!("cargo:rustc-env=VERGEN_RUSTC_SEMVER={rustc_ver}");
     println!("cargo:rustc-env=RSB_GIT_DESCRIBE={describe}");
 
-    // Only re-run when the git HEAD or branch ref changes.
+    // Only re-run when the git HEAD, branch ref, or Cargo.toml changes.
+    println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-changed=.git/HEAD");
     // Read .git/HEAD to find the current ref and watch it.
     // The loose ref file may not exist if git has packed the ref,

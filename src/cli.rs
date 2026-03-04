@@ -9,39 +9,39 @@ use std::str::FromStr;
 #[command(about = "Rust Build Tool - Incremental build system with templates", long_about = None)]
 pub struct Cli {
     /// Show skip/restore/cache messages during build
-    #[arg(short, long, global = true)]
+    #[arg(short, long, global = true, hide_short_help = true)]
     pub verbose: bool,
 
     /// What to show for output files (none, basename, path)
-    #[arg(short = 'O', long, global = true, value_enum, default_value = "none")]
+    #[arg(short = 'O', long, global = true, value_enum, default_value = "none", hide_short_help = true)]
     pub output_display: OutputDisplay,
 
     /// What to show for input files (none, source, all)
-    #[arg(short = 'I', long, global = true, value_enum, default_value = "source")]
+    #[arg(short = 'I', long, global = true, value_enum, default_value = "source", hide_short_help = true)]
     pub input_display: InputDisplay,
 
     /// Path format for displayed files (basename, path)
-    #[arg(short = 'P', long, global = true, value_enum, default_value = "path")]
+    #[arg(short = 'P', long, global = true, value_enum, default_value = "path", hide_short_help = true)]
     pub path_format: PathFormat,
 
     /// Print each child process command before it is executed
-    #[arg(long, global = true)]
+    #[arg(long, global = true, hide_short_help = true)]
     pub show_child_processes: bool,
 
     /// Show tool output even on success (default: only show on failure)
-    #[arg(long, global = true)]
+    #[arg(long, global = true, hide_short_help = true)]
     pub show_output: bool,
 
     /// Output in JSON Lines format (machine-readable)
-    #[arg(long, global = true)]
+    #[arg(long, global = true, hide_short_help = true)]
     pub json: bool,
 
     /// Suppress all output except errors (useful for CI)
-    #[arg(short, long, global = true)]
+    #[arg(short, long, global = true, hide_short_help = true)]
     pub quiet: bool,
 
     /// Show build phase messages (discover, add_dependencies, etc.)
-    #[arg(long, global = true)]
+    #[arg(long, global = true, hide_short_help = true)]
     pub phases: bool,
 
     #[command(subcommand)]

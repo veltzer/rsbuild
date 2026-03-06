@@ -289,12 +289,13 @@ fn run() -> Result<()> {
         }
         Commands::Version => {
             println!("rsbuild {} by {}", env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"));
-            println!("RSBUILD_GIT_DESCRIBE: {}", env!("RSBUILD_GIT_DESCRIBE"));
-            println!("VERGEN_GIT_SHA: {}", env!("VERGEN_GIT_SHA"));
-            println!("VERGEN_GIT_BRANCH: {}", env!("VERGEN_GIT_BRANCH"));
-            println!("VERGEN_GIT_DIRTY: {}", env!("VERGEN_GIT_DIRTY"));
-            println!("VERGEN_RUSTC_SEMVER: {}", env!("VERGEN_RUSTC_SEMVER"));
-            println!("RUST_EDITION: {}", env!("RSBUILD_RUST_EDITION"));
+            println!("GIT_DESCRIBE: {}", env!("GIT_DESCRIBE"));
+            println!("GIT_SHA: {}", env!("GIT_SHA"));
+            println!("GIT_BRANCH: {}", env!("GIT_BRANCH"));
+            println!("GIT_DIRTY: {}", env!("GIT_DIRTY"));
+            println!("RUSTC_SEMVER: {}", env!("RUSTC_SEMVER"));
+            println!("RUST_EDITION: {}", env!("RUST_EDITION"));
+            println!("BUILD_TIMESTAMP: {}", env!("BUILD_TIMESTAMP"));
         }
         Commands::Config { action } => {
             let builder = Builder::new()?;

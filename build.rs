@@ -34,7 +34,6 @@ fn main() {
             .and_then(|l| l.split('=').nth(1))
             .map(|v| v.trim().trim_matches('"').to_owned()))
         .unwrap_or_else(|| "unknown".to_owned());
-    println!("cargo:rustc-env=RSBUILD_RUST_EDITION={edition}");
     let is_dirty = Command::new("git")
         .args(["diff", "--quiet", "HEAD"])
         .stdout(std::process::Stdio::null())
@@ -48,11 +47,24 @@ fn main() {
         describe
     };
 
-    println!("cargo:rustc-env=VERGEN_GIT_SHA={sha}");
-    println!("cargo:rustc-env=VERGEN_GIT_BRANCH={branch}");
-    println!("cargo:rustc-env=VERGEN_GIT_DIRTY={dirty_str}");
-    println!("cargo:rustc-env=VERGEN_RUSTC_SEMVER={rustc_ver}");
-    println!("cargo:rustc-env=RSBUILD_GIT_DESCRIBE={describe}");
+    let build_timestamp = {
+        let output = Command::new("date")
+            .arg("+%Y-%m-%d %H:%M:%S")
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+            .unwrap_or_else(|| "unknown".to_owned());
+        output
+    };
+
+    println!("cargo:rustc-env=RUST_EDITION={edition}");
+    println!("cargo:rustc-env=GIT_SHA={sha}");
+    println!("cargo:rustc-env=GIT_BRANCH={branch}");
+    println!("cargo:rustc-env=GIT_DIRTY={dirty_str}");
+    println!("cargo:rustc-env=RUSTC_SEMVER={rustc_ver}");
+    println!("cargo:rustc-env=GIT_DESCRIBE={describe}");
+    println!("cargo:rustc-env=BUILD_TIMESTAMP={build_timestamp}");
 
     // Only re-run when the git HEAD, branch ref, or Cargo.toml changes.
     println!("cargo:rerun-if-changed=Cargo.toml");

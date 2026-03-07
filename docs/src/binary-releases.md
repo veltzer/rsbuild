@@ -11,7 +11,6 @@ RSBuild publishes pre-built binaries as GitHub releases when a version tag
 | Linux aarch64 (arm64) | `rsbuild-linux-aarch64` |
 | macOS x86_64 | `rsbuild-macos-x86_64` |
 | macOS aarch64 (Apple Silicon) | `rsbuild-macos-aarch64` |
-| Windows x86_64 | `rsbuild-windows-x86_64.exe` |
 
 ## How It Works
 

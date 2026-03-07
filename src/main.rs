@@ -16,6 +16,7 @@ mod file_index;
 mod graph;
 mod json_output;
 mod object_store;
+mod platform;
 mod processors;
 mod progress;
 mod runtime_flags;
@@ -36,12 +37,7 @@ use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 
 fn main() -> std::process::ExitCode {
-    // SAFETY: Resetting SIGPIPE to default behavior is safe — this is a standard
-    // pattern for CLI tools to avoid "broken pipe" errors when piping to head/less/etc.
-    // No Rust invariants are affected; we're just restoring the OS default signal handler.
-    unsafe {
-        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
-    }
+    platform::reset_sigpipe();
 
     match run() {
         Ok(()) => std::process::ExitCode::from(RsbuildExitCode::Success.code()),

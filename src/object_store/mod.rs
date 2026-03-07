@@ -302,9 +302,7 @@ impl ObjectStore {
             let content = self.read_object(checksum)?;
             fs::write(output_path, &content)
                 .with_context(|| format!("Failed to write decompressed output: {}", output_path.display()))?;
-            use std::os::unix::fs::PermissionsExt;
-            let perms = std::fs::Permissions::from_mode(0o644);
-            fs::set_permissions(output_path, perms)
+            crate::platform::set_permissions_mode(output_path, 0o644)
                 .context("Failed to make restored file writable")?;
             return Ok(());
         }
@@ -318,9 +316,7 @@ impl ObjectStore {
                 fs::copy(&object_path, output_path)
                     .with_context(|| format!("Failed to copy from cache: {}", checksum))?;
                 // Make the copy writable (owner rw) — it's independent from the cache object
-                use std::os::unix::fs::PermissionsExt;
-                let perms = std::fs::Permissions::from_mode(0o644);
-                fs::set_permissions(output_path, perms)
+                crate::platform::set_permissions_mode(output_path, 0o644)
                     .context("Failed to make restored file writable")?;
             }
         }

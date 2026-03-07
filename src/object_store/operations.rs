@@ -254,8 +254,6 @@ impl ObjectStore {
     /// Walks the directory, stores each file as an object, and records the manifest.
     /// Returns `Ok(true)` if any output content changed compared to the previous cache entry.
     pub fn cache_output_dir(&self, cache_key: &str, input_checksum: &str, dir: &Path) -> Result<bool> {
-        use std::os::unix::fs::PermissionsExt;
-
         anyhow::ensure!(dir.exists() && dir.is_dir(),
             "Expected output directory not produced: {}", dir.display());
 
@@ -273,8 +271,8 @@ impl ObjectStore {
                 .with_context(|| format!("File {} is not under dir {}", file_path.display(), dir.display()))?
                 .display().to_string();
             let mode = fs::metadata(&file_path)
-                .map(|m| m.permissions().mode())
-                .ok();
+                .ok()
+                .and_then(|m| crate::platform::get_mode(&m));
 
             if !any_changed {
                 let prev_checksum = prev_entry.as_ref().and_then(|e| {
@@ -325,7 +323,6 @@ impl ObjectStore {
     /// Recreates the entire directory structure from cached objects.
     /// Returns `Ok(true)` if restore succeeded, `Ok(false)` if no matching cache entry.
     pub fn restore_output_dir(&self, cache_key: &str, input_checksum: &str, dir: &Path) -> Result<bool> {
-        use std::os::unix::fs::PermissionsExt;
 
         let entry = match self.get_entry(cache_key) {
             Some(e) if e.input_checksum == input_checksum => Some(e),
@@ -363,10 +360,9 @@ impl ObjectStore {
             }
             self.restore_file(&output.checksum, &file_path)?;
 
-            // Restore Unix permissions if stored
+            // Restore file permissions if stored
             if let Some(mode) = output.mode {
-                let perms = std::fs::Permissions::from_mode(mode);
-                fs::set_permissions(&file_path, perms)
+                crate::platform::set_permissions_mode(&file_path, mode)
                     .with_context(|| format!("Failed to set permissions on {}", file_path.display()))?;
             }
         }

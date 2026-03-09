@@ -187,19 +187,15 @@ pub enum Commands {
         #[command(flatten)]
         shared: SharedBuildArgs,
     },
-    /// Clean build artifacts
-    Clean {
-        #[command(subcommand)]
-        action: Option<CleanAction>,
-    },
-    /// Show the status of each product (up-to-date, stale, or restorable)
-    Status,
-    /// Initialize a new rsbuild project in the current directory
-    Init,
     /// Manage the build cache
     Cache {
         #[command(subcommand)]
         action: CacheAction,
+    },
+    /// Clean build artifacts
+    Clean {
+        #[command(subcommand)]
+        action: Option<CleanAction>,
     },
     /// Generate shell completion scripts
     Complete {
@@ -207,32 +203,10 @@ pub enum Commands {
         #[arg(value_enum)]
         shells: Vec<Shell>,
     },
-    /// Watch source files and auto-rebuild on changes
-    Watch {
-        #[command(flatten)]
-        shared: SharedBuildArgs,
-    },
-    /// Manage processors
-    Processors {
-        #[command(subcommand)]
-        action: ProcessorAction,
-    },
-    /// Print version information
-    Version,
     /// Show or inspect configuration
     Config {
         #[command(subcommand)]
         action: ConfigAction,
-    },
-    /// Manage external tool dependencies
-    Tools {
-        #[command(subcommand)]
-        action: ToolsAction,
-    },
-    /// Display the build dependency graph
-    Graph {
-        #[command(subcommand)]
-        action: GraphAction,
     },
     /// Show source file dependencies (e.g., header files for C/C++)
     Deps {
@@ -241,6 +215,18 @@ pub enum Commands {
     },
     /// Check build environment: tool availability, config validity, common problems
     Doctor,
+    /// Display the build dependency graph
+    Graph {
+        #[command(subcommand)]
+        action: GraphAction,
+    },
+    /// Initialize a new rsbuild project in the current directory
+    Init,
+    /// Manage processors
+    Processors {
+        #[command(subcommand)]
+        action: ProcessorAction,
+    },
     /// Count source lines of code (SLOC) by language
     Sloc {
         /// Show COCOMO effort/cost estimation
@@ -250,15 +236,29 @@ pub enum Commands {
         #[arg(long, default_value = "56286")]
         salary: u64,
     },
+    /// Smart config manipulation commands
+    Smart {
+        #[command(subcommand)]
+        action: SmartAction,
+    },
+    /// Show the status of each product (up-to-date, stale, or restorable)
+    Status,
     /// Search and query frontmatter tags from markdown files
     Tags {
         #[command(subcommand)]
         action: TagsAction,
     },
-    /// Smart config manipulation commands
-    Smart {
+    /// Manage external tool dependencies
+    Tools {
         #[command(subcommand)]
-        action: SmartAction,
+        action: ToolsAction,
+    },
+    /// Print version information
+    Version,
+    /// Watch source files and auto-rebuild on changes
+    Watch {
+        #[command(flatten)]
+        shared: SharedBuildArgs,
     },
 }
 

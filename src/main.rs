@@ -120,33 +120,6 @@ fn run() -> Result<()> {
                 builder.build(&opts, Arc::clone(&interrupted), init_timings)?;
             }
         }
-        Commands::Clean { action } => {
-            match action.unwrap_or(CleanAction::Outputs) {
-                CleanAction::Outputs => {
-                    let builder = Builder::new()?;
-                    builder.clean(cli.verbose)?;
-                }
-                CleanAction::All => {
-                    let builder = Builder::new()?;
-                    builder.distclean()?;
-                }
-                CleanAction::Git => {
-                    let builder = Builder::new()?;
-                    builder.hardclean()?;
-                }
-                CleanAction::Unknown { force } => {
-                    let builder = Builder::new()?;
-                    builder.clean_unknown(force, cli.verbose)?;
-                }
-            }
-        }
-        Commands::Status => {
-            let builder = Builder::new()?;
-            builder.status(cli.verbose)?;
-        }
-        Commands::Init => {
-            init_project()?;
-        }
         Commands::Cache { action } => {
             match action {
                 CacheAction::Clear => {
@@ -234,30 +207,25 @@ fn run() -> Result<()> {
                 }
             }
         }
-        Commands::Processors { action } => {
-            match action {
-                cli::ProcessorAction::List { all } => {
-                    // Try with project config; fall back to no-config listing
-                    match Builder::new() {
-                        Ok(builder) => builder.processor(cli::ProcessorAction::List { all })?,
-                        Err(_) => builder::processors::list_processors_no_config(all)?,
-                    }
-                }
-                cli::ProcessorAction::Defconfig { ref name } => {
-                    match Builder::new() {
-                        Ok(builder) => builder.processor(action)?,
-                        Err(_) => builder::processors::processor_defconfig(name)?,
-                    }
-                }
-                action => {
+        Commands::Clean { action } => {
+            match action.unwrap_or(CleanAction::Outputs) {
+                CleanAction::Outputs => {
                     let builder = Builder::new()?;
-                    builder.processor(action)?;
+                    builder.clean(cli.verbose)?;
+                }
+                CleanAction::All => {
+                    let builder = Builder::new()?;
+                    builder.distclean()?;
+                }
+                CleanAction::Git => {
+                    let builder = Builder::new()?;
+                    builder.hardclean()?;
+                }
+                CleanAction::Unknown { force } => {
+                    let builder = Builder::new()?;
+                    builder.clean_unknown(force, cli.verbose)?;
                 }
             }
-        }
-        Commands::Tools { action } => {
-            let builder = Builder::new()?;
-            builder.tools(action, cli.verbose)?;
         }
         Commands::Complete { shells } => {
             let shells_to_generate = if shells.is_empty() {
@@ -279,27 +247,9 @@ fn run() -> Result<()> {
                 print_completions(shell);
             }
         }
-        Commands::Watch { ref shared } => {
-            let opts = shared.to_build_options(&cli, false, BuildPhase::Build);
-            watcher::watch(&opts, Arc::clone(&interrupted))?;
-        }
-        Commands::Version => {
-            println!("rsbuild {} by {}", env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"));
-            println!("GIT_DESCRIBE: {}", env!("GIT_DESCRIBE"));
-            println!("GIT_SHA: {}", env!("GIT_SHA"));
-            println!("GIT_BRANCH: {}", env!("GIT_BRANCH"));
-            println!("GIT_DIRTY: {}", env!("GIT_DIRTY"));
-            println!("RUSTC_SEMVER: {}", env!("RUSTC_SEMVER"));
-            println!("RUST_EDITION: {}", env!("RUST_EDITION"));
-            println!("BUILD_TIMESTAMP: {}", env!("BUILD_TIMESTAMP"));
-        }
         Commands::Config { action } => {
             let builder = Builder::new()?;
             builder.config(action)?;
-        }
-        Commands::Graph { action } => {
-            let builder = Builder::new()?;
-            builder.graph(action)?;
         }
         Commands::Deps { action } => {
             let builder = Builder::new()?;
@@ -308,6 +258,34 @@ fn run() -> Result<()> {
         Commands::Doctor => {
             let builder = Builder::new()?;
             builder.doctor()?;
+        }
+        Commands::Graph { action } => {
+            let builder = Builder::new()?;
+            builder.graph(action)?;
+        }
+        Commands::Init => {
+            init_project()?;
+        }
+        Commands::Processors { action } => {
+            match action {
+                cli::ProcessorAction::List { all } => {
+                    // Try with project config; fall back to no-config listing
+                    match Builder::new() {
+                        Ok(builder) => builder.processor(cli::ProcessorAction::List { all })?,
+                        Err(_) => builder::processors::list_processors_no_config(all)?,
+                    }
+                }
+                cli::ProcessorAction::Defconfig { ref name } => {
+                    match Builder::new() {
+                        Ok(builder) => builder.processor(action)?,
+                        Err(_) => builder::processors::processor_defconfig(name)?,
+                    }
+                }
+                action => {
+                    let builder = Builder::new()?;
+                    builder.processor(action)?;
+                }
+            }
         }
         Commands::Sloc { cocomo, salary } => {
             let file_index = file_index::FileIndex::build()?;
@@ -350,6 +328,10 @@ fn run() -> Result<()> {
                 }
             }
         }
+        Commands::Status => {
+            let builder = Builder::new()?;
+            builder.status(cli.verbose)?;
+        }
         Commands::Tags { action } => {
             let config = Config::load()?;
             let db_path = &config.processor.tags.output;
@@ -370,6 +352,24 @@ fn run() -> Result<()> {
                 cli::TagsAction::Remove { tag } => processors::tags_cmd::remove_tag(tags_file, &tag)?,
                 cli::TagsAction::Sync { prune } => processors::tags_cmd::sync_tags(db_path, tags_file, prune, cli.verbose)?,
             }
+        }
+        Commands::Tools { action } => {
+            let builder = Builder::new()?;
+            builder.tools(action, cli.verbose)?;
+        }
+        Commands::Version => {
+            println!("rsbuild {} by {}", env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"));
+            println!("GIT_DESCRIBE: {}", env!("GIT_DESCRIBE"));
+            println!("GIT_SHA: {}", env!("GIT_SHA"));
+            println!("GIT_BRANCH: {}", env!("GIT_BRANCH"));
+            println!("GIT_DIRTY: {}", env!("GIT_DIRTY"));
+            println!("RUSTC_SEMVER: {}", env!("RUSTC_SEMVER"));
+            println!("RUST_EDITION: {}", env!("RUST_EDITION"));
+            println!("BUILD_TIMESTAMP: {}", env!("BUILD_TIMESTAMP"));
+        }
+        Commands::Watch { ref shared } => {
+            let opts = shared.to_build_options(&cli, false, BuildPhase::Build);
+            watcher::watch(&opts, Arc::clone(&interrupted))?;
         }
     }
 

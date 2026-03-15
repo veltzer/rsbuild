@@ -30,6 +30,14 @@ chmod +x rsbuild
 sudo mv rsbuild /usr/local/bin/
 ```
 
+## Install from crates.io
+
+```bash
+cargo install rsbuild
+```
+
+This downloads, compiles, and installs the latest published version into `~/.cargo/bin/`.
+
 ## Build from source
 
 ```bash

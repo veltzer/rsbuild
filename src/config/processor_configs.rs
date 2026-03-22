@@ -2446,3 +2446,49 @@ impl KnownFields for EslintConfig {
         ]
     }
 }
+
+fn default_htmlhint_linter() -> String {
+    "htmlhint".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct HtmlhintConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_htmlhint_linter")]
+    pub linter: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(default = "default_htmlhint_auto_inputs")]
+    pub auto_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+fn default_htmlhint_auto_inputs() -> Vec<String> {
+    vec![".htmlhintrc".into()]
+}
+
+impl Default for HtmlhintConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            linter: "htmlhint".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            auto_inputs: default_htmlhint_auto_inputs(),
+            scan: default_scan!(extensions: [".html", ".htm"]),
+        }
+    }
+}
+
+impl KnownFields for HtmlhintConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}

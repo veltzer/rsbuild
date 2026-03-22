@@ -62,6 +62,7 @@ macro_rules! for_each_processor {
             CHECKPATCH,     checkpatch,     CheckpatchConfig,      CheckpatchProcessor,      ("src", &[".c", ".h"], CC_EXCLUDE_DIRS);
             OBJDUMP,        objdump,        ObjdumpConfig,         ObjdumpProcessor,         ("out/cc_single_file", &[".elf"], &[]);
             ESLINT,         eslint,         EslintConfig,          EslintProcessor,          ("", &[".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"], BUILD_TOOL_EXCLUDES);
+            HTMLHINT,       htmlhint,       HtmlhintConfig,        HtmlhintProcessor,        ("", &[".html", ".htm"], BUILD_TOOL_EXCLUDES);
         }
     };
 }

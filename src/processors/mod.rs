@@ -581,7 +581,7 @@ where
 pub use checkers::{
     AsciiCheckProcessor, AspellProcessor,
     CheckpatchProcessor, ClippyProcessor, ClangTidyProcessor, CppcheckProcessor, CpplintProcessor,
-    EslintProcessor, HtmlhintProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
+    EslintProcessor, HtmlhintProcessor, JshintProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
     LuacheckProcessor, MakeProcessor, MarkdownlintProcessor, MdlProcessor, MypyProcessor,
     PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,
     ScriptCheckProcessor, ShellcheckProcessor, SleepProcessor, SpellcheckProcessor,
@@ -815,6 +815,7 @@ pub fn tool_install_command(tool: &str) -> Option<&'static str> {
         "node_modules/.bin/markdownlint" => Some("npm install markdownlint-cli"),
         "eslint" => Some("npm install -g eslint"),
         "htmlhint" => Some("npm install -g htmlhint"),
+        "jshint" => Some("npm install -g jshint"),
         "npm" => Some("apt install npm"),
         "node" => Some("apt install nodejs"),
         // Ruby tools

@@ -340,6 +340,7 @@ mod json_schema;
 mod luacheck;
 mod eslint;
 mod htmlhint;
+mod jshint;
 
 pub use aspell::AspellProcessor;
 pub use ascii_check::AsciiCheckProcessor;
@@ -371,3 +372,4 @@ pub use taplo::TaploProcessor;
 pub use json_schema::JsonSchemaProcessor;
 pub use eslint::EslintProcessor;
 pub use htmlhint::HtmlhintProcessor;
+pub use jshint::JshintProcessor;

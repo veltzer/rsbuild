@@ -7,7 +7,7 @@ mod graph;
 pub(crate) mod processors;
 pub(crate) mod sloc;
 pub(crate) mod smart;
-mod tools;
+pub(crate) mod tools;
 
 use std::borrow::Cow;
 use std::collections::HashMap;

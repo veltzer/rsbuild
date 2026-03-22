@@ -357,8 +357,18 @@ fn run() -> Result<()> {
             }
         }
         Commands::Tools { action } => {
-            let builder = Builder::new()?;
-            builder.tools(action, cli.verbose)?;
+            match action {
+                cli::ToolsAction::List { all } => {
+                    match Builder::new() {
+                        Ok(builder) => builder.tools(cli::ToolsAction::List { all }, cli.verbose)?,
+                        Err(_) => builder::tools::list_tools_no_config(all)?,
+                    }
+                }
+                action => {
+                    let builder = Builder::new()?;
+                    builder.tools(action, cli.verbose)?;
+                }
+            }
         }
         Commands::Version => {
             println!("rsconstruct {} by {}", env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"));

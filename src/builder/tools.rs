@@ -27,6 +27,42 @@ fn tool_runtime(tool: &str) -> &'static str {
     }
 }
 
+/// List all required external tools (works without rsconstruct.toml).
+pub fn list_tools_no_config(all: bool) -> Result<()> {
+    let mut cfg = crate::config::ProcessorConfig::default();
+    cfg.resolve_scan_defaults();
+    let processors = super::create_builtin_processors(&cfg);
+
+    let mut tool_map: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for name in sorted_keys(&processors) {
+        if !all && !cfg.is_enabled(name) {
+            continue;
+        }
+        for tool in processors[name].required_tools() {
+            let procs = tool_map.entry(tool).or_default();
+            if !procs.contains(name) {
+                procs.push(name.clone());
+            }
+        }
+    }
+
+    if crate::json_output::is_json_mode() {
+        let entries: Vec<json_output::ToolListEntry> = tool_map.iter()
+            .map(|(tool, procs)| json_output::ToolListEntry {
+                tool: tool.clone(),
+                processors: procs.clone(),
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&entries)?);
+        return Ok(());
+    }
+
+    for (tool, procs) in &tool_map {
+        println!("{} ({})", tool, procs.join(", "));
+    }
+    Ok(())
+}
+
 impl Builder {
     /// Verify tool versions against .tools.versions lock file.
     /// Called at the start of build unless --ignore-tool-versions is passed.

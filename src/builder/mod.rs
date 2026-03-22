@@ -23,7 +23,8 @@ use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::{ObjectStore, ObjectStoreOptions};
-use crate::processors::{A2xProcessor, AsciiCheckProcessor, AspellProcessor, CargoProcessor, CcProcessor, CcSingleFileProcessor, CheckpatchProcessor, ClangTidyProcessor, ClippyProcessor, CppcheckProcessor, CpplintProcessor, DrawioProcessor, EslintProcessor, GemProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor, LibreofficeProcessor, LinuxModuleProcessor, LuaProcessor, LuacheckProcessor, MakoProcessor, MakeProcessor, MarpProcessor, MarkdownProcessor, MarkdownlintProcessor, MdbookProcessor, MdlProcessor, MermaidProcessor, MypyProcessor, NpmProcessor, ObjdumpProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, PipProcessor, ProcessorMap, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor, ScriptCheckProcessor, ShellcheckProcessor, ProductDiscovery, SleepProcessor, SpellcheckProcessor, SphinxProcessor, TagsProcessor, TaploProcessor, TeraProcessor, YamllintProcessor, names as proc_names};
+use crate::processors as proc_mod;
+use crate::processors::{LuaProcessor, ProcessorMap, ProductDiscovery, SpellcheckProcessor, names as proc_names};
 use crate::remote_cache;
 use crate::tool_lock;
 
@@ -70,62 +71,35 @@ struct ProductStatusLabels<'a> {
     stale: (Cow<'a, str>, &'static str),
 }
 
-/// Create all built-in processors from a processor config (no Lua plugins, no spellcheck error propagation).
-pub(crate) fn create_builtin_processors(cfg: &ProcessorConfig) -> ProcessorMap {
-    let mut processors: ProcessorMap = HashMap::new();
-
-    Builder::register(&mut processors, proc_names::TERA, TeraProcessor::new(cfg.tera.clone()));
-
-    Builder::register(&mut processors, proc_names::RUFF, RuffProcessor::new(cfg.ruff.clone()));
-    Builder::register(&mut processors, proc_names::PYLINT, PylintProcessor::new(cfg.pylint.clone()));
-    Builder::register(&mut processors, proc_names::MYPY, MypyProcessor::new(cfg.mypy.clone()));
-    Builder::register(&mut processors, proc_names::PYREFLY, PyreflyProcessor::new(cfg.pyrefly.clone()));
-    Builder::register(&mut processors, proc_names::CC_SINGLE_FILE, CcSingleFileProcessor::new(cfg.cc_single_file.clone()));
-    Builder::register(&mut processors, proc_names::CC, CcProcessor::new(cfg.cc.clone()));
-    Builder::register(&mut processors, proc_names::CPPCHECK, CppcheckProcessor::new(cfg.cppcheck.clone()));
-    Builder::register(&mut processors, proc_names::CLANG_TIDY, ClangTidyProcessor::new(cfg.clang_tidy.clone()));
-    Builder::register(&mut processors, proc_names::SHELLCHECK, ShellcheckProcessor::new(cfg.shellcheck.clone()));
-    Builder::register(&mut processors, proc_names::LUACHECK, LuacheckProcessor::new(cfg.luacheck.clone()));
-    Builder::register(&mut processors, proc_names::RUMDL, RumdlProcessor::new(cfg.rumdl.clone()));
-    Builder::register(&mut processors, proc_names::SLEEP, SleepProcessor::new(cfg.sleep.clone()));
-    Builder::register(&mut processors, proc_names::MAKE, MakeProcessor::new(cfg.make.clone()));
-    Builder::register(&mut processors, proc_names::CARGO, CargoProcessor::new(cfg.cargo.clone()));
-    Builder::register(&mut processors, proc_names::CLIPPY, ClippyProcessor::new(cfg.clippy.clone()));
-    Builder::register(&mut processors, proc_names::YAMLLINT, YamllintProcessor::new(cfg.yamllint.clone()));
-    Builder::register(&mut processors, proc_names::JQ, JqProcessor::new(cfg.jq.clone()));
-    Builder::register(&mut processors, proc_names::JSONLINT, JsonlintProcessor::new(cfg.jsonlint.clone()));
-    Builder::register(&mut processors, proc_names::TAPLO, TaploProcessor::new(cfg.taplo.clone()));
-    Builder::register(&mut processors, proc_names::JSON_SCHEMA, JsonSchemaProcessor::new(cfg.json_schema.clone()));
-    Builder::register(&mut processors, proc_names::TAGS, TagsProcessor::new(cfg.tags.clone()));
-    Builder::register(&mut processors, proc_names::PIP, PipProcessor::new(cfg.pip.clone()));
-    Builder::register(&mut processors, proc_names::SPHINX, SphinxProcessor::new(cfg.sphinx.clone()));
-    Builder::register(&mut processors, proc_names::MDBOOK, MdbookProcessor::new(cfg.mdbook.clone()));
-    Builder::register(&mut processors, proc_names::NPM, NpmProcessor::new(cfg.npm.clone()));
-    Builder::register(&mut processors, proc_names::GEM, GemProcessor::new(cfg.gem.clone()));
-    Builder::register(&mut processors, proc_names::MDL, MdlProcessor::new(cfg.mdl.clone()));
-    Builder::register(&mut processors, proc_names::MARKDOWNLINT, MarkdownlintProcessor::new(cfg.markdownlint.clone()));
-    Builder::register(&mut processors, proc_names::ASPELL, AspellProcessor::new(cfg.aspell.clone()));
-    Builder::register(&mut processors, proc_names::MARP, MarpProcessor::new(cfg.marp.clone()));
-    Builder::register(&mut processors, proc_names::PANDOC, PandocProcessor::new(cfg.pandoc.clone()));
-    Builder::register(&mut processors, proc_names::MARKDOWN, MarkdownProcessor::new(cfg.markdown.clone()));
-    Builder::register(&mut processors, proc_names::PDFLATEX, PdflatexProcessor::new(cfg.pdflatex.clone()));
-    Builder::register(&mut processors, proc_names::A2X, A2xProcessor::new(cfg.a2x.clone()));
-    Builder::register(&mut processors, proc_names::ASCII_CHECK, AsciiCheckProcessor::new(cfg.ascii_check.clone()));
-    Builder::register(&mut processors, proc_names::MERMAID, MermaidProcessor::new(cfg.mermaid.clone()));
-    Builder::register(&mut processors, proc_names::DRAWIO, DrawioProcessor::new(cfg.drawio.clone()));
-    Builder::register(&mut processors, proc_names::MAKO, MakoProcessor::new(cfg.mako.clone()));
-
-    Builder::register(&mut processors, proc_names::LIBREOFFICE, LibreofficeProcessor::new(cfg.libreoffice.clone()));
-    Builder::register(&mut processors, proc_names::PDFUNITE, PdfuniteProcessor::new(cfg.pdfunite.clone()));
-    Builder::register(&mut processors, proc_names::SCRIPT_CHECK, ScriptCheckProcessor::new(cfg.script_check.clone()));
-    Builder::register(&mut processors, proc_names::LINUX_MODULE, LinuxModuleProcessor::new(cfg.linux_module.clone()));
-    Builder::register(&mut processors, proc_names::CPPLINT, CpplintProcessor::new(cfg.cpplint.clone()));
-    Builder::register(&mut processors, proc_names::CHECKPATCH, CheckpatchProcessor::new(cfg.checkpatch.clone()));
-    Builder::register(&mut processors, proc_names::OBJDUMP, ObjdumpProcessor::new(cfg.objdump.clone()));
-    Builder::register(&mut processors, proc_names::ESLINT, EslintProcessor::new(cfg.eslint.clone()));
-
-    processors
+/// Auto-generate `create_builtin_processors` from the central registry.
+/// SpellcheckProcessor is skipped here because its `new()` is fallible;
+/// it is registered separately in `Builder::create_processors()`.
+macro_rules! gen_builtin_processors {
+    ( $( $const_name:ident, $field:ident, $config_type:ty, $proc_type:ident,
+         ($($scan_args:tt)*); )* ) => {
+        pub(crate) fn create_builtin_processors(cfg: &ProcessorConfig) -> ProcessorMap {
+            let mut processors: ProcessorMap = HashMap::new();
+            $(
+                gen_builtin_processors!(@register processors, cfg,
+                    $const_name, $field, $proc_type);
+            )*
+            processors
+        }
+    };
+    // Skip SpellcheckProcessor (fallible new())
+    (@register $processors:ident, $cfg:ident, SPELLCHECK, $field:ident, $proc_type:ident) => {
+        // Registered separately in Builder::create_processors() with error handling
+    };
+    // Normal case
+    (@register $processors:ident, $cfg:ident, $const_name:ident, $field:ident, $proc_type:ident) => {
+        Builder::register(
+            &mut $processors,
+            proc_names::$const_name,
+            proc_mod::$proc_type::new($cfg.$field.clone()),
+        );
+    };
 }
+for_each_processor!(gen_builtin_processors);
 
 pub struct Builder {
     object_store: ObjectStore,

@@ -1,6 +1,9 @@
 #![deny(clippy::all)]
 #![deny(warnings)]
 
+#[macro_use]
+mod registry;
+
 mod analyzers;
 mod builder;
 mod checksum;

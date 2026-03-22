@@ -2,7 +2,7 @@
 ///
 /// On Unix, file permissions use mode bits (e.g. 0o644).
 /// On Windows, only read-only vs read-write is supported.
-
+///
 /// Reset SIGPIPE to default behavior so piping to head/less doesn't cause errors.
 /// No-op on Windows (SIGPIPE doesn't exist there).
 pub fn reset_sigpipe() {

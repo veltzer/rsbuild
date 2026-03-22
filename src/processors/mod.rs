@@ -23,57 +23,16 @@ use crate::config::{config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 
-/// Processor name constants. Using these instead of string literals catches typos at compile time.
-pub mod names {
-    pub const TERA: &str = "tera";
-    pub const RUFF: &str = "ruff";
-    pub const PYLINT: &str = "pylint";
-    pub const MYPY: &str = "mypy";
-    pub const CC_SINGLE_FILE: &str = "cc_single_file";
-    pub const CC: &str = "cc";
-    pub const CPPCHECK: &str = "cppcheck";
-    pub const CLANG_TIDY: &str = "clang_tidy";
-    pub const SHELLCHECK: &str = "shellcheck";
-    pub const LUACHECK: &str = "luacheck";
-    pub const RUMDL: &str = "rumdl";
-    pub const SLEEP: &str = "sleep";
-    pub const MAKE: &str = "make";
-    pub const CARGO: &str = "cargo";
-    pub const CLIPPY: &str = "clippy";
-    pub const SPELLCHECK: &str = "spellcheck";
-    pub const YAMLLINT: &str = "yamllint";
-    pub const JQ: &str = "jq";
-    pub const JSONLINT: &str = "jsonlint";
-    pub const TAPLO: &str = "taplo";
-    pub const PYREFLY: &str = "pyrefly";
-    pub const JSON_SCHEMA: &str = "json_schema";
-    pub const TAGS: &str = "tags";
-    pub const PIP: &str = "pip";
-    pub const SPHINX: &str = "sphinx";
-    pub const NPM: &str = "npm";
-    pub const GEM: &str = "gem";
-    pub const MDBOOK: &str = "mdbook";
-    pub const MDL: &str = "mdl";
-    pub const MARKDOWNLINT: &str = "markdownlint";
-    pub const ASPELL: &str = "aspell";
-    pub const MARP: &str = "marp";
-    pub const PANDOC: &str = "pandoc";
-    pub const MARKDOWN: &str = "markdown";
-    pub const PDFLATEX: &str = "pdflatex";
-    pub const A2X: &str = "a2x";
-    pub const ASCII_CHECK: &str = "ascii_check";
-    pub const MERMAID: &str = "mermaid";
-    pub const DRAWIO: &str = "drawio";
-    pub const MAKO: &str = "mako";
-    pub const LIBREOFFICE: &str = "libreoffice";
-    pub const PDFUNITE: &str = "pdfunite";
-    pub const SCRIPT_CHECK: &str = "script_check";
-    pub const LINUX_MODULE: &str = "linux_module";
-    pub const CPPLINT: &str = "cpplint";
-    pub const CHECKPATCH: &str = "checkpatch";
-    pub const OBJDUMP: &str = "objdump";
-    pub const ESLINT: &str = "eslint";
+/// Processor name constants — auto-generated from the central registry in `src/registry.rs`.
+macro_rules! gen_processor_names {
+    ( $( $const_name:ident, $field:ident, $config_type:ty, $proc_type:ty,
+         ($($scan_args:tt)*); )* ) => {
+        pub mod names {
+            $( pub const $const_name: &str = stringify!($field); )*
+        }
+    };
 }
+for_each_processor!(gen_processor_names);
 
 /// Global flag: set to true on Ctrl+C so subprocesses can be killed promptly.
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
@@ -389,10 +348,9 @@ pub(crate) fn flush_words(
         .append(true)
         .open(words_path)
         .with_context(|| format!("Failed to open words file: {}", words_path.display()))?;
-    if !file_exists {
-        if let Some(header) = header_line {
+    if !file_exists
+        && let Some(header) = header_line {
             writeln!(file, "{}", header)?;
-        }
     }
     for word in &sorted {
         writeln!(file, "{}", word)?;

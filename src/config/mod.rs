@@ -15,8 +15,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::errors;
-use crate::processors::names as processor_names;
-
 use variables::substitute_variables;
 
 const CONFIG_FILE: &str = "rsconstruct.toml";
@@ -261,30 +259,95 @@ pub(crate) fn default_true() -> bool {
     true
 }
 
-pub(crate) fn default_processors() -> Vec<String> {
-    use crate::processors::names;
-    vec![
-        names::TERA.into(), names::RUFF.into(), names::PYLINT.into(),
-        names::MYPY.into(), names::PYREFLY.into(), names::CC_SINGLE_FILE.into(), names::CC.into(),
-        names::CPPCHECK.into(), names::CLANG_TIDY.into(),
-        names::SHELLCHECK.into(), names::LUACHECK.into(), names::SPELLCHECK.into(), names::MAKE.into(),
-        names::CARGO.into(), names::CLIPPY.into(), names::RUMDL.into(),
-        names::YAMLLINT.into(), names::JQ.into(), names::JSONLINT.into(), names::TAPLO.into(),
-        names::JSON_SCHEMA.into(),
-        names::TAGS.into(),
-        names::PIP.into(), names::SPHINX.into(), names::MDBOOK.into(), names::NPM.into(), names::GEM.into(),
-        names::MDL.into(), names::MARKDOWNLINT.into(),
-        names::ASPELL.into(), names::MARP.into(), names::PANDOC.into(), names::MARKDOWN.into(),
-        names::PDFLATEX.into(), names::A2X.into(), names::ASCII_CHECK.into(),
-        names::MAKO.into(),
-        names::MERMAID.into(), names::DRAWIO.into(), names::LIBREOFFICE.into(),
-        names::PDFUNITE.into(), names::SCRIPT_CHECK.into(),
-        names::LINUX_MODULE.into(),
-        names::CPPLINT.into(),
-        names::CHECKPATCH.into(),
-        names::OBJDUMP.into(),
-    ]
+/// Auto-generate `ProcessorConfig` struct, `Default`, and all per-processor wiring
+/// from the central registry in `src/registry.rs`.
+macro_rules! gen_processor_config {
+    ( $( $const_name:ident, $field:ident, $config_type:ty, $proc_type:ty,
+         ($scan_dir:expr, $exts:expr, $excl:expr); )* ) => {
+
+        pub(crate) fn default_processors() -> Vec<String> {
+            vec![ $( crate::processors::names::$const_name.into(), )* ]
+        }
+
+        #[derive(Debug, Deserialize, Serialize)]
+        pub(crate) struct ProcessorConfig {
+            #[serde(default = "default_true")]
+            pub auto_detect: bool,
+            #[serde(default = "default_processors")]
+            pub enabled: Vec<String>,
+            $(
+                #[serde(default)]
+                pub $field: $config_type,
+            )*
+            /// Captures unknown [processor.PLUGIN_NAME] sections for Lua plugins
+            #[serde(flatten)]
+            pub extra: HashMap<String, toml::Value>,
+        }
+
+        impl Default for ProcessorConfig {
+            fn default() -> Self {
+                Self {
+                    auto_detect: true,
+                    enabled: default_processors(),
+                    $( $field: <$config_type>::default(), )*
+                    extra: HashMap::new(),
+                }
+            }
+        }
+
+        impl ProcessorConfig {
+            fn processor_enabled_field(&self, name: &str) -> bool {
+                match name {
+                    $( stringify!($field) => self.$field.enabled, )*
+                    _ => true, // unknown processors (plugins) default to enabled
+                }
+            }
+
+            pub(crate) fn is_enabled(&self, name: &str) -> bool {
+                self.enabled.iter().any(|p| p == name) && self.processor_enabled_field(name)
+            }
+
+            /// Collect unique scan directories from all processor configs.
+            /// Returns non-empty directory names (empty means project root, handled separately).
+            pub(crate) fn scan_dirs(&self) -> Vec<String> {
+                let scans: &[&ScanConfig] = &[ $( &self.$field.scan, )* ];
+                let mut dirs: Vec<String> = scans.iter()
+                    .filter_map(|s| s.scan_dir.as_deref())
+                    .filter(|d| !d.is_empty())
+                    .map(|d| d.to_string())
+                    .collect();
+                dirs.sort();
+                dirs.dedup();
+                dirs
+            }
+
+            /// Fill in None scan fields with per-processor defaults.
+            /// Called after loading from TOML so that `config show` displays resolved values
+            /// and processors can access fields without fallbacks.
+            pub(crate) fn resolve_scan_defaults(&mut self) {
+                $( self.$field.scan.resolve($scan_dir, $exts, $excl); )*
+            }
+
+            /// Return known fields for a builtin processor, or None for Lua plugins.
+            pub(crate) fn known_fields_for(name: &str) -> Option<&'static [&'static str]> {
+                match name {
+                    $( stringify!($field) => Some(<$config_type as KnownFields>::known_fields()), )*
+                    _ => None,
+                }
+            }
+
+            /// Return the default config for a processor as pretty JSON, or None if unknown.
+            pub(crate) fn defconfig_json(name: &str) -> Option<String> {
+                let json: serde_json::Value = match name {
+                    $( stringify!($field) => serde_json::to_value(<$config_type>::default()).ok()?, )*
+                    _ => return None,
+                };
+                serde_json::to_string_pretty(&json).ok()
+            }
+        }
+    };
 }
+for_each_processor!(gen_processor_config);
 
 pub(crate) fn default_cc_compiler() -> String {
     "gcc".into()
@@ -296,314 +359,6 @@ pub(crate) fn default_cxx_compiler() -> String {
 
 pub(crate) fn default_output_suffix() -> String {
     ".elf".into()
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct ProcessorConfig {
-    #[serde(default = "default_true")]
-    pub auto_detect: bool,
-    #[serde(default = "default_processors")]
-    pub enabled: Vec<String>,
-    #[serde(default)]
-    pub tera: TeraConfig,
-    #[serde(default)]
-    pub ruff: RuffConfig,
-    #[serde(default)]
-    pub pylint: PylintConfig,
-    #[serde(default)]
-    pub cc_single_file: CcSingleFileConfig,
-    #[serde(default)]
-    pub cc: CcConfig,
-    #[serde(default)]
-    pub cppcheck: CppcheckConfig,
-    #[serde(default)]
-    pub clang_tidy: ClangTidyConfig,
-    #[serde(default)]
-    pub spellcheck: SpellcheckConfig,
-    #[serde(default)]
-    pub shellcheck: ShellcheckConfig,
-    #[serde(default)]
-    pub luacheck: LuacheckConfig,
-    #[serde(default)]
-    pub sleep: SleepConfig,
-    #[serde(default)]
-    pub make: MakeConfig,
-    #[serde(default)]
-    pub cargo: CargoConfig,
-    #[serde(default)]
-    pub clippy: ClippyConfig,
-    #[serde(default)]
-    pub rumdl: RumdlConfig,
-    #[serde(default)]
-    pub mypy: MypyConfig,
-    #[serde(default)]
-    pub pyrefly: PyreflyConfig,
-    #[serde(default)]
-    pub yamllint: YamllintConfig,
-    #[serde(default)]
-    pub jq: JqConfig,
-    #[serde(default)]
-    pub jsonlint: JsonlintConfig,
-    #[serde(default)]
-    pub taplo: TaploConfig,
-    #[serde(default)]
-    pub json_schema: JsonSchemaConfig,
-    #[serde(default)]
-    pub tags: TagsConfig,
-    #[serde(default)]
-    pub pip: PipConfig,
-    #[serde(default)]
-    pub sphinx: SphinxConfig,
-    #[serde(default)]
-    pub mdbook: MdbookConfig,
-    #[serde(default)]
-    pub npm: NpmConfig,
-    #[serde(default)]
-    pub gem: GemConfig,
-    #[serde(default)]
-    pub mdl: MdlConfig,
-    #[serde(default)]
-    pub markdownlint: MarkdownlintConfig,
-    #[serde(default)]
-    pub aspell: AspellConfig,
-    #[serde(default)]
-    pub marp: MarpConfig,
-    #[serde(default)]
-    pub pandoc: PandocConfig,
-    #[serde(default)]
-    pub markdown: MarkdownConfig,
-    #[serde(default)]
-    pub pdflatex: PdflatexConfig,
-    #[serde(default)]
-    pub a2x: A2xConfig,
-    #[serde(default)]
-    pub ascii_check: AsciiCheckConfig,
-    #[serde(default)]
-    pub mermaid: MermaidConfig,
-    #[serde(default)]
-    pub drawio: DrawioConfig,
-    #[serde(default)]
-    pub mako: MakoConfig,
-    #[serde(default)]
-    pub libreoffice: LibreofficeConfig,
-    #[serde(default)]
-    pub pdfunite: PdfuniteConfig,
-    #[serde(default)]
-    pub script_check: ScriptCheckConfig,
-    #[serde(default)]
-    pub linux_module: LinuxModuleConfig,
-    #[serde(default)]
-    pub cpplint: CpplintConfig,
-    #[serde(default)]
-    pub checkpatch: CheckpatchConfig,
-    #[serde(default)]
-    pub objdump: ObjdumpConfig,
-    #[serde(default)]
-    pub eslint: EslintConfig,
-    /// Captures unknown [processor.PLUGIN_NAME] sections for Lua plugins
-    #[serde(flatten)]
-    pub extra: HashMap<String, toml::Value>,
-}
-
-impl Default for ProcessorConfig {
-    fn default() -> Self {
-        Self {
-            auto_detect: true,
-            enabled: default_processors(),
-            tera: TeraConfig::default(),
-            ruff: RuffConfig::default(),
-            pylint: PylintConfig::default(),
-            cc_single_file: CcSingleFileConfig::default(),
-            cc: CcConfig::default(),
-            cppcheck: CppcheckConfig::default(),
-            clang_tidy: ClangTidyConfig::default(),
-            shellcheck: ShellcheckConfig::default(),
-            luacheck: LuacheckConfig::default(),
-            spellcheck: SpellcheckConfig::default(),
-            sleep: SleepConfig::default(),
-            make: MakeConfig::default(),
-            cargo: CargoConfig::default(),
-            clippy: ClippyConfig::default(),
-            rumdl: RumdlConfig::default(),
-            mypy: MypyConfig::default(),
-            pyrefly: PyreflyConfig::default(),
-            yamllint: YamllintConfig::default(),
-            jq: JqConfig::default(),
-            jsonlint: JsonlintConfig::default(),
-            taplo: TaploConfig::default(),
-            json_schema: JsonSchemaConfig::default(),
-            tags: TagsConfig::default(),
-            pip: PipConfig::default(),
-            sphinx: SphinxConfig::default(),
-            mdbook: MdbookConfig::default(),
-            npm: NpmConfig::default(),
-            gem: GemConfig::default(),
-            mdl: MdlConfig::default(),
-            markdownlint: MarkdownlintConfig::default(),
-            aspell: AspellConfig::default(),
-            marp: MarpConfig::default(),
-            pandoc: PandocConfig::default(),
-            markdown: MarkdownConfig::default(),
-            pdflatex: PdflatexConfig::default(),
-            a2x: A2xConfig::default(),
-            ascii_check: AsciiCheckConfig::default(),
-            mermaid: MermaidConfig::default(),
-            drawio: DrawioConfig::default(),
-            mako: MakoConfig::default(),
-            libreoffice: LibreofficeConfig::default(),
-            pdfunite: PdfuniteConfig::default(),
-            script_check: ScriptCheckConfig::default(),
-            linux_module: LinuxModuleConfig::default(),
-            cpplint: CpplintConfig::default(),
-            checkpatch: CheckpatchConfig::default(),
-            objdump: ObjdumpConfig::default(),
-            eslint: EslintConfig::default(),
-            extra: HashMap::new(),
-        }
-    }
-}
-
-impl ProcessorConfig {
-    fn processor_enabled_field(&self, name: &str) -> bool {
-        match name {
-            "tera" => self.tera.enabled,
-            "ruff" => self.ruff.enabled,
-            "pylint" => self.pylint.enabled,
-            "cc_single_file" => self.cc_single_file.enabled,
-            "cc" => self.cc.enabled,
-            "cppcheck" => self.cppcheck.enabled,
-            "clang_tidy" => self.clang_tidy.enabled,
-            "shellcheck" => self.shellcheck.enabled,
-            "luacheck" => self.luacheck.enabled,
-            "spellcheck" => self.spellcheck.enabled,
-            "sleep" => self.sleep.enabled,
-            "make" => self.make.enabled,
-            "cargo" => self.cargo.enabled,
-            "clippy" => self.clippy.enabled,
-            "rumdl" => self.rumdl.enabled,
-            "mypy" => self.mypy.enabled,
-            "pyrefly" => self.pyrefly.enabled,
-            "yamllint" => self.yamllint.enabled,
-            "jq" => self.jq.enabled,
-            "jsonlint" => self.jsonlint.enabled,
-            "taplo" => self.taplo.enabled,
-            "json_schema" => self.json_schema.enabled,
-            "tags" => self.tags.enabled,
-            "pip" => self.pip.enabled,
-            "sphinx" => self.sphinx.enabled,
-            "mdbook" => self.mdbook.enabled,
-            "npm" => self.npm.enabled,
-            "gem" => self.gem.enabled,
-            "mdl" => self.mdl.enabled,
-            "markdownlint" => self.markdownlint.enabled,
-            "aspell" => self.aspell.enabled,
-            "marp" => self.marp.enabled,
-            "pandoc" => self.pandoc.enabled,
-            "markdown" => self.markdown.enabled,
-            "pdflatex" => self.pdflatex.enabled,
-            "a2x" => self.a2x.enabled,
-            "ascii_check" => self.ascii_check.enabled,
-            "mermaid" => self.mermaid.enabled,
-            "drawio" => self.drawio.enabled,
-            "mako" => self.mako.enabled,
-            "libreoffice" => self.libreoffice.enabled,
-            "pdfunite" => self.pdfunite.enabled,
-            "script_check" => self.script_check.enabled,
-            "linux_module" => self.linux_module.enabled,
-            "cpplint" => self.cpplint.enabled,
-            "checkpatch" => self.checkpatch.enabled,
-            "objdump" => self.objdump.enabled,
-            "eslint" => self.eslint.enabled,
-            _ => true, // unknown processors (plugins) default to enabled
-        }
-    }
-
-    pub(crate) fn is_enabled(&self, name: &str) -> bool {
-        self.enabled.iter().any(|p| p == name) && self.processor_enabled_field(name)
-    }
-
-    /// Collect unique scan directories from all processor configs.
-    /// Returns non-empty directory names (empty means project root, handled separately).
-    pub(crate) fn scan_dirs(&self) -> Vec<String> {
-        let scans = [
-            &self.tera.scan, &self.ruff.scan, &self.pylint.scan,
-            &self.cc_single_file.scan, &self.cc.scan, &self.cppcheck.scan, &self.clang_tidy.scan,
-            &self.shellcheck.scan, &self.luacheck.scan, &self.spellcheck.scan, &self.sleep.scan,
-            &self.make.scan, &self.cargo.scan, &self.clippy.scan, &self.rumdl.scan, &self.mypy.scan,
-            &self.pyrefly.scan, &self.yamllint.scan, &self.jq.scan, &self.jsonlint.scan,
-            &self.taplo.scan, &self.json_schema.scan, &self.tags.scan,
-            &self.pip.scan, &self.sphinx.scan, &self.mdbook.scan, &self.npm.scan, &self.gem.scan,
-            &self.mdl.scan, &self.markdownlint.scan,
-            &self.aspell.scan, &self.marp.scan, &self.pandoc.scan, &self.markdown.scan,
-            &self.pdflatex.scan, &self.a2x.scan, &self.ascii_check.scan,
-            &self.mako.scan,
-            &self.mermaid.scan, &self.drawio.scan, &self.libreoffice.scan,
-            &self.script_check.scan, &self.linux_module.scan,
-            &self.cpplint.scan, &self.checkpatch.scan, &self.objdump.scan,
-            &self.eslint.scan,
-        ];
-        let mut dirs: Vec<String> = scans.iter()
-            .filter_map(|s| s.scan_dir.as_deref())
-            .filter(|d| !d.is_empty())
-            .map(|d| d.to_string())
-            .collect();
-        dirs.sort();
-        dirs.dedup();
-        dirs
-    }
-
-    /// Fill in None scan fields with per-processor defaults.
-    /// Called after loading from TOML so that `config show` displays resolved values
-    /// and processors can access fields without fallbacks.
-    pub(crate) fn resolve_scan_defaults(&mut self) {
-        self.tera.scan.resolve("templates.tera", &[".tera"], &[]);
-        self.ruff.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
-        self.pylint.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
-        self.cc_single_file.scan.resolve("src", &[".c", ".cc"], &[]);
-        self.cc.scan.resolve("", &["cc.yaml"], CC_EXCLUDE_DIRS);
-        self.cppcheck.scan.resolve("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
-        self.clang_tidy.scan.resolve("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
-        self.shellcheck.scan.resolve("", &[".sh", ".bash"], SHELL_EXCLUDE_DIRS);
-        self.luacheck.scan.resolve("", &[".lua"], BUILD_TOOL_EXCLUDES);
-        self.spellcheck.scan.resolve("", &[".md"], SPELLCHECK_EXCLUDE_DIRS);
-        self.sleep.scan.resolve("sleep", &[".sleep"], &[]);
-        self.make.scan.resolve("", &["Makefile"], MAKE_CARGO_EXCLUDES);
-        self.cargo.scan.resolve("", &["Cargo.toml"], MAKE_CARGO_EXCLUDES);
-        self.clippy.scan.resolve("", &["Cargo.toml"], MAKE_CARGO_EXCLUDES);
-        self.rumdl.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
-        self.mypy.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
-        self.pyrefly.scan.resolve("", &[".py"], PYTHON_EXCLUDE_DIRS);
-        self.yamllint.scan.resolve("", &[".yml", ".yaml"], BUILD_TOOL_EXCLUDES);
-        self.jq.scan.resolve("", &[".json"], BUILD_TOOL_EXCLUDES);
-        self.jsonlint.scan.resolve("", &[".json"], BUILD_TOOL_EXCLUDES);
-        self.taplo.scan.resolve("", &[".toml"], BUILD_TOOL_EXCLUDES);
-        self.json_schema.scan.resolve("", &[".json"], BUILD_TOOL_EXCLUDES);
-        self.tags.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
-        self.pip.scan.resolve("", &["requirements.txt"], MAKE_CARGO_EXCLUDES);
-        self.sphinx.scan.resolve("", &["conf.py"], BUILD_TOOL_EXCLUDES);
-        self.mdbook.scan.resolve("", &["book.toml"], BUILD_TOOL_EXCLUDES);
-        self.npm.scan.resolve("", &["package.json"], MAKE_CARGO_EXCLUDES);
-        self.gem.scan.resolve("", &["Gemfile"], MAKE_CARGO_EXCLUDES);
-        self.mdl.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
-        self.markdownlint.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
-        self.aspell.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
-        self.marp.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
-        self.pandoc.scan.resolve("pandoc", &[".md"], MARKDOWN_EXCLUDE_DIRS);
-        self.markdown.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
-        self.pdflatex.scan.resolve("", &[".tex"], BUILD_TOOL_EXCLUDES);
-        self.a2x.scan.resolve("", &[".txt"], BUILD_TOOL_EXCLUDES);
-        self.ascii_check.scan.resolve("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
-        self.mako.scan.resolve("templates.mako", &[".mako"], &[]);
-        self.mermaid.scan.resolve("", &[".mmd"], BUILD_TOOL_EXCLUDES);
-        self.drawio.scan.resolve("", &[".drawio"], BUILD_TOOL_EXCLUDES);
-        self.libreoffice.scan.resolve("", &[".odp"], BUILD_TOOL_EXCLUDES);
-        self.script_check.scan.resolve("", &[], &[]);
-        self.linux_module.scan.resolve("", &["linux-module.yaml"], BUILD_TOOL_EXCLUDES);
-        self.cpplint.scan.resolve("src", &[".c", ".cc", ".h", ".hh"], CC_EXCLUDE_DIRS);
-        self.checkpatch.scan.resolve("src", &[".c", ".h"], CC_EXCLUDE_DIRS);
-        self.objdump.scan.resolve("out/cc_single_file", &[".elf"], &[]);
-        self.eslint.scan.resolve("", &[".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"], BUILD_TOOL_EXCLUDES);
-    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -837,56 +592,9 @@ fn validate_processor_fields(raw: &toml::Value) -> Result<()> {
             None => continue, // skip scalar fields like auto_detect, enabled
         };
 
-        let known: &[&str] = match name.as_str() {
-            processor_names::TERA => TeraConfig::known_fields(),
-            processor_names::RUFF => RuffConfig::known_fields(),
-            processor_names::PYLINT => PylintConfig::known_fields(),
-            processor_names::CC_SINGLE_FILE => CcSingleFileConfig::known_fields(),
-            processor_names::CC => CcConfig::known_fields(),
-            processor_names::CPPCHECK => CppcheckConfig::known_fields(),
-            processor_names::CLANG_TIDY => ClangTidyConfig::known_fields(),
-            processor_names::SHELLCHECK => ShellcheckConfig::known_fields(),
-            processor_names::LUACHECK => LuacheckConfig::known_fields(),
-            processor_names::SPELLCHECK => SpellcheckConfig::known_fields(),
-            processor_names::SLEEP => SleepConfig::known_fields(),
-            processor_names::MAKE => MakeConfig::known_fields(),
-            processor_names::CARGO => CargoConfig::known_fields(),
-            processor_names::CLIPPY => ClippyConfig::known_fields(),
-            processor_names::RUMDL => RumdlConfig::known_fields(),
-            processor_names::MYPY => MypyConfig::known_fields(),
-            processor_names::PYREFLY => PyreflyConfig::known_fields(),
-            processor_names::YAMLLINT => YamllintConfig::known_fields(),
-            processor_names::JQ => JqConfig::known_fields(),
-            processor_names::JSONLINT => JsonlintConfig::known_fields(),
-            processor_names::TAPLO => TaploConfig::known_fields(),
-            processor_names::JSON_SCHEMA => JsonSchemaConfig::known_fields(),
-            processor_names::TAGS => TagsConfig::known_fields(),
-            processor_names::PIP => PipConfig::known_fields(),
-            processor_names::SPHINX => SphinxConfig::known_fields(),
-            processor_names::MDBOOK => MdbookConfig::known_fields(),
-            processor_names::NPM => NpmConfig::known_fields(),
-            processor_names::GEM => GemConfig::known_fields(),
-            processor_names::MDL => MdlConfig::known_fields(),
-            processor_names::MARKDOWNLINT => MarkdownlintConfig::known_fields(),
-            processor_names::ASPELL => AspellConfig::known_fields(),
-            processor_names::MARP => MarpConfig::known_fields(),
-            processor_names::PANDOC => PandocConfig::known_fields(),
-            processor_names::MARKDOWN => MarkdownConfig::known_fields(),
-            processor_names::PDFLATEX => PdflatexConfig::known_fields(),
-            processor_names::A2X => A2xConfig::known_fields(),
-            processor_names::ASCII_CHECK => AsciiCheckConfig::known_fields(),
-            processor_names::MERMAID => MermaidConfig::known_fields(),
-            processor_names::DRAWIO => DrawioConfig::known_fields(),
-            processor_names::MAKO => MakoConfig::known_fields(),
-            processor_names::LIBREOFFICE => LibreofficeConfig::known_fields(),
-            processor_names::PDFUNITE => PdfuniteConfig::known_fields(),
-            processor_names::SCRIPT_CHECK => ScriptCheckConfig::known_fields(),
-            processor_names::LINUX_MODULE => LinuxModuleConfig::known_fields(),
-            processor_names::CPPLINT => CpplintConfig::known_fields(),
-            processor_names::CHECKPATCH => CheckpatchConfig::known_fields(),
-            processor_names::OBJDUMP => ObjdumpConfig::known_fields(),
-            processor_names::ESLINT => EslintConfig::known_fields(),
-            _ => continue, // unknown processor name = Lua plugin, skip
+        let known: &[&str] = match ProcessorConfig::known_fields_for(name.as_str()) {
+            Some(fields) => fields,
+            None => continue, // unknown processor name = Lua plugin, skip
         };
 
         for (key, field_value) in table {

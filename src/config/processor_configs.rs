@@ -2317,6 +2317,8 @@ pub struct PdfuniteConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_pdfunite_output_dir")]
     pub output_dir: String,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
 }
 
 impl Default for PdfuniteConfig {
@@ -2331,6 +2333,7 @@ impl Default for PdfuniteConfig {
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             output_dir: "out/courses".into(),
+            scan: default_scan!(extensions: ["course.yaml"]),
         }
     }
 }
@@ -2340,6 +2343,7 @@ impl KnownFields for PdfuniteConfig {
         &[
             "enabled", "pdfunite_bin", "source_dir", "source_ext", "source_output_dir",
             "args", "extra_inputs", "auto_inputs", "output_dir",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }
 }

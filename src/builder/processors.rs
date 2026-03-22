@@ -2,16 +2,7 @@ use std::collections::HashMap;
 use anyhow::{Result, bail};
 use crate::cli::ProcessorAction;
 use crate::color;
-use crate::config::{
-    ProcessorConfig,
-    TeraConfig, MakoConfig, RuffConfig, PylintConfig, CcSingleFileConfig, CppcheckConfig, ClangTidyConfig,
-    ShellcheckConfig, SpellcheckConfig, SleepConfig, MakeConfig, CargoConfig, ClippyConfig,
-    RumdlConfig, MypyConfig, PyreflyConfig, YamllintConfig, JqConfig, JsonlintConfig, TaploConfig,
-    JsonSchemaConfig, TagsConfig, PipConfig, SphinxConfig, NpmConfig, GemConfig, MdlConfig,
-    MarkdownlintConfig, AspellConfig, PandocConfig, MarkdownConfig, PdflatexConfig,
-    A2xConfig, AsciiCheckConfig, EslintConfig,
-};
-use crate::processors::names;
+use crate::config::ProcessorConfig;
 use super::{Builder, create_builtin_processors, sorted_keys};
 
 /// List all built-in processors (works without rsconstruct.toml).
@@ -65,52 +56,9 @@ pub fn list_processors_no_config(all: bool) -> Result<()> {
     Ok(())
 }
 
-/// Return the default config for a processor as pretty JSON, or None if the name is unknown.
-fn defconfig_json(name: &str) -> Option<String> {
-    let json: serde_json::Value = match name {
-        names::TERA => serde_json::to_value(TeraConfig::default()).ok()?,
-        names::MAKO => serde_json::to_value(MakoConfig::default()).ok()?,
-        names::RUFF => serde_json::to_value(RuffConfig::default()).ok()?,
-        names::PYLINT => serde_json::to_value(PylintConfig::default()).ok()?,
-        names::CC_SINGLE_FILE => serde_json::to_value(CcSingleFileConfig::default()).ok()?,
-        names::CPPCHECK => serde_json::to_value(CppcheckConfig::default()).ok()?,
-        names::CLANG_TIDY => serde_json::to_value(ClangTidyConfig::default()).ok()?,
-        names::SHELLCHECK => serde_json::to_value(ShellcheckConfig::default()).ok()?,
-        names::SPELLCHECK => serde_json::to_value(SpellcheckConfig::default()).ok()?,
-        names::SLEEP => serde_json::to_value(SleepConfig::default()).ok()?,
-        names::MAKE => serde_json::to_value(MakeConfig::default()).ok()?,
-        names::CARGO => serde_json::to_value(CargoConfig::default()).ok()?,
-        names::CLIPPY => serde_json::to_value(ClippyConfig::default()).ok()?,
-        names::RUMDL => serde_json::to_value(RumdlConfig::default()).ok()?,
-        names::MYPY => serde_json::to_value(MypyConfig::default()).ok()?,
-        names::PYREFLY => serde_json::to_value(PyreflyConfig::default()).ok()?,
-        names::YAMLLINT => serde_json::to_value(YamllintConfig::default()).ok()?,
-        names::JQ => serde_json::to_value(JqConfig::default()).ok()?,
-        names::JSONLINT => serde_json::to_value(JsonlintConfig::default()).ok()?,
-        names::TAPLO => serde_json::to_value(TaploConfig::default()).ok()?,
-        names::JSON_SCHEMA => serde_json::to_value(JsonSchemaConfig::default()).ok()?,
-        names::TAGS => serde_json::to_value(TagsConfig::default()).ok()?,
-        names::PIP => serde_json::to_value(PipConfig::default()).ok()?,
-        names::SPHINX => serde_json::to_value(SphinxConfig::default()).ok()?,
-        names::NPM => serde_json::to_value(NpmConfig::default()).ok()?,
-        names::GEM => serde_json::to_value(GemConfig::default()).ok()?,
-        names::MDL => serde_json::to_value(MdlConfig::default()).ok()?,
-        names::MARKDOWNLINT => serde_json::to_value(MarkdownlintConfig::default()).ok()?,
-        names::ASPELL => serde_json::to_value(AspellConfig::default()).ok()?,
-        names::PANDOC => serde_json::to_value(PandocConfig::default()).ok()?,
-        names::MARKDOWN => serde_json::to_value(MarkdownConfig::default()).ok()?,
-        names::PDFLATEX => serde_json::to_value(PdflatexConfig::default()).ok()?,
-        names::A2X => serde_json::to_value(A2xConfig::default()).ok()?,
-        names::ASCII_CHECK => serde_json::to_value(AsciiCheckConfig::default()).ok()?,
-        names::ESLINT => serde_json::to_value(EslintConfig::default()).ok()?,
-        _ => return None,
-    };
-    serde_json::to_string_pretty(&json).ok()
-}
-
 /// Return a JSON value containing only fields that differ from the default config.
 fn config_diff(name: &str, current: &serde_json::Value) -> serde_json::Value {
-    let default_json = defconfig_json(name);
+    let default_json = ProcessorConfig::defconfig_json(name);
     let default_value = default_json
         .and_then(|j| serde_json::from_str::<serde_json::Value>(&j).ok());
     let (Some(serde_json::Value::Object(default_obj)), serde_json::Value::Object(current_obj)) =
@@ -130,7 +78,7 @@ fn config_diff(name: &str, current: &serde_json::Value) -> serde_json::Value {
 
 /// Show default configuration for a processor (works without rsconstruct.toml).
 pub fn processor_defconfig(name: &str) -> Result<()> {
-    match defconfig_json(name) {
+    match ProcessorConfig::defconfig_json(name) {
         Some(json) => {
             println!("{}", json);
             Ok(())

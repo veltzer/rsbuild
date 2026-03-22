@@ -1,0 +1,67 @@
+/// Central processor registry — the single source of truth for all built-in processors.
+///
+/// Adding a new processor requires adding ONE line here. All wiring code
+/// (name constants, config struct fields, default lists, builder registration, etc.)
+/// is auto-generated from this table by consumer macros.
+///
+/// Each entry: `CONST_NAME, field_name, ConfigType, ProcessorType, (scan_dir, extensions, exclude_dirs);`
+///
+/// - `CONST_NAME`: used for `processors::names::CONST_NAME` constant (value = stringify!(field_name))
+/// - `field_name`: the field name in `ProcessorConfig` and the TOML section name `[processor.field_name]`
+/// - `ConfigType`: the config struct (must impl Default, Serialize, Deserialize, Clone, KnownFields)
+/// - `ProcessorType`: the processor struct (must impl ProductDiscovery, have `fn new(config) -> Self`)
+/// - `(scan_dir, extensions, exclude_dirs)`: arguments to `ScanConfig::resolve()` for defaults
+macro_rules! for_each_processor {
+    ($callback:ident) => {
+        $callback! {
+            TERA,           tera,           TeraConfig,            TeraProcessor,            ("templates.tera", &[".tera"], &[]);
+            RUFF,           ruff,           RuffConfig,            RuffProcessor,            ("", &[".py"], PYTHON_EXCLUDE_DIRS);
+            PYLINT,         pylint,         PylintConfig,          PylintProcessor,          ("", &[".py"], PYTHON_EXCLUDE_DIRS);
+            MYPY,           mypy,           MypyConfig,            MypyProcessor,            ("", &[".py"], PYTHON_EXCLUDE_DIRS);
+            PYREFLY,        pyrefly,        PyreflyConfig,         PyreflyProcessor,         ("", &[".py"], PYTHON_EXCLUDE_DIRS);
+            CC_SINGLE_FILE, cc_single_file, CcSingleFileConfig,    CcSingleFileProcessor,    ("src", &[".c", ".cc"], &[]);
+            CC,             cc,             CcConfig,              CcProcessor,              ("", &["cc.yaml"], CC_EXCLUDE_DIRS);
+            CPPCHECK,       cppcheck,       CppcheckConfig,        CppcheckProcessor,        ("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
+            CLANG_TIDY,     clang_tidy,     ClangTidyConfig,       ClangTidyProcessor,       ("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
+            SPELLCHECK,     spellcheck,     SpellcheckConfig,      SpellcheckProcessor,      ("", &[".md"], SPELLCHECK_EXCLUDE_DIRS);
+            SHELLCHECK,     shellcheck,     ShellcheckConfig,      ShellcheckProcessor,      ("", &[".sh", ".bash"], SHELL_EXCLUDE_DIRS);
+            LUACHECK,       luacheck,       LuacheckConfig,        LuacheckProcessor,        ("", &[".lua"], BUILD_TOOL_EXCLUDES);
+            SLEEP,          sleep,          SleepConfig,           SleepProcessor,           ("sleep", &[".sleep"], &[]);
+            MAKE,           make,           MakeConfig,            MakeProcessor,            ("", &["Makefile"], MAKE_CARGO_EXCLUDES);
+            CARGO,          cargo,          CargoConfig,           CargoProcessor,           ("", &["Cargo.toml"], MAKE_CARGO_EXCLUDES);
+            CLIPPY,         clippy,         ClippyConfig,          ClippyProcessor,          ("", &["Cargo.toml"], MAKE_CARGO_EXCLUDES);
+            RUMDL,          rumdl,          RumdlConfig,           RumdlProcessor,           ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+            YAMLLINT,       yamllint,       YamllintConfig,        YamllintProcessor,        ("", &[".yml", ".yaml"], BUILD_TOOL_EXCLUDES);
+            JQ,             jq,             JqConfig,              JqProcessor,              ("", &[".json"], BUILD_TOOL_EXCLUDES);
+            JSONLINT,       jsonlint,       JsonlintConfig,        JsonlintProcessor,        ("", &[".json"], BUILD_TOOL_EXCLUDES);
+            TAPLO,          taplo,          TaploConfig,           TaploProcessor,           ("", &[".toml"], BUILD_TOOL_EXCLUDES);
+            JSON_SCHEMA,    json_schema,    JsonSchemaConfig,      JsonSchemaProcessor,      ("", &[".json"], BUILD_TOOL_EXCLUDES);
+            TAGS,           tags,           TagsConfig,            TagsProcessor,            ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+            PIP,            pip,            PipConfig,             PipProcessor,             ("", &["requirements.txt"], MAKE_CARGO_EXCLUDES);
+            SPHINX,         sphinx,         SphinxConfig,          SphinxProcessor,          ("", &["conf.py"], BUILD_TOOL_EXCLUDES);
+            MDBOOK,         mdbook,         MdbookConfig,          MdbookProcessor,          ("", &["book.toml"], BUILD_TOOL_EXCLUDES);
+            NPM,            npm,            NpmConfig,             NpmProcessor,             ("", &["package.json"], MAKE_CARGO_EXCLUDES);
+            GEM,            gem,            GemConfig,             GemProcessor,             ("", &["Gemfile"], MAKE_CARGO_EXCLUDES);
+            MDL,            mdl,            MdlConfig,             MdlProcessor,             ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+            MARKDOWNLINT,   markdownlint,   MarkdownlintConfig,    MarkdownlintProcessor,    ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+            ASPELL,         aspell,         AspellConfig,          AspellProcessor,          ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+            MARP,           marp,           MarpConfig,            MarpProcessor,            ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+            PANDOC,         pandoc,         PandocConfig,          PandocProcessor,          ("pandoc", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+            MARKDOWN,       markdown,       MarkdownConfig,        MarkdownProcessor,        ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+            PDFLATEX,       pdflatex,       PdflatexConfig,        PdflatexProcessor,        ("", &[".tex"], BUILD_TOOL_EXCLUDES);
+            A2X,            a2x,            A2xConfig,             A2xProcessor,             ("", &[".txt"], BUILD_TOOL_EXCLUDES);
+            ASCII_CHECK,    ascii_check,    AsciiCheckConfig,      AsciiCheckProcessor,      ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+            MAKO,           mako,           MakoConfig,            MakoProcessor,            ("templates.mako", &[".mako"], &[]);
+            MERMAID,        mermaid,        MermaidConfig,         MermaidProcessor,         ("", &[".mmd"], BUILD_TOOL_EXCLUDES);
+            DRAWIO,         drawio,         DrawioConfig,          DrawioProcessor,          ("", &[".drawio"], BUILD_TOOL_EXCLUDES);
+            LIBREOFFICE,    libreoffice,    LibreofficeConfig,     LibreofficeProcessor,     ("", &[".odp"], BUILD_TOOL_EXCLUDES);
+            PDFUNITE,       pdfunite,       PdfuniteConfig,        PdfuniteProcessor,        ("", &["course.yaml"], BUILD_TOOL_EXCLUDES);
+            SCRIPT_CHECK,   script_check,   ScriptCheckConfig,     ScriptCheckProcessor,     ("", &[], &[]);
+            LINUX_MODULE,   linux_module,   LinuxModuleConfig,     LinuxModuleProcessor,     ("", &["linux-module.yaml"], BUILD_TOOL_EXCLUDES);
+            CPPLINT,        cpplint,        CpplintConfig,         CpplintProcessor,         ("src", &[".c", ".cc", ".h", ".hh"], CC_EXCLUDE_DIRS);
+            CHECKPATCH,     checkpatch,     CheckpatchConfig,      CheckpatchProcessor,      ("src", &[".c", ".h"], CC_EXCLUDE_DIRS);
+            OBJDUMP,        objdump,        ObjdumpConfig,         ObjdumpProcessor,         ("out/cc_single_file", &[".elf"], &[]);
+            ESLINT,         eslint,         EslintConfig,          EslintProcessor,          ("", &[".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"], BUILD_TOOL_EXCLUDES);
+        }
+    };
+}

@@ -12,14 +12,15 @@ use super::{Builder, sorted_keys};
 fn tool_runtime(tool: &str) -> &'static str {
     match tool {
         "ruff" | "pylint" | "mypy" | "pyrefly" | "yamllint" | "sphinx-build" | "pip"
-        | "jsonlint" | "a2x" | "python3" => "python",
-        "marp" | "mmdc" | "markdownlint" | "npm" | "node" | "node_modules/.bin/markdownlint" => "node",
+        | "jsonlint" | "cpplint" | "a2x" | "python3" => "python",
+        "marp" | "mmdc" | "markdownlint" | "npm" | "node" | "node_modules/.bin/markdownlint"
+        | "eslint" | "jshint" | "htmlhint" => "node",
         "bundle" | "mdl" | "ruby" | "gems/bin/mdl" => "ruby",
         "cargo" | "rustc" | "mdbook" | "rumdl" | "taplo" => "rust",
-        "perl" | "markdown" => "perl",
+        "perl" | "markdown" | "checkpatch.pl" => "perl",
         "gcc" | "g++" | "clang" | "clang++" | "clang-tidy" | "cppcheck" | "make"
         | "shellcheck" | "jq" | "aspell" | "pandoc" | "pdflatex" | "qpdf" | "drawio"
-        | "libreoffice" | "flock" | "pdfunite" | "dot" => "system",
+        | "libreoffice" | "flock" | "pdfunite" | "dot" | "luacheck" | "objdump" => "system",
         tool => {
             debug_assert!(false, "tool_runtime: unrecognized tool '{tool}'");
             "system"

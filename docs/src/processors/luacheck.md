@@ -16,19 +16,19 @@ single luacheck invocation for better performance.
 ## Source Files
 
 - Input: `**/*.lua`
-- Output: none (checker)
+- Output: none (linter)
 
 ## Configuration
 
 ```toml
 [processor.luacheck]
-checker = "luacheck"                         # The luacheck command to run
+linter = "luacheck"                         # The luacheck command to run
 args = []                                    # Additional arguments to pass to luacheck
 extra_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `checker` | string | `"luacheck"` | The luacheck executable to run |
+| `linter` | string | `"luacheck"` | The luacheck executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to luacheck |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |

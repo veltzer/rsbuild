@@ -16,19 +16,19 @@ single shellcheck invocation for better performance.
 ## Source Files
 
 - Input: `**/*.sh`, `**/*.bash`
-- Output: none (checker)
+- Output: none (linter)
 
 ## Configuration
 
 ```toml
 [processor.shellcheck]
-checker = "shellcheck"                       # The shellcheck command to run
+linter = "shellcheck"                       # The shellcheck command to run
 args = []                                    # Additional arguments to pass to shellcheck
 extra_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `checker` | string | `"shellcheck"` | The shellcheck executable to run |
+| `linter` | string | `"shellcheck"` | The shellcheck executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to shellcheck |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |

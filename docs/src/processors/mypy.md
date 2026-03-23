@@ -25,14 +25,14 @@ extra input so that configuration changes trigger rebuilds.
 
 ```toml
 [processor.mypy]
-checker = "mypy"                             # The mypy command to run
+linter = "mypy"                             # The mypy command to run
 args = []                                    # Additional arguments to pass to mypy
 extra_inputs = []                            # Additional files that trigger rebuilds (e.g. ["pyproject.toml"])
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `checker` | string | `"mypy"` | The mypy executable to run |
+| `linter` | string | `"mypy"` | The mypy executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to mypy |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 

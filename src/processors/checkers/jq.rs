@@ -23,7 +23,7 @@ impl JqProcessor {
     fn check_files(&self, files: &[&Path]) -> Result<()> {
         let mut args = vec!["empty".to_string()];
         args.extend_from_slice(&self.config.args);
-        run_checker(&self.config.checker, None, &args, files)
+        run_checker(&self.config.linter, None, &args, files)
     }
 }
 
@@ -32,7 +32,7 @@ impl_checker!(JqProcessor,
     description: "Validate JSON files with jq",
     name: crate::processors::names::JQ,
     execute: execute_product,
-    tool_field: checker,
+    tool_field: linter,
     config_json: true,
     batch: check_files,
 );

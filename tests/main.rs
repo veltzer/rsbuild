@@ -1,3 +1,4 @@
+#[macro_use]
 mod common;
 
 #[path = "tests_mod/build.rs"]

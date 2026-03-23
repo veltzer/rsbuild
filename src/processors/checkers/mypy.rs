@@ -20,7 +20,7 @@ impl MypyProcessor {
 
     /// Run mypy on one or more files
     fn check_files(&self, py_files: &[&Path]) -> Result<()> {
-        run_checker(&self.config.checker, None, &self.config.args, py_files)
+        run_checker(&self.config.linter, None, &self.config.args, py_files)
     }
 }
 
@@ -29,7 +29,7 @@ impl_checker!(MypyProcessor,
     description: "Type-check Python files with mypy",
     name: crate::processors::names::MYPY,
     execute: execute_product,
-    tool_field_extra: checker ["python3".to_string()],
+    tool_field_extra: linter ["python3".to_string()],
     config_json: true,
     batch: check_files,
 );

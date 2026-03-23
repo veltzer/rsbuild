@@ -24,7 +24,7 @@ impl ShellcheckProcessor {
 
     /// Run shellcheck on one or more files
     fn check_files(&self, files: &[&Path]) -> Result<()> {
-        run_checker(&self.config.checker, None, &self.config.args, files)
+        run_checker(&self.config.linter, None, &self.config.args, files)
     }
 }
 
@@ -34,7 +34,7 @@ impl_checker!(ShellcheckProcessor,
     name: crate::processors::names::SHELLCHECK,
     execute: execute_product,
     guard: should_process,
-    tool_field: checker,
+    tool_field: linter,
     config_json: true,
     batch: check_files,
 );

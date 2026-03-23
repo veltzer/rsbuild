@@ -25,7 +25,7 @@ impl PyreflyProcessor {
     fn check_files(&self, py_files: &[&Path]) -> Result<()> {
         let mut args = vec!["--disable-project-excludes-heuristics".to_string()];
         args.extend_from_slice(&self.config.args);
-        run_checker(&self.config.checker, Some("check"), &args, py_files)
+        run_checker(&self.config.linter, Some("check"), &args, py_files)
     }
 }
 
@@ -34,7 +34,7 @@ impl_checker!(PyreflyProcessor,
     description: "Type-check Python files with pyrefly",
     name: crate::processors::names::PYREFLY,
     execute: execute_product,
-    tool_field: checker,
+    tool_field: linter,
     config_json: true,
     batch: check_files,
 );

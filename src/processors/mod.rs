@@ -1032,3 +1032,37 @@ impl BuildStats {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::ProcessorConfig;
+    use crate::builder::create_builtin_processors;
+
+    /// Verify that every tool declared by any processor's `required_tools()` has
+    /// an entry in the central TOOLS registry (install command + runtime category).
+    /// This prevents silent gaps like the missing `ar` tool.
+    #[test]
+    fn all_required_tools_have_registry_entries() {
+        let mut cfg = ProcessorConfig::default();
+        cfg.resolve_scan_defaults();
+        let processors = create_builtin_processors(&cfg);
+        for (proc_name, proc) in &processors {
+            for tool in proc.required_tools() {
+                if tool.is_empty() {
+                    continue; // script_check defaults to empty tool name
+                }
+                assert!(
+                    tool_install_command(&tool).is_some(),
+                    "Processor '{}' requires tool '{}' which has no install command in TOOLS",
+                    proc_name, tool
+                );
+                assert!(
+                    tool_runtime(&tool).is_some(),
+                    "Processor '{}' requires tool '{}' which has no runtime category in TOOLS",
+                    proc_name, tool
+                );
+            }
+        }
+    }
+}

@@ -16,7 +16,7 @@ fn script_check_valid_file() {
             "\n",
             "[processor.script_check]\n",
             "enabled = true\n",
-            "checker = \"true\"\n",
+            "linter = \"true\"\n",
             "extensions = [\".txt\"]\n",
         ),
     )
@@ -57,7 +57,7 @@ fn script_check_incremental_skip() {
             "\n",
             "[processor.script_check]\n",
             "enabled = true\n",
-            "checker = \"true\"\n",
+            "linter = \"true\"\n",
             "extensions = [\".txt\"]\n",
         ),
     )

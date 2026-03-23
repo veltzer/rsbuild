@@ -2,18 +2,18 @@
 
 ## Purpose
 
-Runs a user-configured script or command as a checker on discovered files. This
-is a generic checker that lets you plug in any script without writing a custom
+Runs a user-configured script or command as a linter on discovered files. This
+is a generic linter that lets you plug in any script without writing a custom
 processor.
 
 ## How It Works
 
 Discovers files matching the configured extensions in the configured scan
-directory, then runs the configured checker command on each file (or batch of
+directory, then runs the configured linter command on each file (or batch of
 files). A non-zero exit code from the script fails the product.
 
 This processor is **disabled by default** — you must set `enabled = true` and
-provide a `checker` command in your `rsconstruct.toml`.
+provide a `linter` command in your `rsconstruct.toml`.
 
 This processor supports batch mode, allowing multiple files to be checked in a
 single invocation for better performance.
@@ -21,14 +21,14 @@ single invocation for better performance.
 ## Source Files
 
 - Input: configured via `extensions` and `scan_dir`
-- Output: none (checker)
+- Output: none (linter)
 
 ## Configuration
 
 ```toml
 [processor.script_check]
 enabled = true
-checker = "python"
+linter = "python"
 args = ["scripts/md_lint.py", "-q"]
 extensions = [".md"]
 scan_dir = "marp"
@@ -37,7 +37,7 @@ scan_dir = "marp"
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `enabled` | bool | `false` | Must be set to `true` to activate |
-| `checker` | string | `""` | The command to run (required) |
+| `linter` | string | `""` | The command to run (required) |
 | `args` | string[] | `[]` | Extra arguments passed before file paths |
 | `extensions` | string[] | `[]` | File extensions to scan for |
 | `scan_dir` | string | `""` | Directory to scan (empty = project root) |

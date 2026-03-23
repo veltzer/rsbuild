@@ -41,6 +41,7 @@ libc = "0.2"
 [dev-dependencies]
 tempfile = "3.8"
 serde_json = "1.0"
+paste = "1.0"
 
 [profile.release]
 strip = true

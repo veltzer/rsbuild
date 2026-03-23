@@ -16,19 +16,19 @@ single pyrefly invocation for better performance.
 ## Source Files
 
 - Input: `**/*.py`
-- Output: none (checker)
+- Output: none (linter)
 
 ## Configuration
 
 ```toml
 [processor.pyrefly]
-checker = "pyrefly"                          # The pyrefly command to run
+linter = "pyrefly"                          # The pyrefly command to run
 args = []                                    # Additional arguments to pass to pyrefly
 extra_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `checker` | string | `"pyrefly"` | The pyrefly executable to run |
+| `linter` | string | `"pyrefly"` | The pyrefly executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to pyrefly |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |

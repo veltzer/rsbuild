@@ -189,3 +189,170 @@ impl BuildResult {
         self.products.iter().filter(|p| p.status == status).collect()
     }
 }
+
+/// Generate standard checker processor tests: valid file + incremental skip.
+///
+/// Usage:
+/// ```ignore
+/// test_checker!(eslint, tool: "eslint", processor: "eslint",
+///     files: [(".eslintrc.json", "{}\n"), ("test.js", "var x = 1;\n")]);
+/// ```
+///
+/// For build tools that don't have simple files to test, use `no_project`:
+/// ```ignore
+/// test_checker!(cmake, tool: "cmake", processor: "cmake", no_project);
+/// ```
+macro_rules! test_checker {
+    // Full test: valid file + incremental skip
+    ($mod_name:ident, tool: $tool:expr, processor: $proc:expr,
+     files: [ $( ($fname:expr, $content:expr) ),+ $(,)? ]) => {
+        paste::paste! {
+            #[test]
+            fn [<$mod_name _valid>]() {
+                if !crate::common::tool_available($tool) {
+                    eprintln!("{} not found, skipping test", $tool);
+                    return;
+                }
+
+                let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+                let project_path = temp_dir.path();
+
+                std::fs::write(
+                    project_path.join("rsconstruct.toml"),
+                    format!("[processor]\nenabled = [\"{}\"]\n", $proc),
+                ).unwrap();
+
+                $( std::fs::write(project_path.join($fname), $content).unwrap(); )+
+
+                let output = crate::common::run_rsconstruct_with_env(
+                    project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
+                assert!(
+                    output.status.success(),
+                    "Build should succeed: stdout={}, stderr={}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                );
+            }
+
+            #[test]
+            fn [<$mod_name _incremental_skip>]() {
+                if !crate::common::tool_available($tool) {
+                    eprintln!("{} not found, skipping test", $tool);
+                    return;
+                }
+
+                let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+                let project_path = temp_dir.path();
+
+                std::fs::write(
+                    project_path.join("rsconstruct.toml"),
+                    format!("[processor]\nenabled = [\"{}\"]\n", $proc),
+                ).unwrap();
+
+                $( std::fs::write(project_path.join($fname), $content).unwrap(); )+
+
+                let output1 = crate::common::run_rsconstruct_with_env(
+                    project_path, &["build"], &[("NO_COLOR", "1")]);
+                assert!(output1.status.success());
+
+                let output2 = crate::common::run_rsconstruct_with_env(
+                    project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+                assert!(output2.status.success());
+                let stdout2 = String::from_utf8_lossy(&output2.stdout);
+                assert!(
+                    stdout2.contains(&format!("[{}] Skipping (unchanged):", $proc)),
+                    "Second build should skip: {}", stdout2
+                );
+            }
+        }
+    };
+
+    // No-project test: just verify the processor works with no matching files
+    ($mod_name:ident, tool: $tool:expr, processor: $proc:expr, no_project) => {
+        paste::paste! {
+            #[test]
+            fn [<$mod_name _no_project_discovered>]() {
+                if !crate::common::tool_available($tool) {
+                    eprintln!("{} not found, skipping test", $tool);
+                    return;
+                }
+
+                let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+                let project_path = temp_dir.path();
+
+                std::fs::write(
+                    project_path.join("rsconstruct.toml"),
+                    format!("[processor]\nenabled = [\"{}\"]\n", $proc),
+                ).unwrap();
+
+                let output = crate::common::run_rsconstruct_with_env(
+                    project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
+                assert!(
+                    output.status.success(),
+                    "Build should succeed with no files: stdout={}, stderr={}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                );
+            }
+        }
+    };
+
+    // Custom config test: with extra TOML config
+    ($mod_name:ident, tool: $tool:expr, processor: $proc:expr,
+     config: $config:expr,
+     files: [ $( ($fname:expr, $content:expr) ),+ $(,)? ]) => {
+        paste::paste! {
+            #[test]
+            fn [<$mod_name _valid>]() {
+                if !crate::common::tool_available($tool) {
+                    eprintln!("{} not found, skipping test", $tool);
+                    return;
+                }
+
+                let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+                let project_path = temp_dir.path();
+
+                std::fs::write(project_path.join("rsconstruct.toml"), $config).unwrap();
+
+                $( std::fs::write(project_path.join($fname), $content).unwrap(); )+
+
+                let output = crate::common::run_rsconstruct_with_env(
+                    project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
+                assert!(
+                    output.status.success(),
+                    "Build should succeed: stdout={}, stderr={}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                );
+            }
+
+            #[test]
+            fn [<$mod_name _incremental_skip>]() {
+                if !crate::common::tool_available($tool) {
+                    eprintln!("{} not found, skipping test", $tool);
+                    return;
+                }
+
+                let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+                let project_path = temp_dir.path();
+
+                std::fs::write(project_path.join("rsconstruct.toml"), $config).unwrap();
+
+                $( std::fs::write(project_path.join($fname), $content).unwrap(); )+
+
+                let output1 = crate::common::run_rsconstruct_with_env(
+                    project_path, &["build"], &[("NO_COLOR", "1")]);
+                assert!(output1.status.success());
+
+                let output2 = crate::common::run_rsconstruct_with_env(
+                    project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+                assert!(output2.status.success());
+                let stdout2 = String::from_utf8_lossy(&output2.stdout);
+                assert!(
+                    stdout2.contains(&format!("[{}] Skipping (unchanged):", $proc)),
+                    "Second build should skip: {}", stdout2
+                );
+            }
+        }
+    };
+}

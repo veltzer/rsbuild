@@ -2,16 +2,71 @@ use serde::{Deserialize, Serialize};
 
 use super::{default_true, default_cc_compiler, default_cxx_compiler, default_output_suffix, KnownFields, ScanConfig};
 
-/// Generate a simple checker config struct with args, extra_inputs, auto_inputs, and scan fields.
+/// Generate a checker config struct with standard fields.
 ///
 /// Generates the struct with serde `Deserialize`/`Serialize`/`Clone` derives and
 /// a `Default` impl with the specified scan settings.
 ///
 /// Variants:
-/// - `checker_config!(Name, extensions: [".py"])` — default scan from project root
-/// - `checker_config!(Name, scan_dir: "src", extensions: [".c"])` — scan in subdirectory
+/// - `checker_config!(Name, extensions: [".py"])` — basic checker
+/// - `checker_config!(Name, scan_dir: "src", extensions: [".c"])` — with scan dir
+/// - `checker_config!(Name, extensions: [".py"], linter: "ruff")` — with configurable tool name
+/// - `checker_config!(Name, extensions: [".py"], auto_inputs: [".pylintrc"])` — with auto inputs
+/// - `checker_config!(Name, extensions: [".py"], linter: "ruff", auto_inputs: [".ruff.toml"])` — both
 macro_rules! checker_config {
+    // Internal: generate struct body, Default, and KnownFields
+    (@impl $name:ident,
+     scan: $scan:expr,
+     linter: [$($linter:expr)?],
+     auto_inputs: [$($ai:expr),*]
+    ) => {
+        #[derive(Debug, Deserialize, Serialize, Clone)]
+        pub struct $name {
+            #[serde(default = "default_true")]
+            pub enabled: bool,
+            $(
+                #[serde(default = $crate::config::processor_configs::checker_config!(@linter_default_name $name))]
+                pub linter: String,
+                const _: () = { // phantom use of $linter to bind it
+                    fn _unused() { let _ = $linter; }
+                };
+            )?
+            #[serde(default)]
+            pub args: Vec<String>,
+            #[serde(default)]
+            pub extra_inputs: Vec<String>,
+            #[serde(default)]
+            pub auto_inputs: Vec<String>,
+            #[serde(flatten)]
+            pub scan: ScanConfig,
+        }
+    };
+
+    // Basic: extensions only
     ($name:ident, extensions: [$($ext:expr),+ $(,)?]) => {
+        checker_config!(@basic $name, default_scan!(extensions: [$($ext),+]));
+    };
+    // With scan_dir
+    ($name:ident, scan_dir: $dir:expr, extensions: [$($ext:expr),+ $(,)?]) => {
+        checker_config!(@basic $name, default_scan!(scan_dir: $dir, extensions: [$($ext),+]));
+    };
+    // With auto_inputs only
+    ($name:ident, extensions: [$($ext:expr),+ $(,)?], auto_inputs: [$($ai:expr),+ $(,)?]) => {
+        checker_config!(@with_auto_inputs $name, default_scan!(extensions: [$($ext),+]), [$($ai),+]);
+    };
+    // With linter only
+    ($name:ident, extensions: [$($ext:expr),+ $(,)?], linter: $linter:expr) => {
+        checker_config!(@with_linter $name, default_scan!(extensions: [$($ext),+]), $linter, []);
+    };
+    // With linter + auto_inputs
+    ($name:ident, extensions: [$($ext:expr),+ $(,)?], linter: $linter:expr, auto_inputs: [$($ai:expr),+ $(,)?]) => {
+        checker_config!(@with_linter $name, default_scan!(extensions: [$($ext),+]), $linter, [$($ai),+]);
+    };
+
+    // --- Internal generation rules ---
+
+    // Basic struct (no linter, no custom auto_inputs)
+    (@basic $name:ident, $scan:expr) => {
         #[derive(Debug, Deserialize, Serialize, Clone)]
         pub struct $name {
             #[serde(default = "default_true")]
@@ -33,22 +88,21 @@ macro_rules! checker_config {
                     args: Vec::new(),
                     extra_inputs: Vec::new(),
                     auto_inputs: Vec::new(),
-                    scan: default_scan!(extensions: [$($ext),+]),
+                    scan: $scan,
                 }
             }
         }
 
         impl KnownFields for $name {
             fn known_fields() -> &'static [&'static str] {
-                static FIELDS: &[&str] = &[
-                    "enabled", "args", "extra_inputs", "auto_inputs",
-                    "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-                ];
-                FIELDS
+                &["enabled", "args", "extra_inputs", "auto_inputs",
+                  "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths"]
             }
         }
     };
-    ($name:ident, scan_dir: $dir:expr, extensions: [$($ext:expr),+ $(,)?]) => {
+
+    // With auto_inputs (no linter)
+    (@with_auto_inputs $name:ident, $scan:expr, [$($ai:expr),+]) => {
         #[derive(Debug, Deserialize, Serialize, Clone)]
         pub struct $name {
             #[serde(default = "default_true")]
@@ -69,19 +123,55 @@ macro_rules! checker_config {
                     enabled: true,
                     args: Vec::new(),
                     extra_inputs: Vec::new(),
-                    auto_inputs: Vec::new(),
-                    scan: default_scan!(scan_dir: $dir, extensions: [$($ext),+]),
+                    auto_inputs: vec![$($ai.into()),+],
+                    scan: $scan,
                 }
             }
         }
 
         impl KnownFields for $name {
             fn known_fields() -> &'static [&'static str] {
-                static FIELDS: &[&str] = &[
-                    "enabled", "args", "extra_inputs", "auto_inputs",
-                    "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-                ];
-                FIELDS
+                &["enabled", "args", "extra_inputs", "auto_inputs",
+                  "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths"]
+            }
+        }
+    };
+
+    // With linter (and optional auto_inputs)
+    (@with_linter $name:ident, $scan:expr, $linter:expr, [$($ai:expr),*]) => {
+        #[derive(Debug, Deserialize, Serialize, Clone)]
+        pub struct $name {
+            #[serde(default = "default_true")]
+            pub enabled: bool,
+            #[serde(default)]
+            pub linter: String,
+            #[serde(default)]
+            pub args: Vec<String>,
+            #[serde(default)]
+            pub extra_inputs: Vec<String>,
+            #[serde(default)]
+            pub auto_inputs: Vec<String>,
+            #[serde(flatten)]
+            pub scan: ScanConfig,
+        }
+
+        impl Default for $name {
+            fn default() -> Self {
+                Self {
+                    enabled: true,
+                    linter: $linter.into(),
+                    args: Vec::new(),
+                    extra_inputs: Vec::new(),
+                    auto_inputs: vec![$($ai.into()),*],
+                    scan: $scan,
+                }
+            }
+        }
+
+        impl KnownFields for $name {
+            fn known_fields() -> &'static [&'static str] {
+                &["enabled", "linter", "args", "extra_inputs", "auto_inputs",
+                  "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths"]
             }
         }
     };
@@ -180,90 +270,9 @@ impl KnownFields for MakoConfig {
     }
 }
 
-fn default_ruff_linter() -> String {
-    "ruff".into()
-}
+checker_config!(RuffConfig, extensions: [".py"], linter: "ruff", auto_inputs: ["ruff.toml", ".ruff.toml", "pyproject.toml"]);
 
-fn default_ruff_auto_inputs() -> Vec<String> {
-    vec!["ruff.toml".into(), ".ruff.toml".into(), "pyproject.toml".into()]
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct RuffConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_ruff_linter")]
-    pub linter: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_ruff_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for RuffConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            linter: "ruff".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_ruff_auto_inputs(),
-            scan: default_scan!(extensions: [".py"]),
-        }
-    }
-}
-
-impl KnownFields for RuffConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
-
-fn default_pylint_auto_inputs() -> Vec<String> {
-    vec![".pylintrc".into()]
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct PylintConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_pylint_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for PylintConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_pylint_auto_inputs(),
-            scan: default_scan!(extensions: [".py"]),
-        }
-    }
-}
-
-impl KnownFields for PylintConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
+checker_config!(PylintConfig, extensions: [".py"], auto_inputs: [".pylintrc"]);
 
 fn default_cppcheck_args() -> Vec<String> {
     vec![
@@ -894,319 +903,19 @@ impl KnownFields for MakeConfig {
     }
 }
 
-fn default_mypy_checker() -> String {
-    "mypy".into()
-}
+checker_config!(MypyConfig, extensions: [".py"], linter: "mypy", auto_inputs: ["mypy.ini"]);
 
-fn default_mypy_auto_inputs() -> Vec<String> {
-    vec!["mypy.ini".into()]
-}
+checker_config!(PyreflyConfig, extensions: [".py"], linter: "pyrefly", auto_inputs: ["pyproject.toml"]);
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct MypyConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_mypy_checker")]
-    pub checker: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_mypy_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
+checker_config!(RumdlConfig, extensions: [".md"], linter: "rumdl", auto_inputs: [".rumdl.toml"]);
 
-impl Default for MypyConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            checker: "mypy".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_mypy_auto_inputs(),
-            scan: default_scan!(extensions: [".py"]),
-        }
-    }
-}
+checker_config!(YamllintConfig, extensions: [".yml", ".yaml"], linter: "yamllint", auto_inputs: [".yamllint", ".yamllint.yml", ".yamllint.yaml"]);
 
-impl KnownFields for MypyConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "checker", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
+checker_config!(JqConfig, extensions: [".json"], linter: "jq");
 
-fn default_pyrefly_checker() -> String {
-    "pyrefly".into()
-}
+checker_config!(JsonlintConfig, extensions: [".json"], linter: "jsonlint");
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct PyreflyConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_pyrefly_checker")]
-    pub checker: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_pyrefly_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-fn default_pyrefly_auto_inputs() -> Vec<String> {
-    vec!["pyproject.toml".into()]
-}
-
-impl Default for PyreflyConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            checker: "pyrefly".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_pyrefly_auto_inputs(),
-            scan: default_scan!(extensions: [".py"]),
-        }
-    }
-}
-
-impl KnownFields for PyreflyConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "checker", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
-
-fn default_rumdl_linter() -> String {
-    "rumdl".into()
-}
-
-fn default_rumdl_auto_inputs() -> Vec<String> {
-    vec![".rumdl.toml".into()]
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct RumdlConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_rumdl_linter")]
-    pub linter: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_rumdl_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for RumdlConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            linter: "rumdl".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_rumdl_auto_inputs(),
-            scan: default_scan!(extensions: [".md"]),
-        }
-    }
-}
-
-impl KnownFields for RumdlConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
-
-fn default_yamllint_linter() -> String {
-    "yamllint".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct YamllintConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_yamllint_linter")]
-    pub linter: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_yamllint_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-fn default_yamllint_auto_inputs() -> Vec<String> {
-    vec![".yamllint".into(), ".yamllint.yml".into(), ".yamllint.yaml".into()]
-}
-
-impl Default for YamllintConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            linter: "yamllint".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_yamllint_auto_inputs(),
-            scan: default_scan!(extensions: [".yml", ".yaml"]),
-        }
-    }
-}
-
-impl KnownFields for YamllintConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
-
-fn default_jq_checker() -> String {
-    "jq".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct JqConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_jq_checker")]
-    pub checker: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default)]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for JqConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            checker: "jq".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: Vec::new(),
-            scan: default_scan!(extensions: [".json"]),
-        }
-    }
-}
-
-impl KnownFields for JqConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "checker", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
-
-fn default_jsonlint_linter() -> String {
-    "jsonlint".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct JsonlintConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_jsonlint_linter")]
-    pub linter: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default)]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for JsonlintConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            linter: "jsonlint".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: Vec::new(),
-            scan: default_scan!(extensions: [".json"]),
-        }
-    }
-}
-
-impl KnownFields for JsonlintConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
-
-fn default_taplo_linter() -> String {
-    "taplo".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct TaploConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_taplo_linter")]
-    pub linter: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_taplo_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-fn default_taplo_auto_inputs() -> Vec<String> {
-    vec!["taplo.toml".into(), ".taplo.toml".into()]
-}
-
-impl Default for TaploConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            linter: "taplo".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_taplo_auto_inputs(),
-            scan: default_scan!(extensions: [".toml"]),
-        }
-    }
-}
-
-impl KnownFields for TaploConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
+checker_config!(TaploConfig, extensions: [".toml"], linter: "taplo", auto_inputs: ["taplo.toml", ".taplo.toml"]);
 
 checker_config!(JsonSchemaConfig, extensions: [".json"]);
 
@@ -1260,104 +969,16 @@ impl KnownFields for TagsConfig {
     }
 }
 
-fn default_shellcheck_checker() -> String {
-    "shellcheck".into()
-}
+checker_config!(ShellcheckConfig, extensions: [".sh", ".bash"], linter: "shellcheck", auto_inputs: [".shellcheckrc"]);
 
-fn default_shellcheck_auto_inputs() -> Vec<String> {
-    vec![".shellcheckrc".into()]
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ShellcheckConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_shellcheck_checker")]
-    pub checker: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_shellcheck_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for ShellcheckConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            checker: "shellcheck".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_shellcheck_auto_inputs(),
-            scan: default_scan!(extensions: [".sh", ".bash"]),
-        }
-    }
-}
-
-impl KnownFields for ShellcheckConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "checker", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
-
-fn default_luacheck_checker() -> String {
-    "luacheck".into()
-}
-
-fn default_luacheck_auto_inputs() -> Vec<String> {
-    vec![".luacheckrc".into()]
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct LuacheckConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_luacheck_checker")]
-    pub checker: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_luacheck_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for LuacheckConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            checker: "luacheck".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_luacheck_auto_inputs(),
-            scan: default_scan!(extensions: [".lua"]),
-        }
-    }
-}
-
-impl KnownFields for LuacheckConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "checker", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
+checker_config!(LuacheckConfig, extensions: [".lua"], linter: "luacheck", auto_inputs: [".luacheckrc"]);
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ScriptCheckConfig {
     #[serde(default)]
     pub enabled: bool,
     #[serde(default)]
-    pub checker: String,
+    pub linter: String,
     #[serde(default)]
     pub args: Vec<String>,
     #[serde(default)]
@@ -1372,7 +993,7 @@ impl Default for ScriptCheckConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            checker: String::new(),
+            linter: String::new(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
@@ -1390,7 +1011,7 @@ impl Default for ScriptCheckConfig {
 impl KnownFields for ScriptCheckConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "checker", "args", "extra_inputs", "auto_inputs",
+            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }
@@ -2391,206 +2012,17 @@ impl KnownFields for ObjdumpConfig {
     }
 }
 
-fn default_eslint_linter() -> String {
-    "eslint".into()
-}
+checker_config!(EslintConfig, extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"], linter: "eslint", auto_inputs: [".eslintrc", ".eslintrc.json", ".eslintrc.js", ".eslintrc.yml", ".eslintrc.yaml", ".eslintrc.cjs", "eslint.config.js", "eslint.config.mjs", "eslint.config.cjs"]);
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct EslintConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_eslint_linter")]
-    pub linter: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_eslint_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
+checker_config!(JshintConfig, extensions: [".js", ".jsx", ".mjs", ".cjs"], linter: "jshint", auto_inputs: [".jshintrc"]);
 
-fn default_eslint_auto_inputs() -> Vec<String> {
-    vec![
-        ".eslintrc".into(),
-        ".eslintrc.json".into(),
-        ".eslintrc.js".into(),
-        ".eslintrc.yml".into(),
-        ".eslintrc.yaml".into(),
-        ".eslintrc.cjs".into(),
-        "eslint.config.js".into(),
-        "eslint.config.mjs".into(),
-        "eslint.config.cjs".into(),
-    ]
-}
-
-impl Default for EslintConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            linter: "eslint".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_eslint_auto_inputs(),
-            scan: default_scan!(extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]),
-        }
-    }
-}
-
-impl KnownFields for EslintConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
-
-fn default_jshint_linter() -> String {
-    "jshint".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct JshintConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_jshint_linter")]
-    pub linter: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_jshint_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-fn default_jshint_auto_inputs() -> Vec<String> {
-    vec![".jshintrc".into()]
-}
-
-impl Default for JshintConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            linter: "jshint".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_jshint_auto_inputs(),
-            scan: default_scan!(extensions: [".js", ".jsx", ".mjs", ".cjs"]),
-        }
-    }
-}
-
-impl KnownFields for JshintConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
-
-fn default_htmlhint_linter() -> String {
-    "htmlhint".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct HtmlhintConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_htmlhint_linter")]
-    pub linter: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_htmlhint_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-fn default_htmlhint_auto_inputs() -> Vec<String> {
-    vec![".htmlhintrc".into()]
-}
-
-impl Default for HtmlhintConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            linter: "htmlhint".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_htmlhint_auto_inputs(),
-            scan: default_scan!(extensions: [".html", ".htm"]),
-        }
-    }
-}
-
-impl KnownFields for HtmlhintConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
+checker_config!(HtmlhintConfig, extensions: [".html", ".htm"], linter: "htmlhint", auto_inputs: [".htmlhintrc"]);
 
 // --- tidy (HTML validator) ---
 checker_config!(TidyConfig, extensions: [".html", ".htm"]);
 
 // --- stylelint (CSS linter) ---
-
-fn default_stylelint_linter() -> String { "stylelint".into() }
-
-fn default_stylelint_auto_inputs() -> Vec<String> {
-    vec![
-        ".stylelintrc".into(), ".stylelintrc.json".into(), ".stylelintrc.yml".into(),
-        ".stylelintrc.yaml".into(), ".stylelintrc.js".into(), ".stylelintrc.cjs".into(),
-        "stylelint.config.js".into(), "stylelint.config.cjs".into(),
-    ]
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct StylelintConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_stylelint_linter")]
-    pub linter: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_stylelint_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for StylelintConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            linter: "stylelint".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_stylelint_auto_inputs(),
-            scan: default_scan!(extensions: [".css", ".scss", ".sass", ".less"]),
-        }
-    }
-}
-
-impl KnownFields for StylelintConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
+checker_config!(StylelintConfig, extensions: [".css", ".scss", ".sass", ".less"], linter: "stylelint", auto_inputs: [".stylelintrc", ".stylelintrc.json", ".stylelintrc.yml", ".stylelintrc.yaml", ".stylelintrc.js", ".stylelintrc.cjs", "stylelint.config.js", "stylelint.config.cjs"]);
 
 // --- jslint (JavaScript linter) ---
 checker_config!(JslintConfig, extensions: [".js"]);
@@ -2605,89 +2037,13 @@ checker_config!(HtmllintConfig, extensions: [".html", ".htm"]);
 checker_config!(PhpLintConfig, extensions: [".php"]);
 
 // --- perlcritic (Perl code analyzer) ---
-
-fn default_perlcritic_auto_inputs() -> Vec<String> {
-    vec![".perlcriticrc".into()]
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct PerlcriticConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_perlcritic_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for PerlcriticConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_perlcritic_auto_inputs(),
-            scan: default_scan!(extensions: [".pl", ".pm"]),
-        }
-    }
-}
-
-impl KnownFields for PerlcriticConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
+checker_config!(PerlcriticConfig, extensions: [".pl", ".pm"], auto_inputs: [".perlcriticrc"]);
 
 // --- xmllint (XML validator) ---
 checker_config!(XmllintConfig, extensions: [".xml"]);
 
 // --- checkstyle (Java style checker) ---
-
-fn default_checkstyle_auto_inputs() -> Vec<String> {
-    vec!["checkstyle.xml".into()]
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct CheckstyleConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default = "default_checkstyle_auto_inputs")]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for CheckstyleConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: default_checkstyle_auto_inputs(),
-            scan: default_scan!(extensions: [".java"]),
-        }
-    }
-}
-
-impl KnownFields for CheckstyleConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
+checker_config!(CheckstyleConfig, extensions: [".java"], auto_inputs: ["checkstyle.xml"]);
 
 // --- yq (YAML processor/validator) ---
 checker_config!(YqConfig, extensions: [".yml", ".yaml"]);

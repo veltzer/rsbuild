@@ -17,19 +17,19 @@ jq invocation.
 ## Source Files
 
 - Input: `**/*.json`
-- Output: none (checker)
+- Output: none (linter)
 
 ## Configuration
 
 ```toml
 [processor.jq]
-checker = "jq"                               # The jq command to run
+linter = "jq"                               # The jq command to run
 args = []                                    # Additional arguments to pass to jq (after "empty")
 extra_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `checker` | string | `"jq"` | The jq executable to run |
+| `linter` | string | `"jq"` | The jq executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to jq (after the `empty` filter) |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |

@@ -308,7 +308,7 @@ impl Function for WorkflowNamesFunction {
             let content = fs::read_to_string(&path)
                 .map_err(|e| tera::Error::msg(format!("workflow_names: read {}: {e}", path.display())))?;
 
-            let yaml: serde_yaml::Value = serde_yaml::from_str(&content)
+            let yaml: serde_yml::Value = serde_yml::from_str(&content)
                 .map_err(|e| tera::Error::msg(format!("workflow_names: parse {}: {e}", path.display())))?;
 
             let name = yaml

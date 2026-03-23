@@ -9,23 +9,12 @@ use crate::tool_lock;
 use super::{Builder, sorted_keys};
 
 /// Return the language runtime category for a tool.
+/// Delegates to the central `TOOLS` registry in `processors/mod.rs`.
 fn tool_runtime(tool: &str) -> &'static str {
-    match tool {
-        "ruff" | "pylint" | "mypy" | "pyrefly" | "yamllint" | "sphinx-build" | "pip"
-        | "jsonlint" | "cpplint" | "a2x" | "python3" => "python",
-        "marp" | "mmdc" | "markdownlint" | "npm" | "node" | "node_modules/.bin/markdownlint"
-        | "eslint" | "jshint" | "htmlhint" => "node",
-        "bundle" | "mdl" | "ruby" | "gems/bin/mdl" => "ruby",
-        "cargo" | "rustc" | "mdbook" | "rumdl" | "taplo" => "rust",
-        "perl" | "markdown" | "checkpatch.pl" => "perl",
-        "gcc" | "g++" | "clang" | "clang++" | "clang-tidy" | "cppcheck" | "make"
-        | "shellcheck" | "jq" | "aspell" | "pandoc" | "pdflatex" | "qpdf" | "drawio"
-        | "libreoffice" | "flock" | "pdfunite" | "dot" | "luacheck" | "objdump" => "system",
-        tool => {
-            debug_assert!(false, "tool_runtime: unrecognized tool '{tool}'");
-            "system"
-        }
-    }
+    crate::processors::tool_runtime(tool).unwrap_or_else(|| {
+        debug_assert!(false, "tool_runtime: unrecognized tool '{tool}'");
+        "system"
+    })
 }
 
 /// Handle `rsconstruct tools` subcommands without a project config.

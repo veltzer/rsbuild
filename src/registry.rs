@@ -64,6 +64,20 @@ macro_rules! for_each_processor {
             ESLINT,         eslint,         EslintConfig,          EslintProcessor,          ("", &[".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"], BUILD_TOOL_EXCLUDES);
             JSHINT,         jshint,         JshintConfig,          JshintProcessor,          ("", &[".js", ".jsx", ".mjs", ".cjs"], BUILD_TOOL_EXCLUDES);
             HTMLHINT,       htmlhint,       HtmlhintConfig,        HtmlhintProcessor,        ("", &[".html", ".htm"], BUILD_TOOL_EXCLUDES);
+            TIDY,           tidy,           TidyConfig,            TidyProcessor,            ("", &[".html", ".htm"], BUILD_TOOL_EXCLUDES);
+            STYLELINT,      stylelint,      StylelintConfig,       StylelintProcessor,       ("", &[".css", ".scss", ".sass", ".less"], BUILD_TOOL_EXCLUDES);
+            JSLINT,         jslint,         JslintConfig,          JslintProcessor,          ("", &[".js"], BUILD_TOOL_EXCLUDES);
+            STANDARD,       standard,       StandardConfig,        StandardProcessor,        ("", &[".js"], BUILD_TOOL_EXCLUDES);
+            HTMLLINT,       htmllint,       HtmllintConfig,        HtmllintProcessor,        ("", &[".html", ".htm"], BUILD_TOOL_EXCLUDES);
+            PHP_LINT,       php_lint,       PhpLintConfig,         PhpLintProcessor,         ("", &[".php"], BUILD_TOOL_EXCLUDES);
+            PERLCRITIC,     perlcritic,     PerlcriticConfig,      PerlcriticProcessor,      ("", &[".pl", ".pm"], BUILD_TOOL_EXCLUDES);
+            XMLLINT,        xmllint,        XmllintConfig,         XmllintProcessor,         ("", &[".xml"], BUILD_TOOL_EXCLUDES);
+            CHECKSTYLE,     checkstyle,     CheckstyleConfig,      CheckstyleProcessor,      ("", &[".java"], BUILD_TOOL_EXCLUDES);
+            YQ,             yq,             YqConfig,              YqProcessor,              ("", &[".yml", ".yaml"], BUILD_TOOL_EXCLUDES);
+            CMAKE,          cmake,          CmakeConfig,           CmakeProcessor,           ("", &["CMakeLists.txt"], BUILD_TOOL_EXCLUDES);
+            HADOLINT,       hadolint,       HadolintConfig,        HadolintProcessor,        ("", &["Dockerfile"], BUILD_TOOL_EXCLUDES);
+            JEKYLL,         jekyll,         JekyllConfig,          JekyllProcessor,          ("", &["_config.yml"], BUILD_TOOL_EXCLUDES);
+            SLIDEV,         slidev,         SlidevConfig,          SlidevProcessor,          ("", &[".md"], BUILD_TOOL_EXCLUDES);
         }
     };
 }

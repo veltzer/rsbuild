@@ -1,0 +1,34 @@
+# Checkstyle Processor
+
+## Purpose
+
+Checks Java code style using [Checkstyle](https://checkstyle.org/).
+
+## How It Works
+
+Discovers `.java` files in the project (excluding common build tool directories),
+runs `checkstyle` on each file, and records success in the cache. A non-zero exit
+code from checkstyle fails the product.
+
+This processor supports batch mode.
+
+If a `checkstyle.xml` file exists, it is automatically added as an extra input so
+that configuration changes trigger rebuilds.
+
+## Source Files
+
+- Input: `**/*.java`
+- Output: none (checker)
+
+## Configuration
+
+```toml
+[processor.checkstyle]
+args = []
+extra_inputs = []
+```
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `args` | string[] | `[]` | Extra arguments passed to checkstyle |
+| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |

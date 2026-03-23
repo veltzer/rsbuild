@@ -1,0 +1,31 @@
+# XMLLint Processor
+
+## Purpose
+
+Validates XML files using [xmllint](http://xmlsoft.org/xmllint.html).
+
+## How It Works
+
+Discovers `.xml` files in the project (excluding common build tool directories),
+runs `xmllint --noout` on each file, and records success in the cache. A non-zero
+exit code from xmllint fails the product.
+
+This processor supports batch mode.
+
+## Source Files
+
+- Input: `**/*.xml`
+- Output: none (checker)
+
+## Configuration
+
+```toml
+[processor.xmllint]
+args = []
+extra_inputs = []
+```
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `args` | string[] | `[]` | Extra arguments passed to xmllint |
+| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |

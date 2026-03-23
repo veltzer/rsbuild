@@ -581,11 +581,14 @@ where
 pub use checkers::{
     AsciiCheckProcessor, AspellProcessor,
     CheckpatchProcessor, ClippyProcessor, ClangTidyProcessor, CppcheckProcessor, CpplintProcessor,
-    EslintProcessor, HtmlhintProcessor, JshintProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
+    CheckstyleProcessor, CmakeProcessor,
+    HadolintProcessor, EslintProcessor, HtmlhintProcessor, HtmllintProcessor,
+    JekyllProcessor, JshintProcessor, JslintProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
     LuacheckProcessor, MakeProcessor, MarkdownlintProcessor, MdlProcessor, MypyProcessor,
-    PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,
-    ScriptCheckProcessor, ShellcheckProcessor, SleepProcessor, SpellcheckProcessor,
-    TaploProcessor, YamllintProcessor,
+    PerlcriticProcessor, PhpLintProcessor, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,
+    ScriptCheckProcessor, ShellcheckProcessor, SleepProcessor, SlidevProcessor, SpellcheckProcessor,
+    StandardProcessor, StylelintProcessor,
+    TaploProcessor, TidyProcessor, XmllintProcessor, YamllintProcessor, YqProcessor,
 };
 pub use generators::{A2xProcessor, CcSingleFileProcessor, DrawioProcessor, LibreofficeProcessor, LinuxModuleProcessor, MakoProcessor, MarpProcessor, MarkdownProcessor, MermaidProcessor, ObjdumpProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, TagsProcessor, TeraProcessor};
 pub use mass_generators::{CargoProcessor, CcProcessor, GemProcessor, MdbookProcessor, NpmProcessor, PipProcessor, SphinxProcessor};
@@ -767,69 +770,100 @@ pub trait ProductDiscovery: Sync + Send {
     }
 }
 
+/// Central registry of all known external tools — single source of truth for
+/// runtime category and install command. Both `tool_install_command()` and
+/// `tool_runtime()` (in `builder/tools.rs`) look up data from this table.
+///
+/// Each entry: `(tool_name, runtime, install_command)`
+///
+/// Runtime categories: "python", "node", "ruby", "rust", "perl", "system"
+pub static TOOLS: &[(&str, &str, &str)] = &[
+    // Python tools
+    ("ruff",            "python", "pip install ruff"),
+    ("pylint",          "python", "pip install pylint"),
+    ("mypy",            "python", "pip install mypy"),
+    ("pyrefly",         "python", "pip install pyrefly"),
+    ("yamllint",        "python", "pip install yamllint"),
+    ("sphinx-build",    "python", "pip install sphinx"),
+    ("pip",             "python", "python3 -m ensurepip"),
+    ("jsonlint",        "python", "pip install jsonlint"),
+    ("cpplint",         "python", "pip install cpplint"),
+    ("a2x",             "python", "apt install asciidoc"),
+    ("python3",         "python", "apt install python3"),
+    // Node tools
+    ("marp",                         "node", "npm install -g @marp-team/marp-cli"),
+    ("mmdc",                         "node", "npm install -g @mermaid-js/mermaid-cli"),
+    ("node_modules/.bin/markdownlint", "node", "npm install markdownlint-cli"),
+    ("markdownlint",                 "node", "npm install -g markdownlint-cli"),
+    ("eslint",                       "node", "npm install -g eslint"),
+    ("htmlhint",                     "node", "npm install -g htmlhint"),
+    ("jshint",                       "node", "npm install -g jshint"),
+    ("npm",                          "node", "apt install npm"),
+    ("node",                         "node", "apt install nodejs"),
+    // Ruby tools
+    ("gems/bin/mdl",    "ruby", "gem install mdl"),
+    ("mdl",             "ruby", "gem install mdl"),
+    ("bundle",          "ruby", "gem install bundler"),
+    ("ruby",            "ruby", "apt install ruby"),
+    // Rust tools
+    ("mdbook",          "rust", "cargo install mdbook"),
+    ("rumdl",           "rust", "cargo install rumdl"),
+    ("taplo",           "rust", "cargo install taplo-cli"),
+    ("cargo",           "rust", "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"),
+    ("rustc",           "rust", "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"),
+    // Perl tools
+    ("perl",            "perl", "apt install perl"),
+    ("markdown",        "perl", "apt install markdown"),
+    ("checkpatch.pl",   "perl", "install from Linux kernel source: scripts/checkpatch.pl"),
+    // System tools
+    ("shellcheck",      "system", "apt install shellcheck"),
+    ("luacheck",        "system", "apt install lua-check"),
+    ("cppcheck",        "system", "apt install cppcheck"),
+    ("clang-tidy",      "system", "apt install clang-tidy"),
+    ("gcc",             "system", "apt install gcc"),
+    ("g++",             "system", "apt install g++"),
+    ("clang",           "system", "apt install clang"),
+    ("clang++",         "system", "apt install clang"),
+    ("ar",              "system", "apt install binutils"),
+    ("make",            "system", "apt install make"),
+    ("jq",              "system", "apt install jq"),
+    ("aspell",          "system", "apt install aspell"),
+    ("pandoc",          "system", "apt install pandoc"),
+    ("pdflatex",        "system", "apt install texlive-latex-base"),
+    ("qpdf",            "system", "apt install qpdf"),
+    ("dot",             "system", "apt install graphviz"),
+    ("drawio",          "system", "snap install drawio"),
+    ("libreoffice",     "system", "apt install libreoffice"),
+    ("flock",           "system", "apt install util-linux"),
+    ("pdfunite",        "system", "apt install poppler-utils"),
+    ("objdump",         "system", "apt install binutils"),
+    ("tidy",            "system", "apt install tidy"),
+    ("xmllint",         "system", "apt install libxml2-utils"),
+    ("cmake",           "system", "apt install cmake"),
+    ("hadolint",        "system", "apt install hadolint"),
+    ("php",             "system", "apt install php-cli"),
+    ("checkstyle",      "system", "apt install checkstyle"),
+    ("yq",              "system", "snap install yq"),
+    // Node tools (additional)
+    ("stylelint",       "node", "npm install -g stylelint"),
+    ("jslint",          "node", "npm install -g jslint"),
+    ("standard",        "node", "npm install -g standard"),
+    ("htmllint",        "node", "npm install -g htmllint-cli"),
+    ("slidev",          "node", "npm install -g @slidev/cli"),
+    // Perl tools (additional)
+    ("perlcritic",      "perl", "apt install libperl-critic-perl"),
+    // Ruby tools (additional)
+    ("jekyll",          "ruby", "gem install jekyll"),
+];
+
 /// Return the install command for a tool, if known.
-/// This is a property of the tool itself, not the processor — multiple processors
-/// may require the same tool (e.g., python3).
 pub fn tool_install_command(tool: &str) -> Option<&'static str> {
-    match tool {
-        // Python tools (pip)
-        "ruff" => Some("pip install ruff"),
-        "pylint" => Some("pip install pylint"),
-        "mypy" => Some("pip install mypy"),
-        "pyrefly" => Some("pip install pyrefly"),
-        "yamllint" => Some("pip install yamllint"),
-        "sphinx-build" => Some("pip install sphinx"),
-        "pip" => Some("python3 -m ensurepip"),
-        // Rust tools (cargo)
-        "mdbook" => Some("cargo install mdbook"),
-        "rumdl" => Some("cargo install rumdl"),
-        "taplo" => Some("cargo install taplo-cli"),
-        "cargo" | "rustc" => Some("curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"),
-        // System packages (apt)
-        "shellcheck" => Some("apt install shellcheck"),
-        "luacheck" => Some("apt install lua-check"),
-        "cpplint" => Some("pip install cpplint"),
-        "cppcheck" => Some("apt install cppcheck"),
-        "clang-tidy" => Some("apt install clang-tidy"),
-        "gcc" => Some("apt install gcc"),
-        "g++" => Some("apt install g++"),
-        "clang" | "clang++" => Some("apt install clang"),
-        "make" => Some("apt install make"),
-        "jq" => Some("apt install jq"),
-        "aspell" => Some("apt install aspell"),
-        "pandoc" => Some("apt install pandoc"),
-        "markdown" => Some("apt install markdown"),
-        "pdflatex" => Some("apt install texlive-latex-base"),
-        "qpdf" => Some("apt install qpdf"),
-        "a2x" => Some("apt install asciidoc"),
-        "dot" => Some("apt install graphviz"),
-        "drawio" => Some("snap install drawio"),
-        "libreoffice" => Some("apt install libreoffice"),
-        "flock" => Some("apt install util-linux"),
-        "pdfunite" => Some("apt install poppler-utils"),
-        "python3" => Some("apt install python3"),
-        "jsonlint" => Some("pip install jsonlint"),
-        // Node tools (npm)
-        "marp" => Some("npm install -g @marp-team/marp-cli"),
-        "mmdc" => Some("npm install -g @mermaid-js/mermaid-cli"),
-        "node_modules/.bin/markdownlint" => Some("npm install markdownlint-cli"),
-        "eslint" => Some("npm install -g eslint"),
-        "htmlhint" => Some("npm install -g htmlhint"),
-        "jshint" => Some("npm install -g jshint"),
-        "npm" => Some("apt install npm"),
-        "node" => Some("apt install nodejs"),
-        // Ruby tools
-        "gems/bin/mdl" => Some("gem install mdl"),
-        "bundle" => Some("gem install bundler"),
-        "ruby" => Some("apt install ruby"),
-        // Binutils
-        "objdump" => Some("apt install binutils"),
-        // Kernel tools
-        "checkpatch.pl" => Some("install from Linux kernel source: scripts/checkpatch.pl"),
-        // Perl
-        "perl" => Some("apt install perl"),
-        _ => None,
-    }
+    TOOLS.iter().find(|(name, _, _)| *name == tool).map(|(_, _, cmd)| *cmd)
+}
+
+/// Return the runtime category for a tool, if known.
+pub fn tool_runtime(tool: &str) -> Option<&'static str> {
+    TOOLS.iter().find(|(name, _, _)| *name == tool).map(|(_, rt, _)| *rt)
 }
 
 /// Timing for a single product execution

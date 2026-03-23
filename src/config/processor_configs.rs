@@ -2538,3 +2538,168 @@ impl KnownFields for HtmlhintConfig {
         ]
     }
 }
+
+// --- tidy (HTML validator) ---
+checker_config!(TidyConfig, extensions: [".html", ".htm"]);
+
+// --- stylelint (CSS linter) ---
+
+fn default_stylelint_linter() -> String { "stylelint".into() }
+
+fn default_stylelint_auto_inputs() -> Vec<String> {
+    vec![
+        ".stylelintrc".into(), ".stylelintrc.json".into(), ".stylelintrc.yml".into(),
+        ".stylelintrc.yaml".into(), ".stylelintrc.js".into(), ".stylelintrc.cjs".into(),
+        "stylelint.config.js".into(), "stylelint.config.cjs".into(),
+    ]
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct StylelintConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_stylelint_linter")]
+    pub linter: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(default = "default_stylelint_auto_inputs")]
+    pub auto_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for StylelintConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            linter: "stylelint".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            auto_inputs: default_stylelint_auto_inputs(),
+            scan: default_scan!(extensions: [".css", ".scss", ".sass", ".less"]),
+        }
+    }
+}
+
+impl KnownFields for StylelintConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "linter", "args", "extra_inputs", "auto_inputs",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}
+
+// --- jslint (JavaScript linter) ---
+checker_config!(JslintConfig, extensions: [".js"]);
+
+// --- standard (JavaScript style checker) ---
+checker_config!(StandardConfig, extensions: [".js"]);
+
+// --- htmllint (HTML linter) ---
+checker_config!(HtmllintConfig, extensions: [".html", ".htm"]);
+
+// --- php_lint (PHP syntax checker) ---
+checker_config!(PhpLintConfig, extensions: [".php"]);
+
+// --- perlcritic (Perl code analyzer) ---
+
+fn default_perlcritic_auto_inputs() -> Vec<String> {
+    vec![".perlcriticrc".into()]
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PerlcriticConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(default = "default_perlcritic_auto_inputs")]
+    pub auto_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for PerlcriticConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            auto_inputs: default_perlcritic_auto_inputs(),
+            scan: default_scan!(extensions: [".pl", ".pm"]),
+        }
+    }
+}
+
+impl KnownFields for PerlcriticConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "args", "extra_inputs", "auto_inputs",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}
+
+// --- xmllint (XML validator) ---
+checker_config!(XmllintConfig, extensions: [".xml"]);
+
+// --- checkstyle (Java style checker) ---
+
+fn default_checkstyle_auto_inputs() -> Vec<String> {
+    vec!["checkstyle.xml".into()]
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct CheckstyleConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(default = "default_checkstyle_auto_inputs")]
+    pub auto_inputs: Vec<String>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for CheckstyleConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            auto_inputs: default_checkstyle_auto_inputs(),
+            scan: default_scan!(extensions: [".java"]),
+        }
+    }
+}
+
+impl KnownFields for CheckstyleConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "args", "extra_inputs", "auto_inputs",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}
+
+// --- yq (YAML processor/validator) ---
+checker_config!(YqConfig, extensions: [".yml", ".yaml"]);
+
+// --- cmake (CMake build system) ---
+checker_config!(CmakeConfig, extensions: ["CMakeLists.txt"]);
+
+// --- docker (Docker image build) ---
+checker_config!(HadolintConfig, extensions: ["Dockerfile"]);
+
+// --- jekyll (Static site generator) ---
+checker_config!(JekyllConfig, extensions: ["_config.yml"]);
+
+// --- slidev (Slidev presentations) ---
+checker_config!(SlidevConfig, extensions: [".md"]);

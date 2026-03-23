@@ -73,4 +73,21 @@ mod processors {
     pub mod tera;
     pub mod yamllint;
     pub mod tags;
+    pub mod eslint;
+    pub mod jshint;
+    pub mod htmlhint;
+    pub mod tidy;
+    pub mod stylelint;
+    pub mod jslint;
+    pub mod standard;
+    pub mod htmllint;
+    pub mod php_lint;
+    pub mod perlcritic;
+    pub mod xmllint;
+    pub mod checkstyle;
+    pub mod yq;
+    pub mod cmake;
+    pub mod hadolint;
+    pub mod jekyll;
+    pub mod slidev;
 }

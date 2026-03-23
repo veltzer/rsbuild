@@ -139,20 +139,30 @@ macro_rules! checker_config {
 
     // With linter (and optional auto_inputs)
     (@with_linter $name:ident, $scan:expr, $linter:expr, [$($ai:expr),*]) => {
-        #[derive(Debug, Deserialize, Serialize, Clone)]
-        pub struct $name {
-            #[serde(default = "default_true")]
-            pub enabled: bool,
-            #[serde(default)]
-            pub linter: String,
-            #[serde(default)]
-            pub args: Vec<String>,
-            #[serde(default)]
-            pub extra_inputs: Vec<String>,
-            #[serde(default)]
-            pub auto_inputs: Vec<String>,
-            #[serde(flatten)]
-            pub scan: ScanConfig,
+        // Generate a serde default function for the linter field.
+        // Using paste to create a unique function name per config type.
+        paste::paste! {
+            fn [<default_ $name:lower _linter>]() -> String {
+                $linter.into()
+            }
+        }
+
+        paste::paste! {
+            #[derive(Debug, Deserialize, Serialize, Clone)]
+            pub struct $name {
+                #[serde(default = "default_true")]
+                pub enabled: bool,
+                #[serde(default = "" [<default_ $name:lower _linter>] "")]
+                pub linter: String,
+                #[serde(default)]
+                pub args: Vec<String>,
+                #[serde(default)]
+                pub extra_inputs: Vec<String>,
+                #[serde(default)]
+                pub auto_inputs: Vec<String>,
+                #[serde(flatten)]
+                pub scan: ScanConfig,
+            }
         }
 
         impl Default for $name {

@@ -214,9 +214,22 @@ fn run_command_inner(cmd: &mut Command, inherit_stdio: bool) -> Result<Output> {
         tokio_cmd.kill_on_drop(true);
 
         let child = tokio_cmd.spawn()
-            .with_context(|| format!("Failed to spawn: {} {}",
-                program.to_string_lossy(),
-                args.iter().map(|a| a.to_string_lossy()).collect::<Vec<_>>().join(" ")))?;
+            .with_context(|| {
+                let prog = program.to_string_lossy();
+                let total_len: usize = prog.len() + args.iter().map(|a| a.len() + 1).sum::<usize>();
+                let arg_count = args.len();
+                if total_len > 100_000 {
+                    format!(
+                        "Failed to spawn '{}' with {} arguments (total command length ~{} bytes). \
+                         This usually means the argument list is too long for the OS (E2BIG). \
+                         Consider reducing the number of files or excluding directories.",
+                        prog, arg_count, total_len
+                    )
+                } else {
+                    format!("Failed to spawn: {} {}", prog,
+                        args.iter().map(|a| a.to_string_lossy()).collect::<Vec<_>>().join(" "))
+                }
+            })?;
 
         let mut interrupt_rx = get_interrupt_receiver();
 
@@ -533,7 +546,48 @@ pub(crate) fn ensure_stub_dir(stub_dir: &Path, processor_name: &str) -> Result<(
 ///
 /// Builds a command from the tool name, optional subcommand, config args, and file paths,
 /// then runs it and checks the output.
+/// Maximum total argument length (in bytes) before splitting into multiple invocations.
+/// Linux limit is typically ~2MB; we use a conservative threshold to leave headroom
+/// for environment variables and the tool path itself.
+const MAX_ARG_LEN: usize = 1_000_000;
+
 pub(crate) fn run_checker(
+    tool: &str,
+    subcommand: Option<&str>,
+    args: &[String],
+    files: &[&Path],
+) -> Result<()> {
+    // Calculate the base command length (tool + subcommand + args)
+    let base_len: usize = tool.len()
+        + subcommand.map_or(0, |s| s.len() + 1)
+        + args.iter().map(|a| a.len() + 1).sum::<usize>();
+
+    // Check if all files fit in a single invocation
+    let files_len: usize = files.iter().map(|f| f.as_os_str().len() + 1).sum();
+    if base_len + files_len <= MAX_ARG_LEN {
+        return run_checker_once(tool, subcommand, args, files);
+    }
+
+    // Split files into chunks that fit within the limit
+    let mut chunk_start = 0;
+    while chunk_start < files.len() {
+        let mut chunk_len = base_len;
+        let mut chunk_end = chunk_start;
+        while chunk_end < files.len() {
+            let file_len = files[chunk_end].as_os_str().len() + 1;
+            if chunk_len + file_len > MAX_ARG_LEN && chunk_end > chunk_start {
+                break;
+            }
+            chunk_len += file_len;
+            chunk_end += 1;
+        }
+        run_checker_once(tool, subcommand, args, &files[chunk_start..chunk_end])?;
+        chunk_start = chunk_end;
+    }
+    Ok(())
+}
+
+fn run_checker_once(
     tool: &str,
     subcommand: Option<&str>,
     args: &[String],

@@ -151,20 +151,14 @@ impl ProductDiscovery for PdfuniteProcessor {
 
             // Compute the expected PDF paths from the upstream processor.
             // The upstream processor (e.g. marp) scans from its scan_dir root,
-            // so the output path uses the source path relative to that root.
-            // The first component of source_dir typically matches the upstream scan_dir.
-            let scan_root = Path::new(&self.config.source_dir)
+            // which is the first component of source_dir.
+            let upstream_scan_dir = Path::new(&self.config.source_dir)
                 .components()
                 .next()
-                .map(|c| PathBuf::from(c.as_os_str()))
+                .map(|c| c.as_os_str().to_string_lossy().into_owned())
                 .unwrap_or_default();
             let inputs: Vec<PathBuf> = source_files.iter().map(|src| {
-                let stem = src.file_stem().expect(crate::errors::PATH_NO_STEM);
-                let parent = src.parent().expect(crate::errors::PATH_NO_PARENT);
-                let relative_parent = parent.strip_prefix(&scan_root).unwrap_or(parent);
-                Path::new(&self.config.source_output_dir)
-                    .join(relative_parent)
-                    .join(format!("{}.pdf", stem.to_string_lossy()))
+                super::output_path(src, &upstream_scan_dir, &self.config.source_output_dir, "pdf")
             }).chain(extra.iter().cloned()).collect();
 
             let course_name = subdir_name.to_string_lossy();

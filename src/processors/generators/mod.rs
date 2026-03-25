@@ -99,6 +99,20 @@ pub(super) struct DiscoverParams<'a, C: Serialize> {
     pub processor_name: &'a str,
 }
 
+/// Compute the output path for a source file.
+///
+/// Strips the `scan_dir` prefix from the source path, replaces the extension,
+/// and joins the result under `output_dir`. This is the single place where
+/// source-to-output path mapping is defined.
+pub(super) fn output_path(source: &Path, scan_dir: &str, output_dir: &str, extension: &str) -> PathBuf {
+    let scan_root = Path::new(scan_dir);
+    let full_parent = source.parent().unwrap_or(Path::new(""));
+    let parent = full_parent.strip_prefix(scan_root).unwrap_or(full_parent);
+    let stem = source.file_stem().unwrap_or_default();
+    let output_name = format!("{}.{}", stem.to_string_lossy(), extension);
+    Path::new(output_dir).join(parent).join(output_name)
+}
+
 /// Discover one product per source x format pair. Returns Ok(()) immediately
 /// if the scan root is invalid (directory doesn't exist).
 pub(super) fn discover_multi_format(
@@ -118,15 +132,11 @@ pub(super) fn discover_multi_format(
 
     let hash = Some(config_hash(params.config));
     let extra = resolve_extra_inputs(params.extra_inputs)?;
+    let scan_dir = params.scan.scan_dir();
 
-    let scan_root = Path::new(params.scan.scan_dir());
     for source in &files {
         for format in formats {
-            let stem = source.file_stem().unwrap_or_default();
-            let full_parent = source.parent().unwrap_or(Path::new(""));
-            let parent = full_parent.strip_prefix(scan_root).unwrap_or(full_parent);
-            let output_name = format!("{}.{}", stem.to_string_lossy(), format);
-            let output = Path::new(params.output_dir).join(parent).join(output_name);
+            let output = output_path(source, scan_dir, params.output_dir, format);
 
             let mut inputs = Vec::with_capacity(1 + extra.len());
             inputs.push(source.clone());
@@ -158,14 +168,10 @@ pub(super) fn discover_single_format(
 
     let hash = Some(config_hash(params.config));
     let extra = resolve_extra_inputs(params.extra_inputs)?;
+    let scan_dir = params.scan.scan_dir();
 
-    let scan_root = Path::new(params.scan.scan_dir());
     for source in files {
-        let stem = source.file_stem().unwrap_or_default();
-        let full_parent = source.parent().unwrap_or(Path::new(""));
-        let parent = full_parent.strip_prefix(scan_root).unwrap_or(full_parent);
-        let output_name = format!("{}.{}", stem.to_string_lossy(), extension);
-        let output = Path::new(params.output_dir).join(parent).join(output_name);
+        let output = output_path(&source, scan_dir, params.output_dir, extension);
 
         let mut inputs = Vec::with_capacity(1 + extra.len());
         inputs.push(source);

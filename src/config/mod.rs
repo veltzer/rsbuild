@@ -339,7 +339,11 @@ macro_rules! gen_processor_config {
             /// Return the default config for a processor as pretty JSON, or None if unknown.
             pub(crate) fn defconfig_json(name: &str) -> Option<String> {
                 let json: serde_json::Value = match name {
-                    $( stringify!($field) => serde_json::to_value(<$config_type>::default()).ok()?, )*
+                    $( stringify!($field) => {
+                        let mut cfg = <$config_type>::default();
+                        cfg.scan.resolve($scan_dir, $exts, $excl);
+                        serde_json::to_value(cfg).ok()?
+                    }, )*
                     _ => return None,
                 };
                 serde_json::to_string_pretty(&json).ok()

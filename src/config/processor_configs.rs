@@ -1921,7 +1921,7 @@ fn default_pdfunite_source_ext() -> String {
 }
 
 fn default_pdfunite_source_output_dir() -> String {
-    "out/marp/pdf".into()
+    "out/marp".into()
 }
 
 fn default_pdfunite_output_dir() -> String {
@@ -1959,7 +1959,7 @@ impl Default for PdfuniteConfig {
             pdfunite_bin: "pdfunite".into(),
             source_dir: "marp/courses".into(),
             source_ext: ".md".into(),
-            source_output_dir: "out/marp/pdf".into(),
+            source_output_dir: "out/marp".into(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),

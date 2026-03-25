@@ -644,7 +644,7 @@ pub use checkers::{
     StandardProcessor, StylelintProcessor,
     TaploProcessor, TidyProcessor, XmllintProcessor, YamllintProcessor, YqProcessor,
 };
-pub use generators::{A2xProcessor, CcSingleFileProcessor, DrawioProcessor, LibreofficeProcessor, LinuxModuleProcessor, MakoProcessor, MarpProcessor, MarkdownProcessor, MermaidProcessor, ObjdumpProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, TagsProcessor, TeraProcessor};
+pub use generators::{A2xProcessor, CcSingleFileProcessor, ChromiumProcessor, DrawioProcessor, LibreofficeProcessor, LinuxModuleProcessor, MakoProcessor, MarpProcessor, MarkdownProcessor, MermaidProcessor, ObjdumpProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, TagsProcessor, TeraProcessor};
 pub use mass_generators::{CargoProcessor, CcProcessor, GemProcessor, MdbookProcessor, NpmProcessor, PipProcessor, SphinxProcessor};
 pub(crate) use generators::tags as tags_cmd;
 pub use lua_processor::LuaProcessor;
@@ -890,6 +890,7 @@ pub static TOOLS: &[(&str, &str, &str)] = &[
     ("libreoffice",     "system", "apt install libreoffice"),
     ("flock",           "system", "apt install util-linux"),
     ("pdfunite",        "system", "apt install poppler-utils"),
+    ("google-chrome",   "system", "apt install google-chrome-stable"),
     ("objdump",         "system", "apt install binutils"),
     ("tidy",            "system", "apt install tidy"),
     ("xmllint",         "system", "apt install libxml2-utils"),

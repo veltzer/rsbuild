@@ -1688,6 +1688,55 @@ impl KnownFields for A2xConfig {
     }
 }
 
+fn default_chromium_bin() -> String {
+    "google-chrome".into()
+}
+
+fn default_chromium_output_dir() -> String {
+    "out/chromium".into()
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ChromiumConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_chromium_bin")]
+    pub chromium_bin: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(default)]
+    pub auto_inputs: Vec<String>,
+    #[serde(default = "default_chromium_output_dir")]
+    pub output_dir: String,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for ChromiumConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            chromium_bin: "google-chrome".into(),
+            args: Vec::new(),
+            extra_inputs: Vec::new(),
+            auto_inputs: Vec::new(),
+            output_dir: "out/chromium".into(),
+            scan: default_scan!(extensions: [".html"]),
+        }
+    }
+}
+
+impl KnownFields for ChromiumConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "chromium_bin", "args", "extra_inputs", "auto_inputs", "output_dir",
+            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+        ]
+    }
+}
+
 fn default_bundler() -> String {
     "bundle".into()
 }

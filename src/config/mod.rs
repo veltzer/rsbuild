@@ -559,6 +559,7 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         ("pdflatex", "qpdf") => Some(FieldType::Bool),
         // a2x
         ("a2x", "a2x" | "format" | "output_dir") => Some(FieldType::String),
+        ("chromium", "chromium_bin" | "output_dir") => Some(FieldType::String),
         // mermaid
         ("mermaid", "mmdc_bin" | "output_dir") => Some(FieldType::String),
         ("mermaid", "formats") => Some(FieldType::StringArray),

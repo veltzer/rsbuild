@@ -1,5 +1,6 @@
 mod a2x;
 mod cc_single_file;
+mod chromium;
 mod drawio;
 mod libreoffice;
 mod linux_module;
@@ -16,6 +17,7 @@ mod tera;
 
 pub use a2x::A2xProcessor;
 pub use cc_single_file::CcSingleFileProcessor;
+pub use chromium::ChromiumProcessor;
 pub use drawio::DrawioProcessor;
 pub use libreoffice::LibreofficeProcessor;
 pub use linux_module::LinuxModuleProcessor;

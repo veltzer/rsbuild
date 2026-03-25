@@ -1925,7 +1925,7 @@ fn default_pdfunite_source_output_dir() -> String {
 }
 
 fn default_pdfunite_output_dir() -> String {
-    "out/courses".into()
+    "out/pdfunite".into()
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -1963,7 +1963,7 @@ impl Default for PdfuniteConfig {
             args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
-            output_dir: "out/courses".into(),
+            output_dir: "out/pdfunite".into(),
             scan: default_scan!(extensions: ["course.yaml"]),
         }
     }

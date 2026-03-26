@@ -3,33 +3,27 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::io::Write;
-use parking_lot::Mutex;
 
 use crate::config::AspellConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, config_file_inputs, flush_words, scan_root_valid, log_command, format_command};
+use crate::processors::{ProductDiscovery, config_file_inputs, scan_root_valid, log_command, format_command};
+use super::word_manager::WordManager;
 
 pub struct AspellProcessor {
     config: AspellConfig,
-    /// Custom words, loaded once at initialization
-    custom_words: HashSet<String>,
-    /// Words to add to the words file (collected during auto_add_words mode)
-    words_to_add: Mutex<HashSet<String>>,
+    words: WordManager,
 }
 
 impl AspellProcessor {
     pub fn new(config: AspellConfig) -> Self {
         let custom_words = Self::load_custom_words(Path::new(&config.words_file));
-        Self {
-            config,
+        let words = WordManager::new(
             custom_words,
-            words_to_add: Mutex::new(HashSet::new()),
-        }
-    }
-
-    fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan)
+            config.words_file.clone(),
+            Some("personal_ws-1.1 en 0"),
+        );
+        Self { config, words }
     }
 
     /// Load custom words from the aspell personal word list (.pws) file
@@ -86,38 +80,10 @@ impl AspellProcessor {
         let misspelled: Vec<&str> = stdout.lines()
             .map(|l| l.trim())
             .filter(|l| !l.is_empty())
-            .filter(|l| !self.custom_words.contains(&l.to_lowercase()))
+            .filter(|l| !self.words.is_known(&l.to_lowercase()))
             .collect();
 
-        if !misspelled.is_empty() {
-            if self.config.auto_add_words {
-                let mut words_to_add = self.words_to_add.lock();
-                for word in &misspelled {
-                    words_to_add.insert(word.to_lowercase());
-                }
-                Ok(())
-            } else {
-                anyhow::bail!(
-                    "Misspelled words in {}:\n{}",
-                    file.display(),
-                    misspelled.join("\n"),
-                );
-            }
-        } else {
-            Ok(())
-        }
-    }
-
-    /// Write collected words to the aspell personal word list (.pws) file
-    fn flush_words_to_file(&self) -> Result<()> {
-        let words_to_add = self.words_to_add.lock();
-        let words_path = Path::new(&self.config.words_file);
-        flush_words(
-            &self.custom_words,
-            &words_to_add,
-            words_path,
-            Some("personal_ws-1.1 en 0"),
-        )
+        self.words.handle_misspelled(&misspelled, file, self.config.auto_add_words)
     }
 }
 
@@ -127,7 +93,7 @@ impl ProductDiscovery for AspellProcessor {
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        self.should_process() && !file_index.scan(&self.config.scan, true).is_empty()
+        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
     }
 
     fn required_tools(&self) -> Vec<String> {
@@ -139,7 +105,7 @@ impl ProductDiscovery for AspellProcessor {
         graph: &mut BuildGraph,
         file_index: &FileIndex,
     ) -> Result<()> {
-        if !self.should_process() {
+        if !scan_root_valid(&self.config.scan) {
             return Ok(());
         }
 
@@ -158,13 +124,12 @@ impl ProductDiscovery for AspellProcessor {
     }
 
     fn execute(&self, product: &Product) -> Result<()> {
-        let result = self.check_file(product.primary_input());
-        if self.config.auto_add_words
-            && let Err(e) = self.flush_words_to_file()
-        {
-            eprintln!("Warning: failed to flush aspell words file: {}", e);
-        }
-        result
+        self.words.execute_with_flush(
+            product,
+            self.config.auto_add_words,
+            |file| self.check_file(file),
+            "aspell",
+        )
     }
 
     fn supports_batch(&self) -> bool {
@@ -172,18 +137,12 @@ impl ProductDiscovery for AspellProcessor {
     }
 
     fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
-        let results: Vec<Result<()>> = products
-            .iter()
-            .map(|p| self.check_file(p.primary_input()))
-            .collect();
-
-        if self.config.auto_add_words
-            && let Err(e) = self.flush_words_to_file()
-        {
-            eprintln!("Warning: failed to flush aspell words file: {}", e);
-        }
-
-        results
+        self.words.execute_batch_with_flush(
+            products,
+            self.config.auto_add_words,
+            |file| self.check_file(file),
+            "aspell",
+        )
     }
 
     fn config_json(&self) -> Option<String> {

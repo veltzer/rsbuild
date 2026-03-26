@@ -19,7 +19,14 @@ use variables::substitute_variables;
 
 const CONFIG_FILE: &str = "rsconstruct.toml";
 
+/// Fields contributed by ScanConfig via `#[serde(flatten)]`.
+/// These are automatically appended to every processor's known fields during validation.
+pub(crate) const SCAN_CONFIG_FIELDS: &[&str] = &[
+    "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+];
+
 pub(crate) trait KnownFields {
+    /// Return the known fields for this config struct, excluding ScanConfig fields.
     fn known_fields() -> &'static [&'static str];
 }
 
@@ -603,16 +610,20 @@ fn validate_processor_fields(raw: &toml::Value) -> Result<()> {
             None => continue, // skip scalar fields like auto_detect, enabled
         };
 
-        let known: &[&str] = match ProcessorConfig::known_fields_for(name.as_str()) {
+        let own_fields: &[&str] = match ProcessorConfig::known_fields_for(name.as_str()) {
             Some(fields) => fields,
             None => continue, // unknown processor name = Lua plugin, skip
         };
 
         for (key, field_value) in table {
-            if !known.contains(&key.as_str()) {
+            if !own_fields.contains(&key.as_str()) && !SCAN_CONFIG_FIELDS.contains(&key.as_str()) {
+                let all_fields: Vec<&str> = own_fields.iter()
+                    .chain(SCAN_CONFIG_FIELDS.iter())
+                    .copied()
+                    .collect();
                 errors.push(format!(
                     "[processor.{}]: unknown field '{}' (valid fields: {})",
-                    name, key, known.join(", ")
+                    name, key, all_fields.join(", ")
                 ));
                 continue;
             }

@@ -68,6 +68,9 @@ macro_rules! impl_checker {
     (@hidden false) => {};
 
     // --- auto_detect ---
+    (@auto_detect $self:ident, $fi:ident, $cfg:ident, [scan_root]) => {
+        $crate::processors::scan_root_valid(&$self.$cfg.scan) && !$fi.scan(&$self.$cfg.scan, true).is_empty()
+    };
     (@auto_detect $self:ident, $fi:ident, $cfg:ident, [$guard:ident]) => {
         $self.$guard() && !$fi.scan(&$self.$cfg.scan, true).is_empty()
     };
@@ -94,7 +97,20 @@ macro_rules! impl_checker {
     };
 
     // --- discover ---
-    // With guard
+    // With scan_root guard (built-in)
+    (@discover $self:ident, $graph:ident, $fi:ident, $cfg:ident, $name:expr, [scan_root]) => {{
+        if !$crate::processors::scan_root_valid(&$self.$cfg.scan) {
+            return Ok(());
+        }
+        let mut extra_inputs = $self.$cfg.extra_inputs.clone();
+        for ai in &$self.$cfg.auto_inputs {
+            extra_inputs.extend($crate::processors::config_file_inputs(ai));
+        }
+        $crate::processors::discover_checker_products(
+            $graph, &$self.$cfg.scan, $fi, &extra_inputs, &$self.$cfg, $name,
+        )
+    }};
+    // With custom guard method
     (@discover $self:ident, $graph:ident, $fi:ident, $cfg:ident, $name:expr, [$guard:ident]) => {{
         if !$self.$guard() {
             return Ok(());
@@ -310,7 +326,176 @@ macro_rules! impl_checker {
     };
 }
 
+/// Generate a complete trivial checker processor from just its parameters.
+///
+/// This eliminates boilerplate for the ~20 checkers that only call `run_checker()`.
+/// Each trivial checker file becomes a single macro invocation instead of ~35 lines.
+///
+/// # Parameters
+/// - `$processor:ident` — processor struct name
+/// - `$config:ty` — config struct type
+/// - `$desc:expr` — description string
+/// - `$name:expr` — processor name constant
+///
+/// # Tool specification (one required)
+/// - `tool_field: $field:ident` — tool name from config field (e.g. `linter`)
+/// - `tool_field_extra: $field:ident [$($extra:expr),+]` — config field + extra tools
+/// - `tools: [$($tool:expr),+]` — static tool name expressions
+///
+/// # Optional
+/// - `subcommand: $sub:expr` — subcommand string (e.g. "check")
+/// - `prepend_args: [$($arg:expr),+]` — args prepended before config args
+macro_rules! simple_checker {
+    // Internal: generate struct + methods + impl_checker
+    (@gen $processor:ident, $config:ty, $desc:expr, $name:expr,
+     subcommand: [$($sub:expr)?],
+     prepend_args: [$($pa:expr),*],
+     tool_kind: $tool_kind:tt,
+    ) => {
+        pub struct $processor {
+            config: $config,
+        }
+
+        impl $processor {
+            pub fn new(config: $config) -> Self {
+                Self { config }
+            }
+
+            fn execute_product(&self, product: &$crate::graph::Product) -> anyhow::Result<()> {
+                self.check_files(&[product.primary_input()])
+            }
+
+            fn check_files(&self, files: &[&std::path::Path]) -> anyhow::Result<()> {
+                simple_checker!(@run_checker self, files, [$($sub)?], [$($pa),*], $tool_kind)
+            }
+        }
+
+        simple_checker!(@impl_checker $processor, $desc, $name, $tool_kind);
+    };
+
+    // --- run_checker dispatch ---
+    // Tool from config field
+    (@run_checker $self:ident, $files:ident, [$($sub:expr)?], [$($pa:expr),*], [field: $field:ident]) => {{
+        simple_checker!(@do_run_checker &$self.config.$field, [$($sub)?], &$self.config.args, $files, [$($pa),*])
+    }};
+    // Tool from config field with extra tools (extra tools only affect required_tools, not the command)
+    (@run_checker $self:ident, $files:ident, [$($sub:expr)?], [$($pa:expr),*], [field_extra: $field:ident, [$($extra:expr),+]]) => {{
+        simple_checker!(@do_run_checker &$self.config.$field, [$($sub)?], &$self.config.args, $files, [$($pa),*])
+    }};
+    // Static tool name (first tool expression is the command)
+    (@run_checker $self:ident, $files:ident, [$($sub:expr)?], [$($pa:expr),*], [static_tool: $tool:expr $(, $extra:expr)*]) => {{
+        let tool_name = $tool;
+        simple_checker!(@do_run_checker &tool_name, [$($sub)?], &$self.config.args, $files, [$($pa),*])
+    }};
+
+    // --- do_run_checker: handle subcommand and prepend_args ---
+    (@do_run_checker $tool:expr, [], $args:expr, $files:ident, []) => {
+        $crate::processors::run_checker($tool, None, $args, $files)
+    };
+    (@do_run_checker $tool:expr, [$sub:expr], $args:expr, $files:ident, []) => {
+        $crate::processors::run_checker($tool, Some($sub), $args, $files)
+    };
+    (@do_run_checker $tool:expr, [], $args:expr, $files:ident, [$($pa:expr),+]) => {{
+        let mut combined_args: Vec<String> = vec![$($pa.to_string()),+];
+        combined_args.extend_from_slice($args);
+        $crate::processors::run_checker($tool, None, &combined_args, $files)
+    }};
+    (@do_run_checker $tool:expr, [$sub:expr], $args:expr, $files:ident, [$($pa:expr),+]) => {{
+        let mut combined_args: Vec<String> = vec![$($pa.to_string()),+];
+        combined_args.extend_from_slice($args);
+        $crate::processors::run_checker($tool, Some($sub), &combined_args, $files)
+    }};
+
+    // --- impl_checker dispatch ---
+    (@impl_checker $processor:ident, $desc:expr, $name:expr, [field: $field:ident]) => {
+        impl_checker!($processor,
+            config: config,
+            description: $desc,
+            name: $name,
+            execute: execute_product,
+            tool_field: $field,
+            config_json: true,
+            batch: check_files,
+        );
+    };
+    (@impl_checker $processor:ident, $desc:expr, $name:expr, [field_extra: $field:ident, [$($extra:expr),+]]) => {
+        impl_checker!($processor,
+            config: config,
+            description: $desc,
+            name: $name,
+            execute: execute_product,
+            tool_field_extra: $field [$($extra),+],
+            config_json: true,
+            batch: check_files,
+        );
+    };
+    (@impl_checker $processor:ident, $desc:expr, $name:expr, [static_tool: $($tool:expr),+]) => {
+        impl_checker!($processor,
+            config: config,
+            description: $desc,
+            name: $name,
+            execute: execute_product,
+            tools: [$($tool),+],
+            config_json: true,
+            batch: check_files,
+        );
+    };
+
+    // --- Public entry points ---
+
+    // tool_field variant (no subcommand, no prepend_args)
+    ($processor:ident, $config:ty, $desc:expr, $name:expr,
+     tool_field: $field:ident $(,)?
+    ) => {
+        simple_checker!(@gen $processor, $config, $desc, $name,
+            subcommand: [], prepend_args: [], tool_kind: [field: $field],);
+    };
+    // tool_field with subcommand
+    ($processor:ident, $config:ty, $desc:expr, $name:expr,
+     tool_field: $field:ident, subcommand: $sub:expr $(,)?
+    ) => {
+        simple_checker!(@gen $processor, $config, $desc, $name,
+            subcommand: [$sub], prepend_args: [], tool_kind: [field: $field],);
+    };
+    // tool_field with subcommand + prepend_args
+    ($processor:ident, $config:ty, $desc:expr, $name:expr,
+     tool_field: $field:ident, subcommand: $sub:expr, prepend_args: [$($pa:expr),+ $(,)?] $(,)?
+    ) => {
+        simple_checker!(@gen $processor, $config, $desc, $name,
+            subcommand: [$sub], prepend_args: [$($pa),+], tool_kind: [field: $field],);
+    };
+    // tool_field with prepend_args (no subcommand)
+    ($processor:ident, $config:ty, $desc:expr, $name:expr,
+     tool_field: $field:ident, prepend_args: [$($pa:expr),+ $(,)?] $(,)?
+    ) => {
+        simple_checker!(@gen $processor, $config, $desc, $name,
+            subcommand: [], prepend_args: [$($pa),+], tool_kind: [field: $field],);
+    };
+    // tool_field_extra variant
+    ($processor:ident, $config:ty, $desc:expr, $name:expr,
+     tool_field_extra: $field:ident [$($extra:expr),+] $(,)?
+    ) => {
+        simple_checker!(@gen $processor, $config, $desc, $name,
+            subcommand: [], prepend_args: [], tool_kind: [field_extra: $field, [$($extra),+]],);
+    };
+    // tools variant (no subcommand)
+    ($processor:ident, $config:ty, $desc:expr, $name:expr,
+     tools: [$($tool:expr),+] $(,)?
+    ) => {
+        simple_checker!(@gen $processor, $config, $desc, $name,
+            subcommand: [], prepend_args: [], tool_kind: [static_tool: $($tool),+],);
+    };
+    // tools with subcommand
+    ($processor:ident, $config:ty, $desc:expr, $name:expr,
+     tools: [$($tool:expr),+], subcommand: $sub:expr $(,)?
+    ) => {
+        simple_checker!(@gen $processor, $config, $desc, $name,
+            subcommand: [$sub], prepend_args: [], tool_kind: [static_tool: $($tool),+],);
+    };
+}
+
 mod aspell;
+pub(crate) mod word_manager;
 mod ascii_check;
 mod checkpatch;
 mod clippy;
@@ -330,7 +515,6 @@ mod ruff;
 mod rumdl;
 mod script_check;
 mod shellcheck;
-mod sleep;
 mod spellcheck;
 mod yamllint;
 mod jsonlint;
@@ -376,7 +560,6 @@ pub use ruff::RuffProcessor;
 pub use rumdl::RumdlProcessor;
 pub use script_check::ScriptCheckProcessor;
 pub use shellcheck::ShellcheckProcessor;
-pub use sleep::SleepProcessor;
 pub use spellcheck::SpellcheckProcessor;
 pub use yamllint::YamllintProcessor;
 pub use jq::JqProcessor;

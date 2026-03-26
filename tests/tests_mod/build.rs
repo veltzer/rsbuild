@@ -66,12 +66,10 @@ fn no_color_env() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Create a sleep file so there's something to process
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/color_test.sleep"), "0.01").unwrap();
+    // Create a template so there's something to process
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/color_test.txt.tera"),
+        "hello"
     ).unwrap();
 
     // Run with NO_COLOR set
@@ -88,12 +86,10 @@ fn timings_flag() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Create a sleep file
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/timing_test.sleep"), "0.01").unwrap();
+    // Create a template
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/timing_test.txt.tera"),
+        "hello"
     ).unwrap();
 
     // Run with --timings
@@ -111,12 +107,10 @@ fn no_timings_by_default() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Create a sleep file
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/no_timing.sleep"), "0.01").unwrap();
+    // Create a template
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/no_timing.txt.tera"),
+        "hello"
     ).unwrap();
 
     // Run without --timings (and without --verbose)
@@ -134,22 +128,17 @@ fn keep_going_continues_after_failure() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Create sleep directory with one bad file and one good file
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/bad.sleep"), "not_a_number").unwrap();
-    fs::write(project_path.join("sleep/good.sleep"), "0.01").unwrap();
-    fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
-    ).unwrap();
+    // Create one bad template and one good template
+    fs::write(project_path.join("templates.tera/bad.txt.tera"), "{{ invalid").unwrap();
+    fs::write(project_path.join("templates.tera/good.txt.tera"), "hello").unwrap();
 
     // Run with --keep-going
     let output = run_rsconstruct_with_env(project_path, &["build", "-v", "--keep-going"], &[("NO_COLOR", "1")]);
 
     // Should exit non-zero because of the failure
-    assert!(!output.status.success(), "Build should fail with bad sleep file");
+    assert!(!output.status.success(), "Build should fail with bad template");
 
-    // The good sleep file should still have been processed (verify via output)
+    // The good template should still have been processed (verify via output)
     let stdout = String::from_utf8_lossy(&output.stdout);
     // With --keep-going, both files should be attempted to be processed
     assert!(stdout.contains("Processing:"), "Files should be processed with --keep-going");
@@ -160,19 +149,14 @@ fn keep_going_short_flag() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Create sleep directory with one bad file
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/bad_k.sleep"), "invalid").unwrap();
-    fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
-    ).unwrap();
+    // Create one bad template
+    fs::write(project_path.join("templates.tera/bad_k.txt.tera"), "{{ invalid").unwrap();
 
     // Run with -k (short form)
     let output = run_rsconstruct_with_env(project_path, &["build", "-k"], &[("NO_COLOR", "1")]);
 
-    // Should exit non-zero since the sleep file has invalid content
-    assert!(!output.status.success(), "Build should fail with bad sleep file");
+    // Should exit non-zero since the template has invalid content
+    assert!(!output.status.success(), "Build should fail with bad template");
     let stderr = String::from_utf8_lossy(&output.stderr);
     let stdout = String::from_utf8_lossy(&output.stdout);
 
@@ -188,21 +172,16 @@ fn build_stops_on_first_error() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
     // "aaa" sorts before "zzz" alphabetically, so it will be processed first
-    fs::write(project_path.join("sleep/aaa.sleep"), "not_a_number").unwrap();
-    fs::write(project_path.join("sleep/zzz.sleep"), "0.01").unwrap();
-    fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
-    ).unwrap();
+    fs::write(project_path.join("templates.tera/aaa.txt.tera"), "{{ invalid").unwrap();
+    fs::write(project_path.join("templates.tera/zzz.txt.tera"), "hello").unwrap();
 
-    // Build should fail on aaa.sleep and stop
+    // Build should fail on aaa.txt.tera and stop
     let result = run_rsconstruct_json(project_path, &["build"]);
-    assert!(!result.exit_success, "Build should fail with bad sleep file");
+    assert!(!result.exit_success, "Build should fail with bad template");
     assert_eq!(result.failed, 1, "Should have exactly 1 failure");
-    // zzz.sleep should NOT be processed because we stop on first error
-    assert!(!result.has_product("zzz.sleep", "success"),
+    // zzz.txt should NOT be processed because we stop on first error
+    assert!(!result.has_product("zzz.txt", "success"),
         "Second file should NOT be processed after first error");
 }
 
@@ -212,30 +191,25 @@ fn keep_going_continues_after_error() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/bad.sleep"), "not_a_number").unwrap();
-    fs::write(project_path.join("sleep/good.sleep"), "0.01").unwrap();
-    fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
-    ).unwrap();
+    fs::write(project_path.join("templates.tera/bad.txt.tera"), "{{ invalid").unwrap();
+    fs::write(project_path.join("templates.tera/good.txt.tera"), "hello").unwrap();
 
     // First build with --keep-going — should fail but process all files
     let result1 = run_rsconstruct_json(project_path, &["build", "--keep-going"]);
-    assert!(!result1.exit_success, "Build should fail with bad sleep file");
+    assert!(!result1.exit_success, "Build should fail with bad template");
     assert_eq!(result1.failed, 1, "Should have 1 failure");
-    assert_eq!(result1.success, 1, "Should have 1 success (good.sleep)");
-    assert!(result1.has_product("good.sleep", "success"),
-        "Good sleep file should be processed with --keep-going");
+    assert_eq!(result1.success, 1, "Should have 1 success (good.txt)");
+    assert!(result1.has_product("good.txt", "success"),
+        "Good template should be processed with --keep-going");
 
     // Fix the bad file
-    fs::write(project_path.join("sleep/bad.sleep"), "0.01").unwrap();
+    fs::write(project_path.join("templates.tera/bad.txt.tera"), "fixed").unwrap();
 
-    // Second build — good.sleep should be skipped (cached)
+    // Second build — good.txt should be skipped (cached)
     let result2 = run_rsconstruct_json(project_path, &["build"]);
     assert!(result2.exit_success, "Second build should succeed");
-    assert_eq!(result2.skipped, 1, "Good sleep file should be skipped (cached)");
-    assert_eq!(result2.success, 1, "Bad sleep file (now fixed) should be processed");
+    assert_eq!(result2.skipped, 1, "Good template should be skipped (cached)");
+    assert_eq!(result2.success, 1, "Bad template (now fixed) should be processed");
 }
 
 #[test]
@@ -244,21 +218,16 @@ fn parallel_build_with_j_flag() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
     for name in &["alpha", "beta", "gamma", "delta"] {
         fs::write(
-            project_path.join(format!("sleep/{}.sleep", name)),
-            "0.01"
+            project_path.join(format!("templates.tera/{}.txt.tera", name)),
+            "hello"
         ).unwrap();
     }
-    fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
-    ).unwrap();
 
     let result = run_rsconstruct_json(project_path, &["build", "-j2"]);
     assert!(result.exit_success, "Parallel build with -j2 should succeed");
-    assert_eq!(result.success, 4, "Should process all 4 sleep files");
+    assert_eq!(result.success, 4, "Should process all 4 templates");
     assert_eq!(result.total_products, 4);
 }
 
@@ -269,22 +238,21 @@ fn parallel_keep_going_continues_after_failure() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/aaa_bad.sleep"), "not_a_number").unwrap();
-    fs::write(project_path.join("sleep/good1.sleep"), "0.01").unwrap();
-    fs::write(project_path.join("sleep/good2.sleep"), "0.01").unwrap();
-    fs::write(project_path.join("sleep/good3.sleep"), "0.01").unwrap();
+    fs::write(project_path.join("templates.tera/aaa_bad.txt.tera"), "{{ invalid").unwrap();
+    fs::write(project_path.join("templates.tera/good1.txt.tera"), "hello1").unwrap();
+    fs::write(project_path.join("templates.tera/good2.txt.tera"), "hello2").unwrap();
+    fs::write(project_path.join("templates.tera/good3.txt.tera"), "hello3").unwrap();
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n\n[build]\nparallel = 2\n"
+        "[processor]\nenabled = [\"tera\"]\n\n[build]\nparallel = 2\n"
     ).unwrap();
 
     let result = run_rsconstruct_json(project_path, &["build", "--keep-going"]);
 
     // Should fail overall
-    assert!(!result.exit_success, "Build should fail with bad sleep file even with --keep-going");
+    assert!(!result.exit_success, "Build should fail with bad template even with --keep-going");
     assert_eq!(result.failed, 1, "Should have 1 failure");
-    assert_eq!(result.success, 3, "All 3 good sleep files should be processed with --keep-going");
+    assert_eq!(result.success, 3, "All 3 good templates should be processed with --keep-going");
 }
 
 #[test]
@@ -293,21 +261,20 @@ fn parallel_builds_all_independent_products() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
     for i in 0..8 {
         fs::write(
-            project_path.join(format!("sleep/task_{:02}.sleep", i)),
-            "0.01"
+            project_path.join(format!("templates.tera/task_{:02}.txt.tera", i)),
+            "hello"
         ).unwrap();
     }
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n\n[build]\nparallel = 4\n"
+        "[processor]\nenabled = [\"tera\"]\n\n[build]\nparallel = 4\n"
     ).unwrap();
 
     let result = run_rsconstruct_json(project_path, &["build"]);
     assert!(result.exit_success, "Parallel build with 8 products and 4 jobs should succeed");
-    assert_eq!(result.success, 8, "Should process all 8 sleep files");
+    assert_eq!(result.success, 8, "Should process all 8 templates");
     assert_eq!(result.total_products, 8);
 
     // Incremental: second build should skip everything
@@ -322,16 +289,15 @@ fn parallel_timings_flag() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
     for name in &["one", "two", "three"] {
         fs::write(
-            project_path.join(format!("sleep/{}.sleep", name)),
-            "0.01"
+            project_path.join(format!("templates.tera/{}.txt.tera", name)),
+            "hello"
         ).unwrap();
     }
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n\n[build]\nparallel = 2\n"
+        "[processor]\nenabled = [\"tera\"]\n\n[build]\nparallel = 2\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(
@@ -346,9 +312,9 @@ fn parallel_timings_flag() {
     assert!(stdout.contains("Timing:"), "Should contain 'Timing:' header in parallel mode");
     assert!(stdout.contains("Total:"), "Should contain 'Total:' line in parallel mode");
 
-    // Should have timing entries (may be batched or individual depending on parallel execution)
+    // Should have timing entries
     let timing_lines = stdout.lines()
-        .filter(|l| l.contains("[sleep]") && l.contains("(0."))
+        .filter(|l| l.contains("[tera]") && l.contains("(0."))
         .count();
     assert!(timing_lines >= 1,
         "Should have at least one timing entry: {}", stdout);
@@ -356,25 +322,19 @@ fn parallel_timings_flag() {
 
 #[test]
 fn deterministic_build_order() {
-    // Run two separate builds with multiple sleep files and verify
+    // Run two separate builds with multiple templates and verify
     // that the processing order is identical both times.
     let outputs: Vec<Vec<String>> = (0..2).map(|_| {
         let temp_dir = setup_test_project();
         let project_path = temp_dir.path();
 
-        fs::create_dir_all(project_path.join("sleep")).unwrap();
-        // Create several sleep files with distinct names
+        // Create several template files with distinct names
         for name in &["zebra", "alpha", "mango", "banana", "cherry"] {
             fs::write(
-                project_path.join(format!("sleep/{}.sleep", name)),
-                "0.01"
+                project_path.join(format!("templates.tera/{}.txt.tera", name)),
+                "hello"
             ).unwrap();
         }
-
-        fs::write(
-            project_path.join("rsconstruct.toml"),
-            "[processor]\nenabled = [\"sleep\"]\n"
-        ).unwrap();
 
         let output = run_rsconstruct_with_env(project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
         assert!(output.status.success(),
@@ -390,7 +350,7 @@ fn deterministic_build_order() {
                 l.split("Processing:").nth(1).map(|s| s.trim().to_string())
             })
             .collect();
-        assert_eq!(processing_names.len(), 5, "Should process all 5 sleep files: {}", stdout);
+        assert_eq!(processing_names.len(), 5, "Should process all 5 templates: {}", stdout);
         processing_names
     }).collect();
 
@@ -400,18 +360,15 @@ fn deterministic_build_order() {
 }
 
 /// Test that classify_products propagates dependency changes transitively.
-/// Setup: tera generates step1.txt, sleep depends on step1.txt via extra_inputs.
-/// When the tera template changes, both products should be classified as needing
-/// rebuild — not just the tera product.
+/// Setup: tera generates step1.txt, a second tera template depends on step1.txt via extra_inputs.
+/// When the first tera template changes, both products should be classified as needing
+/// rebuild — not just the first product.
 #[test]
 fn classify_propagates_through_dependencies() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Create sleep directory
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-
-    // Phase 1: build with tera only to create the output file
+    // Phase 1: build with tera to create the output file
     fs::write(
         project_path.join("config/gen.py"),
         "val = 1"
@@ -428,14 +385,17 @@ fn classify_propagates_through_dependencies() {
         String::from_utf8_lossy(&output1.stderr));
     assert!(project_path.join("step1.txt").exists(), "Tera should generate step1.txt");
 
-    // Phase 2: enable sleep with extra_inputs pointing to the tera output
+    // Phase 2: add a second template with extra_inputs pointing to the first tera output
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"tera\", \"sleep\"]\n\n[processor.sleep]\nextra_inputs = [\"step1.txt\"]\n"
+        "[processor]\nenabled = [\"tera\"]\n\n[processor.tera]\nextra_inputs = [\"step1.txt\"]\n"
     ).unwrap();
-    fs::write(project_path.join("sleep/test.sleep"), "0.01").unwrap();
+    fs::write(
+        project_path.join("templates.tera/step2.txt.tera"),
+        "step2"
+    ).unwrap();
 
-    // Build both processors
+    // Build both products
     let output2 = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
     assert!(output2.status.success(),
         "Phase 2 build failed: stdout={}, stderr={}",
@@ -454,13 +414,13 @@ fn classify_propagates_through_dependencies() {
     // Wait so mtime differs
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    // Modify the tera template
+    // Modify the first tera template
     fs::write(
         project_path.join("templates.tera/step1.txt.tera"),
         "{% set c = load_python(path='config/gen.py') %}modified={{ c.val }}"
     ).unwrap();
 
-    // Classify: both products should need work (tera rebuild + sleep rebuild/restore)
+    // Classify: both products should need work (tera rebuild + second rebuild/restore)
     let output4 = run_rsconstruct_with_env(
         project_path, &["build", "--stop-after", "classify"], &[("NO_COLOR", "1")]
     );

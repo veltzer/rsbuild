@@ -640,7 +640,7 @@ pub use checkers::{
     JekyllProcessor, JshintProcessor, JslintProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
     LuacheckProcessor, MakeProcessor, MarkdownlintProcessor, MdlProcessor, MypyProcessor,
     PerlcriticProcessor, PhpLintProcessor, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,
-    ScriptCheckProcessor, ShellcheckProcessor, SleepProcessor, SlidevProcessor, SpellcheckProcessor,
+    ScriptCheckProcessor, ShellcheckProcessor, SlidevProcessor, SpellcheckProcessor,
     StandardProcessor, StylelintProcessor,
     TaploProcessor, TidyProcessor, XmllintProcessor, YamllintProcessor, YqProcessor,
 };

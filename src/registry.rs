@@ -26,7 +26,6 @@ macro_rules! for_each_processor {
             SPELLCHECK,     spellcheck,     SpellcheckConfig,      SpellcheckProcessor,      ("", &[".md"], SPELLCHECK_EXCLUDE_DIRS);
             SHELLCHECK,     shellcheck,     ShellcheckConfig,      ShellcheckProcessor,      ("", &[".sh", ".bash"], SHELL_EXCLUDE_DIRS);
             LUACHECK,       luacheck,       LuacheckConfig,        LuacheckProcessor,        ("", &[".lua"], BUILD_TOOL_EXCLUDES);
-            SLEEP,          sleep,          SleepConfig,           SleepProcessor,           ("sleep", &[".sleep"], &[]);
             MAKE,           make,           MakeConfig,            MakeProcessor,            ("", &["Makefile"], MAKE_CARGO_EXCLUDES);
             CARGO,          cargo,          CargoConfig,           CargoProcessor,           ("", &["Cargo.toml"], MAKE_CARGO_EXCLUDES);
             CLIPPY,         clippy,         ClippyConfig,          ClippyProcessor,          ("", &["Cargo.toml"], MAKE_CARGO_EXCLUDES);

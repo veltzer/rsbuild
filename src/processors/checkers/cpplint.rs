@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::config::CpplintConfig;
 use crate::graph::Product;
-use crate::processors::{scan_root_valid, run_checker};
+use crate::processors::run_checker;
 
 pub struct CpplintProcessor {
     config: CpplintConfig,
@@ -11,10 +11,6 @@ pub struct CpplintProcessor {
 impl CpplintProcessor {
     pub fn new(config: CpplintConfig) -> Self {
         Self { config }
-    }
-
-    fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan)
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
@@ -27,7 +23,7 @@ impl_checker!(CpplintProcessor,
     description: "Run cpplint (Google C++ style checker) on C/C++ source files",
     name: crate::processors::names::CPPLINT,
     execute: execute_product,
-    guard: should_process,
+    guard: scan_root,
     tools: ["cpplint".to_string()],
     config_json: true,
 );

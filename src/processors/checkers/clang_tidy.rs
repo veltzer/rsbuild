@@ -3,7 +3,7 @@ use std::process::Command;
 
 use crate::config::ClangTidyConfig;
 use crate::graph::Product;
-use crate::processors::{scan_root_valid, run_command, check_command_output};
+use crate::processors::{run_command, check_command_output};
 
 pub struct ClangTidyProcessor {
     config: ClangTidyConfig,
@@ -12,10 +12,6 @@ pub struct ClangTidyProcessor {
 impl ClangTidyProcessor {
     pub fn new(config: ClangTidyConfig) -> Self {
         Self { config }
-    }
-
-    fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan)
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
@@ -40,7 +36,7 @@ impl_checker!(ClangTidyProcessor,
     description: "Run clang-tidy static analysis on C/C++ source files",
     name: crate::processors::names::CLANG_TIDY,
     execute: execute_product,
-    guard: should_process,
+    guard: scan_root,
     tools: ["clang-tidy".to_string()],
     config_json: true,
 );

@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::config::CheckpatchConfig;
 use crate::graph::Product;
-use crate::processors::{scan_root_valid, run_checker};
+use crate::processors::run_checker;
 
 pub struct CheckpatchProcessor {
     config: CheckpatchConfig,
@@ -11,10 +11,6 @@ pub struct CheckpatchProcessor {
 impl CheckpatchProcessor {
     pub fn new(config: CheckpatchConfig) -> Self {
         Self { config }
-    }
-
-    fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan)
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
@@ -32,7 +28,7 @@ impl_checker!(CheckpatchProcessor,
     description: "Run kernel checkpatch.pl on C source files",
     name: crate::processors::names::CHECKPATCH,
     execute: execute_product,
-    guard: should_process,
+    guard: scan_root,
     tools: ["checkpatch.pl".to_string(), "perl".to_string()],
     config_json: true,
 );

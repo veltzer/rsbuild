@@ -6,11 +6,9 @@ fn explain_first_build() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/explain_first.sleep"), "0.01").unwrap();
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/explain_first.txt.tera"),
+        "hello"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build", "--explain"], &[("NO_COLOR", "1")]);
@@ -25,11 +23,9 @@ fn explain_incremental_skip() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/explain_skip.sleep"), "0.01").unwrap();
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/explain_skip.txt.tera"),
+        "hello"
     ).unwrap();
 
     // First build
@@ -49,11 +45,9 @@ fn explain_input_change() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/explain_change.sleep"), "0.01").unwrap();
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/explain_change.txt.tera"),
+        "hello"
     ).unwrap();
 
     // First build
@@ -61,7 +55,8 @@ fn explain_input_change() {
     assert!(output.status.success());
 
     // Modify the input
-    fs::write(project_path.join("sleep/explain_change.sleep"), "0.02").unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    fs::write(project_path.join("templates.tera/explain_change.txt.tera"), "changed").unwrap();
 
     // Second build with explain
     let output = run_rsconstruct_with_env(project_path, &["build", "--explain"], &[("NO_COLOR", "1")]);
@@ -76,11 +71,9 @@ fn explain_force() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/explain_force.sleep"), "0.01").unwrap();
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/explain_force.txt.tera"),
+        "hello"
     ).unwrap();
 
     // First build
@@ -127,11 +120,9 @@ fn explain_dry_run() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/explain_dry.sleep"), "0.01").unwrap();
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/explain_dry.txt.tera"),
+        "hello"
     ).unwrap();
 
     // Dry run with explain on first build

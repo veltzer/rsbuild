@@ -14,45 +14,19 @@ use super::{default_true, default_script_check_linter, default_cc_compiler, defa
 /// - `checker_config!(Name, extensions: [".py"], auto_inputs: [".pylintrc"])` — with auto inputs
 /// - `checker_config!(Name, extensions: [".py"], linter: "ruff", auto_inputs: [".ruff.toml"])` — both
 macro_rules! checker_config {
-    // Internal: generate struct body, Default, and KnownFields
-    (@impl $name:ident,
-     scan: $scan:expr,
-     linter: [$($linter:expr)?],
-     auto_inputs: [$($ai:expr),*]
-    ) => {
-        #[derive(Debug, Deserialize, Serialize, Clone)]
-        pub struct $name {
-            #[serde(default = "default_true")]
-            pub enabled: bool,
-            $(
-                #[serde(default = $crate::config::processor_configs::checker_config!(@linter_default_name $name))]
-                pub linter: String,
-                const _: () = { // phantom use of $linter to bind it
-                    fn _unused() { let _ = $linter; }
-                };
-            )?
-            #[serde(default)]
-            pub args: Vec<String>,
-            #[serde(default)]
-            pub extra_inputs: Vec<String>,
-            #[serde(default)]
-            pub auto_inputs: Vec<String>,
-            #[serde(flatten)]
-            pub scan: ScanConfig,
-        }
-    };
+    // --- Public entry points ---
 
     // Basic: extensions only
     ($name:ident, extensions: [$($ext:expr),+ $(,)?]) => {
-        checker_config!(@basic $name, default_scan!(extensions: [$($ext),+]));
+        checker_config!(@no_linter $name, default_scan!(extensions: [$($ext),+]), []);
     };
     // With scan_dir
     ($name:ident, scan_dir: $dir:expr, extensions: [$($ext:expr),+ $(,)?]) => {
-        checker_config!(@basic $name, default_scan!(scan_dir: $dir, extensions: [$($ext),+]));
+        checker_config!(@no_linter $name, default_scan!(scan_dir: $dir, extensions: [$($ext),+]), []);
     };
     // With auto_inputs only
     ($name:ident, extensions: [$($ext:expr),+ $(,)?], auto_inputs: [$($ai:expr),+ $(,)?]) => {
-        checker_config!(@with_auto_inputs $name, default_scan!(extensions: [$($ext),+]), [$($ai),+]);
+        checker_config!(@no_linter $name, default_scan!(extensions: [$($ext),+]), [$($ai),+]);
     };
     // With linter only
     ($name:ident, extensions: [$($ext:expr),+ $(,)?], linter: $linter:expr) => {
@@ -63,10 +37,8 @@ macro_rules! checker_config {
         checker_config!(@with_linter $name, default_scan!(extensions: [$($ext),+]), $linter, [$($ai),+]);
     };
 
-    // --- Internal generation rules ---
-
-    // Basic struct (no linter, no custom auto_inputs)
-    (@basic $name:ident, $scan:expr) => {
+    // --- Internal: without linter field ---
+    (@no_linter $name:ident, $scan:expr, [$($ai:expr),*]) => {
         #[derive(Debug, Deserialize, Serialize, Clone)]
         pub struct $name {
             #[serde(default = "default_true")]
@@ -89,7 +61,7 @@ macro_rules! checker_config {
                     enabled: true,
                     args: Vec::new(),
                     extra_inputs: Vec::new(),
-                    auto_inputs: Vec::new(),
+                    auto_inputs: vec![$($ai.into()),*],
                     batch: true,
                     scan: $scan,
                 }
@@ -98,55 +70,13 @@ macro_rules! checker_config {
 
         impl KnownFields for $name {
             fn known_fields() -> &'static [&'static str] {
-                &["enabled", "args", "extra_inputs", "auto_inputs", "batch",
-                  "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths"]
+                &["enabled", "args", "extra_inputs", "auto_inputs", "batch"]
             }
         }
     };
 
-    // With auto_inputs (no linter)
-    (@with_auto_inputs $name:ident, $scan:expr, [$($ai:expr),+]) => {
-        #[derive(Debug, Deserialize, Serialize, Clone)]
-        pub struct $name {
-            #[serde(default = "default_true")]
-            pub enabled: bool,
-            #[serde(default)]
-            pub args: Vec<String>,
-            #[serde(default)]
-            pub extra_inputs: Vec<String>,
-            #[serde(default)]
-            pub auto_inputs: Vec<String>,
-            #[serde(default = "default_true")]
-            pub batch: bool,
-            #[serde(flatten)]
-            pub scan: ScanConfig,
-        }
-
-        impl Default for $name {
-            fn default() -> Self {
-                Self {
-                    enabled: true,
-                    args: Vec::new(),
-                    extra_inputs: Vec::new(),
-                    auto_inputs: vec![$($ai.into()),+],
-                    batch: true,
-                    scan: $scan,
-                }
-            }
-        }
-
-        impl KnownFields for $name {
-            fn known_fields() -> &'static [&'static str] {
-                &["enabled", "args", "extra_inputs", "auto_inputs", "batch",
-                  "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths"]
-            }
-        }
-    };
-
-    // With linter (and optional auto_inputs)
+    // --- Internal: with linter field ---
     (@with_linter $name:ident, $scan:expr, $linter:expr, [$($ai:expr),*]) => {
-        // Generate a serde default function for the linter field.
-        // Using paste to create a unique function name per config type.
         paste::paste! {
             fn [<default_ $name:lower _linter>]() -> String {
                 $linter.into()
@@ -189,8 +119,7 @@ macro_rules! checker_config {
 
         impl KnownFields for $name {
             fn known_fields() -> &'static [&'static str] {
-                &["enabled", "linter", "args", "extra_inputs", "auto_inputs", "batch",
-                  "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths"]
+                &["enabled", "linter", "args", "extra_inputs", "auto_inputs", "batch"]
             }
         }
     };
@@ -231,6 +160,8 @@ pub struct TeraConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default)]
     pub auto_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -243,6 +174,7 @@ impl Default for TeraConfig {
             trim_blocks: false,
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
+            batch: true,
             scan: default_scan!(scan_dir: "templates.tera", extensions: [".tera"]),
         }
     }
@@ -251,8 +183,7 @@ impl Default for TeraConfig {
 impl KnownFields for TeraConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "strict", "trim_blocks", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "strict", "trim_blocks", "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }
@@ -265,6 +196,8 @@ pub struct MakoConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default)]
     pub auto_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -275,6 +208,7 @@ impl Default for MakoConfig {
             enabled: true,
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
+            batch: true,
             scan: default_scan!(scan_dir: "templates.mako", extensions: [".mako"]),
         }
     }
@@ -283,8 +217,7 @@ impl Default for MakoConfig {
 impl KnownFields for MakoConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }
@@ -314,6 +247,8 @@ pub struct CppcheckConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_cppcheck_auto_inputs")]
     pub auto_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -325,6 +260,7 @@ impl Default for CppcheckConfig {
             args: default_cppcheck_args(),
             extra_inputs: Vec::new(),
             auto_inputs: default_cppcheck_auto_inputs(),
+            batch: true,
             scan: default_scan!(scan_dir: "src", extensions: [".c", ".cc"]),
         }
     }
@@ -333,8 +269,7 @@ impl Default for CppcheckConfig {
 impl KnownFields for CppcheckConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "args", "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }
@@ -351,6 +286,8 @@ pub struct ClangTidyConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_clang_tidy_auto_inputs")]
     pub auto_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -367,6 +304,7 @@ impl Default for ClangTidyConfig {
             compiler_args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: default_clang_tidy_auto_inputs(),
+            batch: true,
             scan: default_scan!(scan_dir: "src", extensions: [".c", ".cc"]),
         }
     }
@@ -375,8 +313,7 @@ impl Default for ClangTidyConfig {
 impl KnownFields for ClangTidyConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "args", "compiler_args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "args", "compiler_args", "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }
@@ -447,6 +384,8 @@ pub struct CcSingleFileConfig {
     /// Method for scanning header dependencies (native or compiler)
     #[serde(default)]
     pub include_scanner: IncludeScanner,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -489,6 +428,7 @@ impl Default for CcSingleFileConfig {
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             include_scanner: IncludeScanner::default(),
+            batch: true,
             scan: default_scan!(scan_dir: "src", extensions: [".c", ".cc"]),
         }
     }
@@ -498,8 +438,7 @@ impl KnownFields for CcSingleFileConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
             "enabled", "cc", "cxx", "cflags", "cxxflags", "ldflags", "output_suffix",
-            "compilers", "include_paths", "extra_inputs", "auto_inputs", "include_scanner",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "compilers", "include_paths", "extra_inputs", "auto_inputs", "include_scanner", "batch",
         ]
     }
 }
@@ -585,6 +524,8 @@ pub struct CcConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -602,6 +543,7 @@ impl Default for CcConfig {
             single_invocation: false,
             extra_inputs: Vec::new(),
             cache_output_dir: true,
+            batch: true,
             scan: default_scan!(extensions: ["cc.yaml"]),
         }
     }
@@ -612,8 +554,7 @@ impl KnownFields for CcConfig {
         &[
             "enabled", "cc", "cxx", "cflags", "cxxflags", "ldflags",
             "include_dirs", "single_invocation",
-            "extra_inputs", "cache_output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "extra_inputs", "cache_output_dir", "batch",
         ]
     }
 }
@@ -665,6 +606,8 @@ pub struct LinuxModuleConfig {
     pub enabled: bool,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -674,6 +617,7 @@ impl Default for LinuxModuleConfig {
         Self {
             enabled: true,
             extra_inputs: Vec::new(),
+            batch: true,
             scan: default_scan!(extensions: ["linux-module.yaml"]),
         }
     }
@@ -682,8 +626,7 @@ impl Default for LinuxModuleConfig {
 impl KnownFields for LinuxModuleConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "extra_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "extra_inputs", "batch",
         ]
     }
 }
@@ -711,6 +654,8 @@ pub struct SpellcheckConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_spellcheck_auto_inputs")]
     pub auto_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -729,6 +674,7 @@ impl Default for SpellcheckConfig {
             auto_add_words: false,
             extra_inputs: Vec::new(),
             auto_inputs: default_spellcheck_auto_inputs(),
+            batch: true,
             scan: default_scan!(extensions: [".md"]),
         }
     }
@@ -737,40 +683,7 @@ impl Default for SpellcheckConfig {
 impl KnownFields for SpellcheckConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "language", "words_file", "auto_add_words", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-        ]
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct SleepConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default)]
-    pub auto_inputs: Vec<String>,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for SleepConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            extra_inputs: Vec::new(),
-            auto_inputs: Vec::new(),
-            scan: default_scan!(scan_dir: "sleep", extensions: [".sleep"]),
-        }
-    }
-}
-
-impl KnownFields for SleepConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "language", "words_file", "auto_add_words", "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }
@@ -807,6 +720,8 @@ pub struct CargoConfig {
     pub profiles: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -821,6 +736,7 @@ impl Default for CargoConfig {
             extra_inputs: Vec::new(),
             profiles: default_cargo_profiles(),
             cache_output_dir: true,
+            batch: true,
             scan: default_scan!(extensions: ["Cargo.toml"]),
         }
     }
@@ -830,7 +746,7 @@ impl KnownFields for CargoConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
             "enabled", "cargo", "command", "args", "extra_inputs", "profiles",
-            "cache_output_dir", "scan_dir", "extensions", "exclude_dirs", "exclude_files",
+            "cache_output_dir", "batch", "scan_dir", "extensions", "exclude_dirs", "exclude_files",
             "exclude_paths",
         ]
     }
@@ -854,6 +770,8 @@ pub struct ClippyConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default)]
     pub auto_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -867,6 +785,7 @@ impl Default for ClippyConfig {
             args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
+            batch: true,
             scan: default_scan!(extensions: ["Cargo.toml"]),
         }
     }
@@ -875,8 +794,7 @@ impl Default for ClippyConfig {
 impl KnownFields for ClippyConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "cargo", "command", "args", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "cargo", "command", "args", "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }
@@ -895,6 +813,8 @@ pub struct MakeConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default)]
     pub auto_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -908,6 +828,7 @@ impl Default for MakeConfig {
             target: String::new(),
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
+            batch: true,
             scan: default_scan!(extensions: ["Makefile"]),
         }
     }
@@ -916,8 +837,7 @@ impl Default for MakeConfig {
 impl KnownFields for MakeConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "make", "args", "target", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "make", "args", "target", "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }
@@ -961,6 +881,8 @@ pub struct TagsConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default)]
     pub auto_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -974,6 +896,7 @@ impl Default for TagsConfig {
             tags_file_strict: false,
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
+            batch: true,
             scan: default_scan!(extensions: [".md"]),
         }
     }
@@ -982,8 +905,7 @@ impl Default for TagsConfig {
 impl KnownFields for TagsConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "output", "tags_file", "tags_file_strict", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "output", "tags_file", "tags_file_strict", "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }
@@ -1034,7 +956,6 @@ impl KnownFields for ScriptCheckConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
             "enabled", "linter", "args", "extra_inputs", "auto_inputs", "batch",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }
 }
@@ -1053,6 +974,8 @@ pub struct PipConfig {
     pub args: Vec<String>,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1064,6 +987,7 @@ impl Default for PipConfig {
             pip: "pip".into(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
+            batch: true,
             scan: default_scan!(extensions: ["requirements.txt"]),
         }
     }
@@ -1072,8 +996,7 @@ impl Default for PipConfig {
 impl KnownFields for PipConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "pip", "args", "extra_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "pip", "args", "extra_inputs", "batch",
         ]
     }
 }
@@ -1102,6 +1025,8 @@ pub struct SphinxConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1116,6 +1041,7 @@ impl Default for SphinxConfig {
             args: Vec::new(),
             extra_inputs: Vec::new(),
             cache_output_dir: true,
+            batch: true,
             scan: default_scan!(extensions: ["conf.py"]),
         }
     }
@@ -1124,8 +1050,7 @@ impl Default for SphinxConfig {
 impl KnownFields for SphinxConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "sphinx_build", "output_dir", "working_dir", "args", "extra_inputs", "cache_output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "sphinx_build", "output_dir", "working_dir", "args", "extra_inputs", "cache_output_dir", "batch",
         ]
     }
 }
@@ -1152,6 +1077,8 @@ pub struct MdbookConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1165,6 +1092,7 @@ impl Default for MdbookConfig {
             args: Vec::new(),
             extra_inputs: Vec::new(),
             cache_output_dir: true,
+            batch: true,
             scan: default_scan!(extensions: ["book.toml"]),
         }
     }
@@ -1173,8 +1101,7 @@ impl Default for MdbookConfig {
 impl KnownFields for MdbookConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "mdbook", "output_dir", "args", "extra_inputs", "cache_output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "mdbook", "output_dir", "args", "extra_inputs", "cache_output_dir", "batch",
         ]
     }
 }
@@ -1201,6 +1128,8 @@ pub struct NpmConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1214,6 +1143,7 @@ impl Default for NpmConfig {
             args: Vec::new(),
             extra_inputs: Vec::new(),
             cache_output_dir: true,
+            batch: true,
             scan: default_scan!(extensions: ["package.json"]),
         }
     }
@@ -1222,8 +1152,7 @@ impl Default for NpmConfig {
 impl KnownFields for NpmConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "npm", "command", "args", "extra_inputs", "cache_output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "npm", "command", "args", "extra_inputs", "cache_output_dir", "batch",
         ]
     }
 }
@@ -1262,6 +1191,8 @@ pub struct MdlConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_gem_stamp")]
     pub gem_stamp: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1277,6 +1208,7 @@ impl Default for MdlConfig {
             extra_inputs: Vec::new(),
             auto_inputs: default_mdl_auto_inputs(),
             gem_stamp: "out/gem/root.stamp".into(),
+            batch: true,
             scan: default_scan!(extensions: [".md"]),
         }
     }
@@ -1285,8 +1217,7 @@ impl Default for MdlConfig {
 impl KnownFields for MdlConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "local_repo", "gem_home", "mdl_bin", "args", "extra_inputs", "auto_inputs", "gem_stamp",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "local_repo", "gem_home", "mdl_bin", "args", "extra_inputs", "auto_inputs", "gem_stamp", "batch",
         ]
     }
 }
@@ -1319,6 +1250,8 @@ pub struct MarkdownlintConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_npm_stamp")]
     pub npm_stamp: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1333,6 +1266,7 @@ impl Default for MarkdownlintConfig {
             extra_inputs: Vec::new(),
             auto_inputs: default_markdownlint_auto_inputs(),
             npm_stamp: "out/npm/root.stamp".into(),
+            batch: true,
             scan: default_scan!(extensions: [".md"]),
         }
     }
@@ -1341,8 +1275,7 @@ impl Default for MarkdownlintConfig {
 impl KnownFields for MarkdownlintConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "local_repo", "markdownlint_bin", "args", "extra_inputs", "auto_inputs", "npm_stamp",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "local_repo", "markdownlint_bin", "args", "extra_inputs", "auto_inputs", "npm_stamp", "batch",
         ]
     }
 }
@@ -1387,6 +1320,8 @@ pub struct AspellConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_aspell_auto_inputs")]
     pub auto_inputs: Vec<String>,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1403,6 +1338,7 @@ impl Default for AspellConfig {
             words_file: ".aspell.en.pws".into(),
             extra_inputs: Vec::new(),
             auto_inputs: default_aspell_auto_inputs(),
+            batch: true,
             scan: default_scan!(extensions: [".md"]),
         }
     }
@@ -1411,8 +1347,7 @@ impl Default for AspellConfig {
 impl KnownFields for AspellConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "aspell", "args", "conf_dir", "conf", "auto_add_words", "words_file", "extra_inputs", "auto_inputs",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "aspell", "args", "conf_dir", "conf", "auto_add_words", "words_file", "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }
@@ -1453,6 +1388,8 @@ pub struct PandocConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_pandoc_output_dir")]
     pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1468,6 +1405,7 @@ impl Default for PandocConfig {
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             output_dir: "out/pandoc".into(),
+            batch: true,
             scan: default_scan!(scan_dir: "pandoc", extensions: [".md"]),
         }
     }
@@ -1476,8 +1414,7 @@ impl Default for PandocConfig {
 impl KnownFields for PandocConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "pandoc", "from", "formats", "args", "extra_inputs", "auto_inputs", "output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "pandoc", "from", "formats", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
         ]
     }
 }
@@ -1514,6 +1451,8 @@ pub struct MarpConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_marp_output_dir")]
     pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1528,6 +1467,7 @@ impl Default for MarpConfig {
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             output_dir: "out/marp".into(),
+            batch: true,
             scan: default_scan!(extensions: [".md"]),
         }
     }
@@ -1536,8 +1476,7 @@ impl Default for MarpConfig {
 impl KnownFields for MarpConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "marp_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "marp_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
         ]
     }
 }
@@ -1564,6 +1503,8 @@ pub struct MarkdownConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_markdown_output_dir")]
     pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1577,6 +1518,7 @@ impl Default for MarkdownConfig {
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             output_dir: "out/markdown".into(),
+            batch: true,
             scan: default_scan!(extensions: [".md"]),
         }
     }
@@ -1585,8 +1527,7 @@ impl Default for MarkdownConfig {
 impl KnownFields for MarkdownConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "markdown_bin", "args", "extra_inputs", "auto_inputs", "output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "markdown_bin", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
         ]
     }
 }
@@ -1621,6 +1562,8 @@ pub struct PdflatexConfig {
     pub qpdf: bool,
     #[serde(default = "default_pdflatex_output_dir")]
     pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1636,6 +1579,7 @@ impl Default for PdflatexConfig {
             runs: 2,
             qpdf: true,
             output_dir: "out/pdflatex".into(),
+            batch: true,
             scan: default_scan!(extensions: [".tex"]),
         }
     }
@@ -1644,8 +1588,7 @@ impl Default for PdflatexConfig {
 impl KnownFields for PdflatexConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "pdflatex", "args", "extra_inputs", "auto_inputs", "runs", "qpdf", "output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "pdflatex", "args", "extra_inputs", "auto_inputs", "runs", "qpdf", "output_dir", "batch",
         ]
     }
 }
@@ -1678,6 +1621,8 @@ pub struct A2xConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_a2x_output_dir")]
     pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1692,6 +1637,7 @@ impl Default for A2xConfig {
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             output_dir: "out/a2x".into(),
+            batch: true,
             scan: default_scan!(extensions: [".txt"]),
         }
     }
@@ -1700,8 +1646,7 @@ impl Default for A2xConfig {
 impl KnownFields for A2xConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "a2x", "format", "args", "extra_inputs", "auto_inputs", "output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "a2x", "format", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
         ]
     }
 }
@@ -1728,6 +1673,8 @@ pub struct ChromiumConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_chromium_output_dir")]
     pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1741,6 +1688,7 @@ impl Default for ChromiumConfig {
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             output_dir: "out/chromium".into(),
+            batch: true,
             scan: default_scan!(extensions: [".html"]),
         }
     }
@@ -1749,8 +1697,7 @@ impl Default for ChromiumConfig {
 impl KnownFields for ChromiumConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "chromium_bin", "args", "extra_inputs", "auto_inputs", "output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "chromium_bin", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
         ]
     }
 }
@@ -1779,6 +1726,8 @@ pub struct GemConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1793,6 +1742,7 @@ impl Default for GemConfig {
             args: Vec::new(),
             extra_inputs: Vec::new(),
             cache_output_dir: true,
+            batch: true,
             scan: default_scan!(extensions: ["Gemfile"]),
         }
     }
@@ -1801,8 +1751,7 @@ impl Default for GemConfig {
 impl KnownFields for GemConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "bundler", "command", "gem_home", "args", "extra_inputs", "cache_output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "bundler", "command", "gem_home", "args", "extra_inputs", "cache_output_dir", "batch",
         ]
     }
 }
@@ -1835,6 +1784,8 @@ pub struct MermaidConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_mermaid_output_dir")]
     pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1849,6 +1800,7 @@ impl Default for MermaidConfig {
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             output_dir: "out/mermaid".into(),
+            batch: true,
             scan: default_scan!(extensions: [".mmd"]),
         }
     }
@@ -1857,8 +1809,7 @@ impl Default for MermaidConfig {
 impl KnownFields for MermaidConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "mmdc_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "mmdc_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
         ]
     }
 }
@@ -1891,6 +1842,8 @@ pub struct DrawioConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_drawio_output_dir")]
     pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1905,6 +1858,7 @@ impl Default for DrawioConfig {
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             output_dir: "out/drawio".into(),
+            batch: true,
             scan: default_scan!(extensions: [".drawio"]),
         }
     }
@@ -1913,8 +1867,7 @@ impl Default for DrawioConfig {
 impl KnownFields for DrawioConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "drawio_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "drawio_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
         ]
     }
 }
@@ -1947,6 +1900,8 @@ pub struct LibreofficeConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_libreoffice_output_dir")]
     pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -1961,6 +1916,7 @@ impl Default for LibreofficeConfig {
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             output_dir: "out/libreoffice".into(),
+            batch: true,
             scan: default_scan!(extensions: [".odp"]),
         }
     }
@@ -1969,8 +1925,7 @@ impl Default for LibreofficeConfig {
 impl KnownFields for LibreofficeConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "libreoffice_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "libreoffice_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
         ]
     }
 }
@@ -2015,6 +1970,8 @@ pub struct PdfuniteConfig {
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_pdfunite_output_dir")]
     pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -2031,6 +1988,7 @@ impl Default for PdfuniteConfig {
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             output_dir: "out/pdfunite".into(),
+            batch: true,
             scan: default_scan!(extensions: ["course.yaml"]),
         }
     }
@@ -2040,8 +1998,7 @@ impl KnownFields for PdfuniteConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
             "enabled", "pdfunite_bin", "source_dir", "source_ext", "source_output_dir",
-            "args", "extra_inputs", "auto_inputs", "output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
         ]
     }
 }
@@ -2060,6 +2017,8 @@ pub struct ObjdumpConfig {
     pub extra_inputs: Vec<String>,
     #[serde(default = "default_objdump_output_dir")]
     pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
     #[serde(flatten)]
     pub scan: ScanConfig,
 }
@@ -2075,6 +2034,7 @@ impl Default for ObjdumpConfig {
             args: Vec::new(),
             extra_inputs: Vec::new(),
             output_dir: default_objdump_output_dir(),
+            batch: true,
             scan: default_scan!(scan_dir: "out/cc_single_file", extensions: [".elf"]),
         }
     }
@@ -2083,8 +2043,7 @@ impl Default for ObjdumpConfig {
 impl KnownFields for ObjdumpConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "args", "extra_inputs", "output_dir",
-            "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+            "enabled", "args", "extra_inputs", "output_dir", "batch",
         ]
     }
 }

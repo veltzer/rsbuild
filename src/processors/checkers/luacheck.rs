@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::config::LuacheckConfig;
 use crate::graph::Product;
-use crate::processors::{scan_root_valid, run_checker};
+use crate::processors::run_checker;
 
 pub struct LuacheckProcessor {
     config: LuacheckConfig,
@@ -12,10 +12,6 @@ pub struct LuacheckProcessor {
 impl LuacheckProcessor {
     pub fn new(config: LuacheckConfig) -> Self {
         Self { config }
-    }
-
-    fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan)
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
@@ -33,7 +29,7 @@ impl_checker!(LuacheckProcessor,
     description: "Lint Lua scripts using luacheck",
     name: crate::processors::names::LUACHECK,
     execute: execute_product,
-    guard: should_process,
+    guard: scan_root,
     tool_field: linter,
     config_json: true,
     batch: check_files,

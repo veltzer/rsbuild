@@ -6,12 +6,10 @@ fn status_command() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Create a sleep file
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/status_test.sleep"), "0.01").unwrap();
+    // Create a template
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/status_test.txt.tera"),
+        "hello"
     ).unwrap();
 
     // Before building, should be STALE (use -v to see per-file status)
@@ -24,7 +22,7 @@ fn status_command() {
     let build = run_rsconstruct(project_path, &["build"]);
     assert!(build.status.success());
 
-    // After building, should be UP-TO-DATE (checkers have no output files, cache entry = success)
+    // After building, should be UP-TO-DATE
     let status2 = run_rsconstruct_with_env(project_path, &["-v", "status"], &[("NO_COLOR", "1")]);
     assert!(status2.status.success());
     let stdout2 = String::from_utf8_lossy(&status2.stdout);
@@ -39,7 +37,7 @@ fn status_empty_project() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // No sleep dir, no templates to process — disable all processors
+    // No templates to process — disable all processors
     fs::write(
         project_path.join("rsconstruct.toml"),
         "[processor]\nenabled = []\n"

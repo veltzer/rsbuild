@@ -156,16 +156,16 @@ macro_rules! default_scan {
 /// - Add `args: ["--flag"]` for non-empty default args
 /// - Add `auto_inputs: [".config"]` for auto input files
 macro_rules! generator_config {
-    // Multi-format variant
+    // Multi-format variant with custom default args
     ($name:ident, tool: $tool_default:expr, $tool_field:ident,
      formats: [$($fmt:expr),+ $(,)?], output_dir: $output_dir:expr,
-     $scan:expr $(, args: [$($arg:expr),+ $(,)?])? $(, auto_inputs: [$($ai:expr),+ $(,)?])? $(,)?
+     $scan:expr, args: [$($arg:expr),+ $(,)?] $(, auto_inputs: [$($ai:expr),+ $(,)?])? $(,)?
     ) => {
         paste::paste! {
             fn [<default_ $name:lower _tool>]() -> String { $tool_default.into() }
             fn [<default_ $name:lower _formats>]() -> Vec<String> { vec![$($fmt.into()),+] }
             fn [<default_ $name:lower _output_dir>]() -> String { $output_dir.into() }
-            $(fn [<default_ $name:lower _args>]() -> Vec<String> { vec![$($arg.into()),+] })?
+            fn [<default_ $name:lower _args>]() -> Vec<String> { vec![$($arg.into()),+] }
         }
 
         paste::paste! {
@@ -177,7 +177,7 @@ macro_rules! generator_config {
                 pub $tool_field: String,
                 #[serde(default = "" [<default_ $name:lower _formats>] "")]
                 pub formats: Vec<String>,
-                #[serde(default $( = "" [<default_ $name:lower _args>] "")?)]
+                #[serde(default = "" [<default_ $name:lower _args>] "")]
                 pub args: Vec<String>,
                 #[serde(default)]
                 pub extra_inputs: Vec<String>,
@@ -198,7 +198,66 @@ macro_rules! generator_config {
                     enabled: true,
                     $tool_field: $tool_default.into(),
                     formats: vec![$($fmt.into()),+],
-                    args: generator_config!(@default_args $($($arg),+)?),
+                    args: vec![$($arg.into()),+],
+                    extra_inputs: Vec::new(),
+                    auto_inputs: generator_config!(@default_auto_inputs $($($ai),+)?),
+                    output_dir: $output_dir.into(),
+                    batch: true,
+                    scan: $scan,
+                }
+            }
+        }
+
+        impl KnownFields for $name {
+            fn known_fields() -> &'static [&'static str] {
+                &["enabled", stringify!($tool_field), "formats", "args",
+                  "extra_inputs", "auto_inputs", "output_dir", "batch"]
+            }
+        }
+    };
+
+    // Multi-format variant without custom args
+    ($name:ident, tool: $tool_default:expr, $tool_field:ident,
+     formats: [$($fmt:expr),+ $(,)?], output_dir: $output_dir:expr,
+     $scan:expr $(, auto_inputs: [$($ai:expr),+ $(,)?])? $(,)?
+    ) => {
+        paste::paste! {
+            fn [<default_ $name:lower _tool>]() -> String { $tool_default.into() }
+            fn [<default_ $name:lower _formats>]() -> Vec<String> { vec![$($fmt.into()),+] }
+            fn [<default_ $name:lower _output_dir>]() -> String { $output_dir.into() }
+        }
+
+        paste::paste! {
+            #[derive(Debug, Deserialize, Serialize, Clone)]
+            pub struct $name {
+                #[serde(default = "default_true")]
+                pub enabled: bool,
+                #[serde(default = "" [<default_ $name:lower _tool>] "")]
+                pub $tool_field: String,
+                #[serde(default = "" [<default_ $name:lower _formats>] "")]
+                pub formats: Vec<String>,
+                #[serde(default)]
+                pub args: Vec<String>,
+                #[serde(default)]
+                pub extra_inputs: Vec<String>,
+                #[serde(default)]
+                pub auto_inputs: Vec<String>,
+                #[serde(default = "" [<default_ $name:lower _output_dir>] "")]
+                pub output_dir: String,
+                #[serde(default = "default_true")]
+                pub batch: bool,
+                #[serde(flatten)]
+                pub scan: ScanConfig,
+            }
+        }
+
+        impl Default for $name {
+            fn default() -> Self {
+                Self {
+                    enabled: true,
+                    $tool_field: $tool_default.into(),
+                    formats: vec![$($fmt.into()),+],
+                    args: Vec::new(),
                     extra_inputs: Vec::new(),
                     auto_inputs: generator_config!(@default_auto_inputs $($($ai),+)?),
                     output_dir: $output_dir.into(),
@@ -270,10 +329,6 @@ macro_rules! generator_config {
             }
         }
     };
-
-    // Helper: default args (empty or provided)
-    (@default_args) => { Vec::new() };
-    (@default_args $($arg:expr),+) => { vec![$($arg.into()),+] };
 
     // Helper: default auto_inputs (empty or provided)
     (@default_auto_inputs) => { Vec::new() };
@@ -1551,118 +1606,16 @@ impl KnownFields for PandocConfig {
     }
 }
 
-fn default_marp_bin() -> String {
-    "marp".into()
-}
+generator_config!(MarpConfig, tool: "marp", marp_bin,
+    formats: ["pdf"], output_dir: "out/marp",
+    default_scan!(extensions: [".md"]),
+    args: ["--html", "--allow-local-files"],
+);
 
-fn default_marp_formats() -> Vec<String> {
-    vec!["pdf".into()]
-}
-
-fn default_marp_args() -> Vec<String> {
-    vec!["--html".into(), "--allow-local-files".into()]
-}
-
-fn default_marp_output_dir() -> String {
-    "out/marp".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct MarpConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_marp_bin")]
-    pub marp_bin: String,
-    #[serde(default = "default_marp_formats")]
-    pub formats: Vec<String>,
-    #[serde(default = "default_marp_args")]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default)]
-    pub auto_inputs: Vec<String>,
-    #[serde(default = "default_marp_output_dir")]
-    pub output_dir: String,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for MarpConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            marp_bin: "marp".into(),
-            formats: vec!["pdf".into()],
-            args: vec!["--html".into(), "--allow-local-files".into()],
-            extra_inputs: Vec::new(),
-            auto_inputs: Vec::new(),
-            output_dir: "out/marp".into(),
-            batch: true,
-            scan: default_scan!(extensions: [".md"]),
-        }
-    }
-}
-
-impl KnownFields for MarpConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "marp_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
-        ]
-    }
-}
-
-fn default_markdown_bin() -> String {
-    "markdown".into()
-}
-
-fn default_markdown_output_dir() -> String {
-    "out/markdown".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct MarkdownConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_markdown_bin")]
-    pub markdown_bin: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default)]
-    pub auto_inputs: Vec<String>,
-    #[serde(default = "default_markdown_output_dir")]
-    pub output_dir: String,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for MarkdownConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            markdown_bin: "markdown".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: Vec::new(),
-            output_dir: "out/markdown".into(),
-            batch: true,
-            scan: default_scan!(extensions: [".md"]),
-        }
-    }
-}
-
-impl KnownFields for MarkdownConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "markdown_bin", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
-        ]
-    }
-}
+generator_config!(MarkdownConfig, tool: "markdown", markdown_bin,
+    output_dir: "out/markdown",
+    default_scan!(extensions: [".md"]),
+);
 
 fn default_pdflatex() -> String {
     "pdflatex".into()
@@ -1783,56 +1736,10 @@ impl KnownFields for A2xConfig {
     }
 }
 
-fn default_chromium_bin() -> String {
-    "google-chrome".into()
-}
-
-fn default_chromium_output_dir() -> String {
-    "out/chromium".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ChromiumConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_chromium_bin")]
-    pub chromium_bin: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default)]
-    pub auto_inputs: Vec<String>,
-    #[serde(default = "default_chromium_output_dir")]
-    pub output_dir: String,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for ChromiumConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            chromium_bin: "google-chrome".into(),
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: Vec::new(),
-            output_dir: "out/chromium".into(),
-            batch: true,
-            scan: default_scan!(extensions: [".html"]),
-        }
-    }
-}
-
-impl KnownFields for ChromiumConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "chromium_bin", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
-        ]
-    }
-}
+generator_config!(ChromiumConfig, tool: "google-chrome", chromium_bin,
+    output_dir: "out/chromium",
+    default_scan!(extensions: [".html"]),
+);
 
 fn default_bundler() -> String {
     "bundle".into()
@@ -1888,179 +1795,20 @@ impl KnownFields for GemConfig {
     }
 }
 
-fn default_mmdc_bin() -> String {
-    "mmdc".into()
-}
+generator_config!(MermaidConfig, tool: "mmdc", mmdc_bin,
+    formats: ["png"], output_dir: "out/mermaid",
+    default_scan!(extensions: [".mmd"]),
+);
 
-fn default_mermaid_formats() -> Vec<String> {
-    vec!["png".into()]
-}
+generator_config!(DrawioConfig, tool: "drawio", drawio_bin,
+    formats: ["png"], output_dir: "out/drawio",
+    default_scan!(extensions: [".drawio"]),
+);
 
-fn default_mermaid_output_dir() -> String {
-    "out/mermaid".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct MermaidConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_mmdc_bin")]
-    pub mmdc_bin: String,
-    #[serde(default = "default_mermaid_formats")]
-    pub formats: Vec<String>,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default)]
-    pub auto_inputs: Vec<String>,
-    #[serde(default = "default_mermaid_output_dir")]
-    pub output_dir: String,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for MermaidConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            mmdc_bin: "mmdc".into(),
-            formats: vec!["png".into()],
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: Vec::new(),
-            output_dir: "out/mermaid".into(),
-            batch: true,
-            scan: default_scan!(extensions: [".mmd"]),
-        }
-    }
-}
-
-impl KnownFields for MermaidConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "mmdc_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
-        ]
-    }
-}
-
-fn default_drawio_bin() -> String {
-    "drawio".into()
-}
-
-fn default_drawio_formats() -> Vec<String> {
-    vec!["png".into()]
-}
-
-fn default_drawio_output_dir() -> String {
-    "out/drawio".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct DrawioConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_drawio_bin")]
-    pub drawio_bin: String,
-    #[serde(default = "default_drawio_formats")]
-    pub formats: Vec<String>,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default)]
-    pub auto_inputs: Vec<String>,
-    #[serde(default = "default_drawio_output_dir")]
-    pub output_dir: String,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for DrawioConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            drawio_bin: "drawio".into(),
-            formats: vec!["png".into()],
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: Vec::new(),
-            output_dir: "out/drawio".into(),
-            batch: true,
-            scan: default_scan!(extensions: [".drawio"]),
-        }
-    }
-}
-
-impl KnownFields for DrawioConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "drawio_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
-        ]
-    }
-}
-
-fn default_libreoffice_bin() -> String {
-    "libreoffice".into()
-}
-
-fn default_libreoffice_formats() -> Vec<String> {
-    vec!["pdf".into()]
-}
-
-fn default_libreoffice_output_dir() -> String {
-    "out/libreoffice".into()
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct LibreofficeConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_libreoffice_bin")]
-    pub libreoffice_bin: String,
-    #[serde(default = "default_libreoffice_formats")]
-    pub formats: Vec<String>,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub extra_inputs: Vec<String>,
-    #[serde(default)]
-    pub auto_inputs: Vec<String>,
-    #[serde(default = "default_libreoffice_output_dir")]
-    pub output_dir: String,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(flatten)]
-    pub scan: ScanConfig,
-}
-
-impl Default for LibreofficeConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            libreoffice_bin: "libreoffice".into(),
-            formats: vec!["pdf".into()],
-            args: Vec::new(),
-            extra_inputs: Vec::new(),
-            auto_inputs: Vec::new(),
-            output_dir: "out/libreoffice".into(),
-            batch: true,
-            scan: default_scan!(extensions: [".odp"]),
-        }
-    }
-}
-
-impl KnownFields for LibreofficeConfig {
-    fn known_fields() -> &'static [&'static str] {
-        &[
-            "enabled", "libreoffice_bin", "formats", "args", "extra_inputs", "auto_inputs", "output_dir", "batch",
-        ]
-    }
-}
+generator_config!(LibreofficeConfig, tool: "libreoffice", libreoffice_bin,
+    formats: ["pdf"], output_dir: "out/libreoffice",
+    default_scan!(extensions: [".odp"]),
+);
 
 fn default_pdfunite_bin() -> String {
     "pdfunite".into()

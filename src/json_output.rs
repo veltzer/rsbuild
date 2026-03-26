@@ -101,11 +101,21 @@ pub struct ProcessorListEntry {
     pub description: String,
 }
 
+/// A single install method for a tool.
+#[derive(Debug, Serialize)]
+pub struct ToolInstallMethodEntry {
+    pub method: String,
+    pub command: String,
+}
+
 /// Entry for `rsconstruct tools list --json`.
 #[derive(Debug, Serialize)]
 pub struct ToolListEntry {
     pub tool: String,
+    pub installed: bool,
+    pub runtime: String,
     pub processors: Vec<String>,
+    pub install_methods: Vec<ToolInstallMethodEntry>,
 }
 
 /// Output for `rsconstruct tools stats --json`.

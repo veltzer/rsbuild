@@ -94,9 +94,23 @@ fn run_tools_command(
         ToolsAction::List { .. } => {
             if crate::json_output::is_json_mode() {
                 let entries: Vec<json_output::ToolListEntry> = tool_map.iter()
-                    .map(|(tool, procs)| json_output::ToolListEntry {
-                        tool: tool.clone(),
-                        processors: procs.clone(),
+                    .map(|(tool, procs)| {
+                        let info = crate::processors::tool_info(tool);
+                        let install_methods = info
+                            .map(|i| i.install_methods.iter().map(|m| {
+                                json_output::ToolInstallMethodEntry {
+                                    method: m.method.to_string(),
+                                    command: m.command.to_string(),
+                                }
+                            }).collect())
+                            .unwrap_or_default();
+                        json_output::ToolListEntry {
+                            tool: tool.clone(),
+                            installed: which::which(tool).is_ok(),
+                            runtime: info.map(|i| i.runtime).unwrap_or("unknown").to_string(),
+                            processors: procs.clone(),
+                            install_methods,
+                        }
                     })
                     .collect();
                 println!("{}", serde_json::to_string_pretty(&entries)?);
@@ -104,7 +118,19 @@ fn run_tools_command(
             }
 
             for (tool, procs) in &tool_map {
-                println!("{} ({})", tool, procs.join(", "));
+                let installed = if which::which(tool).is_ok() {
+                    color::green("installed")
+                } else {
+                    color::red("missing")
+                };
+                let info = crate::processors::tool_info(tool);
+                let runtime = info.map(|i| i.runtime).unwrap_or("unknown");
+                let install = info
+                    .and_then(|i| i.install_methods.first())
+                    .map(|m| m.command)
+                    .unwrap_or("?");
+                println!("{} [{}] [{}] ({}) — {}",
+                    tool, installed, runtime, procs.join(", "), color::dim(install));
             }
         }
         ToolsAction::Check => {

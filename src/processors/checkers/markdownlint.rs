@@ -38,23 +38,27 @@ impl ProductDiscovery for MarkdownlintProcessor {
         }
         let extra = resolve_extra_inputs(&extra_inputs)?;
 
-        // The npm stamp path is added directly (without existence validation)
-        // so that resolve_dependencies() can create the dependency edge to the
-        // npm processor's output.
-        let npm_stamp = PathBuf::from(&self.config.npm_stamp);
+        // Only depend on the npm stamp when using a local repo install
+        let npm_stamp = if self.config.local_repo {
+            Some(PathBuf::from(&self.config.npm_stamp))
+        } else {
+            None
+        };
 
         for file in files {
             let mut inputs = Vec::with_capacity(1 + extra.len() + 1);
             inputs.push(file);
             inputs.extend_from_slice(&extra);
-            inputs.push(npm_stamp.clone());
+            if let Some(ref stamp) = npm_stamp {
+                inputs.push(stamp.clone());
+            }
             graph.add_product(inputs, vec![], crate::processors::names::MARKDOWNLINT, hash.clone())?;
         }
         Ok(())
     }
 
     fn required_tools(&self) -> Vec<String> {
-        vec![self.config.markdownlint_bin.clone(), "node".to_string()]
+        vec![self.config.markdownlint_bin.clone()]
     }
 
     fn execute(&self, product: &Product) -> Result<()> {

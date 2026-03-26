@@ -38,16 +38,20 @@ impl ProductDiscovery for MdlProcessor {
         }
         let extra = resolve_extra_inputs(&extra_inputs)?;
 
-        // The gem stamp path is added directly (without existence validation)
-        // so that resolve_dependencies() can create the dependency edge to the
-        // gem processor's output.
-        let gem_stamp = PathBuf::from(&self.config.gem_stamp);
+        // Only depend on the gem stamp when using a local repo install
+        let gem_stamp = if self.config.local_repo {
+            Some(PathBuf::from(&self.config.gem_stamp))
+        } else {
+            None
+        };
 
         for file in files {
             let mut inputs = Vec::with_capacity(1 + extra.len() + 1);
             inputs.push(file);
             inputs.extend_from_slice(&extra);
-            inputs.push(gem_stamp.clone());
+            if let Some(ref stamp) = gem_stamp {
+                inputs.push(stamp.clone());
+            }
             graph.add_product(inputs, vec![], crate::processors::names::MDL, hash.clone())?;
         }
         Ok(())
@@ -64,8 +68,10 @@ impl ProductDiscovery for MdlProcessor {
             cmd.arg(arg);
         }
         cmd.arg(file);
-        cmd.env("GEM_HOME", &self.config.gem_home);
-        cmd.env("GEM_PATH", &self.config.gem_home);
+        if self.config.local_repo {
+            cmd.env("GEM_HOME", &self.config.gem_home);
+            cmd.env("GEM_PATH", &self.config.gem_home);
+        }
         let output = run_command(&mut cmd)?;
         check_command_output(&output, format_args!("mdl {}", file.display()))
     }

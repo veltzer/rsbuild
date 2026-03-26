@@ -540,8 +540,10 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         ("gem", "bundler" | "command" | "gem_home") => Some(FieldType::String),
         // mdl
         ("mdl", "gem_home" | "mdl_bin" | "gem_stamp") => Some(FieldType::String),
+        ("mdl", "local_repo") => Some(FieldType::Bool),
         // markdownlint
         ("markdownlint", "markdownlint_bin" | "npm_stamp") => Some(FieldType::String),
+        ("markdownlint", "local_repo") => Some(FieldType::Bool),
         // aspell
         ("aspell", "aspell" | "conf_dir" | "conf" | "words_file") => Some(FieldType::String),
         ("aspell", "auto_add_words") => Some(FieldType::Bool),

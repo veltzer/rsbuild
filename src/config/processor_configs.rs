@@ -1217,7 +1217,7 @@ impl KnownFields for NpmConfig {
 }
 
 fn default_mdl_bin() -> String {
-    "gems/bin/mdl".into()
+    "mdl".into()
 }
 
 fn default_gem_home() -> String {
@@ -1236,6 +1236,8 @@ fn default_mdl_auto_inputs() -> Vec<String> {
 pub struct MdlConfig {
     #[serde(default = "default_true")]
     pub enabled: bool,
+    #[serde(default)]
+    pub local_repo: bool,
     #[serde(default = "default_gem_home")]
     pub gem_home: String,
     #[serde(default = "default_mdl_bin")]
@@ -1256,8 +1258,9 @@ impl Default for MdlConfig {
     fn default() -> Self {
         Self {
             enabled: true,
+            local_repo: false,
             gem_home: "gems".into(),
-            mdl_bin: "gems/bin/mdl".into(),
+            mdl_bin: "mdl".into(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: default_mdl_auto_inputs(),
@@ -1270,14 +1273,14 @@ impl Default for MdlConfig {
 impl KnownFields for MdlConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "gem_home", "mdl_bin", "args", "extra_inputs", "auto_inputs", "gem_stamp",
+            "enabled", "local_repo", "gem_home", "mdl_bin", "args", "extra_inputs", "auto_inputs", "gem_stamp",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }
 }
 
 fn default_markdownlint_bin() -> String {
-    "node_modules/.bin/markdownlint".into()
+    "markdownlint".into()
 }
 
 fn default_npm_stamp() -> String {
@@ -1292,6 +1295,8 @@ fn default_markdownlint_auto_inputs() -> Vec<String> {
 pub struct MarkdownlintConfig {
     #[serde(default = "default_true")]
     pub enabled: bool,
+    #[serde(default)]
+    pub local_repo: bool,
     #[serde(default = "default_markdownlint_bin")]
     pub markdownlint_bin: String,
     #[serde(default)]
@@ -1310,7 +1315,8 @@ impl Default for MarkdownlintConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            markdownlint_bin: "node_modules/.bin/markdownlint".into(),
+            local_repo: false,
+            markdownlint_bin: "markdownlint".into(),
             args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: default_markdownlint_auto_inputs(),
@@ -1323,7 +1329,7 @@ impl Default for MarkdownlintConfig {
 impl KnownFields for MarkdownlintConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "enabled", "markdownlint_bin", "args", "extra_inputs", "auto_inputs", "npm_stamp",
+            "enabled", "local_repo", "markdownlint_bin", "args", "extra_inputs", "auto_inputs", "npm_stamp",
             "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
         ]
     }

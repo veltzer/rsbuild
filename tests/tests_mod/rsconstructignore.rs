@@ -3,24 +3,18 @@ use tempfile::TempDir;
 use crate::common::{setup_test_project, setup_cc_project, run_rsconstruct_with_env};
 
 #[test]
-fn rsconstructignore_excludes_sleep_files() {
+fn rsconstructignore_excludes_tera_files() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Create sleep directory with two files
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/included.sleep"), "0.01").unwrap();
-    fs::write(project_path.join("sleep/excluded.sleep"), "0.01").unwrap();
-
-    fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
-    ).unwrap();
+    // Create two template files
+    fs::write(project_path.join("templates.tera/included.txt.tera"), "hello").unwrap();
+    fs::write(project_path.join("templates.tera/excluded.txt.tera"), "world").unwrap();
 
     // Create .rsconstructignore that excludes one file
     fs::write(
         project_path.join(".rsconstructignore"),
-        "sleep/excluded.sleep\n"
+        "templates.tera/excluded.txt.tera\n"
     ).unwrap();
 
     // Build
@@ -29,8 +23,8 @@ fn rsconstructignore_excludes_sleep_files() {
 
     // Verify via output - only included file should be processed
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("included.sleep"), "Included sleep file should be processed");
-    assert!(!stdout.contains("excluded.sleep"), "Excluded sleep file should not be processed");
+    assert!(stdout.contains("included.txt"), "Included template should be processed");
+    assert!(!stdout.contains("excluded.txt"), "Excluded template should not be processed");
 }
 
 #[test]
@@ -38,32 +32,27 @@ fn rsconstructignore_glob_pattern() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Create sleep directory with subdirectory
-    fs::create_dir_all(project_path.join("sleep/subdir")).unwrap();
-    fs::write(project_path.join("sleep/keep.sleep"), "0.01").unwrap();
-    fs::write(project_path.join("sleep/subdir/skip1.sleep"), "0.01").unwrap();
-    fs::write(project_path.join("sleep/subdir/skip2.sleep"), "0.01").unwrap();
-
-    fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
-    ).unwrap();
+    // Create templates directory with subdirectory
+    fs::create_dir_all(project_path.join("templates.tera/subdir")).unwrap();
+    fs::write(project_path.join("templates.tera/keep.txt.tera"), "hello").unwrap();
+    fs::write(project_path.join("templates.tera/subdir/skip1.txt.tera"), "world1").unwrap();
+    fs::write(project_path.join("templates.tera/subdir/skip2.txt.tera"), "world2").unwrap();
 
     // Use a glob pattern to exclude the entire subdirectory
     fs::write(
         project_path.join(".rsconstructignore"),
-        "# Exclude all files in subdir\nsleep/subdir/**\n"
+        "# Exclude all files in subdir\ntemplates.tera/subdir/**\n"
     ).unwrap();
 
     // Build
     let output = run_rsconstruct_with_env(project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
     assert!(output.status.success(), "rsconstruct build failed: {}", String::from_utf8_lossy(&output.stderr));
 
-    // Verify via output - keep.sleep should be processed, subdir files should not
+    // Verify via output - keep.txt should be processed, subdir files should not
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("keep.sleep"), "keep.sleep should be processed");
-    assert!(!stdout.contains("skip1.sleep"), "subdir/skip1.sleep should be excluded");
-    assert!(!stdout.contains("skip2.sleep"), "subdir/skip2.sleep should be excluded");
+    assert!(stdout.contains("keep.txt"), "keep.txt should be processed");
+    assert!(!stdout.contains("skip1.txt"), "subdir/skip1.txt should be excluded");
+    assert!(!stdout.contains("skip2.txt"), "subdir/skip2.txt should be excluded");
 }
 
 #[test]
@@ -71,14 +60,8 @@ fn rsconstructignore_no_file() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Create sleep directory — no .rsconstructignore
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/normal.sleep"), "0.01").unwrap();
-
-    fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
-    ).unwrap();
+    // Create a template — no .rsconstructignore
+    fs::write(project_path.join("templates.tera/normal.txt.tera"), "hello").unwrap();
 
     // Build should work fine without .rsconstructignore
     let output = run_rsconstruct_with_env(project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
@@ -87,8 +70,8 @@ fn rsconstructignore_no_file() {
 
     // Verify via output that the file was processed
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("normal.sleep"),
-        "Sleep file should be processed when no .rsconstructignore exists: {}", stdout);
+    assert!(stdout.contains("normal.txt"),
+        "Template should be processed when no .rsconstructignore exists: {}", stdout);
 }
 
 #[test]
@@ -96,19 +79,13 @@ fn rsconstructignore_comments_and_blank_lines() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/a.sleep"), "0.01").unwrap();
-    fs::write(project_path.join("sleep/b.sleep"), "0.01").unwrap();
-
-    fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
-    ).unwrap();
+    fs::write(project_path.join("templates.tera/a.txt.tera"), "hello").unwrap();
+    fs::write(project_path.join("templates.tera/b.txt.tera"), "world").unwrap();
 
     // .rsconstructignore with comments, blank lines, and one real pattern
     fs::write(
         project_path.join(".rsconstructignore"),
-        "# This is a comment\n\n   \n# Another comment\nsleep/b.sleep\n\n"
+        "# This is a comment\n\n   \n# Another comment\ntemplates.tera/b.txt.tera\n\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
@@ -116,8 +93,8 @@ fn rsconstructignore_comments_and_blank_lines() {
 
     // Verify via output
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("a.sleep"), "a.sleep should be processed");
-    assert!(!stdout.contains("b.sleep"), "b.sleep should be ignored");
+    assert!(stdout.contains("a.txt"), "a.txt should be processed");
+    assert!(!stdout.contains("b.txt"), "b.txt should be ignored");
 }
 
 #[test]

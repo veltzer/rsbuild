@@ -176,24 +176,24 @@ fn per_processor_enabled_false_disables_processor() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
-    // Create sleep directory and file
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/quick.sleep"), "0.01").unwrap();
+    // Create tera template directory and file
+    fs::create_dir_all(project_path.join("templates.tera")).unwrap();
+    fs::write(project_path.join("templates.tera/quick.txt.tera"), "hello").unwrap();
 
-    // Enable sleep in the enabled list but disable it via per-processor config
+    // Enable tera in the enabled list but disable it via per-processor config
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n\n[processor.sleep]\nenabled = false\n"
+        "[processor]\nenabled = [\"tera\"]\n\n[processor.tera]\nenabled = false\n"
     ).unwrap();
 
-    // processors list --all should show sleep as disabled (sleep is hidden, needs --all)
-    let output = run_rsconstruct_with_env(project_path, &["processors", "list", "--all"], &[("NO_COLOR", "1")]);
+    // processors list should show tera as disabled
+    let output = run_rsconstruct_with_env(project_path, &["processors", "list"], &[("NO_COLOR", "1")]);
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("sleep"), "Expected sleep in processor list");
-    assert!(stdout.contains("disabled"), "Expected sleep to show as disabled");
+    assert!(stdout.contains("tera"), "Expected tera in processor list");
+    assert!(stdout.contains("disabled"), "Expected tera to show as disabled");
 
-    // Build should produce zero products (sleep is disabled)
+    // Build should produce zero products (tera is disabled)
     let result = run_rsconstruct_json_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
     assert!(result.exit_success, "Build should succeed");
     assert_eq!(result.total_products, 0, "Expected 0 products when processor is disabled");
@@ -204,17 +204,17 @@ fn per_processor_enabled_true_is_default() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
-    // Create sleep directory and file
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/quick.sleep"), "0.01").unwrap();
+    // Create tera template directory and file
+    fs::create_dir_all(project_path.join("templates.tera")).unwrap();
+    fs::write(project_path.join("templates.tera/quick.txt.tera"), "hello").unwrap();
 
-    // Enable sleep in the enabled list without setting per-processor enabled
+    // Enable tera in the enabled list without setting per-processor enabled
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        "[processor]\nenabled = [\"tera\"]\n"
     ).unwrap();
 
-    // Build should produce one product (sleep defaults to enabled = true)
+    // Build should produce one product (tera defaults to enabled = true)
     let result = run_rsconstruct_json_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
     assert!(result.exit_success, "Build should succeed");
     assert_eq!(result.total_products, 1, "Expected 1 product when processor defaults to enabled");

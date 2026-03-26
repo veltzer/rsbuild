@@ -72,11 +72,9 @@ fn cache_list_shows_entries() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/list_test.sleep"), "0.01").unwrap();
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/list_test.txt.tera"),
+        "hello"
     ).unwrap();
 
     // Build to populate cache
@@ -92,11 +90,8 @@ fn cache_list_shows_entries() {
     let arr = entries.as_array().expect("Cache list should be a JSON array");
     assert!(!arr.is_empty(), "Cache list should have entries after build");
     let first = &arr[0];
-    assert!(first["cache_key"].as_str().unwrap().contains("sleep"),
+    assert!(first["cache_key"].as_str().unwrap().contains("tera"),
         "Cache entry should contain processor name: {}", first);
-    // Checkers have empty outputs - the cache entry itself is the success record
-    let outputs = first["outputs"].as_array().expect("outputs should be an array");
-    assert!(outputs.is_empty(), "Checker cache entry should have empty outputs: {}", first);
 }
 
 #[test]
@@ -140,11 +135,9 @@ fn cache_stats_after_build() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/stats_test.sleep"), "0.01").unwrap();
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/stats_test.txt.tera"),
+        "hello"
     ).unwrap();
 
     // Build to populate cache
@@ -155,7 +148,7 @@ fn cache_stats_after_build() {
     let output = run_rsconstruct_with_env(project_path, &["cache", "stats"], &[("NO_COLOR", "1")]);
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("sleep"), "Expected processor name in stats, got: {}", stdout);
+    assert!(stdout.contains("tera"), "Expected processor name in stats, got: {}", stdout);
     assert!(stdout.contains("entries"), "Expected 'entries' in stats, got: {}", stdout);
 }
 
@@ -164,11 +157,9 @@ fn cache_stats_json() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    fs::create_dir_all(project_path.join("sleep")).unwrap();
-    fs::write(project_path.join("sleep/json_test.sleep"), "0.01").unwrap();
     fs::write(
-        project_path.join("rsconstruct.toml"),
-        "[processor]\nenabled = [\"sleep\"]\n"
+        project_path.join("templates.tera/json_test.txt.tera"),
+        "hello"
     ).unwrap();
 
     // Build to populate cache
@@ -182,5 +173,5 @@ fn cache_stats_json() {
     let parsed: serde_json::Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("Cache stats JSON should be valid: {}\nOutput: {}", e, stdout));
     assert!(parsed.is_object(), "Expected JSON object, got: {}", stdout);
-    assert!(parsed.get("sleep").is_some(), "Expected 'sleep' key in stats JSON, got: {}", stdout);
+    assert!(parsed.get("tera").is_some(), "Expected 'tera' key in stats JSON, got: {}", stdout);
 }

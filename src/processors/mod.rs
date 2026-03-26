@@ -70,10 +70,6 @@ pub(crate) fn set_interrupted() {
     let _ = get_interrupt_sender().send(true);
 }
 
-/// Check whether the global interrupted flag is set.
-pub(crate) fn is_interrupted() -> bool {
-    INTERRUPTED.load(Ordering::SeqCst)
-}
 
 // Thread-local holding the current processor's declared tools.
 // Set before execute()/execute_batch() and cleared after.

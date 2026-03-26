@@ -84,5 +84,6 @@
 - [Environment Variables](environment-variables.md)
 - [Processor Contract](processor-contract.md)
 - [Coding Standards](coding-standards.md)
+- [Crates.io Publishing](crates-io.md)
 - [Missing Processors](missing-processors.md)
 - [Suggestions](suggestions.md)

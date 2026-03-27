@@ -230,7 +230,7 @@ pub enum Commands {
     /// Count source lines of code (SLOC) by language
     Sloc {
         /// Show COCOMO effort/cost estimation
-        #[arg(long)]
+        #[arg(long, hide_short_help = true)]
         cocomo: bool,
         /// Annual salary for COCOMO cost estimation (default: 56286)
         #[arg(long, default_value = "56286")]

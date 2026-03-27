@@ -28,8 +28,7 @@ mod tool_lock;
 mod watcher;
 
 use anyhow::{bail, Result};
-use clap::Parser;
-use cli::{BuildPhase, CacheAction, CleanAction, Cli, Commands, parse_shell, print_completions};
+use cli::{BuildPhase, CacheAction, CleanAction, Commands, parse_shell, print_completions};
 use config::Config;
 use builder::Builder;
 use exit_code::{RsconstructExitCode, RsconstructError, classify_error};
@@ -64,7 +63,7 @@ fn main() -> std::process::ExitCode {
 
 fn run() -> Result<()> {
     let t_start = Instant::now();
-    let cli = Cli::parse();
+    let cli = cli::parse_cli();
     let cli_parse_dur = t_start.elapsed();
 
     // Initialize runtime flags from CLI arguments (once, before any reads)

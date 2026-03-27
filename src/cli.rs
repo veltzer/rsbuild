@@ -1,4 +1,4 @@
-use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
+use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
 use std::io;
 use std::str::FromStr;
@@ -9,39 +9,39 @@ use std::str::FromStr;
 #[command(about = "Rust Build Tool - Incremental build system with templates", long_about = None)]
 pub struct Cli {
     /// Show skip/restore/cache messages during build
-    #[arg(short, long, global = true, hide_short_help = true)]
+    #[arg(short, long, global = true)]
     pub verbose: bool,
 
     /// What to show for output files (none, basename, path)
-    #[arg(short = 'O', long, global = true, value_enum, default_value = "none", hide_short_help = true)]
+    #[arg(short = 'O', long, global = true, value_enum, default_value = "none")]
     pub output_display: OutputDisplay,
 
     /// What to show for input files (none, source, all)
-    #[arg(short = 'I', long, global = true, value_enum, default_value = "source", hide_short_help = true)]
+    #[arg(short = 'I', long, global = true, value_enum, default_value = "source")]
     pub input_display: InputDisplay,
 
     /// Path format for displayed files (basename, path)
-    #[arg(short = 'P', long, global = true, value_enum, default_value = "path", hide_short_help = true)]
+    #[arg(short = 'P', long, global = true, value_enum, default_value = "path")]
     pub path_format: PathFormat,
 
     /// Print each child process command before it is executed
-    #[arg(long, global = true, hide_short_help = true)]
+    #[arg(long, global = true)]
     pub show_child_processes: bool,
 
     /// Show tool output even on success (default: only show on failure)
-    #[arg(long, global = true, hide_short_help = true)]
+    #[arg(long, global = true)]
     pub show_output: bool,
 
     /// Output in JSON Lines format (machine-readable)
-    #[arg(long, global = true, hide_short_help = true)]
+    #[arg(long, global = true)]
     pub json: bool,
 
     /// Suppress all output except errors (useful for CI)
-    #[arg(short, long, global = true, hide_short_help = true)]
+    #[arg(short, long, global = true)]
     pub quiet: bool,
 
     /// Show build phase messages (discover, add_dependencies, etc.)
-    #[arg(long, global = true, hide_short_help = true)]
+    #[arg(long, global = true)]
     pub phases: bool,
 
     #[command(subcommand)]
@@ -169,19 +169,19 @@ pub enum Commands {
     /// Execute an incremental build
     Build {
         /// Force rebuild even if files haven't changed
-        #[arg(short, long, hide_short_help = true)]
+        #[arg(short, long)]
         force: bool,
 
         /// Show what would be built without executing anything
-        #[arg(short = 'n', long, hide_short_help = true)]
+        #[arg(short = 'n', long)]
         dry_run: bool,
 
         /// Verify tool versions against .tools.versions before building
-        #[arg(long, hide_short_help = true)]
+        #[arg(long)]
         verify_tool_versions: bool,
 
         /// Stop after a specific build phase
-        #[arg(long, value_enum, default_value = "build", hide_short_help = true)]
+        #[arg(long, value_enum, default_value = "build")]
         stop_after: BuildPhase,
 
         #[command(flatten)]
@@ -230,10 +230,10 @@ pub enum Commands {
     /// Count source lines of code (SLOC) by language
     Sloc {
         /// Show COCOMO effort/cost estimation
-        #[arg(long, hide_short_help = true)]
+        #[arg(long)]
         cocomo: bool,
         /// Annual salary for COCOMO cost estimation (default: 56286)
-        #[arg(long, default_value = "56286", hide_short_help = true)]
+        #[arg(long, default_value = "56286")]
         salary: u64,
     },
     /// Smart config manipulation commands
@@ -299,13 +299,13 @@ pub enum GraphAction {
     /// Print the dependency graph to stdout
     Show {
         /// Output format
-        #[arg(short, long, value_enum, default_value = "svg", hide_short_help = true)]
+        #[arg(short, long, value_enum, default_value = "svg")]
         format: GraphFormat,
     },
     /// Open the dependency graph in a viewer
     View {
         /// Viewer to use
-        #[arg(long, value_enum, default_value = "svg", hide_short_help = true)]
+        #[arg(long, value_enum, default_value = "svg")]
         viewer: GraphViewer,
     },
     /// Show graph statistics (products, processors, dependencies)
@@ -323,7 +323,7 @@ pub enum CleanAction {
     /// Remove files not tracked by git and not known as RSConstruct build outputs
     Unknown {
         /// Show what would be removed without actually deleting
-        #[arg(long, hide_short_help = true)]
+        #[arg(long)]
         dry_run: bool,
     },
 }
@@ -361,7 +361,7 @@ pub enum ProcessorAction {
     /// List available processors with status and descriptions
     List {
         /// Include hidden processors
-        #[arg(short, long, hide_short_help = true)]
+        #[arg(short, long)]
         all: bool,
     },
     /// Show source and target files for each processor
@@ -369,7 +369,7 @@ pub enum ProcessorAction {
         /// Processor name (omit to show all enabled processors)
         name: Option<String>,
         /// Include disabled and hidden processors
-        #[arg(short, long, hide_short_help = true)]
+        #[arg(short, long)]
         all: bool,
     },
     /// Show resolved configuration for a processor
@@ -655,6 +655,26 @@ pub struct BuildOptions {
 /// Parse a shell name string into a Shell enum
 pub fn parse_shell(name: &str) -> Option<Shell> {
     <Shell as FromStr>::from_str(name).ok()
+}
+
+/// Recursively set `hide_short_help = true` on all arguments in a command and its subcommands.
+fn hide_all_flags(cmd: clap::Command) -> clap::Command {
+    let cmd = cmd.mut_args(|arg| {
+        if arg.get_long().is_some() || arg.get_short().is_some() {
+            arg.hide_short_help(true)
+        } else {
+            arg
+        }
+    });
+    cmd.mut_subcommands(hide_all_flags)
+}
+
+/// Parse CLI arguments with all flags hidden from short help (`-h`).
+/// Use `--help` to see all flags.
+pub fn parse_cli() -> Cli {
+    let cmd = hide_all_flags(Cli::command());
+    let matches = cmd.get_matches();
+    Cli::from_arg_matches(&matches).expect("failed to parse CLI arguments")
 }
 
 /// Generate shell completions and print to stdout

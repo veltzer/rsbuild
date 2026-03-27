@@ -181,7 +181,7 @@ pub enum Commands {
         verify_tool_versions: bool,
 
         /// Stop after a specific build phase
-        #[arg(long, value_enum, default_value = "build")]
+        #[arg(long, value_enum, default_value = "build", hide_short_help = true)]
         stop_after: BuildPhase,
 
         #[command(flatten)]

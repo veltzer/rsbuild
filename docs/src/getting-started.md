@@ -19,8 +19,7 @@ mkdir myproject && cd myproject
 
 ```toml
 # rsconstruct.toml
-[processor]
-enabled = ["ruff"]
+[processor.ruff]
 ```
 
 Create a Python source file:
@@ -60,12 +59,13 @@ Processing ruff (1 product)
 
 ### Adding pylint
 
-Install [pylint](https://pylint.readthedocs.io/) and add it to the enabled list:
+Install [pylint](https://pylint.readthedocs.io/) and add a section for it:
 
 ```toml
 # rsconstruct.toml
-[processor]
-enabled = ["ruff", "pylint"]
+[processor.ruff]
+
+[processor.pylint]
 ```
 
 Pass extra arguments via processor config:
@@ -77,11 +77,14 @@ args = ["--disable=C0114,C0115,C0116"]
 
 ### Adding spellcheck for docs
 
-If your project has markdown documentation, add the spellcheck processor:
+If your project has markdown documentation, add a section for the spellcheck processor:
 
 ```toml
-[processor]
-enabled = ["ruff", "pylint", "spellcheck"]
+[processor.ruff]
+
+[processor.pylint]
+
+[processor.spellcheck]
 ```
 
 Create a `.spellcheck-words` file in the project root with any custom words (one per line) that the spellchecker should accept.
@@ -103,8 +106,7 @@ mkdir myproject && cd myproject
 
 ```toml
 # rsconstruct.toml
-[processor]
-enabled = ["cc_single_file"]
+[processor.cc_single_file]
 ```
 
 Create a source file under `src/`:
@@ -160,11 +162,12 @@ See the [CC Single File](processors/cc_single_file.md) processor docs for the fu
 
 ### Adding static analysis
 
-Install [cppcheck](http://cppcheck.net/) and add it to the enabled list:
+Install [cppcheck](http://cppcheck.net/) and add a section for it:
 
 ```toml
-[processor]
-enabled = ["cc_single_file", "cppcheck"]
+[processor.cc_single_file]
+
+[processor.cppcheck]
 ```
 
 Both processors run on the same source files — rsconstruct handles them independently.

@@ -28,14 +28,20 @@ src/bar.py → (checker)
 
 ## Configuration
 
-Enable processors in `rsconstruct.toml`:
+Declare processors by adding `[processor.NAME]` sections to `rsconstruct.toml`:
 
 ```toml
-[processor]
-enabled = ["tera", "ruff", "pylint", "pyrefly", "cc_single_file", "cppcheck", "shellcheck", "spellcheck", "make", "yamllint", "jq", "jsonlint", "taplo", "json_schema"]
+[processor.ruff]
+
+[processor.pylint]
+args = ["--disable=C0114"]
+
+[processor.cc_single_file]
 ```
 
-Use `rsconstruct processors list` to see available processors with enabled/detected status and descriptions.
+Only declared processors run — no processors are enabled by default. Use `rsconstruct auto` to auto-detect and add relevant processors.
+
+Use `rsconstruct processors list` to see declared processors and descriptions.
 Use `rsconstruct processors list --all` to include hidden processors.
 Use `rsconstruct processors files` to see which files each processor discovers.
 

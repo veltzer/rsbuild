@@ -36,9 +36,6 @@ member directories, or configure `scan_dir` to limit discovery.
 ## Configuration
 
 ```toml
-[processor]
-enabled = ["cargo"]
-
 [processor.cargo]
 cargo = "cargo"          # Cargo binary to use
 command = "build"        # Cargo command (build, check, test, clippy, etc.)
@@ -68,16 +65,12 @@ cache_output_dir = true  # Cache the target/ directory for fast restore after cl
 ### Basic Usage
 
 ```toml
-[processor]
-enabled = ["cargo"]
+[processor.cargo]
 ```
 
 ### Release Only
 
 ```toml
-[processor]
-enabled = ["cargo"]
-
 [processor.cargo]
 profiles = ["release"]
 ```
@@ -85,9 +78,6 @@ profiles = ["release"]
 ### Dev Only
 
 ```toml
-[processor]
-enabled = ["cargo"]
-
 [processor.cargo]
 profiles = ["dev"]
 ```
@@ -95,9 +85,6 @@ profiles = ["dev"]
 ### Use cargo check Instead of build
 
 ```toml
-[processor]
-enabled = ["cargo"]
-
 [processor.cargo]
 command = "check"
 ```
@@ -105,9 +92,6 @@ command = "check"
 ### Run clippy
 
 ```toml
-[processor]
-enabled = ["cargo"]
-
 [processor.cargo]
 command = "clippy"
 args = ["--", "-D", "warnings"]
@@ -116,9 +100,6 @@ args = ["--", "-D", "warnings"]
 ### Workspace Root Only
 
 ```toml
-[processor]
-enabled = ["cargo"]
-
 [processor.cargo]
 exclude_paths = ["crates/"]
 ```

@@ -1,6 +1,6 @@
 # Lua Plugins
 
-RSConstruct supports custom processors written in Lua. Drop a `.lua` file in the `plugins/` directory and add its name to `[processor] enabled` in `rsconstruct.toml`. The plugin participates in discovery, execution, caching, cleaning, tool listing, and auto-detection just like a built-in processor.
+RSConstruct supports custom processors written in Lua. Drop a `.lua` file in the `plugins/` directory and add a `[processor.NAME]` section in `rsconstruct.toml`. The plugin participates in discovery, execution, caching, cleaning, tool listing, and auto-detection just like a built-in processor.
 
 ## Quick Start
 
@@ -40,9 +40,6 @@ end
 **2. Enable it in `rsconstruct.toml`:**
 
 ```toml
-[processor]
-enabled = ["eslint"]
-
 [processor.eslint]
 scan_dir = "src"
 extensions = [".js", ".ts"]
@@ -241,7 +238,7 @@ dir = "plugins"  # default
 The plugin name is derived from the `.lua` filename (without extension). This name is used for:
 
 - The `[processor.NAME]` config section
-- The `enabled` list in `[processor]`
+- The `[processor.NAME]` config section in `rsconstruct.toml`
 - The `out/NAME/` stub directory
 - Display in `rsconstruct processors list` and build output
 
@@ -299,9 +296,6 @@ end
 ```
 
 ```toml
-[processor]
-enabled = ["yamllint"]
-
 [processor.yamllint]
 extensions = [".yml", ".yaml"]
 ```
@@ -341,9 +335,6 @@ end
 ```
 
 ```toml
-[processor]
-enabled = ["yamllint"]
-
 [processor.yamllint]
 extensions = [".yml", ".yaml"]
 ```
@@ -383,9 +374,6 @@ end
 ```
 
 ```toml
-[processor]
-enabled = ["sass"]
-
 [processor.sass]
 scan_dir = "src"
 extensions = [".scss"]

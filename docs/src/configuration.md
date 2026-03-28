@@ -9,19 +9,25 @@ RSConstruct is configured via an `rsconstruct.toml` file in the project root.
 parallel = 1          # Number of parallel jobs (1 = sequential, 0 = auto-detect CPU cores)
 batch_size = 0        # Max files per batch for batch-capable processors (0 = no limit, omit to disable)
 
-[processor]
-auto_detect = true
-enabled = ["tera", "ruff", "pylint", "mypy", "pyrefly", "cc_single_file", "cppcheck",
-           "clang_tidy", "shellcheck", "spellcheck", "make", "cargo", "rumdl", "yamllint",
-           "jq", "jsonlint", "taplo", "json_schema", "tags", "pip", "sphinx", "mdbook",
-           "npm", "gem", "mdl", "markdownlint", "aspell", "marp", "pandoc", "markdown",
-           "pdflatex", "a2x", "ascii_check", "mermaid", "drawio", "libreoffice", "pdfunite"]
+# Declare processors by adding [processor.NAME] sections.
+# Only declared processors run — no processors are enabled by default.
+# Use `rsconstruct auto` to auto-detect and add relevant processors.
+
+[processor.ruff]
+# args = []
+
+[processor.pylint]
+# args = ["--disable=C0114"]
+
+[processor.cc_single_file]
+# cc = "gcc"
+# cflags = ["-Wall", "-O2"]
 
 [cache]
 restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
 remote = "s3://my-bucket/rsconstruct-cache"  # Optional: remote cache URL
 remote_push = true       # Push local builds to remote (default: true)
-remote_pull = true       # Pull from remote on cache miss (default: true)
+remote_pull = true       # Pull from remote cache on cache miss (default: true)
 mtime_check = true       # Use mtime pre-check to skip unchanged file checksums (default: true)
 
 [analyzer]
@@ -40,6 +46,46 @@ shells = ["bash"]
 
 Per-processor configuration is documented on each processor's page under [Processors](processors.md).
 Lua plugin configuration is documented under [Lua Plugins](plugins.md).
+
+## Processor instances
+
+Processors are declared by adding a `[processor.NAME]` section to `rsconstruct.toml`. An empty section enables the processor with default settings:
+
+```toml
+[processor.pylint]
+```
+
+Customize with config fields:
+
+```toml
+[processor.pylint]
+args = ["--disable=C0114,C0116"]
+scan_dir = "src"
+```
+
+Remove the section to disable the processor.
+
+### Multiple instances
+
+Run the same processor multiple times with different configurations by adding named sub-sections:
+
+```toml
+[processor.pylint.core]
+scan_dir = "src/core"
+args = ["--disable=C0114"]
+
+[processor.pylint.tests]
+scan_dir = "tests"
+args = ["--disable=C0114,C0116"]
+```
+
+Each instance runs independently with its own config and cache. The instance name (e.g., `pylint.core`) appears in build output and cache keys.
+
+You cannot mix single-instance and multi-instance formats for the same processor type — use either `[processor.pylint]` or `[processor.pylint.NAME]`, not both.
+
+### Auto-detection
+
+Run `rsconstruct auto` to scan the project and automatically add `[processor.NAME]` sections for all processors whose files are detected and whose tools are installed. It does not remove existing sections.
 
 ## Variable substitution
 
@@ -67,12 +113,25 @@ Variables are substituted before TOML parsing. The `"${var_name}"` (including qu
 | `parallel` | integer | `1` | Number of parallel jobs. `1` = sequential, `0` = auto-detect CPU cores. |
 | `batch_size` | integer | `0` | Maximum files per batch for batch-capable processors. `0` = no limit (all files in one batch). Omit to disable batching entirely. |
 
-### `[processor]`
+### `[processor.NAME]`
+
+Each `[processor.NAME]` section declares a processor instance. The section name must match a builtin processor type (e.g., `ruff`, `pylint`, `cc_single_file`) or a [Lua plugin](plugins.md) name.
+
+Common fields available to all processors:
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `auto_detect` | boolean | `true` | When `true`, only run enabled processors that auto-detect relevant files. When `false`, run all enabled processors unconditionally. |
-| `enabled` | array of strings | (see below) | List of processors to enable. By default all built-in processors are enabled. Run `rsconstruct processors list` to see the full list. [Lua plugin](plugins.md) names can also be listed here. |
+| `args` | array of strings | `[]` | Extra command-line arguments passed to the tool. |
+| `extra_inputs` | array of strings | `[]` | Additional input files that trigger rebuild when changed. |
+| `auto_inputs` | array of strings | varies | Config files auto-detected as inputs (e.g., `.pylintrc`). |
+| `batch` | boolean | `true` | Whether to batch multiple files into a single tool invocation. |
+| `scan_dir` | string | varies | Directory to scan for source files (empty = project root). |
+| `extensions` | array of strings | varies | File extensions to match. |
+| `exclude_dirs` | array of strings | varies | Directory path segments to exclude from scanning. |
+| `exclude_files` | array of strings | `[]` | File names to exclude. |
+| `exclude_paths` | array of strings | `[]` | Paths (relative to project root) to exclude. |
+
+Processor-specific fields are documented on each processor's page under [Processors](processors.md).
 
 ### `[cache]`
 

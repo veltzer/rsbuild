@@ -30,9 +30,6 @@ When any tracked file changes, rsconstruct will re-run clippy.
 ## Configuration
 
 ```toml
-[processor]
-enabled = ["clippy"]
-
 [processor.clippy]
 cargo = "cargo"          # Cargo binary to use
 command = "clippy"       # Cargo command (usually "clippy")
@@ -58,16 +55,12 @@ extra_inputs = []        # Additional files that trigger rebuilds
 ### Basic Usage
 
 ```toml
-[processor]
-enabled = ["clippy"]
+[processor.clippy]
 ```
 
 ### Deny All Warnings
 
 ```toml
-[processor]
-enabled = ["clippy"]
-
 [processor.clippy]
 args = ["--", "-D", "warnings"]
 ```
@@ -75,8 +68,9 @@ args = ["--", "-D", "warnings"]
 ### Use Both Cargo Build and Clippy
 
 ```toml
-[processor]
-enabled = ["cargo", "clippy"]
+[processor.cargo]
+
+[processor.clippy]
 ```
 
 ## Notes

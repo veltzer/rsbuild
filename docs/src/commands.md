@@ -108,6 +108,20 @@ Show product status — whether each product is up-to-date, stale, or restorable
 rsconstruct status
 ```
 
+## `rsconstruct auto`
+
+Auto-detect relevant processors and add them to `rsconstruct.toml`. Scans the project for files matching each processor's conventions and checks that the required tools are installed. Only adds new sections — existing processor sections are preserved.
+
+```bash
+rsconstruct auto
+```
+
+Example output:
+
+```
+Added 3 processor(s): pylint, ruff, shellcheck
+```
+
 ## `rsconstruct init`
 
 Initialize a new rsconstruct project in the current directory.
@@ -216,12 +230,28 @@ rsconstruct config show-default   # Show the default configuration (without rsco
 rsconstruct config validate       # Validate the configuration for errors and warnings
 ```
 
+## `rsconstruct smart`
+
+Smart config manipulation commands for managing processor sections in `rsconstruct.toml`.
+
+```bash
+rsconstruct smart enable pylint          # Add [processor.pylint] section
+rsconstruct smart disable pylint         # Remove [processor.pylint] section
+rsconstruct smart enable-all             # Add sections for all builtin processors
+rsconstruct smart disable-all            # Remove all processor sections
+rsconstruct smart enable-detected        # Add sections for auto-detected processors
+rsconstruct smart enable-if-available    # Add sections for detected processors with tools installed
+rsconstruct smart minimal                # Remove all, then add only detected processors
+rsconstruct smart only ruff pylint       # Remove all, then add only listed processors
+rsconstruct smart reset                  # Remove all processor sections
+```
+
 ## `rsconstruct processors`
 
 ```bash
-rsconstruct processors list              # List processors with enabled/detected status and descriptions
+rsconstruct processors list              # List declared processors and descriptions
 rsconstruct processors list -a           # Include hidden processors
-rsconstruct processors files             # Show source and target files for each enabled processor
+rsconstruct processors files             # Show source and target files for each declared processor
 rsconstruct processors files ruff        # Show files for a specific processor
 rsconstruct processors files -a          # Include disabled and hidden processors
 rsconstruct processors config ruff       # Show resolved configuration for a processor
@@ -230,7 +260,7 @@ rsconstruct processors defconfig ruff    # Show default configuration for a proc
 
 ## `rsconstruct tools`
 
-List or check external tools required by enabled processors.
+List or check external tools required by declared processors.
 
 ```bash
 rsconstruct tools list              # List required tools and which processor needs them

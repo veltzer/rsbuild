@@ -27,7 +27,7 @@ mod remote_cache;
 mod tool_lock;
 mod watcher;
 
-use anyhow::{bail, Result};
+use anyhow::{Context, bail, Result};
 use cli::{BuildPhase, CacheAction, CleanAction, Commands, parse_shell, print_completions};
 use config::Config;
 use builder::Builder;
@@ -360,6 +360,19 @@ fn run() -> Result<()> {
                 cli::TagsAction::Frontmatter { path } => processors::tags_cmd::frontmatter_for_file(&db_path, &path)?,
                 cli::TagsAction::Unused { strict } => processors::tags_cmd::unused_tags(&db_path, &tags_dir, strict)?,
                 cli::TagsAction::Validate => processors::tags_cmd::validate_tags(&db_path, &tags_dir)?,
+                cli::TagsAction::Matrix => processors::tags_cmd::matrix_tags(&db_path)?,
+                cli::TagsAction::Coverage => processors::tags_cmd::coverage_tags(&db_path)?,
+                cli::TagsAction::Orphans => processors::tags_cmd::orphan_files(&db_path)?,
+                cli::TagsAction::Check => {
+                    let tags_config: config::TagsConfig = config.processor
+                        .first_instance_of_type("tags")
+                        .map(|inst| inst.config_toml.clone().try_into())
+                        .transpose()
+                        .context("Failed to parse tags config")?
+                        .unwrap_or_default();
+                    processors::tags_cmd::check_tags(&tags_config)?;
+                }
+                cli::TagsAction::Suggest { path } => processors::tags_cmd::suggest_tags(&db_path, &path)?,
             }
         }
         Commands::Tools { action } => {

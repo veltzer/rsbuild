@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use super::{default_true, default_script_check_linter, default_cc_compiler, default_cxx_compiler, default_output_suffix, KnownFields, ScanConfig};
 
@@ -1014,9 +1015,20 @@ pub struct TagsConfig {
     #[serde(default = "default_tags_dir")]
     pub tags_dir: String,
     /// Frontmatter fields that every markdown file must have.
-    /// e.g. ["tags", "level", "category", "duration_hours", "audiences"]
     #[serde(default)]
     pub required_fields: Vec<String>,
+    /// Scalar fields whose values must exist in the corresponding tag_lists file.
+    #[serde(default)]
+    pub required_values: Vec<String>,
+    /// Fields whose values must be unique across all files.
+    #[serde(default)]
+    pub unique_fields: Vec<String>,
+    /// Expected types for fields: "scalar", "list", or "number".
+    #[serde(default)]
+    pub field_types: HashMap<String, String>,
+    /// Require list-type fields to have items in sorted order.
+    #[serde(default)]
+    pub sorted_tags: bool,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
     #[serde(default)]
@@ -1033,6 +1045,10 @@ impl Default for TagsConfig {
             output: "out/tags/tags.db".into(),
             tags_dir: "tag_lists".into(),
             required_fields: Vec::new(),
+            required_values: Vec::new(),
+            unique_fields: Vec::new(),
+            field_types: HashMap::new(),
+            sorted_tags: false,
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             batch: true,
@@ -1044,7 +1060,9 @@ impl Default for TagsConfig {
 impl KnownFields for TagsConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "output", "tags_dir", "required_fields", "extra_inputs", "auto_inputs", "batch",
+            "output", "tags_dir", "required_fields", "required_values",
+            "unique_fields", "field_types", "sorted_tags",
+            "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }

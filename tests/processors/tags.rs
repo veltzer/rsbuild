@@ -535,3 +535,226 @@ required_fields = ["level"]
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("level"), "should mention missing field 'level': {}", stderr);
 }
+
+// --- Feature 1: required_values ---
+
+#[test]
+fn tags_required_values_pass() {
+    let config = "[processor.tags]\nrequired_values = [\"level\"]\n";
+    let temp_dir = setup_tags_project_with_config(
+        &[("a.md", "---\nlevel: beginner\ntags:\n  - tools:docker\n---\n")],
+        &[("level.txt", "beginner\n"), ("tools.txt", "docker\n")],
+        config,
+    );
+    build_project(temp_dir.path());
+}
+
+#[test]
+fn tags_required_values_invalid_fails() {
+    let config = "[processor.tags]\nrequired_values = [\"level\"]\n";
+    let temp_dir = setup_tags_project_with_config(
+        &[("a.md", "---\nlevel: begginer\ntags:\n  - tools:docker\n---\n")],
+        &[("level.txt", "beginner\nadvanced\n"), ("tools.txt", "docker\n")],
+        config,
+    );
+    let output = run_rsconstruct_with_env(temp_dir.path(), &["build"], &[("NO_COLOR", "1")]);
+    assert!(!output.status.success(), "build should fail with invalid value");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("begginer"), "should mention invalid value: {}", stderr);
+}
+
+// --- Feature 2: unique_fields ---
+
+#[test]
+fn tags_unique_fields_pass() {
+    let config = "[processor.tags]\nunique_fields = [\"title\"]\n";
+    let temp_dir = setup_tags_project_with_config(
+        &[
+            ("a.md", "---\ntitle: Course A\ntags:\n  - tools:docker\n---\n"),
+            ("b.md", "---\ntitle: Course B\ntags:\n  - tools:rust\n---\n"),
+        ],
+        &[("tools.txt", "docker\nrust\n"), ("title.txt", "Course A\nCourse B\n")],
+        config,
+    );
+    build_project(temp_dir.path());
+}
+
+#[test]
+fn tags_unique_fields_duplicate_fails() {
+    let config = "[processor.tags]\nunique_fields = [\"title\"]\n";
+    let temp_dir = setup_tags_project_with_config(
+        &[
+            ("a.md", "---\ntitle: Same Title\ntags:\n  - tools:docker\n---\n"),
+            ("b.md", "---\ntitle: Same Title\ntags:\n  - tools:rust\n---\n"),
+        ],
+        &[("tools.txt", "docker\nrust\n"), ("title.txt", "Same Title\n")],
+        config,
+    );
+    let output = run_rsconstruct_with_env(temp_dir.path(), &["build"], &[("NO_COLOR", "1")]);
+    assert!(!output.status.success(), "build should fail with duplicate title");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("Same Title"), "should mention the duplicate value: {}", stderr);
+}
+
+// --- Feature 3: field_types ---
+
+#[test]
+fn tags_field_types_pass() {
+    let config = "[processor.tags]\n[processor.tags.field_types]\ntags = \"list\"\nlevel = \"scalar\"\nduration_hours = \"number\"\n";
+    let temp_dir = setup_tags_project_with_config(
+        &[("a.md", "---\ntags:\n  - tools:docker\nlevel: beginner\nduration_hours: 24\n---\n")],
+        &[("tools.txt", "docker\n"), ("level.txt", "beginner\n"), ("duration_hours.txt", "24\n")],
+        config,
+    );
+    build_project(temp_dir.path());
+}
+
+#[test]
+fn tags_field_types_wrong_type_fails() {
+    let config = "[processor.tags]\n[processor.tags.field_types]\nlevel = \"list\"\n";
+    let temp_dir = setup_tags_project_with_config(
+        &[("a.md", "---\nlevel: beginner\ntags:\n  - tools:docker\n---\n")],
+        &[("tools.txt", "docker\n"), ("level.txt", "beginner\n")],
+        config,
+    );
+    let output = run_rsconstruct_with_env(temp_dir.path(), &["build"], &[("NO_COLOR", "1")]);
+    assert!(!output.status.success(), "build should fail with wrong field type");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("level"), "should mention the field: {}", stderr);
+    assert!(stderr.contains("list"), "should mention expected type: {}", stderr);
+}
+
+// --- Feature 9: sorted_tags ---
+
+#[test]
+fn tags_sorted_tags_pass() {
+    let config = "[processor.tags]\nsorted_tags = true\n";
+    let temp_dir = setup_tags_project_with_config(
+        &[("a.md", "---\ntags:\n  - tools:alpha\n  - tools:beta\n---\n")],
+        &[("tools.txt", "alpha\nbeta\n")],
+        config,
+    );
+    build_project(temp_dir.path());
+}
+
+#[test]
+fn tags_sorted_tags_unsorted_fails() {
+    let config = "[processor.tags]\nsorted_tags = true\n";
+    let temp_dir = setup_tags_project_with_config(
+        &[("a.md", "---\ntags:\n  - tools:beta\n  - tools:alpha\n---\n")],
+        &[("tools.txt", "alpha\nbeta\n")],
+        config,
+    );
+    let output = run_rsconstruct_with_env(temp_dir.path(), &["build"], &[("NO_COLOR", "1")]);
+    assert!(!output.status.success(), "build should fail with unsorted tags");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("sorted"), "should mention sorting: {}", stderr);
+}
+
+// --- Feature 4, 5, 6: matrix, coverage, orphans ---
+
+#[test]
+fn tags_matrix_shows_categories() {
+    let temp_dir = setup_tags_project(
+        &[
+            ("a.md", "---\nlevel: beginner\ntags:\n  - tools:docker\n---\n"),
+            ("b.md", "---\ntags:\n  - tools:rust\n---\n"),
+        ],
+        &[("level.txt", "beginner\n"), ("tools.txt", "docker\nrust\n")],
+    );
+    build_project(temp_dir.path());
+
+    let output = run_rsconstruct_with_env(temp_dir.path(), &["tags", "matrix"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("level"), "matrix should show level category: {}", stdout);
+    assert!(stdout.contains("tools"), "matrix should show tools category: {}", stdout);
+}
+
+#[test]
+fn tags_coverage_shows_percentages() {
+    let temp_dir = setup_tags_project(
+        &[
+            ("a.md", "---\nlevel: beginner\ntags:\n  - tools:docker\n---\n"),
+            ("b.md", "---\ntags:\n  - tools:rust\n---\n"),
+        ],
+        &[("level.txt", "beginner\n"), ("tools.txt", "docker\nrust\n")],
+    );
+    build_project(temp_dir.path());
+
+    let output = run_rsconstruct_with_env(temp_dir.path(), &["tags", "coverage"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("tools"), "coverage should show tools: {}", stdout);
+    assert!(stdout.contains("100%"), "tools should be 100%: {}", stdout);
+    assert!(stdout.contains("50%"), "level should be 50%: {}", stdout);
+}
+
+#[test]
+fn tags_orphans_no_orphans() {
+    let temp_dir = setup_tags_project(
+        &[
+            ("a.md", "---\ntags:\n  - tools:docker\n---\n"),
+            ("b.md", "---\ntags:\n  - tools:rust\n---\n"),
+        ],
+        &[("tools.txt", "docker\nrust\n")],
+    );
+    build_project(temp_dir.path());
+
+    let output = run_rsconstruct_with_env(temp_dir.path(), &["tags", "orphans"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("All files have tags"), "should report no orphans: {}", stdout);
+}
+
+// --- Feature 8: suggest ---
+
+#[test]
+fn tags_suggest_shows_suggestions() {
+    let temp_dir = setup_tags_project(
+        &[
+            ("a.md", "---\ntags:\n  - tools:docker\n  - tools:python\nlevel: beginner\n---\n"),
+            ("b.md", "---\ntags:\n  - tools:docker\n  - tools:rust\nlevel: advanced\n---\n"),
+            ("c.md", "---\ntags:\n  - tools:docker\n---\n"),
+        ],
+        &[("tools.txt", "docker\npython\nrust\n"), ("level.txt", "beginner\nadvanced\n")],
+    );
+    build_project(temp_dir.path());
+
+    let output = run_rsconstruct_with_env(temp_dir.path(), &["tags", "suggest", "c.md"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // c.md only has docker, so it should suggest tags from similar files (a.md, b.md)
+    assert!(stdout.contains("Suggested"), "should show suggestions: {}", stdout);
+}
+
+// --- Feature 7: check ---
+
+#[test]
+fn tags_check_passes_clean_project() {
+    let config = "[processor.tags]\nrequired_fields = [\"tags\"]\n";
+    let temp_dir = setup_tags_project_with_config(
+        &[("a.md", "---\ntags:\n  - tools:docker\n---\n")],
+        &[("tools.txt", "docker\n")],
+        config,
+    );
+    build_project(temp_dir.path());
+
+    let output = run_rsconstruct_with_env(temp_dir.path(), &["tags", "check"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "check should pass: {}", String::from_utf8_lossy(&output.stderr));
+}
+
+#[test]
+fn tags_check_reports_issues() {
+    let config = "[processor.tags]\nrequired_fields = [\"level\"]\n";
+    let temp_dir = setup_tags_project_with_config(
+        &[("a.md", "---\ntags:\n  - tools:docker\n---\n")],
+        &[("tools.txt", "docker\n")],
+        config,
+    );
+
+    let output = run_rsconstruct_with_env(temp_dir.path(), &["tags", "check"], &[("NO_COLOR", "1")]);
+    assert!(!output.status.success(), "check should fail with missing required field");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("level"), "should report missing level: {}", stderr);
+}

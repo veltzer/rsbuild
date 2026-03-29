@@ -525,6 +525,19 @@ pub enum TagsAction {
     },
     /// Validate tags against the allowlist (tags_dir) without building
     Validate,
+    /// Show a coverage matrix of tag categories per file
+    Matrix,
+    /// Show percentage of files that have each tag category
+    Coverage,
+    /// Find markdown files with no tags at all
+    Orphans,
+    /// Run all tag validations without building (lint pass)
+    Check,
+    /// Suggest tags for a file based on similarity to other tagged files
+    Suggest {
+        /// Path to the file
+        path: String,
+    },
 }
 
 /// CLI arguments shared between Build and Watch commands.

@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Extracts YAML frontmatter tags from markdown files into a searchable database.
+Extracts YAML frontmatter tags from markdown files into a searchable database
+with comprehensive validation.
 
 ## How It Works
 
@@ -10,29 +11,25 @@ Scans `.md` files for YAML frontmatter blocks (delimited by `---`), parses tag
 metadata, and builds a [redb](https://github.com/cberner/redb) database. The
 database enables querying files by tags via `rsconstruct tags` subcommands.
 
-Validates tags against a `tags_dir` directory containing tag list files.
-
 ### Tag Indexing
 
 Two kinds of frontmatter fields are indexed:
 
-- **List fields** — each item becomes a bare tag.
+- **List fields** — each item becomes a tag as-is.
   ```yaml
   tags:
-    - docker
-    - python
+    - tools:docker
+    - tools:python
   ```
-  Produces tags: `docker`, `python`.
+  Produces tags: `tools:docker`, `tools:python`.
 
 - **Scalar fields** — indexed as `key:value` (colon separator).
   ```yaml
   level: beginner
-  difficulty: 3
-  published: true
-  url: https://example.com/path
+  category: big-data
+  duration_hours: 24
   ```
-  Produces tags: `level:beginner`, `difficulty:3`, `published:true`,
-  `url:https://example.com/path`.
+  Produces tags: `level:beginner`, `category:big-data`, `duration_hours:24`.
 
 Both inline YAML lists (`tags: [a, b, c]`) and multi-line lists are supported.
 
@@ -46,37 +43,181 @@ define the allowed tags. Each file `<name>.txt` contributes tags as
 tag_lists/
 ├── level.txt        # Contains: beginner, intermediate, advanced
 ├── languages.txt    # Contains: python, rust, go, ...
-└── tools.txt        # Contains: docker, ansible, ...
+├── tools.txt        # Contains: docker, ansible, ...
+└── audiences.txt    # Contains: developers, architects, ...
 ```
 
 `level.txt` with content `beginner` produces the allowed tag `level:beginner`.
 
-Unknown tags cause a build error with typo suggestions (Levenshtein distance).
 The tags processor is only auto-detected when `tags_dir` contains `.txt` files.
+
+## Build-Time Validation
+
+During every build, the tags processor runs the following checks. Any failure
+stops the build with a descriptive error message.
+
+### Required Frontmatter Fields
+
+When `required_fields` is configured, every `.md` file must contain those
+frontmatter fields. Empty lists (`[]`) and empty strings are treated as missing.
+Files with no frontmatter block at all also fail:
+
+```toml
+[processor.tags]
+required_fields = ["tags", "level", "category", "duration_hours", "audiences"]
+```
+
+```
+Missing required frontmatter fields:
+  syllabi/courses/intro.md: category, duration_hours
+  syllabi/courses/advanced.md: audiences
+```
+
+### Required Values
+
+When `required_values` is configured, scalar fields must contain a value that
+exists in the corresponding `tag_lists/<field>.txt` file. This catches typos in
+scalar values:
+
+```toml
+[processor.tags]
+required_values = ["level", "category"]
+```
+
+```
+Invalid values for validated fields:
+  syllabi/courses/intro.md: level=begginer (not in tag_lists/level.txt)
+```
+
+### Field Types
+
+When `field_types` is configured, frontmatter fields must have the expected
+type. Supported types: `"list"`, `"scalar"`, `"number"`.
+
+```toml
+[processor.tags.field_types]
+tags = "list"
+level = "scalar"
+duration_hours = "number"
+```
+
+```
+Field type mismatches:
+  syllabi/courses/intro.md: 'level' expected list, got scalar
+```
+
+### Unique Fields
+
+When `unique_fields` is configured, no two files may share the same value for
+that field:
+
+```toml
+[processor.tags]
+unique_fields = ["title"]
+```
+
+```
+Duplicate values for unique fields:
+  title='Intro to Docker' in:
+    - syllabi/courses/docker_intro.md
+    - syllabi/courses/containers/docker_intro.md
+```
+
+### Sorted Tags
+
+When `sorted_tags = true`, list-type frontmatter fields must have their items
+in lexicographic sorted order. This reduces diff noise in version control:
+
+```toml
+[processor.tags]
+sorted_tags = true
+```
+
+```
+List tags are not in sorted order:
+  syllabi/courses/intro.md field 'tags': 'tools:alpha' should come after 'tools:beta'
+```
+
+### Duplicate Tags Within a File
+
+The same tag cannot appear twice in a single file's frontmatter:
+
+```
+Duplicate tags found within files:
+  tools:docker in syllabi/courses/containers/intro.md
+```
+
+### Duplicate Tags Across Tag Lists
+
+The same `category:value` tag cannot be defined in multiple `tags_dir/*.txt`
+files. Note that the same value in different categories is fine (`tools:docker`
+and `infra:docker` are distinct tags):
+
+```
+Duplicate tags found across tag_lists files:
+  tools:docker in tools.txt and infra.txt
+```
+
+### Unknown Tags
+
+Every tag found in frontmatter must exist in `tags_dir`. Unknown tags cause an
+error with a typo suggestion (Levenshtein distance):
+
+```
+Unknown tags found (not in tag_lists):
+  tools:dockker (did you mean 'tools:docker'?)
+    - syllabi/courses/containers/intro.md
+```
+
+### Unused Tags
+
+Every tag defined in `tags_dir/*.txt` must be used by at least one `.md` file.
+This catches stale entries that should be cleaned up:
+
+```
+Unused tags in tag_lists (not used by any file):
+  tools:vagrant
+  languages:fortran
+```
 
 ## Source Files
 
-- Input: `**/*.md`
+- Input: `**/*.md` (configurable via `scan_dir` / `extensions`)
 - Output: `out/tags/tags.db`
 
 ## Configuration
 
 ```toml
 [processor.tags]
-output = "out/tags/tags.db"            # Output database path
-tags_dir = "tag_lists"                 # Directory containing tag list files
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+output = "out/tags/tags.db"                                       # Output database path
+tags_dir = "tag_lists"                                            # Directory containing tag list files
+required_fields = ["tags", "level", "category", "duration_hours"] # Fields every .md file must have
+required_values = ["level", "category"]                           # Scalar fields validated against tag_lists
+unique_fields = ["title"]                                         # Fields that must be unique across files
+sorted_tags = true                                                # Require list items in sorted order
+extra_inputs = []                                                 # Additional files that trigger rebuilds
+
+[processor.tags.field_types]
+tags = "list"                                                     # Must be a YAML list
+level = "scalar"                                                  # Must be a string
+duration_hours = "number"                                         # Must be numeric
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `output` | string | `"out/tags/tags.db"` | Path to the tags database file |
 | `tags_dir` | string | `"tag_lists"` | Directory containing `.txt` tag list files |
+| `required_fields` | string[] | `[]` | Frontmatter fields that every `.md` file must have |
+| `required_values` | string[] | `[]` | Scalar fields whose values must exist in `tag_lists/<field>.txt` |
+| `unique_fields` | string[] | `[]` | Fields whose values must be unique across all files |
+| `field_types` | map | `{}` | Expected types per field: `"list"`, `"scalar"`, or `"number"` |
+| `sorted_tags` | bool | `false` | Require list items in sorted order within each file |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Subcommands
 
-All subcommands require a prior `rsconstruct build` to populate the database.
+All subcommands require a prior `rsconstruct build` to populate the database
+(except `check` which reads files directly).
 All support `--json` for machine-readable output.
 
 ### Querying
@@ -94,10 +235,20 @@ All support `--json` for machine-readable output.
 | `rsconstruct tags tree` | Show tags grouped by key (e.g. `level=` group) vs bare tags |
 | `rsconstruct tags stats` | Show database statistics (file count, unique tags, associations) |
 
+### Reporting
+
+| Command | Description |
+|---------|-------------|
+| `rsconstruct tags matrix` | Show a coverage matrix of tag categories per file |
+| `rsconstruct tags coverage` | Show percentage of files that have each tag category |
+| `rsconstruct tags orphans` | Find files with no tags at all |
+| `rsconstruct tags suggest PATH` | Suggest tags for a file based on similarity to other tagged files |
+
 ### Validation
 
 | Command | Description |
 |---------|-------------|
+| `rsconstruct tags check` | Run all validations without building (fast lint pass) |
 | `rsconstruct tags unused` | List tags in `tags_dir` that no file uses |
 | `rsconstruct tags unused --strict` | Same, but exit with error if any unused tags exist (for CI) |
 | `rsconstruct tags validate` | Validate indexed tags against `tags_dir` without rebuilding |

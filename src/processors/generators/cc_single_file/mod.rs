@@ -4,7 +4,7 @@ use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::config::{CcSingleFileConfig, CompilerProfile, config_hash, resolve_extra_inputs};
+use crate::config::{CcSingleFileConfig, CompilerProfile, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, scan_root, clean_outputs, check_command_output, format_command, run_command};
@@ -149,7 +149,7 @@ impl CcSingleFileProcessor {
             return Ok(());
         }
 
-        let cfg_hash = if for_clean { None } else { Some(config_hash(&self.config)) };
+        let cfg_hash = if for_clean { None } else { Some(output_config_hash(&self.config, &[])) };
         let extra = if for_clean { Vec::new() } else { resolve_extra_inputs(&self.config.extra_inputs)? };
 
         for profile in &self.profiles {

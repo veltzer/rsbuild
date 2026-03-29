@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::config::{TagsConfig, config_hash, resolve_extra_inputs};
+use crate::config::{TagsConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProcessorType, ProductDiscovery, clean_outputs, scan_root_valid};
@@ -75,7 +75,10 @@ impl ProductDiscovery for TagsProcessor {
             inputs,
             vec![output],
             crate::processors::names::TAGS,
-            Some(config_hash(&self.config)),
+            Some(output_config_hash(&self.config, &[
+                "required_fields", "required_values", "unique_fields",
+                "field_types", "required_field_groups", "sorted_tags",
+            ])),
         )?;
 
         Ok(())

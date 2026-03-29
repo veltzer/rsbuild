@@ -188,7 +188,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use serde::Serialize;
 
-use crate::config::{ScanConfig, config_hash, resolve_extra_inputs};
+use crate::config::{ScanConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 
@@ -278,7 +278,7 @@ pub(super) fn discover_multi_format(
         return Ok(());
     };
 
-    let hash = Some(config_hash(params.config));
+    let hash = Some(output_config_hash(params.config, &["formats", "output_dir"]));
     let extra = resolve_extra_inputs(params.extra_inputs)?;
     let scan_dir = params.scan.scan_dir();
 

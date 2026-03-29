@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::config::{CcConfig, CcManifest, config_hash, resolve_extra_inputs};
+use crate::config::{CcConfig, CcManifest, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, ProcessorType, scan_root_valid, run_command, check_command_output, anchor_display_dir};
@@ -273,7 +273,7 @@ impl ProductDiscovery for CcProcessor {
         let Some(files) = crate::processors::scan_or_skip(&self.config.scan, file_index) else {
             return Ok(());
         };
-        let hash = Some(config_hash(&self.config));
+        let hash = Some(output_config_hash(&self.config, &[]));
         let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
 
         for yaml_path in files {

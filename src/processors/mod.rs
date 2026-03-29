@@ -19,7 +19,7 @@ use tokio::sync::watch;
 
 use crate::color;
 use crate::errors;
-use crate::config::{config_hash, resolve_extra_inputs};
+use crate::config::{output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 
@@ -498,7 +498,7 @@ pub(crate) fn discover_directory_products(
         return Ok(());
     }
 
-    let hash = Some(config_hash(cfg_hash));
+    let hash = Some(output_config_hash(cfg_hash, &[]));
     let extra = resolve_extra_inputs(extra_inputs)?;
 
     for anchor in files {
@@ -552,7 +552,7 @@ pub(crate) fn discover_checker_products(
     if files.is_empty() {
         return Ok(());
     }
-    let hash = Some(config_hash(cfg_hash));
+    let hash = Some(output_config_hash(cfg_hash, &[]));
     let extra = resolve_extra_inputs(extra_inputs)?;
     for file in files {
         let mut inputs = Vec::with_capacity(1 + extra.len());

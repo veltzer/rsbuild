@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::config::{MdlConfig, config_hash, resolve_extra_inputs};
+use crate::config::{MdlConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, check_command_output, config_file_inputs, run_command};
@@ -31,7 +31,7 @@ impl ProductDiscovery for MdlProcessor {
         if files.is_empty() {
             return Ok(());
         }
-        let hash = Some(config_hash(&self.config));
+        let hash = Some(output_config_hash(&self.config, &[]));
         let mut extra_inputs = self.config.extra_inputs.clone();
         for ai in &self.config.auto_inputs {
             extra_inputs.extend(config_file_inputs(ai));

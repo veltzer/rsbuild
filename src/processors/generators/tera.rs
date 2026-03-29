@@ -9,7 +9,7 @@ use std::path::Path;
 use std::process::Command;
 use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value};
 
-use crate::config::{TeraConfig, config_hash, resolve_extra_inputs};
+use crate::config::{TeraConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, clean_outputs, run_command_capture};
@@ -131,7 +131,7 @@ impl ProductDiscovery for TeraProcessor {
                 inputs,
                 vec![item.output_path.clone()],
                 crate::processors::names::TERA,
-                Some(config_hash(&self.config)),
+                Some(output_config_hash(&self.config, &[])),
             )?;
         }
 

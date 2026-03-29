@@ -45,10 +45,30 @@ pub(crate) fn resolve_extra_inputs(extra_inputs: &[String]) -> Result<Vec<PathBu
     Ok(resolved)
 }
 
-/// Compute a SHA-256 hash of any serializable config value.
-/// Uses JSON serialization (deterministic for structs) to produce the hash input.
-pub(crate) fn config_hash(value: &impl Serialize) -> String {
-    let json = serde_json::to_string(value).expect(errors::CONFIG_SERIALIZE);
+/// Fields that never affect product output and are excluded from the output config hash.
+/// These control file discovery, caching strategy, and execution batching.
+const NON_OUTPUT_FIELDS: &[&str] = &[
+    "scan_dir", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
+    "extra_inputs", "auto_inputs", "batch",
+];
+
+/// Compute a config hash including only fields that affect the product output.
+/// Strips scan config, discovery, and batching fields. Additional non-output
+/// fields can be excluded via `extra_exclude`.
+pub(crate) fn output_config_hash(value: &impl Serialize, extra_exclude: &[&str]) -> String {
+    let json_value: serde_json::Value = serde_json::to_value(value).expect(errors::CONFIG_SERIALIZE);
+    let filtered = if let serde_json::Value::Object(mut map) = json_value {
+        for field in NON_OUTPUT_FIELDS {
+            map.remove(*field);
+        }
+        for field in extra_exclude {
+            map.remove(*field);
+        }
+        serde_json::Value::Object(map)
+    } else {
+        json_value
+    };
+    let json = serde_json::to_string(&filtered).expect(errors::CONFIG_SERIALIZE);
     let hash = Sha256::digest(json.as_bytes());
     hex::encode(hash)
 }

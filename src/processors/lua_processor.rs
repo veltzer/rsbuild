@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::config::{config_hash, scan_config_from_toml, ScanConfig};
+use crate::config::{output_config_hash, scan_config_from_toml, ScanConfig};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use super::{clean_outputs, ensure_stub_dir, run_command, ProductDiscovery};
@@ -398,7 +398,7 @@ impl ProductDiscovery for LuaProcessor {
             format!("Lua plugin '{}': discover() failed", self.name),
         )?;
 
-        let hash = Some(config_hash(&self.config_value));
+        let hash = Some(output_config_hash(&self.config_value, &[]));
 
         // Parse each product from the returned table
         let len = lua_context(products_table.len(), "Failed to get products length")?;

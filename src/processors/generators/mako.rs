@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::process::Command;
 
-use crate::config::{MakoConfig, config_hash, resolve_extra_inputs};
+use crate::config::{MakoConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, clean_outputs, run_command, check_command_output};
@@ -75,7 +75,7 @@ impl ProductDiscovery for MakoProcessor {
                 inputs,
                 vec![item.output_path.clone()],
                 crate::processors::names::MAKO,
-                Some(config_hash(&self.config)),
+                Some(output_config_hash(&self.config, &[])),
             )?;
         }
 

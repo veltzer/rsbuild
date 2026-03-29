@@ -247,6 +247,30 @@ impl Builder {
         };
 
         self.print_product_status(&products, false, &labels, false, DisplayOptions::default(), verbose);
+
+        // Source file counts by extension
+        let mut all_inputs: std::collections::HashSet<&std::path::Path> = std::collections::HashSet::new();
+        for product in &products {
+            for input in &product.inputs {
+                all_inputs.insert(input.as_path());
+            }
+        }
+        let mut ext_counts: BTreeMap<String, usize> = BTreeMap::new();
+        for path in &all_inputs {
+            let ext = path.extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("(no ext)");
+            *ext_counts.entry(ext.to_string()).or_default() += 1;
+        }
+        println!("{}: {} files ({})",
+            color::bold("Source files"),
+            all_inputs.len(),
+            ext_counts.iter()
+                .map(|(ext, count)| format!("{} .{}", count, ext))
+                .collect::<Vec<_>>()
+                .join(", "),
+        );
+
         Ok(())
     }
 

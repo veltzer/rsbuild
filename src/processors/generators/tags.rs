@@ -90,6 +90,7 @@ impl ProductDiscovery for TagsProcessor {
         // Collect frontmatter from all input .md files
         let mut all_frontmatter: HashMap<String, serde_json::Value> = HashMap::new();
         let mut tag_to_files: HashMap<String, BTreeSet<String>> = HashMap::new();
+        let mut duplicate_tags: Vec<(String, String)> = Vec::new(); // (file, tag)
 
         for input in &product.inputs {
             let ext = input.extension().and_then(|e| e.to_str()).unwrap_or("");
@@ -101,6 +102,7 @@ impl ProductDiscovery for TagsProcessor {
 
             if let Some(fm) = parse_frontmatter(&content) {
                 let file_key = input.display().to_string();
+                let mut file_tags: HashSet<String> = HashSet::new();
 
                 // Index all frontmatter fields:
                 // - list fields: each item becomes a tag (e.g. "docker" from tags: [docker])
@@ -111,6 +113,9 @@ impl ProductDiscovery for TagsProcessor {
                             serde_json::Value::Array(items) => {
                                 for item in items {
                                     if let Some(s) = item.as_str() {
+                                        if !file_tags.insert(s.to_string()) {
+                                            duplicate_tags.push((file_key.clone(), s.to_string()));
+                                        }
                                         tag_to_files.entry(s.to_string())
                                             .or_default()
                                             .insert(file_key.clone());
@@ -119,6 +124,9 @@ impl ProductDiscovery for TagsProcessor {
                             }
                             serde_json::Value::String(s) => {
                                 let tag = format!("{}:{}", key, s);
+                                if !file_tags.insert(tag.clone()) {
+                                    duplicate_tags.push((file_key.clone(), tag.clone()));
+                                }
                                 tag_to_files.entry(tag)
                                     .or_default()
                                     .insert(file_key.clone());
@@ -132,6 +140,16 @@ impl ProductDiscovery for TagsProcessor {
 
                 all_frontmatter.insert(file_key, fm);
             }
+        }
+
+        // Check for duplicate tags within files
+        if !duplicate_tags.is_empty() {
+            duplicate_tags.sort();
+            let mut msg = String::from("Duplicate tags found within files:\n");
+            for (file, tag) in &duplicate_tags {
+                msg.push_str(&format!("  {} in {}\n", tag, file));
+            }
+            bail!("{}", msg.trim_end());
         }
 
         // Validate tags against allowed set from tags_dir
@@ -156,6 +174,20 @@ impl ProductDiscovery for TagsProcessor {
                     for file in files {
                         msg.push_str(&format!("    - {}\n", file));
                     }
+                }
+                bail!("{}", msg.trim_end());
+            }
+
+            // Check for unused tags (in allowlist but not used by any file)
+            let used_tags: HashSet<&String> = tag_to_files.keys().collect();
+            let mut unused: Vec<&String> = allowed.iter()
+                .filter(|t| !used_tags.contains(t))
+                .collect();
+            if !unused.is_empty() {
+                unused.sort();
+                let mut msg = format!("Unused tags in {} (not used by any file):\n", self.config.tags_dir);
+                for tag in &unused {
+                    msg.push_str(&format!("  {}\n", tag));
                 }
                 bail!("{}", msg.trim_end());
             }
@@ -763,8 +795,11 @@ fn load_tag_counts(db_path: &str) -> Result<HashMap<String, usize>> {
 
 /// Load allowed tags from a directory of `.txt` files.
 /// Each file `<name>.txt` contributes tags as `<name>:<line>`.
+/// Fails if the same tag appears in multiple files.
 pub(crate) fn load_tags_dir(dir: &Path) -> Result<HashSet<String>> {
     let mut tags = HashSet::new();
+    let mut tag_source: HashMap<String, String> = HashMap::new();
+    let mut duplicates: Vec<(String, String, String)> = Vec::new(); // (tag, file1, file2)
     let mut entries: Vec<_> = fs::read_dir(dir)
         .with_context(|| format!("Failed to read tags directory: {}", dir.display()))?
         .collect::<Result<Vec<_>, _>>()?;
@@ -775,6 +810,7 @@ pub(crate) fn load_tags_dir(dir: &Path) -> Result<HashSet<String>> {
         if path.extension().and_then(|e| e.to_str()) != Some("txt") {
             continue;
         }
+        let filename = path.file_name().unwrap().to_string_lossy().to_string();
         let category = path.file_stem()
             .and_then(|s| s.to_str())
             .context("Invalid filename in tags_dir")?;
@@ -783,10 +819,26 @@ pub(crate) fn load_tags_dir(dir: &Path) -> Result<HashSet<String>> {
         for line in content.lines() {
             let line = line.trim();
             if !line.is_empty() && !line.starts_with('#') {
-                tags.insert(format!("{}:{}", category, line));
+                let tag = format!("{}:{}", category, line);
+                if let Some(prev_file) = tag_source.get(&tag) {
+                    duplicates.push((tag.clone(), prev_file.clone(), filename.clone()));
+                } else {
+                    tag_source.insert(tag.clone(), filename.clone());
+                }
+                tags.insert(tag);
             }
         }
     }
+
+    if !duplicates.is_empty() {
+        duplicates.sort();
+        let mut msg = String::from("Duplicate tags found across tag_lists files:\n");
+        for (tag, file1, file2) in &duplicates {
+            msg.push_str(&format!("  {} in {} and {}\n", tag, file1, file2));
+        }
+        bail!("{}", msg.trim_end());
+    }
+
     Ok(tags)
 }
 

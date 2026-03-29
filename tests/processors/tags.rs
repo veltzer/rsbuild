@@ -241,6 +241,7 @@ fn tags_frontmatter() {
 
 #[test]
 fn tags_unused_strict_fails() {
+    // Build should fail when tag_lists contains unused tags
     let temp_dir = setup_tags_project(
         &[
             ("a.md", "---\ntags:\n  - tools:active\n---\n"),
@@ -250,17 +251,11 @@ fn tags_unused_strict_fails() {
         ],
     );
     let p = temp_dir.path();
-    build_project(p);
 
-    // Without --strict, should succeed even with unused tags
-    let unused = run_rsconstruct_with_env(p, &["tags", "unused"], &[("NO_COLOR", "1")]);
-    assert!(unused.status.success(), "unused without --strict should succeed");
-    let stdout = String::from_utf8_lossy(&unused.stdout);
-    assert!(stdout.contains("obsolete"), "should report 'obsolete' as unused: {}", stdout);
-
-    // With --strict, should fail
-    let unused_strict = run_rsconstruct_with_env(p, &["tags", "unused", "--strict"], &[("NO_COLOR", "1")]);
-    assert!(!unused_strict.status.success(), "unused with --strict should fail when unused tags exist");
+    let output = run_rsconstruct_with_env(p, &["build"], &[("NO_COLOR", "1")]);
+    assert!(!output.status.success(), "build should fail with unused tags");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("obsolete"), "should report 'obsolete' as unused: {}", stderr);
 }
 
 #[test]
@@ -380,8 +375,9 @@ fn tags_stale_entries_cleared_on_rebuild() {
     assert!(stdout1.contains("alpha"));
     assert!(stdout1.contains("beta"));
 
-    // Remove "beta" tag from the file and force rebuild
+    // Remove "beta" tag from the file and tag_lists, then force rebuild
     fs::write(p.join("a.md"), "---\ntags:\n  - tools:alpha\n---\n").unwrap();
+    fs::write(p.join("tag_lists/tools.txt"), "alpha\n").unwrap();
     let rebuild = run_rsconstruct_with_env(p, &["build", "--force"], &[("NO_COLOR", "1")]);
     assert!(rebuild.status.success(), "rebuild failed: {}", String::from_utf8_lossy(&rebuild.stderr));
 
@@ -413,4 +409,39 @@ fn tags_empty_inline_list() {
     assert!(stdout.contains("level:beginner"), "should have level:beginner: {}", stdout);
     let tags: Vec<&str> = stdout.lines().collect();
     assert_eq!(tags.len(), 1, "should have exactly 1 tag (level:beginner), got: {:?}", tags);
+}
+
+#[test]
+fn tags_duplicate_within_file_fails() {
+    let temp_dir = setup_tags_project(
+        &[
+            ("a.md", "---\ntags:\n  - tools:docker\n  - tools:docker\n---\n"),
+        ],
+        &[
+            ("tools.txt", "docker\n"),
+        ],
+    );
+    let p = temp_dir.path();
+
+    let output = run_rsconstruct_with_env(p, &["build"], &[("NO_COLOR", "1")]);
+    assert!(!output.status.success(), "build should fail with duplicate tags");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("Duplicate"), "should mention duplicate: {}", stderr);
+    assert!(stderr.contains("docker"), "should mention the duplicate tag: {}", stderr);
+}
+
+#[test]
+fn tags_duplicate_across_tag_lists_different_categories_ok() {
+    // tools:docker and infra:docker are different tags — no conflict
+    let temp_dir = setup_tags_project(
+        &[
+            ("a.md", "---\ntags:\n  - tools:docker\n  - infra:docker\n---\n"),
+        ],
+        &[
+            ("tools.txt", "docker\n"),
+            ("infra.txt", "docker\n"),
+        ],
+    );
+    let p = temp_dir.path();
+    build_project(p);
 }

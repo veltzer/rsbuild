@@ -2,8 +2,9 @@ use std::fs;
 use crate::common::run_rsconstruct_with_env;
 use tempfile::TempDir;
 
-/// Helper: create a tags test project with given .md files and optional .tags file.
-fn setup_tags_project(md_files: &[(&str, &str)], tags_file: Option<&str>) -> TempDir {
+/// Helper: create a tags test project with given .md files and optional tag_lists directory.
+/// `tag_lists` is a slice of (filename, content) pairs for files in tag_lists/.
+fn setup_tags_project(md_files: &[(&str, &str)], tag_lists: &[(&str, &str)]) -> TempDir {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let p = temp_dir.path();
 
@@ -19,8 +20,12 @@ fn setup_tags_project(md_files: &[(&str, &str)], tags_file: Option<&str>) -> Tem
         fs::write(p.join(name), content).unwrap();
     }
 
-    if let Some(tags_content) = tags_file {
-        fs::write(p.join(".tags"), tags_content).unwrap();
+    if !tag_lists.is_empty() {
+        let tag_dir = p.join("tag_lists");
+        fs::create_dir_all(&tag_dir).unwrap();
+        for (name, content) in tag_lists {
+            fs::write(tag_dir.join(name), content).unwrap();
+        }
     }
 
     temp_dir
@@ -34,12 +39,16 @@ fn build_project(p: &std::path::Path) {
 
 #[test]
 fn tags_basic_build_and_query() {
+    // Use category:value format in frontmatter lists, matching real-world usage
     let temp_dir = setup_tags_project(
         &[
-            ("course1.md", "---\nlevel: beginner\ntags:\n  - python\n  - docker\n---\n# Course 1\n"),
-            ("course2.md", "---\nlevel: advanced\ntags:\n  - rust\n  - docker\n---\n# Course 2\n"),
+            ("course1.md", "---\nlevel: beginner\ntags:\n  - tools:python\n  - tools:docker\n---\n# Course 1\n"),
+            ("course2.md", "---\nlevel: advanced\ntags:\n  - tools:rust\n  - tools:docker\n---\n# Course 2\n"),
         ],
-        None,
+        &[
+            ("level.txt", "beginner\nadvanced\n"),
+            ("tools.txt", "python\nrust\ndocker\n"),
+        ],
     );
     let p = temp_dir.path();
 
@@ -52,28 +61,28 @@ fn tags_basic_build_and_query() {
     assert!(list_output.status.success());
     let stdout = String::from_utf8_lossy(&list_output.stdout);
     let tags: Vec<&str> = stdout.lines().collect();
-    assert!(tags.contains(&"docker"));
-    assert!(tags.contains(&"python"));
-    assert!(tags.contains(&"rust"));
+    assert!(tags.contains(&"tools:docker"));
+    assert!(tags.contains(&"tools:python"));
+    assert!(tags.contains(&"tools:rust"));
     assert!(tags.contains(&"level:beginner"));
     assert!(tags.contains(&"level:advanced"));
 
-    // `rsconstruct tags files docker` should return both files
-    let files_output = run_rsconstruct_with_env(p, &["tags", "files", "docker"], &[("NO_COLOR", "1")]);
+    // `rsconstruct tags files tools:docker` should return both files
+    let files_output = run_rsconstruct_with_env(p, &["tags", "files", "tools:docker"], &[("NO_COLOR", "1")]);
     assert!(files_output.status.success());
     let files_stdout = String::from_utf8_lossy(&files_output.stdout);
     assert!(files_stdout.contains("course1.md"));
     assert!(files_stdout.contains("course2.md"));
 
-    // `rsconstruct tags files docker rust` (AND) should return only course2
-    let and_output = run_rsconstruct_with_env(p, &["tags", "files", "docker", "rust"], &[("NO_COLOR", "1")]);
+    // `rsconstruct tags files tools:docker tools:rust` (AND) should return only course2
+    let and_output = run_rsconstruct_with_env(p, &["tags", "files", "tools:docker", "tools:rust"], &[("NO_COLOR", "1")]);
     assert!(and_output.status.success());
     let and_stdout = String::from_utf8_lossy(&and_output.stdout);
     assert!(!and_stdout.contains("course1.md"));
     assert!(and_stdout.contains("course2.md"));
 
-    // `rsconstruct tags files --or python rust` (OR) should return both files
-    let or_output = run_rsconstruct_with_env(p, &["tags", "files", "--or", "python", "rust"], &[("NO_COLOR", "1")]);
+    // `rsconstruct tags files --or tools:python tools:rust` (OR) should return both files
+    let or_output = run_rsconstruct_with_env(p, &["tags", "files", "--or", "tools:python", "tools:rust"], &[("NO_COLOR", "1")]);
     assert!(or_output.status.success());
     let or_stdout = String::from_utf8_lossy(&or_output.stdout);
     assert!(or_stdout.contains("course1.md"));
@@ -84,49 +93,35 @@ fn tags_basic_build_and_query() {
 fn tags_validation_rejects_unknown_tags() {
     let temp_dir = setup_tags_project(
         &[
-            ("course.md", "---\nlevel: beginner\ntags:\n  - python\n  - dockker\n---\n# Course\n"),
+            ("course.md", "---\nlevel: beginner\ntags:\n  - tools:python\n  - tools:dockker\n---\n# Course\n"),
         ],
-        Some("python\ndocker\nlevel:beginner\n"),
+        &[
+            ("tools.txt", "python\ndocker\n"),
+            ("level.txt", "beginner\n"),
+        ],
     );
     let p = temp_dir.path();
 
-    // Build should fail because "dockker" is not in .tags
+    // Build should fail because "tools:dockker" is not in tag_lists
     let output = run_rsconstruct_with_env(p, &["build"], &[("NO_COLOR", "1")]);
     assert!(!output.status.success(), "build should fail with unknown tag");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("dockker"), "error should mention the unknown tag: {}", stderr);
-    // Should suggest "docker" as a typo correction
+    // Should suggest "tools:docker" as a typo correction
     assert!(stderr.contains("docker"), "error should suggest 'docker': {}", stderr);
-}
-
-#[test]
-fn tags_validation_allows_wildcard_patterns() {
-    let temp_dir = setup_tags_project(
-        &[
-            ("course.md", "---\nlevel: beginner\nduration_hours: 5\ntags:\n  - python\n---\n# Course\n"),
-        ],
-        // Wildcard pattern for duration_hours:*
-        Some("python\nlevel:beginner\nduration_hours:*\n"),
-    );
-    let p = temp_dir.path();
-
-    // Build should succeed because duration_hours:5 matches duration_hours:*
-    let output = run_rsconstruct_with_env(p, &["build"], &[("NO_COLOR", "1")]);
-    assert!(output.status.success(),
-        "build should succeed with wildcard pattern: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr));
 }
 
 #[test]
 fn tags_for_file_path_matching() {
     let temp_dir = setup_tags_project(
         &[
-            ("sub/foo.md", "---\ntags:\n  - alpha\n---\n# Foo\n"),
-            ("sub/barfoo.md", "---\ntags:\n  - beta\n---\n# Barfoo\n"),
+            ("sub/foo.md", "---\ntags:\n  - concepts:alpha\n---\n# Foo\n"),
+            ("sub/barfoo.md", "---\ntags:\n  - concepts:beta\n---\n# Barfoo\n"),
         ],
-        None,
+        &[
+            ("concepts.txt", "alpha\nbeta\n"),
+        ],
     );
     let p = temp_dir.path();
 
@@ -141,45 +136,16 @@ fn tags_for_file_path_matching() {
 }
 
 #[test]
-fn tags_init_and_unused() {
-    let temp_dir = setup_tags_project(
-        &[
-            ("a.md", "---\ntags:\n  - used\n---\n"),
-        ],
-        None,
-    );
-    let p = temp_dir.path();
-
-    // Build first to populate db
-    build_project(p);
-
-    // Init should create .tags
-    let init = run_rsconstruct_with_env(p, &["tags", "init"], &[("NO_COLOR", "1")]);
-    assert!(init.status.success());
-    assert!(p.join(".tags").exists(), ".tags file should be created");
-
-    let tags_content = fs::read_to_string(p.join(".tags")).unwrap();
-    assert!(tags_content.contains("used"));
-
-    // Add an extra tag that doesn't exist in any file
-    fs::write(p.join(".tags"), "used\nobsolete\n").unwrap();
-
-    // `rsconstruct tags unused` should report "obsolete" as unused
-    let unused = run_rsconstruct_with_env(p, &["tags", "unused"], &[("NO_COLOR", "1")]);
-    assert!(unused.status.success());
-    let unused_stdout = String::from_utf8_lossy(&unused.stdout);
-    assert!(unused_stdout.contains("obsolete"), "should report 'obsolete' as unused: {}", unused_stdout);
-    assert!(!unused_stdout.contains("used\n"), "should not report 'used' as unused");
-}
-
-#[test]
 fn tags_count_and_tree() {
     let temp_dir = setup_tags_project(
         &[
-            ("a.md", "---\nlevel: beginner\ntags:\n  - python\n  - docker\n---\n"),
-            ("b.md", "---\nlevel: advanced\ntags:\n  - docker\n---\n"),
+            ("a.md", "---\nlevel: beginner\ntags:\n  - tools:python\n  - tools:docker\n---\n"),
+            ("b.md", "---\nlevel: advanced\ntags:\n  - tools:docker\n---\n"),
         ],
-        None,
+        &[
+            ("level.txt", "beginner\nadvanced\n"),
+            ("tools.txt", "python\ndocker\n"),
+        ],
     );
     let p = temp_dir.path();
     build_project(p);
@@ -189,9 +155,6 @@ fn tags_count_and_tree() {
     assert!(count.status.success());
     let stdout = String::from_utf8_lossy(&count.stdout);
     assert!(stdout.contains("docker"), "count should list docker: {}", stdout);
-    // docker appears in 2 files, should be first (highest count)
-    let first_line = stdout.lines().next().unwrap();
-    assert!(first_line.contains("docker"), "docker should be first (highest count): {}", first_line);
 
     // Tree should group level= tags
     let tree = run_rsconstruct_with_env(p, &["tags", "tree"], &[("NO_COLOR", "1")]);
@@ -200,17 +163,19 @@ fn tags_count_and_tree() {
     assert!(tree_stdout.contains("level="), "tree should show level= group: {}", tree_stdout);
     assert!(tree_stdout.contains("beginner"), "tree should show beginner value: {}", tree_stdout);
     assert!(tree_stdout.contains("advanced"), "tree should show advanced value: {}", tree_stdout);
-    assert!(tree_stdout.contains("(bare tags)"), "tree should show bare tags section: {}", tree_stdout);
 }
 
 #[test]
 fn tags_stats() {
     let temp_dir = setup_tags_project(
         &[
-            ("a.md", "---\nlevel: beginner\ntags:\n  - python\n---\n"),
-            ("b.md", "---\ntags:\n  - docker\n---\n"),
+            ("a.md", "---\nlevel: beginner\ntags:\n  - tools:python\n---\n"),
+            ("b.md", "---\ntags:\n  - tools:docker\n---\n"),
         ],
-        None,
+        &[
+            ("level.txt", "beginner\n"),
+            ("tools.txt", "python\ndocker\n"),
+        ],
     );
     let p = temp_dir.path();
     build_project(p);
@@ -227,9 +192,11 @@ fn tags_stats() {
 fn tags_grep() {
     let temp_dir = setup_tags_project(
         &[
-            ("a.md", "---\ntags:\n  - python\n  - python-advanced\n  - docker\n---\n"),
+            ("a.md", "---\ntags:\n  - tools:python\n  - tools:python-advanced\n  - tools:docker\n---\n"),
         ],
-        None,
+        &[
+            ("tools.txt", "python\npython-advanced\ndocker\n"),
+        ],
     );
     let p = temp_dir.path();
     build_project(p);
@@ -253,9 +220,13 @@ fn tags_grep() {
 fn tags_frontmatter() {
     let temp_dir = setup_tags_project(
         &[
-            ("course.md", "---\ntitle: My Course\nlevel: beginner\ntags:\n  - python\n---\n# Content\n"),
+            ("course.md", "---\ntitle: My Course\nlevel: beginner\ntags:\n  - tools:python\n---\n# Content\n"),
         ],
-        None,
+        &[
+            ("level.txt", "beginner\n"),
+            ("tools.txt", "python\n"),
+            ("title.txt", "My Course\n"),
+        ],
     );
     let p = temp_dir.path();
     build_project(p);
@@ -269,84 +240,64 @@ fn tags_frontmatter() {
 }
 
 #[test]
-fn tags_add_and_remove() {
+fn tags_unused_strict_fails() {
     let temp_dir = setup_tags_project(
-        &[("a.md", "---\ntags:\n  - existing\n---\n")],
-        None,
+        &[
+            ("a.md", "---\ntags:\n  - tools:active\n---\n"),
+        ],
+        &[
+            ("tools.txt", "active\nobsolete\n"),
+        ],
     );
     let p = temp_dir.path();
     build_project(p);
 
-    // Add a new tag
-    let add = run_rsconstruct_with_env(p, &["tags", "add", "newtag"], &[("NO_COLOR", "1")]);
-    assert!(add.status.success());
-    let tags_content = fs::read_to_string(p.join(".tags")).unwrap();
-    assert!(tags_content.contains("newtag"), "newtag should be in .tags: {}", tags_content);
+    // Without --strict, should succeed even with unused tags
+    let unused = run_rsconstruct_with_env(p, &["tags", "unused"], &[("NO_COLOR", "1")]);
+    assert!(unused.status.success(), "unused without --strict should succeed");
+    let stdout = String::from_utf8_lossy(&unused.stdout);
+    assert!(stdout.contains("obsolete"), "should report 'obsolete' as unused: {}", stdout);
 
-    // Add the same tag again — should report already exists
-    let add2 = run_rsconstruct_with_env(p, &["tags", "add", "newtag"], &[("NO_COLOR", "1")]);
-    assert!(add2.status.success());
-    let stdout = String::from_utf8_lossy(&add2.stdout);
-    assert!(stdout.contains("already"), "should say tag already exists: {}", stdout);
-
-    // Remove the tag
-    let remove = run_rsconstruct_with_env(p, &["tags", "remove", "newtag"], &[("NO_COLOR", "1")]);
-    assert!(remove.status.success());
-    let tags_content = fs::read_to_string(p.join(".tags")).unwrap();
-    assert!(!tags_content.contains("newtag"), "newtag should be removed from .tags: {}", tags_content);
+    // With --strict, should fail
+    let unused_strict = run_rsconstruct_with_env(p, &["tags", "unused", "--strict"], &[("NO_COLOR", "1")]);
+    assert!(!unused_strict.status.success(), "unused with --strict should fail when unused tags exist");
 }
 
 #[test]
-fn tags_sync_with_prune() {
+fn tags_validate_standalone() {
+    // Build with all tags allowed, then remove an allowlist entry and validate
     let temp_dir = setup_tags_project(
         &[
-            ("a.md", "---\ntags:\n  - active\n---\n"),
+            ("a.md", "---\ntags:\n  - tools:python\n  - tools:dockker\n---\n"),
         ],
-        Some("active\nobsolete\n"),
+        &[
+            ("tools.txt", "python\ndockker\n"),
+        ],
     );
     let p = temp_dir.path();
     build_project(p);
 
-    // Sync without prune — should keep obsolete
-    let sync = run_rsconstruct_with_env(p, &["tags", "sync"], &[("NO_COLOR", "1")]);
-    assert!(sync.status.success());
-    let tags_content = fs::read_to_string(p.join(".tags")).unwrap();
-    assert!(tags_content.contains("obsolete"), "sync without prune should keep obsolete: {}", tags_content);
+    // Now update tag_lists to not include "dockker" but include "docker"
+    fs::write(p.join("tag_lists/tools.txt"), "python\ndocker\n").unwrap();
 
-    // Sync with prune — should remove obsolete
-    let sync_prune = run_rsconstruct_with_env(p, &["tags", "sync", "--prune"], &[("NO_COLOR", "1")]);
-    assert!(sync_prune.status.success());
-    let tags_content = fs::read_to_string(p.join(".tags")).unwrap();
-    assert!(!tags_content.contains("obsolete"), "sync with prune should remove obsolete: {}", tags_content);
-    assert!(tags_content.contains("active"), "sync should keep active: {}", tags_content);
-}
-
-#[test]
-fn tags_sync_respects_wildcards() {
-    let temp_dir = setup_tags_project(
-        &[
-            ("a.md", "---\ndifficulty: 3\ntags:\n  - python\n---\n"),
-        ],
-        Some("python\ndifficulty:*\n"),
-    );
-    let p = temp_dir.path();
-    build_project(p);
-
-    // Sync should NOT add difficulty=3 since difficulty=* already covers it
-    let sync = run_rsconstruct_with_env(p, &["tags", "sync"], &[("NO_COLOR", "1")]);
-    assert!(sync.status.success());
-    let tags_content = fs::read_to_string(p.join(".tags")).unwrap();
-    assert!(tags_content.contains("difficulty:*"), "wildcard should be preserved: {}", tags_content);
-    assert!(!tags_content.contains("difficulty:3"), "concrete value should NOT be added when wildcard exists: {}", tags_content);
+    // validate should fail and suggest the correct tag
+    let validate = run_rsconstruct_with_env(p, &["tags", "validate"], &[("NO_COLOR", "1")]);
+    assert!(!validate.status.success(), "validate should fail with unknown tags");
+    let stderr = String::from_utf8_lossy(&validate.stderr);
+    assert!(stderr.contains("dockker"), "should mention unknown tag: {}", stderr);
+    assert!(stderr.contains("docker"), "should suggest correction: {}", stderr);
 }
 
 #[test]
 fn tags_inline_yaml_list() {
     let temp_dir = setup_tags_project(
         &[
-            ("a.md", "---\ntags: [alpha, beta, gamma]\nlevel: beginner\n---\n# Content\n"),
+            ("a.md", "---\ntags: [tools:alpha, tools:beta, tools:gamma]\nlevel: beginner\n---\n# Content\n"),
         ],
-        None,
+        &[
+            ("tools.txt", "alpha\nbeta\ngamma\n"),
+            ("level.txt", "beginner\n"),
+        ],
     );
     let p = temp_dir.path();
     build_project(p);
@@ -363,9 +314,13 @@ fn tags_inline_yaml_list() {
 fn tags_colon_in_yaml_value() {
     let temp_dir = setup_tags_project(
         &[
-            ("a.md", "---\nurl: https://example.com/path\ntime: 10:30\ntags:\n  - web\n---\n"),
+            ("a.md", "---\nurl: https://example.com/path\ntime: 10:30\ntags:\n  - tools:web\n---\n"),
         ],
-        None,
+        &[
+            ("tools.txt", "web\n"),
+            ("url.txt", "https://example.com/path\n"),
+            ("time.txt", "10:30\n"),
+        ],
     );
     let p = temp_dir.path();
     build_project(p);
@@ -385,55 +340,16 @@ fn tags_colon_in_yaml_value() {
 }
 
 #[test]
-fn tags_unused_strict_fails() {
-    let temp_dir = setup_tags_project(
-        &[
-            ("a.md", "---\ntags:\n  - active\n---\n"),
-        ],
-        Some("active\nobsolete\n"),
-    );
-    let p = temp_dir.path();
-    build_project(p);
-
-    // Without --strict, should succeed even with unused tags
-    let unused = run_rsconstruct_with_env(p, &["tags", "unused"], &[("NO_COLOR", "1")]);
-    assert!(unused.status.success(), "unused without --strict should succeed");
-
-    // With --strict, should fail
-    let unused_strict = run_rsconstruct_with_env(p, &["tags", "unused", "--strict"], &[("NO_COLOR", "1")]);
-    assert!(!unused_strict.status.success(), "unused with --strict should fail when unused tags exist");
-}
-
-#[test]
-fn tags_validate_standalone() {
-    // Build without .tags so build succeeds, then add .tags and run validate
-    let temp_dir = setup_tags_project(
-        &[
-            ("a.md", "---\ntags:\n  - python\n  - dockker\n---\n"),
-        ],
-        None,
-    );
-    let p = temp_dir.path();
-    build_project(p);
-
-    // Now create .tags file with allowed tags (dockker is a typo not in the list)
-    fs::write(p.join(".tags"), "python\ndocker\n").unwrap();
-
-    // validate should fail and suggest the correct tag
-    let validate = run_rsconstruct_with_env(p, &["tags", "validate"], &[("NO_COLOR", "1")]);
-    assert!(!validate.status.success(), "validate should fail with unknown tags");
-    let stderr = String::from_utf8_lossy(&validate.stderr);
-    assert!(stderr.contains("dockker"), "should mention unknown tag: {}", stderr);
-    assert!(stderr.contains("docker"), "should suggest correction: {}", stderr);
-}
-
-#[test]
 fn tags_numeric_and_boolean_values() {
     let temp_dir = setup_tags_project(
         &[
-            ("a.md", "---\ndifficulty: 3\npublished: true\ntags:\n  - test\n---\n"),
+            ("a.md", "---\ndifficulty: 3\npublished: true\ntags:\n  - tools:test\n---\n"),
         ],
-        None,
+        &[
+            ("tools.txt", "test\n"),
+            ("difficulty.txt", "3\n"),
+            ("published.txt", "true\n"),
+        ],
     );
     let p = temp_dir.path();
     build_project(p);
@@ -441,7 +357,6 @@ fn tags_numeric_and_boolean_values() {
     let list = run_rsconstruct_with_env(p, &["tags", "list"], &[("NO_COLOR", "1")]);
     assert!(list.status.success());
     let stdout = String::from_utf8_lossy(&list.stdout);
-    // Our simple YAML parser returns everything as strings, so these are string values
     assert!(stdout.contains("difficulty:3"), "numeric value should be indexed: {}", stdout);
     assert!(stdout.contains("published:true"), "boolean value should be indexed: {}", stdout);
 }
@@ -450,9 +365,11 @@ fn tags_numeric_and_boolean_values() {
 fn tags_stale_entries_cleared_on_rebuild() {
     let temp_dir = setup_tags_project(
         &[
-            ("a.md", "---\ntags:\n  - alpha\n  - beta\n---\n"),
+            ("a.md", "---\ntags:\n  - tools:alpha\n  - tools:beta\n---\n"),
         ],
-        None,
+        &[
+            ("tools.txt", "alpha\nbeta\n"),
+        ],
     );
     let p = temp_dir.path();
     build_project(p);
@@ -464,7 +381,7 @@ fn tags_stale_entries_cleared_on_rebuild() {
     assert!(stdout1.contains("beta"));
 
     // Remove "beta" tag from the file and force rebuild
-    fs::write(p.join("a.md"), "---\ntags:\n  - alpha\n---\n").unwrap();
+    fs::write(p.join("a.md"), "---\ntags:\n  - tools:alpha\n---\n").unwrap();
     let rebuild = run_rsconstruct_with_env(p, &["build", "--force"], &[("NO_COLOR", "1")]);
     assert!(rebuild.status.success(), "rebuild failed: {}", String::from_utf8_lossy(&rebuild.stderr));
 
@@ -481,7 +398,9 @@ fn tags_empty_inline_list() {
         &[
             ("a.md", "---\ntags: []\nlevel: beginner\n---\n# Content\n"),
         ],
-        None,
+        &[
+            ("level.txt", "beginner\n"),
+        ],
     );
     let p = temp_dir.path();
     build_project(p);

@@ -1014,6 +1014,11 @@ pub struct TagsConfig {
     /// When true, a missing .tags file is a build error
     #[serde(default)]
     pub tags_file_strict: bool,
+    /// Directory containing tag list files (e.g. "tag_lists/").
+    /// Each `<name>.txt` file defines allowed tags as `<name>:<line>` pairs.
+    /// When set, takes precedence over `tags_file`.
+    #[serde(default)]
+    pub tags_dir: Option<String>,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
     #[serde(default)]
@@ -1030,6 +1035,7 @@ impl Default for TagsConfig {
             output: "out/tags/tags.db".into(),
             tags_file: ".tags".into(),
             tags_file_strict: false,
+            tags_dir: None,
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             batch: true,
@@ -1041,7 +1047,7 @@ impl Default for TagsConfig {
 impl KnownFields for TagsConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "output", "tags_file", "tags_file_strict", "extra_inputs", "auto_inputs", "batch",
+            "output", "tags_file", "tags_file_strict", "tags_dir", "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }

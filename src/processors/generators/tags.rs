@@ -47,10 +47,25 @@ impl ProductDiscovery for TagsProcessor {
         inputs.extend(files);
         inputs.extend_from_slice(&extra);
 
-        // If a tags file exists, add it as an input so edits trigger rebuild
-        let tags_file_path = Path::new(&self.config.tags_file);
-        if tags_file_path.exists() {
-            inputs.push(tags_file_path.to_path_buf());
+        // Add tag allowlist files as inputs so edits trigger rebuild
+        if let Some(ref tags_dir) = self.config.tags_dir {
+            let dir = Path::new(tags_dir);
+            if dir.is_dir() {
+                for entry in fs::read_dir(dir)
+                    .with_context(|| format!("Failed to read tags_dir: {}", tags_dir))?
+                {
+                    let entry = entry?;
+                    let path = entry.path();
+                    if path.extension().and_then(|e| e.to_str()) == Some("txt") {
+                        inputs.push(path);
+                    }
+                }
+            }
+        } else {
+            let tags_file_path = Path::new(&self.config.tags_file);
+            if tags_file_path.exists() {
+                inputs.push(tags_file_path.to_path_buf());
+            }
         }
 
         let output = PathBuf::from(&self.config.output);
@@ -117,23 +132,39 @@ impl ProductDiscovery for TagsProcessor {
             }
         }
 
-        // Validate tags against allowed set if tags file exists
-        let tags_file_path = Path::new(&self.config.tags_file);
-        if tags_file_path.exists() {
-            let allowed = load_tags_file(tags_file_path)?;
+        // Validate tags against allowed set
+        let allowed = if let Some(ref tags_dir) = self.config.tags_dir {
+            let dir = Path::new(tags_dir);
+            if dir.is_dir() {
+                Some(load_tags_dir(dir)?)
+            } else {
+                bail!("tags_dir not found: {}", tags_dir);
+            }
+        } else {
+            let tags_file_path = Path::new(&self.config.tags_file);
+            if tags_file_path.exists() {
+                Some(load_tags_file(tags_file_path)?)
+            } else if self.config.tags_file_strict {
+                bail!("Tags file not found: {}. Run 'rsconstruct tags init' to create one.", self.config.tags_file);
+            } else {
+                None
+            }
+        };
 
+        if let Some(ref allowed) = allowed {
             let mut unknown: Vec<(String, Vec<String>)> = Vec::new();
             for (tag, files) in &tag_to_files {
-                if !tag_matches_allowed(tag, &allowed) {
+                if !tag_matches_allowed(tag, allowed) {
                     unknown.push((tag.clone(), files.iter().cloned().collect()));
                 }
             }
             if !unknown.is_empty() {
                 unknown.sort_by(|a, b| a.0.cmp(&b.0));
-                let mut msg = String::from("Unknown tags found (not in .tags file):\n");
+                let source = if self.config.tags_dir.is_some() { "tags_dir" } else { ".tags file" };
+                let mut msg = format!("Unknown tags found (not in {}):\n", source);
                 for (tag, files) in &unknown {
                     msg.push_str(&format!("  {}", tag));
-                    if let Some(suggestion) = find_similar_tag(tag, &allowed) {
+                    if let Some(suggestion) = find_similar_tag(tag, allowed) {
                         msg.push_str(&format!(" (did you mean '{}'?)", suggestion));
                     }
                     msg.push('\n');
@@ -143,8 +174,6 @@ impl ProductDiscovery for TagsProcessor {
                 }
                 bail!("{}", msg.trim_end());
             }
-        } else if self.config.tags_file_strict {
-            bail!("Tags file not found: {}. Run 'rsconstruct tags init' to create one.", self.config.tags_file);
         }
 
         // Delete old database to avoid stale entries from previous builds
@@ -608,15 +637,11 @@ pub fn frontmatter_for_file(db_path: &str, path: &str) -> Result<()> {
     Ok(())
 }
 
-/// List tags in .tags that are not used by any file.
+/// List tags in the allowlist that are not used by any file.
 /// If `strict` is true, returns an error when unused tags are found (for CI).
-pub fn unused_tags(db_path: &str, tags_file: &str, strict: bool) -> Result<()> {
-    let tags_file_path = Path::new(tags_file);
-    if !tags_file_path.exists() {
-        bail!("Tags file not found: {}", tags_file);
-    }
-
-    let allowed = load_tags_file(tags_file_path)?;
+pub fn unused_tags(db_path: &str, tags_file: &str, tags_dir: Option<&str>, strict: bool) -> Result<()> {
+    let allowed = load_allowed_tags(tags_file, tags_dir)?;
+    let source = tags_dir.unwrap_or(tags_file);
     let db_tags = load_all_tags(db_path)?;
 
     let mut unused: Vec<&String> = allowed.iter()
@@ -625,8 +650,7 @@ pub fn unused_tags(db_path: &str, tags_file: &str, strict: bool) -> Result<()> {
     unused.sort();
 
     if strict && !unused.is_empty() {
-        // In strict mode, report via error (nonzero exit) with full details
-        let mut msg = format!("{} unused tag(s) in {}:\n", unused.len(), tags_file);
+        let mut msg = format!("{} unused tag(s) in {}:\n", unused.len(), source);
         for tag in &unused {
             msg.push_str(&format!("  {}\n", tag));
         }
@@ -636,9 +660,9 @@ pub fn unused_tags(db_path: &str, tags_file: &str, strict: bool) -> Result<()> {
     if crate::json_output::is_json_mode() {
         println!("{}", serde_json::to_string(&unused).expect(crate::errors::JSON_SERIALIZE));
     } else if unused.is_empty() {
-        println!("All tags in {} are in use.", tags_file);
+        println!("All tags in {} are in use.", source);
     } else {
-        println!("{} unused tag(s) in {}:", unused.len(), tags_file);
+        println!("{} unused tag(s) in {}:", unused.len(), source);
         for tag in &unused {
             println!("  {}", tag);
         }
@@ -647,14 +671,9 @@ pub fn unused_tags(db_path: &str, tags_file: &str, strict: bool) -> Result<()> {
     Ok(())
 }
 
-/// Validate tags against .tags file without building.
-pub fn validate_tags(db_path: &str, tags_file: &str) -> Result<()> {
-    let tags_file_path = Path::new(tags_file);
-    if !tags_file_path.exists() {
-        bail!("Tags file not found: {}. Run 'rsconstruct tags init' to create one.", tags_file);
-    }
-
-    let allowed = load_tags_file(tags_file_path)?;
+/// Validate tags against allowed set without building.
+pub fn validate_tags(db_path: &str, tags_file: &str, tags_dir: Option<&str>) -> Result<()> {
+    let allowed = load_allowed_tags(tags_file, tags_dir)?;
     // Single db open: get both tags and counts in one pass
     let tag_counts = load_tag_counts(db_path)?;
 
@@ -688,7 +707,10 @@ pub fn validate_tags(db_path: &str, tags_file: &str) -> Result<()> {
 }
 
 /// Generate .tags file from current tag union.
-pub fn init_tags(db_path: &str, tags_file: &str) -> Result<()> {
+pub fn init_tags(db_path: &str, tags_file: &str, tags_dir: Option<&str>) -> Result<()> {
+    if let Some(dir) = tags_dir {
+        bail!("tags_dir is configured ({}). Edit the .txt files there directly.", dir);
+    }
     let tags_file_path = Path::new(tags_file);
     if tags_file_path.exists() {
         bail!("{} already exists. Use 'rsconstruct tags sync' to update it.", tags_file);
@@ -706,7 +728,10 @@ pub fn init_tags(db_path: &str, tags_file: &str) -> Result<()> {
 }
 
 /// Add a tag to the .tags file (sorted, deduplicated).
-pub fn add_tag(tags_file: &str, tag: &str) -> Result<()> {
+pub fn add_tag(tags_file: &str, tag: &str, tags_dir: Option<&str>) -> Result<()> {
+    if let Some(dir) = tags_dir {
+        bail!("tags_dir is configured ({}). Edit the .txt files there directly.", dir);
+    }
     let tags_file_path = Path::new(tags_file);
     let mut tags = if tags_file_path.exists() {
         load_tags_file_sorted(tags_file_path)?
@@ -736,7 +761,10 @@ pub fn add_tag(tags_file: &str, tag: &str) -> Result<()> {
 }
 
 /// Remove a tag from the .tags file.
-pub fn remove_tag(tags_file: &str, tag: &str) -> Result<()> {
+pub fn remove_tag(tags_file: &str, tag: &str, tags_dir: Option<&str>) -> Result<()> {
+    if let Some(dir) = tags_dir {
+        bail!("tags_dir is configured ({}). Edit the .txt files there directly.", dir);
+    }
     let tags_file_path = Path::new(tags_file);
     if !tags_file_path.exists() {
         bail!("Tags file not found: {}", tags_file);
@@ -762,7 +790,10 @@ pub fn remove_tag(tags_file: &str, tag: &str) -> Result<()> {
 }
 
 /// Sync .tags file with current tag union.
-pub fn sync_tags(db_path: &str, tags_file: &str, prune: bool, verbose: bool) -> Result<()> {
+pub fn sync_tags(db_path: &str, tags_file: &str, tags_dir: Option<&str>, prune: bool, verbose: bool) -> Result<()> {
+    if let Some(dir) = tags_dir {
+        bail!("tags_dir is configured ({}). Edit the .txt files there directly.", dir);
+    }
     let tags_file_path = Path::new(tags_file);
     let db_tags: HashSet<String> = load_all_tags(db_path)?;
 
@@ -893,6 +924,54 @@ fn load_tag_counts(db_path: &str) -> Result<HashMap<String, usize>> {
     }
 
     Ok(counts)
+}
+
+/// Load allowed tags from either `tags_dir` (if set) or `tags_file`.
+pub(crate) fn load_allowed_tags(tags_file: &str, tags_dir: Option<&str>) -> Result<HashSet<String>> {
+    if let Some(dir) = tags_dir {
+        let dir_path = Path::new(dir);
+        if dir_path.is_dir() {
+            load_tags_dir(dir_path)
+        } else {
+            bail!("tags_dir not found: {}", dir);
+        }
+    } else {
+        let path = Path::new(tags_file);
+        if path.exists() {
+            load_tags_file(path)
+        } else {
+            bail!("Tags file not found: {}", tags_file);
+        }
+    }
+}
+
+/// Load allowed tags from a directory of `.txt` files.
+/// Each file `<name>.txt` contributes tags as `<name>:<line>`.
+pub(crate) fn load_tags_dir(dir: &Path) -> Result<HashSet<String>> {
+    let mut tags = HashSet::new();
+    let mut entries: Vec<_> = fs::read_dir(dir)
+        .with_context(|| format!("Failed to read tags directory: {}", dir.display()))?
+        .collect::<Result<Vec<_>, _>>()?;
+    entries.sort_by_key(|e| e.file_name());
+
+    for entry in entries {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("txt") {
+            continue;
+        }
+        let category = path.file_stem()
+            .and_then(|s| s.to_str())
+            .context("Invalid filename in tags_dir")?;
+        let content = fs::read_to_string(&path)
+            .with_context(|| format!("Failed to read {}", path.display()))?;
+        for line in content.lines() {
+            let line = line.trim();
+            if !line.is_empty() && !line.starts_with('#') {
+                tags.insert(format!("{}:{}", category, line));
+            }
+        }
+    }
+    Ok(tags)
 }
 
 /// Parse a .tags file into a HashSet, skipping comments and blank lines.

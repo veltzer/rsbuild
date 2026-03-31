@@ -42,7 +42,8 @@ impl TechCheckProcessor {
             }
             let backticked = find_backticked_terms(&content);
             for t in &backticked {
-                if !terms.contains(t) {
+                let is_known = terms.iter().any(|term| term.eq_ignore_ascii_case(t));
+                if !is_known {
                     errors.push(format!(
                         "{}: `{}` is backtick-quoted but not in tech term list",
                         file.display(), t,
@@ -54,7 +55,8 @@ impl TechCheckProcessor {
 
         // Check for unused terms (terms in the list but never backticked in any file)
         for term in &terms {
-            if !all_backticked.contains(term) {
+            let found = all_backticked.iter().any(|b| b.eq_ignore_ascii_case(term));
+            if !found {
                 errors.push(format!(
                     "tech term `{}` is in {} but never backtick-quoted in any file",
                     term, self.config.tech_files_dir,
@@ -276,8 +278,29 @@ pub fn find_unquoted_terms(content: &str, pattern: &Regex) -> Vec<(usize, String
     results
 }
 
+/// Split a backticked string into individual terms.
+/// Handles comma-separated lists like "sed, awk" and separators like "and", "or", "/".
+fn split_backticked(inner: &str) -> Vec<String> {
+    // Split on comma, " and ", " or ", "/"
+    let parts: Vec<&str> = inner.split(',').collect();
+    let mut results = Vec::new();
+    for part in parts {
+        // Further split on " and " / " or " / "/"
+        for sub in part.split('/') {
+            for tok in sub.split(" and ").flat_map(|s| s.split(" or ")) {
+                let trimmed = tok.trim();
+                if !trimmed.is_empty() {
+                    results.push(trimmed.to_string());
+                }
+            }
+        }
+    }
+    results
+}
+
 /// Extract all backtick-quoted terms from a markdown file's content,
 /// excluding content inside fenced code blocks.
+/// Handles grouped terms like `` `sed, awk` `` by splitting them.
 pub fn find_backticked_terms(content: &str) -> HashSet<String> {
     let fenced = fenced_code_ranges(content);
     let backtick_re = Regex::new(r"`([^`]+)`").expect("backtick regex");
@@ -296,9 +319,11 @@ pub fn find_backticked_terms(content: &str) -> HashSet<String> {
         if in_fenced {
             continue;
         }
-        // Extract the content between backticks
+        // Extract the content between backticks and split grouped terms
         let inner = &content[start + 1..end - 1];
-        terms.insert(inner.to_string());
+        for term in split_backticked(inner) {
+            terms.insert(term);
+        }
     }
     terms
 }
@@ -342,9 +367,13 @@ fn find_non_tech_backticked_positions(content: &str, terms: &HashSet<String>) ->
             continue;
         }
         let inner = &content[start + 1..end - 1];
-        // Case-insensitive check: does any term match?
-        let is_tech = terms.iter().any(|t| t.eq_ignore_ascii_case(inner));
-        if !is_tech {
+        // Split grouped terms and check each part
+        let parts = split_backticked(inner);
+        let all_non_tech = parts.iter().all(|p| {
+            !terms.iter().any(|t| t.eq_ignore_ascii_case(p))
+        });
+        // Only flag for removal if none of the parts are tech terms
+        if all_non_tech {
             results.push((start, end));
         }
     }

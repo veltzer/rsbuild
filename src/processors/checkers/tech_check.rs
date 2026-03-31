@@ -309,13 +309,33 @@ fn split_backticked(inner: &str) -> Vec<String> {
     results
 }
 
-/// Check if a backticked string looks like a term reference (not arbitrary inline code).
+/// Check if a string with `/` looks like a file path rather than a term like CI/CD.
+/// File paths have dots (extensions) or multiple segments.
+fn is_file_path(s: &str) -> bool {
+    if !s.contains('/') {
+        return false;
+    }
+    // Has a dot after a slash → likely a file path (e.g., doc/ai.txt)
+    if let Some(last_slash) = s.rfind('/')
+        && s[last_slash..].contains('.')
+    {
+        return true;
+    }
+    // More than one slash → likely a file path (e.g., syllabi/courses/ai)
+    s.matches('/').count() > 1
+}
+
+/// Check if a backticked string looks like a term reference (not arbitrary inline code
+/// or a file path). Code snippets, file paths, and shell commands should keep their backticks.
 fn looks_like_term_reference(inner: &str) -> bool {
     let parts = split_backticked(inner);
     if parts.is_empty() {
         return false;
     }
-    let code_chars = ['(', ')', '{', '}', '[', ']', ';', '=', '>', '<', '|', '\\', '"', '\''];
+    if is_file_path(inner) {
+        return false;
+    }
+    let code_chars = ['(', ')', '{', '}', '[', ']', ';', '=', '>', '<', '|', '\\', '"', '\'', '~'];
     for part in &parts {
         if part.contains(' ') || part.chars().any(|c| code_chars.contains(&c)) {
             return false;

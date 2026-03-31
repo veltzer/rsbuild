@@ -1,5 +1,4 @@
 use anyhow::{Result, bail};
-use regex::Regex;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
@@ -27,13 +26,13 @@ impl TechCheckProcessor {
         if terms.is_empty() {
             return Ok(());
         }
-        let pattern = create_pattern(&terms);
+        let sorted_terms = sorted_terms(&terms);
         let mut errors = Vec::new();
         let mut all_backticked = HashSet::new();
 
         for file in files {
             let content = fs::read_to_string(file)?;
-            let unquoted = find_unquoted_terms(&content, &pattern);
+            let unquoted = find_unquoted_terms(&content, &sorted_terms);
             for (line_num, term) in &unquoted {
                 errors.push(format!(
                     "{}:{}: tech term `{}` is not backtick-quoted",
@@ -151,18 +150,16 @@ pub fn load_terms(tech_files_dir: &str) -> Result<HashSet<String>> {
     Ok(terms)
 }
 
-/// Build a regex pattern matching all terms, sorted longest-first
-/// to avoid partial matches. Uses word boundaries and is case-insensitive.
-pub fn create_pattern(terms: &HashSet<String>) -> Regex {
+/// Sort terms longest-first for greedy matching (so "Android Studio" matches before "Android").
+fn sorted_terms(terms: &HashSet<String>) -> Vec<&str> {
     let mut sorted: Vec<&str> = terms.iter().map(|s| s.as_str()).collect();
     sorted.sort_by_key(|b| std::cmp::Reverse(b.len()));
-    let escaped: Vec<String> = sorted.iter().map(|t| regex::escape(t)).collect();
-    let pattern = format!(r"\b(?:{})\b", escaped.join("|"));
-    Regex::new(&format!("(?i){}", pattern)).expect("failed to compile tech terms regex")
+    sorted
 }
 
+// --- Text analysis helpers ---
+
 /// Find ranges in the text that are inside fenced code blocks (``` ... ```)
-/// Returns a sorted list of (start, end) byte ranges.
 fn fenced_code_ranges(text: &str) -> Vec<(usize, usize)> {
     let mut ranges = Vec::new();
     let mut pos = 0;
@@ -170,16 +167,13 @@ fn fenced_code_ranges(text: &str) -> Vec<(usize, usize)> {
     while pos < bytes.len() {
         if bytes[pos] == b'`' && pos + 2 < bytes.len() && bytes[pos + 1] == b'`' && bytes[pos + 2] == b'`' {
             let start = pos;
-            // Skip opening fence (may have more than 3 backticks and info string)
             pos += 3;
             while pos < bytes.len() && bytes[pos] == b'`' {
                 pos += 1;
             }
-            // Skip to end of opening fence line
             while pos < bytes.len() && bytes[pos] != b'\n' {
                 pos += 1;
             }
-            // Find closing fence
             loop {
                 if pos >= bytes.len() {
                     ranges.push((start, bytes.len()));
@@ -192,13 +186,12 @@ fn fenced_code_ranges(text: &str) -> Vec<(usize, usize)> {
                         && bytes[line_start + 1] == b'`'
                         && bytes[line_start + 2] == b'`'
                     {
-                        // Skip to end of closing fence line
                         let mut end = line_start + 3;
                         while end < bytes.len() && bytes[end] != b'\n' {
                             end += 1;
                         }
                         if end < bytes.len() {
-                            end += 1; // include the newline
+                            end += 1;
                         }
                         ranges.push((start, end));
                         pos = end;
@@ -214,25 +207,18 @@ fn fenced_code_ranges(text: &str) -> Vec<(usize, usize)> {
     ranges
 }
 
-/// Check if a byte position is inside a fenced code block or inline code span.
-fn is_inside_code(text: &str, match_start: usize, match_end: usize, fenced_ranges: &[(usize, usize)]) -> bool {
-    // Check fenced code blocks
-    for &(start, end) in fenced_ranges {
-        if match_start >= start && match_end <= end {
-            return true;
-        }
-    }
-    // Check inline code: count single backticks before position (outside fenced blocks)
-    let before = &text[..match_start];
-    let mut backtick_count = 0;
+/// Find all backtick span ranges (start, end) in text, excluding fenced code blocks.
+/// Returns positions of the opening and closing backtick (inclusive of backticks).
+fn backtick_span_ranges(text: &str, fenced: &[(usize, usize)]) -> Vec<(usize, usize)> {
+    let mut spans = Vec::new();
+    let bytes = text.as_bytes();
     let mut i = 0;
-    let b = before.as_bytes();
-    while i < b.len() {
-        // Skip fenced ranges
+    while i < bytes.len() {
+        // Skip fenced code blocks
         let mut in_fenced = false;
-        for &(start, end) in fenced_ranges {
-            if i >= start && i < end {
-                i = end;
+        for &(fs, fe) in fenced {
+            if i >= fs && i < fe {
+                i = fe;
                 in_fenced = true;
                 break;
             }
@@ -240,87 +226,150 @@ fn is_inside_code(text: &str, match_start: usize, match_end: usize, fenced_range
         if in_fenced {
             continue;
         }
-        if i < b.len() && b[i] == b'`' {
-            backtick_count += 1;
+        if bytes[i] == b'`' {
+            // Find matching closing backtick
+            let open = i;
+            i += 1;
+            while i < bytes.len() && bytes[i] != b'`' && bytes[i] != b'\n' {
+                i += 1;
+            }
+            if i < bytes.len() && bytes[i] == b'`' && i > open + 1 {
+                spans.push((open, i + 1)); // include both backticks
+            }
+            if i < bytes.len() {
+                i += 1;
+            }
+        } else {
+            i += 1;
         }
-        i += 1;
     }
-    // Odd count means we're inside inline code
-    backtick_count % 2 == 1
+    spans
 }
 
-/// Check if a match is already wrapped in backticks.
-fn is_already_backticked(text: &str, match_start: usize, match_end: usize) -> bool {
-    match_start > 0
-        && match_end < text.len()
-        && text.as_bytes()[match_start - 1] == b'`'
-        && text.as_bytes()[match_end] == b'`'
+/// Check if a byte position is inside any of the given ranges.
+fn inside_ranges(pos: usize, end: usize, ranges: &[(usize, usize)]) -> bool {
+    ranges.iter().any(|&(s, e)| pos >= s && end <= e)
 }
+
+/// Check if the character at a byte position is a word-boundary character.
+/// A term match is valid if the characters immediately before and after it
+/// are not alphanumeric (or the match is at the start/end of text).
+fn is_word_boundary(text: &[u8], pos: usize) -> bool {
+    if pos >= text.len() {
+        return true;
+    }
+    let ch = text[pos];
+    // Not a word character: anything that's not alphanumeric or underscore
+    !ch.is_ascii_alphanumeric() && ch != b'_'
+}
+
+/// Case-insensitive substring search. Returns byte offset of the match, or None.
+fn find_case_insensitive(haystack: &str, needle: &str, start: usize) -> Option<usize> {
+    let h = haystack.as_bytes();
+    let n = needle.as_bytes();
+    if n.is_empty() || start + n.len() > h.len() {
+        return None;
+    }
+    for i in start..=(h.len() - n.len()) {
+        if h[i..i + n.len()].eq_ignore_ascii_case(n) {
+            return Some(i);
+        }
+    }
+    None
+}
+
+/// Find all occurrences of a term in text (case-insensitive, word-boundary).
+/// Returns (start, end) byte positions for each match.
+fn find_term_occurrences(text: &str, term: &str) -> Vec<(usize, usize)> {
+    let bytes = text.as_bytes();
+    let mut results = Vec::new();
+    let mut pos = 0;
+    while let Some(start) = find_case_insensitive(text, term, pos) {
+        let end = start + term.len();
+        // Check word boundaries
+        let before_ok = start == 0 || is_word_boundary(bytes, start - 1);
+        let after_ok = end >= bytes.len() || is_word_boundary(bytes, end);
+        if before_ok && after_ok {
+            results.push((start, end));
+        }
+        pos = start + 1;
+    }
+    results
+}
+
+// --- Core check/fix logic ---
 
 /// Find unquoted technical terms in a markdown file's content.
-/// Returns (line_number, term) pairs for each unquoted occurrence.
-pub fn find_unquoted_terms(content: &str, pattern: &Regex) -> Vec<(usize, String)> {
+/// Returns (line_number, term) pairs.
+pub fn find_unquoted_terms(content: &str, sorted_terms: &[&str]) -> Vec<(usize, String)> {
     let fenced = fenced_code_ranges(content);
+    let backtick_spans = backtick_span_ranges(content, &fenced);
+    // Track which byte positions are already claimed by a longer term match
+    let mut claimed = Vec::new();
     let mut results = Vec::new();
-    for m in pattern.find_iter(content) {
-        let start = m.start();
-        let end = m.end();
-        if is_already_backticked(content, start, end) {
-            continue;
+
+    for &term in sorted_terms {
+        for (start, end) in find_term_occurrences(content, term) {
+            // Skip if inside fenced code block
+            if inside_ranges(start, end, &fenced) {
+                continue;
+            }
+            // Skip if inside a backtick span
+            if inside_ranges(start, end, &backtick_spans) {
+                continue;
+            }
+            // Skip if overlapping with an already-claimed longer term
+            if claimed.iter().any(|&(cs, ce): &(usize, usize)| {
+                start < ce && end > cs
+            }) {
+                continue;
+            }
+            claimed.push((start, end));
+            let line_num = content[..start].matches('\n').count() + 1;
+            results.push((line_num, term.to_string()));
         }
-        if is_inside_code(content, start, end, &fenced) {
-            continue;
-        }
-        // Calculate line number
-        let line_num = content[..start].matches('\n').count() + 1;
-        results.push((line_num, m.as_str().to_string()));
     }
     results
 }
 
 /// Split a backticked string into individual terms.
-/// Handles comma-separated lists like "sed, awk" and separators like "and", "or", "/".
+/// Handles comma-separated lists like "sed, awk" and word separators "and"/"or".
 fn split_backticked(inner: &str) -> Vec<String> {
-    // Split on comma, " and ", " or ", "/"
-    let parts: Vec<&str> = inner.split(',').collect();
     let mut results = Vec::new();
-    for part in parts {
-        // Further split on " and " / " or " / "/"
-        for sub in part.split('/') {
-            for tok in sub.split(" and ").flat_map(|s| s.split(" or ")) {
-                let trimmed = tok.trim();
-                if !trimmed.is_empty() {
-                    results.push(trimmed.to_string());
-                }
+    for part in inner.split(',') {
+        for tok in part.split(" and ").flat_map(|s| s.split(" or ")) {
+            let trimmed = tok.trim();
+            if !trimmed.is_empty() {
+                results.push(trimmed.to_string());
             }
         }
     }
     results
 }
 
+/// Check if a backticked string looks like a term reference (not arbitrary inline code).
+fn looks_like_term_reference(inner: &str) -> bool {
+    let parts = split_backticked(inner);
+    if parts.is_empty() {
+        return false;
+    }
+    let code_chars = ['(', ')', '{', '}', '[', ']', ';', '=', '>', '<', '|', '\\', '"', '\''];
+    for part in &parts {
+        if part.contains(' ') || part.chars().any(|c| code_chars.contains(&c)) {
+            return false;
+        }
+    }
+    true
+}
+
 /// Extract all backtick-quoted terms from a markdown file's content,
 /// excluding content inside fenced code blocks.
-/// Handles grouped terms like `` `sed, awk` `` by splitting them.
+/// Handles grouped terms like `sed, awk` by splitting them.
 pub fn find_backticked_terms(content: &str) -> HashSet<String> {
     let fenced = fenced_code_ranges(content);
-    let backtick_re = Regex::new(r"`([^`]+)`").expect("backtick regex");
+    let spans = backtick_span_ranges(content, &fenced);
     let mut terms = HashSet::new();
-    for m in backtick_re.find_iter(content) {
-        let start = m.start();
-        let end = m.end();
-        // Skip if inside fenced code block
-        let mut in_fenced = false;
-        for &(fs, fe) in &fenced {
-            if start >= fs && end <= fe {
-                in_fenced = true;
-                break;
-            }
-        }
-        if in_fenced {
-            continue;
-        }
-        // Extract the content between backticks and split grouped terms
-        // Skip anything that looks like inline code rather than a term reference
+    for (start, end) in &spans {
         let inner = &content[start + 1..end - 1];
         if !looks_like_term_reference(inner) {
             continue;
@@ -333,74 +382,46 @@ pub fn find_backticked_terms(content: &str) -> HashSet<String> {
 }
 
 /// Find unquoted term positions (byte offsets) for the fix command.
-/// Returns (start, end, matched_text) sorted by position.
-fn find_unquoted_positions(content: &str, pattern: &Regex) -> Vec<(usize, usize, String)> {
+/// Returns (start, end, term_text) sorted longest-first, non-overlapping.
+fn find_unquoted_positions(content: &str, sorted_terms: &[&str]) -> Vec<(usize, usize, String)> {
     let fenced = fenced_code_ranges(content);
+    let backtick_spans = backtick_span_ranges(content, &fenced);
+    let mut claimed: Vec<(usize, usize)> = Vec::new();
     let mut results = Vec::new();
-    for m in pattern.find_iter(content) {
-        let start = m.start();
-        let end = m.end();
-        if is_already_backticked(content, start, end) {
-            continue;
+
+    for &term in sorted_terms {
+        for (start, end) in find_term_occurrences(content, term) {
+            if inside_ranges(start, end, &fenced) {
+                continue;
+            }
+            if inside_ranges(start, end, &backtick_spans) {
+                continue;
+            }
+            if claimed.iter().any(|&(cs, ce)| start < ce && end > cs) {
+                continue;
+            }
+            claimed.push((start, end));
+            results.push((start, end, content[start..end].to_string()));
         }
-        if is_inside_code(content, start, end, &fenced) {
-            continue;
-        }
-        results.push((start, end, m.as_str().to_string()));
     }
     results
 }
 
-/// Check if a backticked string looks like a term reference (not arbitrary inline code).
-/// Code snippets like `ls -la`, `pip install foo`, `x = 5` should keep their backticks.
-fn looks_like_term_reference(inner: &str) -> bool {
-    let parts = split_backticked(inner);
-    // Must have at least one part
-    if parts.is_empty() {
-        return false;
-    }
-    // Each part should look like a plausible term name:
-    // no shell/code characters that indicate it's a code snippet
-    let code_chars = ['(', ')', '{', '}', '[', ']', ';', '=', '>', '<', '|', '\\', '"', '\''];
-    for part in &parts {
-        if part.contains(' ') || part.chars().any(|c| code_chars.contains(&c)) {
-            return false;
-        }
-    }
-    true
-}
-
 /// Find backtick-quoted terms that are NOT in the tech term list.
-/// Returns (start, end) byte positions of the full `term` span (including backticks).
 /// Only considers spans that look like term references, not arbitrary inline code.
 fn find_non_tech_backticked_positions(content: &str, terms: &HashSet<String>) -> Vec<(usize, usize)> {
     let fenced = fenced_code_ranges(content);
-    let backtick_re = Regex::new(r"`([^`]+)`").expect("backtick regex");
+    let spans = backtick_span_ranges(content, &fenced);
     let mut results = Vec::new();
-    for m in backtick_re.find_iter(content) {
-        let start = m.start();
-        let end = m.end();
-        let mut in_fenced = false;
-        for &(fs, fe) in &fenced {
-            if start >= fs && end <= fe {
-                in_fenced = true;
-                break;
-            }
-        }
-        if in_fenced {
-            continue;
-        }
+    for &(start, end) in &spans {
         let inner = &content[start + 1..end - 1];
-        // Skip anything that looks like inline code rather than a term reference
         if !looks_like_term_reference(inner) {
             continue;
         }
-        // Split grouped terms and check each part
         let parts = split_backticked(inner);
         let all_non_tech = parts.iter().all(|p| {
             !terms.iter().any(|t| t.eq_ignore_ascii_case(p))
         });
-        // Only flag for removal if none of the parts are tech terms
         if all_non_tech {
             results.push((start, end));
         }
@@ -408,46 +429,47 @@ fn find_non_tech_backticked_positions(content: &str, terms: &HashSet<String>) ->
     results
 }
 
+/// Apply edits to text, right-to-left. Edits must not overlap.
+fn apply_edits(content: &str, edits: &mut Vec<(usize, usize, String)>) -> String {
+    edits.sort_by(|a, b| b.0.cmp(&a.0));
+    edits.dedup_by(|a, b| a.1 > b.0);
+
+    let mut result = content.to_string();
+    for (start, end, replacement) in edits.iter() {
+        result = format!("{}{}{}", &result[..*start], replacement, &result[*end..]);
+    }
+    result
+}
+
 /// Auto-fix a single markdown file: add backticks to unquoted tech terms,
 /// remove backticks from non-tech backticked terms.
 /// Returns true if the file was modified.
-pub fn fix_file(path: &Path, terms: &HashSet<String>, pattern: &Regex) -> Result<bool> {
-    let content = fs::read_to_string(path)?;
+pub fn fix_file(path: &Path, terms: &HashSet<String>, sorted_terms: &[&str]) -> Result<bool> {
+    let original = fs::read_to_string(path)?;
 
-    // Collect all edits as (start, end, replacement)
-    let mut edits: Vec<(usize, usize, String)> = Vec::new();
+    // Step 1: remove backticks from non-tech terms (e.g. `CI`/`CD` → CI/CD)
+    let mut removals: Vec<(usize, usize, String)> = find_non_tech_backticked_positions(&original, terms)
+        .into_iter()
+        .map(|(s, e)| (s, e, original[s + 1..e - 1].to_string()))
+        .collect();
+    let cleaned = if removals.is_empty() {
+        original.clone()
+    } else {
+        apply_edits(&original, &mut removals)
+    };
 
-    // Add backticks to unquoted terms
-    for (start, end, matched) in find_unquoted_positions(&content, pattern) {
-        edits.push((start, end, format!("`{}`", matched)));
-    }
+    // Step 2: add backticks to unquoted terms (on the cleaned text, so CI/CD is now found)
+    let mut additions: Vec<(usize, usize, String)> = find_unquoted_positions(&cleaned, sorted_terms)
+        .into_iter()
+        .map(|(s, e, m)| (s, e, format!("`{}`", m)))
+        .collect();
+    let result = if additions.is_empty() {
+        cleaned
+    } else {
+        apply_edits(&cleaned, &mut additions)
+    };
 
-    // Remove backticks from non-tech terms
-    for (start, end) in find_non_tech_backticked_positions(&content, terms) {
-        let inner = &content[start + 1..end - 1];
-        edits.push((start, end, inner.to_string()));
-    }
-
-    if edits.is_empty() {
-        return Ok(false);
-    }
-
-    // Sort by position descending so we can apply from right to left
-    edits.sort_by(|a, b| b.0.cmp(&a.0));
-
-    // Remove overlapping edits (keep the first one, i.e., rightmost after sorting desc)
-    edits.dedup_by(|a, b| {
-        // a comes after b in position (since sorted desc)
-        // They overlap if a.start < b.end
-        a.0 < b.1
-    });
-
-    let mut result = content.clone();
-    for (start, end, replacement) in &edits {
-        result = format!("{}{}{}", &result[..*start], replacement, &result[*end..]);
-    }
-
-    if result != content {
+    if result != original {
         fs::write(path, &result)?;
         Ok(true)
     } else {
@@ -463,7 +485,7 @@ pub fn fix_all(config: &TechCheckConfig) -> Result<()> {
         println!("No technical terms found in {}", config.tech_files_dir);
         return Ok(());
     }
-    let pattern = create_pattern(&terms);
+    let sorted = sorted_terms(&terms);
 
     let file_index = FileIndex::build()?;
     let md_files = file_index.scan(&config.scan, true);
@@ -477,7 +499,7 @@ pub fn fix_all(config: &TechCheckConfig) -> Result<()> {
 
     let mut modified_count = 0;
     for file in &md_files {
-        if fix_file(file, &terms, &pattern)? {
+        if fix_file(file, &terms, &sorted)? {
             modified_count += 1;
             println!("  Fixed: {}", file.display());
         }

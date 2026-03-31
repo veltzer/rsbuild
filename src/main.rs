@@ -353,15 +353,16 @@ fn run() -> Result<()> {
         }
         Commands::Tech { action } => {
             let config = Config::load()?;
-            let tech_files_dir = config.processor.instance_field_str("tech_check", "tech_files_dir")
-                .unwrap_or_else(|| "tech_files".into());
-            let scan_dir = config.processor.instance_field_str("tech_check", "scan_dir");
+            let mut tech_config: config::TechCheckConfig = config.processor
+                .first_instance_of_type("tech_check")
+                .map(|inst| inst.config_toml.clone().try_into())
+                .transpose()
+                .context("Failed to parse tech_check config")?
+                .unwrap_or_default();
+            tech_config.scan.resolve("", &[".md"], config::MARKDOWN_EXCLUDE_DIRS);
             match action {
                 cli::TechAction::Fix => {
-                    processors::tech_check::fix_all(
-                        &tech_files_dir,
-                        scan_dir.as_deref(),
-                    )?;
+                    processors::tech_check::fix_all(&tech_config)?;
                 }
             }
         }

@@ -428,20 +428,20 @@ pub fn fix_file(path: &Path, terms: &HashSet<String>, pattern: &Regex) -> Result
 }
 
 /// Fix all markdown files: called by `rsconstruct tech fix`.
-pub fn fix_all(tech_files_dir: &str, scan_dir: Option<&str>) -> Result<()> {
-    let terms = load_terms(tech_files_dir)?;
+/// Uses the same scan config as the tech_check processor to find files.
+pub fn fix_all(config: &TechCheckConfig) -> Result<()> {
+    let terms = load_terms(&config.tech_files_dir)?;
     if terms.is_empty() {
-        println!("No technical terms found in {}", tech_files_dir);
+        println!("No technical terms found in {}", config.tech_files_dir);
         return Ok(());
     }
     let pattern = create_pattern(&terms);
 
-    // Find all .md files
-    let search_dir = scan_dir.unwrap_or(".");
-    let md_files = collect_md_files(Path::new(search_dir))?;
+    let file_index = FileIndex::build()?;
+    let md_files = file_index.scan(&config.scan, true);
 
     if md_files.is_empty() {
-        println!("No markdown files found in {}", search_dir);
+        println!("No markdown files found");
         return Ok(());
     }
 
@@ -457,29 +457,4 @@ pub fn fix_all(tech_files_dir: &str, scan_dir: Option<&str>) -> Result<()> {
 
     println!("Done. Modified {} of {} files.", modified_count, md_files.len());
     Ok(())
-}
-
-/// Recursively collect all .md files under a directory.
-fn collect_md_files(dir: &Path) -> Result<Vec<std::path::PathBuf>> {
-    let mut files = Vec::new();
-    if !dir.is_dir() {
-        return Ok(files);
-    }
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            // Skip common excluded directories
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if name.starts_with('.') || name == "node_modules" || name == "target"
-                || name == "out" || name == "__pycache__" || name == "venv"
-            {
-                continue;
-            }
-            files.extend(collect_md_files(&path)?);
-        } else if path.extension().is_some_and(|e| e == "md") {
-            files.push(path);
-        }
-    }
-    Ok(files)
 }

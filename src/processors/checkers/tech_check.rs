@@ -159,9 +159,28 @@ fn sorted_terms(terms: &HashSet<String>) -> Vec<&str> {
 
 // --- Text analysis helpers ---
 
-/// Find ranges in the text that are inside fenced code blocks (``` ... ```)
-fn fenced_code_ranges(text: &str) -> Vec<(usize, usize)> {
+/// Find ranges in the text that should be excluded from tech term processing:
+/// YAML frontmatter (--- ... ---) and fenced code blocks (``` ... ```).
+fn excluded_ranges(text: &str) -> Vec<(usize, usize)> {
     let mut ranges = Vec::new();
+
+    // YAML frontmatter: must start at the very beginning of the file
+    if text.starts_with("---\n") || text.starts_with("---\r\n") {
+        let skip = if text.as_bytes().get(3) == Some(&b'\r') { 5 } else { 4 };
+        if let Some(end_idx) = text[skip..].find("\n---") {
+            let mut end = skip + end_idx + 4; // past the closing ---
+            // Skip to end of line
+            while end < text.len() && text.as_bytes()[end] != b'\n' {
+                end += 1;
+            }
+            if end < text.len() {
+                end += 1;
+            }
+            ranges.push((0, end));
+        }
+    }
+
+    // Fenced code blocks
     let mut pos = 0;
     let bytes = text.as_bytes();
     while pos < bytes.len() {
@@ -302,7 +321,7 @@ fn find_term_occurrences(text: &str, term: &str) -> Vec<(usize, usize)> {
 /// Find unquoted technical terms in a markdown file's content.
 /// Returns (line_number, term) pairs.
 pub fn find_unquoted_terms(content: &str, sorted_terms: &[&str]) -> Vec<(usize, String)> {
-    let fenced = fenced_code_ranges(content);
+    let fenced = excluded_ranges(content);
     let backtick_spans = backtick_span_ranges(content, &fenced);
     // Track which byte positions are already claimed by a longer term match
     let mut claimed = Vec::new();
@@ -366,7 +385,7 @@ fn looks_like_term_reference(inner: &str) -> bool {
 /// excluding content inside fenced code blocks.
 /// Handles grouped terms like `sed, awk` by splitting them.
 pub fn find_backticked_terms(content: &str) -> HashSet<String> {
-    let fenced = fenced_code_ranges(content);
+    let fenced = excluded_ranges(content);
     let spans = backtick_span_ranges(content, &fenced);
     let mut terms = HashSet::new();
     for (start, end) in &spans {
@@ -384,7 +403,7 @@ pub fn find_backticked_terms(content: &str) -> HashSet<String> {
 /// Find unquoted term positions (byte offsets) for the fix command.
 /// Returns (start, end, term_text) sorted longest-first, non-overlapping.
 fn find_unquoted_positions(content: &str, sorted_terms: &[&str]) -> Vec<(usize, usize, String)> {
-    let fenced = fenced_code_ranges(content);
+    let fenced = excluded_ranges(content);
     let backtick_spans = backtick_span_ranges(content, &fenced);
     let mut claimed: Vec<(usize, usize)> = Vec::new();
     let mut results = Vec::new();
@@ -410,7 +429,7 @@ fn find_unquoted_positions(content: &str, sorted_terms: &[&str]) -> Vec<(usize, 
 /// Find backtick-quoted terms that are NOT in the tech term list.
 /// Only considers spans that look like term references, not arbitrary inline code.
 fn find_non_tech_backticked_positions(content: &str, terms: &HashSet<String>) -> Vec<(usize, usize)> {
-    let fenced = fenced_code_ranges(content);
+    let fenced = excluded_ranges(content);
     let spans = backtick_span_ranges(content, &fenced);
     let mut results = Vec::new();
     for &(start, end) in &spans {

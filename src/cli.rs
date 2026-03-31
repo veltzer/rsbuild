@@ -252,6 +252,11 @@ pub enum Commands {
         #[arg(long)]
         breakdown: bool,
     },
+    /// Manage technical term checking and fixing in markdown files
+    Tech {
+        #[command(subcommand)]
+        action: TechAction,
+    },
     /// Search and query frontmatter tags from markdown files
     Tags {
         #[command(subcommand)]
@@ -493,6 +498,12 @@ pub enum DepsShowFilter {
         #[arg(required = true)]
         analyzers: Vec<String>,
     },
+}
+
+#[derive(Subcommand)]
+pub enum TechAction {
+    /// Auto-fix: add backticks to tech terms, remove backticks from non-tech terms
+    Fix,
 }
 
 #[derive(Subcommand)]

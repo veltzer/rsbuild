@@ -693,11 +693,12 @@ pub use checkers::{
     PerlcriticProcessor, PhpLintProcessor, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,
     ScriptCheckProcessor, ShellcheckProcessor, SlidevProcessor, SpellcheckProcessor,
     StandardProcessor, StylelintProcessor,
-    TaploProcessor, TidyProcessor, XmllintProcessor, YamllintProcessor, YqProcessor,
+    TaploProcessor, TechCheckProcessor, TidyProcessor, XmllintProcessor, YamllintProcessor, YqProcessor,
 };
 pub use generators::{A2xProcessor, CcSingleFileProcessor, ChromiumProcessor, DrawioProcessor, LibreofficeProcessor, LinuxModuleProcessor, MakoProcessor, MarpProcessor, MarkdownProcessor, MermaidProcessor, ObjdumpProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, TagsProcessor, TeraProcessor};
 pub use mass_generators::{CargoProcessor, CcProcessor, GemProcessor, MdbookProcessor, NpmProcessor, PipProcessor, SphinxProcessor};
 pub(crate) use generators::tags as tags_cmd;
+pub(crate) use checkers::tech_check;
 pub use lua_processor::LuaProcessor;
 
 /// Map from processor name to processor instance. Used throughout the build pipeline.
@@ -880,7 +881,7 @@ pub trait ProductDiscovery: Sync + Send {
 /// `tool_runtime()` (in `builder/tools.rs`) look up data from this table.
 ///
 /// Runtime categories: "python", "node", "ruby", "rust", "perl", "system"
-
+///
 /// A single way to install a tool.
 pub struct InstallMethod {
     /// Package manager or method name (e.g., "pip", "apt", "npm", "snap", "cargo", "binary")

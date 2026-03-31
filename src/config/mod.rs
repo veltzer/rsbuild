@@ -389,21 +389,12 @@ for_each_processor!(gen_processor_config);
 /// Processor configuration: a collection of declared processor instances.
 /// Each `[processor.TYPE]` or `[processor.TYPE.NAME]` section in rsconstruct.toml
 /// creates a ProcessorInstance. No instances exist by default — only what's declared.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub(crate) struct ProcessorConfig {
     /// All declared processor instances
     pub instances: Vec<ProcessorInstance>,
     /// Lua plugin configs (processor types not in the builtin registry)
     pub extra: HashMap<String, toml::Value>,
-}
-
-impl Default for ProcessorConfig {
-    fn default() -> Self {
-        Self {
-            instances: Vec::new(),
-            extra: HashMap::new(),
-        }
-    }
 }
 
 impl Serialize for ProcessorConfig {

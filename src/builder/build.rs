@@ -73,10 +73,10 @@ impl Builder {
         // CLI override for spellcheck and aspell auto_add_words
         if opts.auto_add_words {
             for inst in &mut self.config.processor.instances {
-                if inst.type_name == "spellcheck" || inst.type_name == "aspell" {
-                    if let Some(table) = inst.config_toml.as_table_mut() {
-                        table.insert("auto_add_words".to_string(), toml::Value::Boolean(true));
-                    }
+                if (inst.type_name == "spellcheck" || inst.type_name == "aspell")
+                    && let Some(table) = inst.config_toml.as_table_mut()
+                {
+                    table.insert("auto_add_words".to_string(), toml::Value::Boolean(true));
                 }
             }
         }

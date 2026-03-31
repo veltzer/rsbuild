@@ -351,6 +351,20 @@ fn run() -> Result<()> {
             let builder = Builder::new()?;
             builder.status(cli.verbose, breakdown)?;
         }
+        Commands::Tech { action } => {
+            let config = Config::load()?;
+            let tech_files_dir = config.processor.instance_field_str("tech_check", "tech_files_dir")
+                .unwrap_or_else(|| "tech_files".into());
+            let scan_dir = config.processor.instance_field_str("tech_check", "scan_dir");
+            match action {
+                cli::TechAction::Fix => {
+                    processors::tech_check::fix_all(
+                        &tech_files_dir,
+                        scan_dir.as_deref(),
+                    )?;
+                }
+            }
+        }
         Commands::Tags { action } => {
             let config = Config::load()?;
             let db_path = config.processor.instance_field_str("tags", "output")

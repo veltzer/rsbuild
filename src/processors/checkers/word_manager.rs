@@ -84,10 +84,10 @@ impl WordManager {
         processor_name: &str,
     ) -> Result<()> {
         let result = check_fn(product.primary_input());
-        if auto_add_words {
-            if let Err(e) = self.flush() {
-                eprintln!("Warning: failed to flush {} words file: {}", processor_name, e);
-            }
+        if auto_add_words
+            && let Err(e) = self.flush()
+        {
+            eprintln!("Warning: failed to flush {} words file: {}", processor_name, e);
         }
         result
     }
@@ -105,10 +105,10 @@ impl WordManager {
             .map(|p| check_fn(p.primary_input()))
             .collect();
 
-        if auto_add_words {
-            if let Err(e) = self.flush() {
-                eprintln!("Warning: failed to flush {} words file: {}", processor_name, e);
-            }
+        if auto_add_words
+            && let Err(e) = self.flush()
+        {
+            eprintln!("Warning: failed to flush {} words file: {}", processor_name, e);
         }
 
         results

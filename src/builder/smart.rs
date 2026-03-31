@@ -31,7 +31,7 @@ fn processor_table(doc: &mut toml_edit::DocumentMut) -> Result<&mut toml_edit::T
 /// Validate that a processor name is a known builtin type.
 fn validate_name(name: &str) -> Result<()> {
     let all = all_type_names();
-    if !all.iter().any(|n| *n == name) {
+    if !all.contains(&name) {
         bail!(
             "Unknown processor '{}'. Run 'rsconstruct processors list --all' to see available processors.",
             name

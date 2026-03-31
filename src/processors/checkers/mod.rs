@@ -531,6 +531,7 @@ mod cmake;
 mod hadolint;
 mod jekyll;
 mod slidev;
+pub(crate) mod tech_check;
 
 pub use aspell::AspellProcessor;
 pub use ascii_check::AsciiCheckProcessor;
@@ -576,3 +577,4 @@ pub use cmake::CmakeProcessor;
 pub use hadolint::HadolintProcessor;
 pub use jekyll::JekyllProcessor;
 pub use slidev::SlidevProcessor;
+pub use tech_check::TechCheckProcessor;

@@ -309,12 +309,11 @@ fn run_tools_command(
                         continue;
                     }
                     // Skip undetected processors unless --all
-                    if !install_all {
-                        if let Some(fi) = file_index {
-                            if !processors[name].auto_detect(fi) {
-                                continue;
-                            }
-                        }
+                    if !install_all
+                        && let Some(fi) = file_index
+                        && !processors[name].auto_detect(fi)
+                    {
+                        continue;
                     }
                     for tool in processors[name].required_tools() {
                         let procs = install_tools.entry(tool).or_default();

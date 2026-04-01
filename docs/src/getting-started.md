@@ -75,19 +75,19 @@ Pass extra arguments via processor config:
 args = ["--disable=C0114,C0115,C0116"]
 ```
 
-### Adding spellcheck for docs
+### Adding zspell for docs
 
-If your project has markdown documentation, add a section for the spellcheck processor:
+If your project has markdown documentation, add a section for the zspell processor:
 
 ```toml
 [processor.ruff]
 
 [processor.pylint]
 
-[processor.spellcheck]
+[processor.zspell]
 ```
 
-Create a `.spellcheck-words` file in the project root with any custom words (one per line) that the spellchecker should accept.
+Create a `.zspell-words` file in the project root with any custom words (one per line) that the zspeller should accept.
 
 ## C++
 

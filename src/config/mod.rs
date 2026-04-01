@@ -164,7 +164,7 @@ pub(crate) const PYTHON_EXCLUDE_DIRS: &[&str] = &[
 ];
 
 pub(crate) const CC_EXCLUDE_DIRS: &[&str] = COMMON_EXCLUDE_DIRS;
-pub(crate) const SPELLCHECK_EXCLUDE_DIRS: &[&str] = BUILD_TOOL_EXCLUDES;
+pub(crate) const ZSPELL_EXCLUDE_DIRS: &[&str] = BUILD_TOOL_EXCLUDES;
 pub(crate) const SHELL_EXCLUDE_DIRS: &[&str] = BUILD_TOOL_EXCLUDES;
 pub(crate) const MARKDOWN_EXCLUDE_DIRS: &[&str] = BUILD_TOOL_EXCLUDES;
 
@@ -691,9 +691,9 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         // cppcheck — only common fields
         // clang_tidy
         ("clang_tidy", "compiler_args") => Some(FieldType::StringArray),
-        // spellcheck
-        ("spellcheck", "language" | "words_file") => Some(FieldType::String),
-        ("spellcheck", "auto_add_words") => Some(FieldType::Bool),
+        // zspell
+        ("zspell", "language" | "words_file") => Some(FieldType::String),
+        ("zspell", "auto_add_words") => Some(FieldType::Bool),
         // make
         ("make", "make" | "target") => Some(FieldType::String),
         // cargo / clippy

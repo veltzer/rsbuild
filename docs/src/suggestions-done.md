@@ -11,7 +11,7 @@ Items from `suggestions.md` that have been implemented.
 - **Native C/C++ include scanner** — Default `include_scanner = "native"` uses regex-based scanning. Falls back to `include_scanner = "compiler"` (gcc -MM).
 - **`--processors` flag** — `rsconstruct build -p tera,ruff` and `rsconstruct watch -p tera` filter which processors run.
 - **Colored diff on config changes** — When processor config changes trigger rebuilds, rsconstruct shows what changed with colored diff output.
-- **Batch processing** — ruff, pylint, shellcheck, spellcheck, mypy, and rumdl all support batch execution via `execute_batch()`.
+- **Batch processing** — ruff, pylint, shellcheck, zspell, mypy, and rumdl all support batch execution via `execute_batch()`.
 - **Progress bar** — Uses `indicatif` crate. Progress bar sized to actual work (excludes instant skips), hidden in verbose/JSON mode.
 - **Emit `ProductStart` JSON events** — Emitted before each product starts executing, pairs with `ProductComplete` for per-product timing.
 - **mypy processor** — Python type checking with mypy. Batch-capable. Auto-detects `mypy.ini` as extra input.

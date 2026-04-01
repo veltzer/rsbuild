@@ -43,8 +43,8 @@ rsconstruct build --stop-after add-dependencies # Stop after dependency scanning
 rsconstruct build --stop-after resolve         # Stop after graph resolution
 rsconstruct build --stop-after classify        # Stop after classifying products
 rsconstruct build --show-output                # Show compiler/linter output even on success
-rsconstruct build --auto-add-words             # Add misspelled words to .spellcheck-words instead of failing
-rsconstruct build --auto-add-words -p spellcheck # Run only spellcheck and auto-add words
+rsconstruct build --auto-add-words             # Add misspelled words to .zspell-words instead of failing
+rsconstruct build --auto-add-words -p zspell   # Run only zspell and auto-add words
 rsconstruct build -p ruff,pylint               # Run only specific processors
 rsconstruct build --explain                    # Show why each product is skipped/restored/rebuilt
 rsconstruct build --retry 3                    # Retry failed products up to 3 times
@@ -136,7 +136,7 @@ Watch source files and auto-rebuild on changes.
 
 ```bash
 rsconstruct watch                              # Watch and rebuild on changes
-rsconstruct watch --auto-add-words             # Watch with spellcheck auto-add words
+rsconstruct watch --auto-add-words             # Watch with zspell auto-add words
 rsconstruct watch -j4                          # Watch with 4 parallel jobs
 rsconstruct watch -p ruff                      # Watch and only run the ruff processor
 ```

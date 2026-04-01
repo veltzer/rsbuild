@@ -134,7 +134,7 @@ extra_inputs = [".cppcheck-suppressions"]
 [processor.cc_single_file]
 extra_inputs = ["Makefile.inc"]
 
-[processor.spellcheck]
+[processor.zspell]
 extra_inputs = ["custom-dictionary.txt"]
 ```
 

@@ -6,7 +6,7 @@ use parking_lot::Mutex;
 use crate::processors::flush_words;
 use crate::graph::Product;
 
-/// Shared word-file management for spell-checking processors (aspell, spellcheck).
+/// Shared word-file management for spell-checking processors (aspell, zspell).
 ///
 /// Handles loading custom words, collecting misspelled words in auto-add mode,
 /// and flushing new words to disk. Also provides the shared execute/batch pattern

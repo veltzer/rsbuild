@@ -39,6 +39,10 @@ When adding a new processor, use the identity string everywhere. Do not
 abbreviate, rename, or add suffixes (`Gen`, `Bin`, etc.) to any of the
 derived names.
 
+Never use a `_check` suffix in processor names. Name the processor after the
+tool or library it wraps — do not abstract or rename it (e.g. `zspell` not
+`spellcheck`, `ruff` not `python_lint`).
+
 ## Processor directory layout
 
 Each processor category directory (`src/processors/checkers/`,

@@ -43,7 +43,7 @@ Detection heuristics per processor:
 | `cppcheck` | Checker | Configured source directory contains `.c` or `.cc` files |
 | `clang_tidy` | Checker | Configured source directory contains `.c` or `.cc` files |
 | `shellcheck` | Checker | Project contains `.sh` or `.bash` files |
-| `spellcheck` | Checker | Project contains files matching configured extensions (e.g., `.md`) |
+| `zspell` | Checker | Project contains files matching configured extensions (e.g., `.md`) |
 | `aspell` | Checker | Project contains `.md` files |
 | `ascii_check` | Checker | Project contains `.md` files |
 | `rumdl` | Checker | Project contains `.md` files |

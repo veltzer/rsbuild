@@ -41,7 +41,7 @@ Grades:
 - **Urgency**: low | **Complexity**: low
 
 #### markdownlint
-- Lint Markdown files (`.md`) for structural issues (complements spellcheck which only checks spelling).
+- Lint Markdown files (`.md`) for structural issues (complements zspell which only checks spelling).
 - Uses `mdl` or `markdownlint-cli`.
 - Config: `linter` (default `"mdl"`), `args`, `extra_inputs`, `scan`.
 - **Urgency**: low | **Complexity**: low

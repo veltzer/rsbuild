@@ -340,7 +340,7 @@ pub(crate) fn dot_to_svg(dot_content: &str) -> Result<String> {
 }
 
 /// Append new words to a words file without truncating existing content.
-/// Used by aspell and spellcheck processors for their auto_add_words feature.
+/// Used by aspell and zspell processors for their auto_add_words feature.
 /// `existing` is the set of words already on disk, `new_words` the words to add.
 /// If `header_line` is Some and the file does not yet exist, it is written as the
 /// first line (e.g. aspell .pws header). New words are appended to the end of the
@@ -692,7 +692,7 @@ pub use checkers::{
     JekyllProcessor, JshintProcessor, JslintProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
     LuacheckProcessor, MakeProcessor, MarkdownlintProcessor, MdlProcessor, MypyProcessor,
     PerlcriticProcessor, PhpLintProcessor, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,
-    ScriptCheckProcessor, ShellcheckProcessor, SlidevProcessor, SpellcheckProcessor,
+    ScriptCheckProcessor, ShellcheckProcessor, SlidevProcessor, ZspellProcessor,
     StandardProcessor, StylelintProcessor,
     TaploProcessor, TermsProcessor, TidyProcessor, XmllintProcessor, YamllintProcessor, YqProcessor,
 };

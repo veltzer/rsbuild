@@ -58,7 +58,7 @@ Use `rsconstruct processors files` to see which files each processor discovers.
 - [Cppcheck](processors/cppcheck.md) — runs static analysis on C/C++ source files
 - [Clang-Tidy](processors/clang_tidy.md) — runs clang-tidy static analysis on C/C++ source files
 - [Shellcheck](processors/shellcheck.md) — lints shell scripts using shellcheck
-- [Spellcheck](processors/spellcheck.md) — checks documentation files for spelling errors
+- [Zspell](processors/zspell.md) — checks documentation files for spelling errors
 - [Rumdl](processors/rumdl.md) — lints Markdown files with rumdl
 - [Make](processors/make.md) — runs make in directories containing Makefiles
 - [Cargo](processors/cargo.md) — builds Rust projects using Cargo

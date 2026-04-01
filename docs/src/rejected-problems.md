@@ -86,9 +86,9 @@ Reconstructing checksums from filesystem paths (`prefix + rest`) during cache tr
 
 Originally flagged as a design choice. User overruled — missing outputs are now an error (`anyhow::ensure!`). This was **accepted and fixed** in a later commit, not rejected.
 
-## Spellcheck read-modify-write race
+## Zspell read-modify-write race
 
-**File:** `src/processors/checkers/spellcheck.rs` (lines 192-229)
+**File:** `src/processors/checkers/zspell.rs` (lines 192-229)
 **Flagged in:** round 11
 
 Agent claimed file read-modify-write isn't protected. Wrong — `self.words_to_add.lock()` on line 193 acquires the mutex, which is held for the entire function (not dropped until return). The lock prevents concurrent threads from interleaving. Cross-process races are not a concern for RSConstruct.

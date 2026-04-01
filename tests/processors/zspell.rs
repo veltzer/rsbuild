@@ -2,7 +2,7 @@ use std::fs;
 use crate::common::{setup_test_project, run_rsconstruct, run_rsconstruct_with_env};
 
 #[test]
-fn spellcheck_correct_spelling() {
+fn zspell_correct_spelling() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -14,7 +14,7 @@ fn spellcheck_correct_spelling() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.spellcheck]\n"
+        "[processor.zspell]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
@@ -26,11 +26,11 @@ fn spellcheck_correct_spelling() {
     // Checkers no longer create stub files - success is recorded in cache database
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Processing:"),
-        "Should process spellcheck: {}", stdout);
+        "Should process zspell: {}", stdout);
 }
 
 #[test]
-fn spellcheck_misspelled_word() {
+fn zspell_misspelled_word() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -42,7 +42,7 @@ fn spellcheck_misspelled_word() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.spellcheck]\n"
+        "[processor.zspell]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
@@ -57,7 +57,7 @@ fn spellcheck_misspelled_word() {
 }
 
 #[test]
-fn spellcheck_custom_words_file() {
+fn zspell_custom_words_file() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -69,13 +69,13 @@ fn spellcheck_custom_words_file() {
 
     // Add "rsconstruct" to custom words file
     fs::write(
-        project_path.join(".spellcheck-words"),
+        project_path.join(".zspell-words"),
         "# Custom project words\nrsconstruct\n"
     ).unwrap();
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.spellcheck]\n"
+        "[processor.zspell]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
@@ -86,7 +86,7 @@ fn spellcheck_custom_words_file() {
 }
 
 #[test]
-fn spellcheck_incremental_skip() {
+fn zspell_incremental_skip() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -97,7 +97,7 @@ fn spellcheck_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.spellcheck]\n"
+        "[processor.zspell]\n"
     ).unwrap();
 
     // First build
@@ -111,12 +111,12 @@ fn spellcheck_incremental_skip() {
     let output2 = run_rsconstruct_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
     assert!(output2.status.success());
     let stdout2 = String::from_utf8_lossy(&output2.stdout);
-    assert!(stdout2.contains("[spellcheck] Skipping (unchanged):"),
+    assert!(stdout2.contains("[zspell] Skipping (unchanged):"),
         "Second build should skip: {}", stdout2);
 }
 
 #[test]
-fn spellcheck_clean() {
+fn zspell_clean() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -127,13 +127,13 @@ fn spellcheck_clean() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.spellcheck]\n"
+        "[processor.zspell]\n"
     ).unwrap();
 
     // Build
     let build_output = run_rsconstruct(project_path, &["build"]);
     assert!(build_output.status.success());
-    // Checkers no longer create stub files - nothing in out/ for spellcheck
+    // Checkers no longer create stub files - nothing in out/ for zspell
 
     // Clean is a no-op for checkers (nothing to clean)
     let clean_output = run_rsconstruct(project_path, &["clean", "outputs"]);
@@ -141,7 +141,7 @@ fn spellcheck_clean() {
 }
 
 #[test]
-fn spellcheck_stops_after_first_error() {
+fn zspell_stops_after_first_error() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -159,7 +159,7 @@ fn spellcheck_stops_after_first_error() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.spellcheck]\n"
+        "[processor.zspell]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
@@ -179,7 +179,7 @@ fn spellcheck_stops_after_first_error() {
 }
 
 #[test]
-fn spellcheck_ignores_code_blocks() {
+fn zspell_ignores_code_blocks() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -191,7 +191,7 @@ fn spellcheck_ignores_code_blocks() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.spellcheck]\n"
+        "[processor.zspell]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
@@ -202,7 +202,7 @@ fn spellcheck_ignores_code_blocks() {
 }
 
 #[test]
-fn spellcheck_auto_add_words() {
+fn zspell_auto_add_words() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -214,10 +214,10 @@ fn spellcheck_auto_add_words() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.spellcheck]\nauto_add_words = true\n"
+        "[processor.zspell]\nauto_add_words = true\n"
     ).unwrap();
 
-    // Build should succeed and add words to .spellcheck-words
+    // Build should succeed and add words to .zspell-words
     let output = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
     assert!(output.status.success(),
         "Build should succeed with auto_add_words: stdout={}, stderr={}",
@@ -225,7 +225,7 @@ fn spellcheck_auto_add_words() {
         String::from_utf8_lossy(&output.stderr));
 
     // Check that the words file was created with the misspelled words
-    let words_path = project_path.join(".spellcheck-words");
+    let words_path = project_path.join(".zspell-words");
     assert!(words_path.exists(), "Words file should be created");
 
     let words_content = fs::read_to_string(&words_path).unwrap();

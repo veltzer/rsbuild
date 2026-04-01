@@ -67,7 +67,7 @@ mod processors {
     pub mod rumdl;
     pub mod script_check;
     pub mod shellcheck;
-    pub mod spellcheck;
+    pub mod zspell;
     pub mod sphinx;
     pub mod taplo;
     pub mod tera;

@@ -23,7 +23,7 @@ macro_rules! for_each_processor {
             CC,             cc,             CcConfig,              CcProcessor,              ("", &["cc.yaml"], CC_EXCLUDE_DIRS);
             CPPCHECK,       cppcheck,       CppcheckConfig,        CppcheckProcessor,        ("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
             CLANG_TIDY,     clang_tidy,     ClangTidyConfig,       ClangTidyProcessor,       ("src", &[".c", ".cc"], CC_EXCLUDE_DIRS);
-            SPELLCHECK,     spellcheck,     SpellcheckConfig,      SpellcheckProcessor,      ("", &[".md"], SPELLCHECK_EXCLUDE_DIRS);
+            ZSPELL,         zspell,         ZspellConfig,          ZspellProcessor,          ("", &[".md"], ZSPELL_EXCLUDE_DIRS);
             SHELLCHECK,     shellcheck,     ShellcheckConfig,      ShellcheckProcessor,      ("", &[".sh", ".bash"], SHELL_EXCLUDE_DIRS);
             LUACHECK,       luacheck,       LuacheckConfig,        LuacheckProcessor,        ("", &[".lua"], BUILD_TOOL_EXCLUDES);
             MAKE,           make,           MakeConfig,            MakeProcessor,            ("", &["Makefile"], MAKE_CARGO_EXCLUDES);

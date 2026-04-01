@@ -64,7 +64,7 @@
     - [Script Check](processors/script_check.md)
     - [Shellcheck](processors/shellcheck.md)
     - [Slidev](processors/slidev.md)
-    - [Spellcheck](processors/spellcheck.md)
+    - [Zspell](processors/zspell.md)
     - [Sphinx](processors/sphinx.md)
     - [Standard](processors/standard.md)
     - [Stylelint](processors/stylelint.md)

@@ -783,26 +783,26 @@ impl KnownFields for LinuxModuleConfig {
     }
 }
 
-fn default_spellcheck_language() -> String {
+fn default_zspell_language() -> String {
     "en_US".into()
 }
 
-fn default_spellcheck_words_file() -> String {
-    ".spellcheck-words".into()
+fn default_zspell_words_file() -> String {
+    ".zspell-words".into()
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct SpellcheckConfig {
-    #[serde(default = "default_spellcheck_language")]
+pub struct ZspellConfig {
+    #[serde(default = "default_zspell_language")]
     pub language: String,
-    #[serde(default = "default_spellcheck_words_file")]
+    #[serde(default = "default_zspell_words_file")]
     pub words_file: String,
     /// When true, automatically add misspelled words to words_file instead of failing
     #[serde(default)]
     pub auto_add_words: bool,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
-    #[serde(default = "default_spellcheck_auto_inputs")]
+    #[serde(default = "default_zspell_auto_inputs")]
     pub auto_inputs: Vec<String>,
     #[serde(default = "default_true")]
     pub batch: bool,
@@ -810,26 +810,25 @@ pub struct SpellcheckConfig {
     pub scan: ScanConfig,
 }
 
-fn default_spellcheck_auto_inputs() -> Vec<String> {
-    vec![".spellcheck-words".into()]
+fn default_zspell_auto_inputs() -> Vec<String> {
+    vec![".zspell-words".into()]
 }
 
-impl Default for SpellcheckConfig {
+impl Default for ZspellConfig {
     fn default() -> Self {
         Self {
             language: "en_US".into(),
-            words_file: ".spellcheck-words".into(),
-
+            words_file: ".zspell-words".into(),
             auto_add_words: false,
             extra_inputs: Vec::new(),
-            auto_inputs: default_spellcheck_auto_inputs(),
+            auto_inputs: default_zspell_auto_inputs(),
             batch: true,
             scan: default_scan!(extensions: [".md"]),
         }
     }
 }
 
-impl KnownFields for SpellcheckConfig {
+impl KnownFields for ZspellConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
             "language", "words_file", "auto_add_words", "extra_inputs", "auto_inputs", "batch",

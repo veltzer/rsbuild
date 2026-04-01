@@ -5,7 +5,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::OnceLock;
 
-use crate::config::SpellcheckConfig;
+use crate::config::ZspellConfig;
 use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
@@ -14,15 +14,15 @@ use crate::processors::word_manager::WordManager;
 
 const DICT_DIR: &str = "/usr/share/hunspell";
 
-pub struct SpellcheckProcessor {
-    config: SpellcheckConfig,
+pub struct ZspellProcessor {
+    config: ZspellConfig,
     /// Cached dictionary, built once on first use and reused across all execute() calls
     cached_dict: OnceLock<Result<zspell::Dictionary, String>>,
     words: WordManager,
 }
 
-impl SpellcheckProcessor {
-    pub fn new(config: SpellcheckConfig) -> Self {
+impl ZspellProcessor {
+    pub fn new(config: ZspellConfig) -> Self {
         let words_path = Path::new(&config.words_file);
         let custom_words = if words_path.exists() {
             Self::load_custom_words(words_path).unwrap_or_default()
@@ -69,7 +69,7 @@ impl SpellcheckProcessor {
             .config_str(&aff_content)
             .dict_str(&dic_content)
             .build()
-            .context("Failed to build spellcheck dictionary")?;
+            .context("Failed to build zspell dictionary")?;
 
         Ok(dict)
     }
@@ -168,7 +168,7 @@ impl SpellcheckProcessor {
     }
 }
 
-impl ProductDiscovery for SpellcheckProcessor {
+impl ProductDiscovery for ZspellProcessor {
     fn description(&self) -> &str {
         "Check documentation files for spelling errors"
     }
@@ -188,7 +188,7 @@ impl ProductDiscovery for SpellcheckProcessor {
             file_index,
             &extra_inputs,
             &self.config,
-            crate::processors::names::SPELLCHECK,
+            crate::processors::names::ZSPELL,
         )
     }
 
@@ -197,7 +197,7 @@ impl ProductDiscovery for SpellcheckProcessor {
             product,
             self.config.auto_add_words,
             |file| self.check_file(file),
-            "spellcheck",
+            "zspell",
         )
     }
 
@@ -214,7 +214,7 @@ impl ProductDiscovery for SpellcheckProcessor {
             products,
             self.config.auto_add_words,
             |file| self.check_file(file),
-            "spellcheck",
+            "zspell",
         )
     }
 }

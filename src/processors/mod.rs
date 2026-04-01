@@ -683,6 +683,34 @@ where
     }
 }
 
+/// Shared helper for generator processors that support batch execution.
+///
+/// Passes (input, output) path pairs to `batch_fn`. On success, returns Ok for all products.
+/// On failure, the batch error is returned for all products.
+///
+/// No built-in generator currently uses this, but it's available for custom generators
+/// (e.g., a script that takes multiple input/output pairs on the command line).
+#[allow(dead_code)]
+pub(crate) fn execute_generator_batch<F>(
+    products: &[&Product],
+    batch_fn: F,
+) -> Vec<Result<()>>
+where
+    F: Fn(&[(&Path, &Path)]) -> Result<()>,
+{
+    let pairs: Vec<(&Path, &Path)> = products.iter()
+        .map(|p| (p.primary_input(), p.primary_output()))
+        .collect();
+
+    match batch_fn(&pairs) {
+        Ok(()) => products.iter().map(|_| Ok(())).collect(),
+        Err(e) => {
+            let err_msg = e.to_string();
+            products.iter().map(|_| Err(anyhow::anyhow!("{}", err_msg))).collect()
+        }
+    }
+}
+
 // Re-export from subdirectories
 pub use checkers::{
     AsciiProcessor, AspellProcessor,

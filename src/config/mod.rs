@@ -81,9 +81,9 @@ pub(crate) fn output_config_hash(value: &impl Serialize, extra_exclude: &[&str])
 /// loading, so processors can always unwrap safely.
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub(crate) struct ScanConfig {
-    /// Directory to scan for source files ("" means project root)
+    /// Directories to scan for source files ("" means project root)
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub scan_dir: Option<String>,
+    pub scan_dirs: Option<Vec<String>>,
 
     /// File extensions to match
     #[serde(default, skip_serializing_if = "Option::is_none")]

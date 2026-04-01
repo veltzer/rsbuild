@@ -12,7 +12,7 @@
 - [Dependency Analyzers](analyzers.md)
 - [Processors](processors.md)
     - [A2x](processors/a2x.md)
-    - [ASCII Check](processors/ascii_check.md)
+    - [ASCII](processors/ascii.md)
     - [Aspell](processors/aspell.md)
     - [Cargo](processors/cargo.md)
     - [CC](processors/cc.md)

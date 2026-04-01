@@ -458,7 +458,7 @@ macro_rules! simple_checker {
 }
 
 mod aspell;
-mod ascii_check;
+mod ascii;
 mod checkpatch;
 mod clippy;
 mod clang_tidy;
@@ -499,12 +499,11 @@ mod checkstyle;
 mod yq;
 mod cmake;
 mod hadolint;
-mod jekyll;
 mod slidev;
 pub(crate) mod terms;
 
 pub use aspell::AspellProcessor;
-pub use ascii_check::AsciiCheckProcessor;
+pub use ascii::AsciiProcessor;
 pub use checkpatch::CheckpatchProcessor;
 pub use clippy::ClippyProcessor;
 pub use clang_tidy::ClangTidyProcessor;
@@ -545,6 +544,5 @@ pub use checkstyle::CheckstyleProcessor;
 pub use yq::YqProcessor;
 pub use cmake::CmakeProcessor;
 pub use hadolint::HadolintProcessor;
-pub use jekyll::JekyllProcessor;
 pub use slidev::SlidevProcessor;
 pub use terms::TermsProcessor;

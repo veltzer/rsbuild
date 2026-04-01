@@ -1493,7 +1493,7 @@ impl KnownFields for AspellConfig {
     }
 }
 
-checker_config!(AsciiCheckConfig, extensions: [".md"]);
+checker_config!(AsciiConfig, extensions: [".md"]);
 
 fn default_terms_dir() -> String {
     "terms".into()

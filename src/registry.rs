@@ -49,7 +49,7 @@ macro_rules! for_each_processor {
             MARKDOWN,       markdown,       MarkdownConfig,        MarkdownProcessor,        ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
             PDFLATEX,       pdflatex,       PdflatexConfig,        PdflatexProcessor,        ("", &[".tex"], BUILD_TOOL_EXCLUDES);
             A2X,            a2x,            A2xConfig,             A2xProcessor,             ("", &[".txt"], BUILD_TOOL_EXCLUDES);
-            ASCII_CHECK,    ascii_check,    AsciiCheckConfig,      AsciiCheckProcessor,      ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
+            ASCII,    ascii,    AsciiConfig,      AsciiProcessor,      ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
             TERMS,          terms,          TermsConfig,           TermsProcessor,           ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
             CHROMIUM,       chromium,       ChromiumConfig,        ChromiumProcessor,        ("out/marp", &[".html"], BUILD_TOOL_EXCLUDES);
             MAKO,           mako,           MakoConfig,            MakoProcessor,            ("templates.mako", &[".mako"], &[]);

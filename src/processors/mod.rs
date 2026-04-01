@@ -685,11 +685,11 @@ where
 
 // Re-export from subdirectories
 pub use checkers::{
-    AsciiCheckProcessor, AspellProcessor,
+    AsciiProcessor, AspellProcessor,
     CheckpatchProcessor, ClippyProcessor, ClangTidyProcessor, CppcheckProcessor, CpplintProcessor,
     CheckstyleProcessor, CmakeProcessor,
     HadolintProcessor, EslintProcessor, HtmlhintProcessor, HtmllintProcessor,
-    JekyllProcessor, JshintProcessor, JslintProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
+    JshintProcessor, JslintProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
     LuacheckProcessor, MakeProcessor, MarkdownlintProcessor, MdlProcessor, MypyProcessor,
     PerlcriticProcessor, PhpLintProcessor, PylintProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,
     ScriptProcessor, ShellcheckProcessor, SlidevProcessor, ZspellProcessor,
@@ -697,7 +697,7 @@ pub use checkers::{
     TaploProcessor, TermsProcessor, TidyProcessor, XmllintProcessor, YamllintProcessor, YqProcessor,
 };
 pub use generators::{A2xProcessor, CcSingleFileProcessor, ChromiumProcessor, DrawioProcessor, LibreofficeProcessor, LinuxModuleProcessor, MakoProcessor, MarpProcessor, MarkdownProcessor, MermaidProcessor, ObjdumpProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, TagsProcessor, TeraProcessor};
-pub use mass_generators::{CargoProcessor, CcProcessor, GemProcessor, MdbookProcessor, NpmProcessor, PipProcessor, SphinxProcessor};
+pub use mass_generators::{CargoProcessor, CcProcessor, GemProcessor, JekyllProcessor, MdbookProcessor, NpmProcessor, PipProcessor, SphinxProcessor};
 pub(crate) use generators::tags as tags_cmd;
 pub(crate) use checkers::terms;
 pub use lua_processor::LuaProcessor;

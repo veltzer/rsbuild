@@ -1,15 +1,15 @@
 use anyhow::Result;
 use std::path::Path;
 
-use crate::config::AsciiCheckConfig;
+use crate::config::AsciiConfig;
 use crate::graph::Product;
 
-pub struct AsciiCheckProcessor {
-    config: AsciiCheckConfig,
+pub struct AsciiProcessor {
+    config: AsciiConfig,
 }
 
-impl AsciiCheckProcessor {
-    pub fn new(config: AsciiCheckConfig) -> Self {
+impl AsciiProcessor {
+    pub fn new(config: AsciiConfig) -> Self {
         Self { config }
     }
 
@@ -54,10 +54,10 @@ impl AsciiCheckProcessor {
     }
 }
 
-impl_checker!(AsciiCheckProcessor,
+impl_checker!(AsciiProcessor,
     config: config,
     description: "Check files for non-ASCII characters",
-    name: crate::processors::names::ASCII_CHECK,
+    name: crate::processors::names::ASCII,
     execute: execute_product,
     config_json: true,
     batch: check_files,

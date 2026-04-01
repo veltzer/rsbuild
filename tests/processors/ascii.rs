@@ -3,13 +3,13 @@ use tempfile::TempDir;
 use crate::common::run_rsconstruct_with_env;
 
 #[test]
-fn ascii_check_valid_file() {
+fn ascii_valid_file() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.ascii_check]\n",
+        "[processor.ascii]\n",
     )
     .unwrap();
 
@@ -30,19 +30,19 @@ fn ascii_check_valid_file() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains("Processing:"),
-        "Should process ascii_check: {}",
+        "Should process ascii: {}",
         stdout
     );
 }
 
 #[test]
-fn ascii_check_incremental_skip() {
+fn ascii_incremental_skip() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.ascii_check]\n",
+        "[processor.ascii]\n",
     )
     .unwrap();
 
@@ -61,20 +61,20 @@ fn ascii_check_incremental_skip() {
     assert!(output2.status.success());
     let stdout2 = String::from_utf8_lossy(&output2.stdout);
     assert!(
-        stdout2.contains("[ascii_check] Skipping (unchanged):"),
+        stdout2.contains("[ascii] Skipping (unchanged):"),
         "Second build should skip: {}",
         stdout2
     );
 }
 
 #[test]
-fn ascii_check_non_ascii_fails() {
+fn ascii_non_ascii_fails() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.ascii_check]\n",
+        "[processor.ascii]\n",
     )
     .unwrap();
 

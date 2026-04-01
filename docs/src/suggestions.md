@@ -15,7 +15,7 @@ Grades:
 - **Urgency**: high | **Complexity**: low (per processor)
 
 ### Add tests for untested checkers
-- 5 checkers have no integration tests: ascii_check, aspell, markdownlint, mdbook, mdl.
+- 5 checkers have no integration tests: ascii, aspell, markdownlint, mdbook, mdl.
 - **Urgency**: medium | **Complexity**: low (per processor)
 
 ## New Processors

@@ -45,7 +45,7 @@ Detection heuristics per processor:
 | `shellcheck` | Checker | Project contains `.sh` or `.bash` files |
 | `zspell` | Checker | Project contains files matching configured extensions (e.g., `.md`) |
 | `aspell` | Checker | Project contains `.md` files |
-| `ascii_check` | Checker | Project contains `.md` files |
+| `ascii` | Checker | Project contains `.md` files |
 | `rumdl` | Checker | Project contains `.md` files |
 | `mdl` | Checker | Project contains `.md` files |
 | `markdownlint` | Checker | Project contains `.md` files |

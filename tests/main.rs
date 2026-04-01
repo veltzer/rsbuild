@@ -32,7 +32,7 @@ mod watch;
 
 mod processors {
     pub mod a2x;
-    pub mod ascii_check;
+    pub mod ascii;
     pub mod aspell;
     pub mod cargo;
     pub mod cc;

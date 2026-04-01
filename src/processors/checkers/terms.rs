@@ -3,17 +3,17 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
-use crate::config::TechCheckConfig;
+use crate::config::TermsConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{discover_checker_products, execute_checker_batch};
 
-pub struct TechCheckProcessor {
-    config: TechCheckConfig,
+pub struct TermsProcessor {
+    config: TermsConfig,
 }
 
-impl TechCheckProcessor {
-    pub fn new(config: TechCheckConfig) -> Self {
+impl TermsProcessor {
+    pub fn new(config: TermsConfig) -> Self {
         Self { config }
     }
 
@@ -22,7 +22,7 @@ impl TechCheckProcessor {
     }
 
     fn check_files(&self, files: &[&Path]) -> Result<()> {
-        let terms = load_terms(&self.config.tech_files_dir)?;
+        let terms = load_terms(&self.config.terms_dir)?;
         if terms.is_empty() {
             return Ok(());
         }
@@ -39,7 +39,7 @@ impl TechCheckProcessor {
             Ok(())
         } else {
             bail!(
-                "{} file(s) have tech term issues (run `rsconstruct tech fix` to fix):\n{}",
+                "{} file(s) have term issues (run `rsconstruct terms fix` to fix):\n{}",
                 bad_files.len(),
                 bad_files.join("\n"),
             )
@@ -47,13 +47,13 @@ impl TechCheckProcessor {
     }
 }
 
-impl crate::processors::ProductDiscovery for TechCheckProcessor {
+impl crate::processors::ProductDiscovery for TermsProcessor {
     fn description(&self) -> &str {
         "Check that technical terms are backtick-quoted in markdown files"
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        Path::new(&self.config.tech_files_dir).is_dir()
+        Path::new(&self.config.terms_dir).is_dir()
             && !file_index.scan(&self.config.scan, true).is_empty()
     }
 
@@ -62,12 +62,12 @@ impl crate::processors::ProductDiscovery for TechCheckProcessor {
         graph: &mut BuildGraph,
         file_index: &FileIndex,
     ) -> Result<()> {
-        if !Path::new(&self.config.tech_files_dir).is_dir() {
+        if !Path::new(&self.config.terms_dir).is_dir() {
             return Ok(());
         }
-        // Collect all .txt files from tech_files_dir as extra inputs
+        // Collect all .txt files from terms_dir as extra inputs
         let mut extra_inputs = self.config.extra_inputs.clone();
-        for entry in fs::read_dir(&self.config.tech_files_dir)? {
+        for entry in fs::read_dir(&self.config.terms_dir)? {
             let entry = entry?;
             let path = entry.path();
             if path.extension().is_some_and(|e| e == "txt") {
@@ -79,7 +79,7 @@ impl crate::processors::ProductDiscovery for TechCheckProcessor {
         }
         discover_checker_products(
             graph, &self.config.scan, file_index, &extra_inputs, &self.config,
-            crate::processors::names::TECH_CHECK,
+            crate::processors::names::TERMS,
         )
     }
 
@@ -104,10 +104,10 @@ impl crate::processors::ProductDiscovery for TechCheckProcessor {
 
 /// Load all technical terms from .txt files in the given directory.
 /// Each file has one term per line.
-pub fn load_terms(tech_files_dir: &str) -> Result<HashSet<String>> {
-    let dir = Path::new(tech_files_dir);
+pub fn load_terms(terms_dir: &str) -> Result<HashSet<String>> {
+    let dir = Path::new(terms_dir);
     if !dir.is_dir() {
-        bail!("tech_files_dir `{}` does not exist or is not a directory", tech_files_dir);
+        bail!("terms_dir `{}` does not exist or is not a directory", terms_dir);
     }
     let mut terms = HashSet::new();
     for entry in fs::read_dir(dir)? {
@@ -135,7 +135,7 @@ fn sorted_terms(terms: &HashSet<String>) -> Vec<&str> {
 
 // --- Text analysis helpers ---
 
-/// Find ranges in the text that should be excluded from tech term processing:
+/// Find ranges in the text that should be excluded from term processing:
 /// YAML frontmatter (--- ... ---) and fenced code blocks (``` ... ```).
 fn excluded_ranges(text: &str) -> Vec<(usize, usize)> {
     let mut ranges = Vec::new();
@@ -370,7 +370,7 @@ fn find_unquoted_positions(content: &str, sorted_terms: &[&str]) -> Vec<(usize, 
     results
 }
 
-/// Find backtick-quoted terms that are NOT in the tech term list.
+/// Find backtick-quoted terms that are NOT in the term list.
 /// Only considers spans that look like term references, not arbitrary inline code.
 fn find_non_tech_backticked_positions(content: &str, terms: &HashSet<String>) -> Vec<(usize, usize)> {
     let fenced = excluded_ranges(content);
@@ -404,10 +404,10 @@ fn apply_edits(content: &str, edits: &mut Vec<(usize, usize, String)>) -> String
     result
 }
 
-/// Apply tech term fixes to content: remove non-tech backticks, then add missing backticks.
+/// Apply term fixes to content: remove non-tech backticks, then add missing backticks.
 /// Returns the fixed content.
 fn fix_content(original: &str, terms: &HashSet<String>, sorted_terms: &[&str]) -> String {
-    // Step 1: remove backticks from non-tech terms (e.g. `CI`/`CD` → CI/CD)
+    // Step 1: remove backticks from non-terms (e.g. `CI`/`CD` → CI/CD)
     let mut removals: Vec<(usize, usize, String)> = find_non_tech_backticked_positions(original, terms)
         .into_iter()
         .map(|(s, e)| (s, e, original[s + 1..e - 1].to_string()))
@@ -449,12 +449,12 @@ pub fn fix_file(path: &Path, terms: &HashSet<String>, sorted_terms: &[&str]) -> 
     }
 }
 
-/// Fix all markdown files: called by `rsconstruct tech fix`.
-/// Uses the same scan config as the tech_check processor to find files.
-pub fn fix_all(config: &TechCheckConfig) -> Result<()> {
-    let terms = load_terms(&config.tech_files_dir)?;
+/// Fix all markdown files: called by `rsconstruct terms fix`.
+/// Uses the same scan config as the terms processor to find files.
+pub fn fix_all(config: &TermsConfig) -> Result<()> {
+    let terms = load_terms(&config.terms_dir)?;
     if terms.is_empty() {
-        println!("No technical terms found in {}", config.tech_files_dir);
+        println!("No technical terms found in {}", config.terms_dir);
         return Ok(());
     }
     let sorted = sorted_terms(&terms);
@@ -467,7 +467,7 @@ pub fn fix_all(config: &TechCheckConfig) -> Result<()> {
         return Ok(());
     }
 
-    println!("Checking {} markdown files against {} tech terms...", md_files.len(), terms.len());
+    println!("Checking {} markdown files against {} terms...", md_files.len(), terms.len());
 
     let mut modified_count = 0;
     for file in &md_files {

@@ -351,18 +351,18 @@ fn run() -> Result<()> {
             let builder = Builder::new()?;
             builder.status(cli.verbose, breakdown)?;
         }
-        Commands::Tech { action } => {
+        Commands::Terms { action } => {
             let config = Config::load()?;
-            let mut tech_config: config::TechCheckConfig = config.processor
-                .first_instance_of_type("tech_check")
+            let mut terms_config: config::TermsConfig = config.processor
+                .first_instance_of_type("terms")
                 .map(|inst| inst.config_toml.clone().try_into())
                 .transpose()
-                .context("Failed to parse tech_check config")?
+                .context("Failed to parse terms config")?
                 .unwrap_or_default();
-            tech_config.scan.resolve("", &[".md"], config::MARKDOWN_EXCLUDE_DIRS);
+            terms_config.scan.resolve("", &[".md"], config::MARKDOWN_EXCLUDE_DIRS);
             match action {
-                cli::TechAction::Fix => {
-                    processors::tech_check::fix_all(&tech_config)?;
+                cli::TermsAction::Fix => {
+                    processors::terms::fix_all(&terms_config)?;
                 }
             }
         }

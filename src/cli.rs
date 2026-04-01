@@ -252,10 +252,10 @@ pub enum Commands {
         #[arg(long)]
         breakdown: bool,
     },
-    /// Manage technical term checking and fixing in markdown files
-    Tech {
+    /// Manage term checking and fixing in markdown files
+    Terms {
         #[command(subcommand)]
-        action: TechAction,
+        action: TermsAction,
     },
     /// Search and query frontmatter tags from markdown files
     Tags {
@@ -501,8 +501,8 @@ pub enum DepsShowFilter {
 }
 
 #[derive(Subcommand)]
-pub enum TechAction {
-    /// Auto-fix: add backticks to tech terms, remove backticks from non-tech terms
+pub enum TermsAction {
+    /// Auto-fix: add backticks to terms, remove backticks from non-terms
     Fix,
 }
 

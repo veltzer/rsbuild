@@ -1492,14 +1492,14 @@ impl KnownFields for AspellConfig {
 
 checker_config!(AsciiCheckConfig, extensions: [".md"]);
 
-fn default_tech_files_dir() -> String {
-    "tech_files".into()
+fn default_terms_dir() -> String {
+    "terms".into()
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct TechCheckConfig {
-    #[serde(default = "default_tech_files_dir")]
-    pub tech_files_dir: String,
+pub struct TermsConfig {
+    #[serde(default = "default_terms_dir")]
+    pub terms_dir: String,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
     #[serde(default)]
@@ -1510,10 +1510,10 @@ pub struct TechCheckConfig {
     pub scan: ScanConfig,
 }
 
-impl Default for TechCheckConfig {
+impl Default for TermsConfig {
     fn default() -> Self {
         Self {
-            tech_files_dir: "tech_files".into(),
+            terms_dir: "terms".into(),
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             batch: true,
@@ -1522,9 +1522,9 @@ impl Default for TechCheckConfig {
     }
 }
 
-impl KnownFields for TechCheckConfig {
+impl KnownFields for TermsConfig {
     fn known_fields() -> &'static [&'static str] {
-        &["tech_files_dir", "extra_inputs", "auto_inputs", "batch"]
+        &["terms_dir", "extra_inputs", "auto_inputs", "batch"]
     }
 }
 

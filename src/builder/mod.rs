@@ -79,7 +79,6 @@ macro_rules! gen_processor_dispatch {
          ($scan_dir:expr, $exts:expr, $excl:expr); )* ) => {
         /// Create a processor from a type name and TOML config value.
         /// Returns None for unknown types (Lua plugins handled separately).
-        /// SpellcheckProcessor returns Result because its new() is fallible.
         pub(crate) fn create_processor_for_instance(
             type_name: &str,
             config_toml: &toml::Value,

@@ -8,7 +8,7 @@ use crate::config::AspellConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, config_file_inputs, scan_root_valid, log_command, format_command};
-use super::word_manager::WordManager;
+use crate::processors::word_manager::WordManager;
 
 pub struct AspellProcessor {
     config: AspellConfig,

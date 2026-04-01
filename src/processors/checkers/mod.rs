@@ -487,7 +487,6 @@ macro_rules! simple_checker {
 }
 
 mod aspell;
-pub(crate) mod word_manager;
 mod ascii_check;
 mod checkpatch;
 mod clippy;

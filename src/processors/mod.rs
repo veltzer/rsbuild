@@ -2,6 +2,7 @@ mod checkers;
 mod generators;
 mod mass_generators;
 pub mod lua_processor;
+pub(crate) mod word_manager;
 
 use anyhow::{Context, Result};
 #[cfg(debug_assertions)]

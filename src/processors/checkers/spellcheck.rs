@@ -10,7 +10,7 @@ use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProductDiscovery, config_file_inputs, discover_checker_products};
-use super::word_manager::WordManager;
+use crate::processors::word_manager::WordManager;
 
 const DICT_DIR: &str = "/usr/share/hunspell";
 

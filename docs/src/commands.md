@@ -250,10 +250,10 @@ rsconstruct smart reset                  # Remove all processor sections
 
 ```bash
 rsconstruct processors list              # List declared processors and descriptions
-rsconstruct processors list -a           # Include hidden processors
+rsconstruct processors list -a           # Show all built-in processors
 rsconstruct processors files             # Show source and target files for each declared processor
 rsconstruct processors files ruff        # Show files for a specific processor
-rsconstruct processors files -a          # Include disabled and hidden processors
+rsconstruct processors files              # Show files for enabled processors
 rsconstruct processors config ruff       # Show resolved configuration for a processor
 rsconstruct processors defconfig ruff    # Show default configuration for a processor
 ```

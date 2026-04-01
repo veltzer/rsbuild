@@ -138,16 +138,6 @@ function required_tools()
 end
 ```
 
-#### `hidden()`
-
-Returns `true` to hide this processor from default `rsconstruct processors list` output (still shown with `--all`). Default: `false`.
-
-```lua
-function hidden()
-    return false
-end
-```
-
 #### `processor_type()`
 
 Returns the type of processor: `"generator"` or `"checker"`. Generators create real output files (e.g., compilers, transpilers). Checkers validate input files; for checkers, you can choose whether to produce stub files or not. Default: `"checker"`.

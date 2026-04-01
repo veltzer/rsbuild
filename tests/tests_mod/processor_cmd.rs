@@ -199,7 +199,6 @@ fn processors_list_json() {
         assert!(entry.get("processor_type").is_some(), "Entry should have 'processor_type' field");
         assert!(entry.get("enabled").is_some(), "Entry should have 'enabled' field");
         assert!(entry.get("detected").is_some(), "Entry should have 'detected' field");
-        assert!(entry.get("hidden").is_some(), "Entry should have 'hidden' field");
         assert!(entry.get("batch").is_some(), "Entry should have 'batch' field");
         assert!(entry.get("description").is_some(), "Entry should have 'description' field");
     }
@@ -225,14 +224,12 @@ fn processors_list_all_json_without_config() {
     for entry in &entries {
         assert!(entry.get("name").is_some(), "Entry should have 'name' field");
         assert!(entry.get("processor_type").is_some(), "Entry should have 'processor_type' field");
-        assert!(entry.get("hidden").is_some(), "Entry should have 'hidden' field");
         assert!(entry.get("batch").is_some(), "Entry should have 'batch' field");
         assert!(entry.get("description").is_some(), "Entry should have 'description' field");
     }
 
-    // Should include both hidden and non-hidden processors
     let tera = entries.iter().find(|e| e["name"] == "tera").expect("Expected tera in list --all");
-    assert_eq!(tera["hidden"], false);
+    assert!(tera.get("name").is_some());
 }
 
 #[test]

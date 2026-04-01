@@ -20,7 +20,7 @@ single invocation for better performance.
 
 ## Source Files
 
-- Input: configured via `extensions` and `scan_dir`
+- Input: configured via `extensions` and `scan_dirs`
 - Output: none (linter)
 
 ## Configuration
@@ -31,7 +31,7 @@ enabled = true
 linter = "python"
 args = ["scripts/md_lint.py", "-q"]
 extensions = [".md"]
-scan_dir = "marp"
+scan_dirs = ["marp"]
 ```
 
 | Key | Type | Default | Description |
@@ -40,6 +40,6 @@ scan_dir = "marp"
 | `linter` | string | `""` | The command to run (required) |
 | `args` | string[] | `[]` | Extra arguments passed before file paths |
 | `extensions` | string[] | `[]` | File extensions to scan for |
-| `scan_dir` | string | `""` | Directory to scan (empty = project root) |
+| `scan_dirs` | string[] | `[""]` | Directory to scan (empty = project root) |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 | `auto_inputs` | string[] | `[]` | Auto-detected input files |

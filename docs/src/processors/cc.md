@@ -153,7 +153,7 @@ compiler and flags.
 | `single_invocation` | bool | `false` | Build programs in single compiler invocation |
 | `extra_inputs` | string[] | `[]` | Extra files that trigger rebuilds when changed |
 | `cache_output_dir` | bool | `true` | Cache the entire output directory |
-| `scan_dir` | string | `""` | Directory to scan for cc.yaml files |
+| `scan_dirs` | string[] | `[""]` | Directory to scan for cc.yaml files |
 | `extensions` | string[] | `["cc.yaml"]` | File patterns to scan for |
 
 ## Example

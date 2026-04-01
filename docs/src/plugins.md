@@ -41,7 +41,7 @@ end
 
 ```toml
 [processor.eslint]
-scan_dir = "src"
+scan_dirs = ["src"]
 extensions = [".js", ".ts"]
 ```
 
@@ -184,7 +184,7 @@ These fields control which files are passed to `discover()`:
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `scan_dir` | string | `""` | Directory to scan (`""` = project root) |
+| `scan_dirs` | string[] | `[""]` | Directory to scan (`""` = project root) |
 | `extensions` | string[] | `[]` | File extensions to match |
 | `exclude_dirs` | string[] | `[]` | Directory path segments to skip |
 | `exclude_files` | string[] | `[]` | File names to skip |
@@ -196,7 +196,7 @@ Any additional keys in the `[processor.NAME]` section are passed through to the 
 
 ```toml
 [processor.eslint]
-scan_dir = "src"
+scan_dirs = ["src"]
 extensions = [".js", ".ts"]
 max_warnings = 0          # custom key, accessible as config.max_warnings in Lua
 fix = false               # custom key, accessible as config.fix in Lua
@@ -365,6 +365,6 @@ end
 
 ```toml
 [processor.sass]
-scan_dir = "src"
+scan_dirs = ["src"]
 extensions = [".scss"]
 ```

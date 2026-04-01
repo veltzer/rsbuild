@@ -80,7 +80,7 @@ which file changed.
 make = "make"        # Make binary to use
 args = []            # Extra arguments passed to make
 target = ""          # Make target (empty = default target)
-scan_dir = ""        # Directory to scan ("" = project root)
+scan_dirs = [""]        # Directory to scan ("" = project root)
 extensions = ["Makefile"]
 extra_inputs = []    # Additional files that trigger rebuilds when changed
 ```
@@ -90,7 +90,7 @@ extra_inputs = []    # Additional files that trigger rebuilds when changed
 | `make` | string | `"make"` | Path or name of the make binary |
 | `args` | string[] | `[]` | Extra arguments passed to every make invocation |
 | `target` | string | `""` | Make target to build (empty = default target) |
-| `scan_dir` | string | `""` | Directory to scan for Makefiles |
+| `scan_dirs` | string[] | `[""]` | Directory to scan for Makefiles |
 | `extensions` | string[] | `["Makefile"]` | File names to match |
 | `exclude_paths` | string[] | `[]` | Paths (relative to project root) to exclude |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds (in addition to directory contents) |

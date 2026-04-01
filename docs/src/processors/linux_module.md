@@ -111,7 +111,7 @@ extra_inputs = []        # Extra files that trigger rebuilds
 |-----|------|---------|-------------|
 | `enabled` | bool | `true` | Enable/disable the processor |
 | `extra_inputs` | string[] | `[]` | Extra files that trigger rebuilds when changed |
-| `scan_dir` | string | `""` | Directory to scan for linux-module.yaml files |
+| `scan_dirs` | string[] | `[""]` | Directory to scan for linux-module.yaml files |
 | `extensions` | string[] | `["linux-module.yaml"]` | File patterns to scan for |
 | `exclude_dirs` | string[] | common excludes | Directories to skip during scanning |
 

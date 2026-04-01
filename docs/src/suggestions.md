@@ -377,7 +377,7 @@ Grades:
 
 ### `rsconstruct init --detect`
 - Scan the project and generate a complete `rsconstruct.toml` with all detected processors enabled and configured.
-- Goes beyond `smart auto` by also setting processor-specific config (scan_dir, extensions, tool paths).
+- Goes beyond `smart auto` by also setting processor-specific config (scan_dirs, extensions, tool paths).
 - **Urgency**: medium | **Complexity**: medium
 
 ### `rsconstruct fmt`  — Auto-format rsconstruct.toml

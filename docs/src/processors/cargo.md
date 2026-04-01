@@ -26,7 +26,7 @@ When any tracked file changes, rsconstruct will re-run cargo.
 
 For Cargo workspaces, each `Cargo.toml` (root and members) is discovered as a
 separate product. To build only the workspace root, use `exclude_paths` to skip
-member directories, or configure `scan_dir` to limit discovery.
+member directories, or configure `scan_dirs` to limit discovery.
 
 ## Source Files
 
@@ -41,7 +41,7 @@ cargo = "cargo"          # Cargo binary to use
 command = "build"        # Cargo command (build, check, test, clippy, etc.)
 args = []                # Extra arguments passed to cargo
 profiles = ["dev", "release"]  # Cargo profiles to build
-scan_dir = ""            # Directory to scan ("" = project root)
+scan_dirs = [""]            # Directory to scan ("" = project root)
 extensions = ["Cargo.toml"]
 extra_inputs = []        # Additional files that trigger rebuilds
 cache_output_dir = true  # Cache the target/ directory for fast restore after clean
@@ -53,7 +53,7 @@ cache_output_dir = true  # Cache the target/ directory for fast restore after cl
 | `command` | string | `"build"` | Cargo subcommand to run |
 | `args` | string[] | `[]` | Extra arguments passed to cargo |
 | `profiles` | string[] | `["dev", "release"]` | Cargo profiles to build (creates one product per profile) |
-| `scan_dir` | string | `""` | Directory to scan for Cargo.toml files |
+| `scan_dirs` | string[] | `[""]` | Directory to scan for Cargo.toml files |
 | `extensions` | string[] | `["Cargo.toml"]` | File names to match |
 | `exclude_dirs` | string[] | `["/.git/", "/target/", ...]` | Directory patterns to exclude |
 | `exclude_paths` | string[] | `[]` | Paths (relative to project root) to exclude |

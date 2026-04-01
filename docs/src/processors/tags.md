@@ -205,7 +205,7 @@ Unused tags in tags (not used by any file):
 
 ## Source Files
 
-- Input: `**/*.md` (configurable via `scan_dir` / `extensions`)
+- Input: `**/*.md` (configurable via `scan_dirs` / `extensions`)
 - Output: `out/tags/tags.db`
 
 ## Configuration

@@ -34,7 +34,7 @@ When any tracked file changes, rsconstruct will re-run clippy.
 cargo = "cargo"          # Cargo binary to use
 command = "clippy"       # Cargo command (usually "clippy")
 args = []                # Extra arguments passed to cargo clippy
-scan_dir = ""            # Directory to scan ("" = project root)
+scan_dirs = [""]            # Directory to scan ("" = project root)
 extensions = ["Cargo.toml"]
 extra_inputs = []        # Additional files that trigger rebuilds
 ```
@@ -44,7 +44,7 @@ extra_inputs = []        # Additional files that trigger rebuilds
 | `cargo` | string | `"cargo"` | Path or name of the cargo binary |
 | `command` | string | `"clippy"` | Cargo subcommand to run |
 | `args` | string[] | `[]` | Extra arguments passed to cargo clippy |
-| `scan_dir` | string | `""` | Directory to scan for Cargo.toml files |
+| `scan_dirs` | string[] | `[""]` | Directory to scan for Cargo.toml files |
 | `extensions` | string[] | `["Cargo.toml"]` | File names to match |
 | `exclude_dirs` | string[] | `["/.git/", "/target/", ...]` | Directory patterns to exclude |
 | `exclude_paths` | string[] | `[]` | Paths (relative to project root) to exclude |

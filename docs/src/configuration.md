@@ -60,7 +60,7 @@ Customize with config fields:
 ```toml
 [processor.pylint]
 args = ["--disable=C0114,C0116"]
-scan_dir = "src"
+scan_dirs = ["src"]
 ```
 
 Remove the section to disable the processor.
@@ -71,11 +71,11 @@ Run the same processor multiple times with different configurations by adding na
 
 ```toml
 [processor.pylint.core]
-scan_dir = "src/core"
+scan_dirs = ["src/core"]
 args = ["--disable=C0114"]
 
 [processor.pylint.tests]
-scan_dir = "tests"
+scan_dirs = ["tests"]
 args = ["--disable=C0114,C0116"]
 ```
 
@@ -125,7 +125,7 @@ Common fields available to all processors:
 | `extra_inputs` | array of strings | `[]` | Additional input files that trigger rebuild when changed. |
 | `auto_inputs` | array of strings | varies | Config files auto-detected as inputs (e.g., `.pylintrc`). |
 | `batch` | boolean | `true` | Whether to batch multiple files into a single tool invocation. |
-| `scan_dir` | string | varies | Directory to scan for source files (empty = project root). |
+| `scan_dirs` | string | varies | Directory to scan for source files (empty = project root). |
 | `extensions` | array of strings | varies | File extensions to match. |
 | `exclude_dirs` | array of strings | varies | Directory path segments to exclude from scanning. |
 | `exclude_files` | array of strings | `[]` | File names to exclude. |

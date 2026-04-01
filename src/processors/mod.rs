@@ -716,7 +716,7 @@ pub use checkers::{
     StandardProcessor, StylelintProcessor,
     TaploProcessor, TermsProcessor, TidyProcessor, XmllintProcessor, YamllintProcessor, YqProcessor,
 };
-pub use generators::{A2xProcessor, CcSingleFileProcessor, ChromiumProcessor, DrawioProcessor, GeneratorProcessor, Jinja2Processor, LibreofficeProcessor, LinuxModuleProcessor, MakoProcessor, MarpProcessor, MarkdownProcessor, MermaidProcessor, ObjdumpProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, ProtobufProcessor, SassProcessor, TagsProcessor, TeraProcessor};
+pub use generators::{A2xProcessor, CcSingleFileProcessor, ChromiumProcessor, DrawioProcessor, GeneratorProcessor, Jinja2Processor, LibreofficeProcessor, LinuxModuleProcessor, MakoProcessor, MarpProcessor, MarkdownProcessor, MermaidProcessor, ObjdumpProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, ProtobufProcessor, RustSingleFileProcessor, SassProcessor, TagsProcessor, TeraProcessor};
 pub use mass_generators::{CargoProcessor, CcProcessor, GemProcessor, JekyllProcessor, MdbookProcessor, NpmProcessor, PipProcessor, SphinxProcessor};
 pub(crate) use generators::tags as tags_cmd;
 pub(crate) use checkers::terms;
@@ -986,6 +986,8 @@ pub static TOOLS: &[ToolInfo] = &[
     tool!("pip",             "python", "system", "python3 -m ensurepip"),
     tool!("jsonlint",        "python", "pip"),
     tool!("cpplint",         "python", "pip"),
+    tool!("black",           "python", "pip"),
+    tool!("pytest",          "python", "pip"),
     tool!("a2x",             "python", "apt", "asciidoc"),
     tool!("python3",         "python", "apt"),
     // Node tools
@@ -1039,6 +1041,8 @@ pub static TOOLS: &[ToolInfo] = &[
     tool!("tidy",            "system", "apt"),
     tool!("xmllint",         "system", "apt", "libxml2-utils"),
     tool!("cmake",           "system", "apt"),
+    tool!("protoc",          "system", "apt", "protobuf-compiler"),
+    tool!("sass",            "node", "npm"),
     tool_multi!("hadolint",   "system",
         ("binary", "wget -O ~/.local/bin/hadolint https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64 && chmod +x ~/.local/bin/hadolint"),
         ("brew",   "hadolint"),

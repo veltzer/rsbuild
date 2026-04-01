@@ -85,6 +85,7 @@ macro_rules! for_each_processor {
             HADOLINT,       hadolint,       HadolintConfig,        HadolintProcessor,        ("", &["Dockerfile"], BUILD_TOOL_EXCLUDES);
             JEKYLL,         jekyll,         JekyllConfig,          JekyllProcessor,          ("", &["_config.yml"], BUILD_TOOL_EXCLUDES);
             SASS,           sass,           SassConfig,            SassProcessor,            ("sass", &[".scss", ".sass"], &[]);
+            RUST_SINGLE_FILE, rust_single_file, RustSingleFileConfig, RustSingleFileProcessor, ("src", &[".rs"], &[]);
             SLIDEV,         slidev,         SlidevConfig,          SlidevProcessor,          ("", &[".md"], BUILD_TOOL_EXCLUDES);
         }
     };

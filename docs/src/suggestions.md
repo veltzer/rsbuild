@@ -7,49 +7,6 @@ Grades:
 - **Urgency**: `high` (users need this), `medium` (nice to have), `low` (speculative/future)
 - **Complexity**: `low` (hours), `medium` (days), `high` (weeks+)
 
-## New Processors
-
-### Linting / Checking (stub-based)
-
-#### black-check
-- Python formatting verification using `black --check`.
-- Verifies files are formatted without modifying them.
-- Config: `args`, `extra_inputs`, `scan`.
-- **Urgency**: low | **Complexity**: low
-
-### Compilation / Generation
-
-#### rust_single_file
-- Compile single-file Rust programs (`.rs`) to executables, like cc_single_file but for Rust.
-- Useful for exercise/example repositories.
-- Config: `rustc` (default `"rustc"`), `flags`, `output_suffix`, `extra_inputs`, `scan`.
-- **Urgency**: medium | **Complexity**: medium
-
-#### sass
-- Compile `.scss`/`.sass` files to `.css`.
-- Single-file transformation using `sass` or `dart-sass`.
-- Config: `compiler` (default `"sass"`), `args`, `extra_inputs`, `scan`.
-- **Urgency**: low | **Complexity**: low
-
-#### protobuf
-- Compile `.proto` files to generated code using `protoc`.
-- Config: `protoc` (default `"protoc"`), `args`, `language` (default `"cpp"`), `extra_inputs`, `scan`.
-- **Urgency**: low | **Complexity**: medium
-
-### Testing
-
-#### pytest
-- Run Python test files and produce pass/fail stubs.
-- Each `test_*.py` file becomes a product.
-- Config: `runner` (default `"pytest"`), `args`, `extra_inputs`, `scan` (default extensions `["test_*.py"]`).
-- **Urgency**: medium | **Complexity**: medium
-
-#### doctest
-- Run Python doctests and produce stubs.
-- Each `.py` file with doctests produces a stub.
-- Config: `args`, `extra_inputs`, `scan`.
-- **Urgency**: low | **Complexity**: medium
-
 ## Build Execution
 
 ### Distributed builds

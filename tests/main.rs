@@ -70,6 +70,7 @@ mod processors {
     pub mod pyrefly;
     pub mod ruff;
     pub mod rumdl;
+    pub mod rust_single_file;
     pub mod sass;
     pub mod script;
     pub mod shellcheck;

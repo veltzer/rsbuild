@@ -43,6 +43,12 @@ Never use a `_check` suffix in processor names. Name the processor after the
 tool or library it wraps — do not abstract or rename it (e.g. `zspell` not
 `spellcheck`, `ruff` not `python_lint`).
 
+## Processor `new()` must be infallible
+
+Every processor's `fn new(config: XxxConfig) -> Self` must return `Self`, not
+`Result<Self>`. This is enforced at compile time by the registry macro. If
+construction can fail, defer the failure to `execute()` or `discover()`.
+
 ## Processor directory layout
 
 Each processor category directory (`src/processors/checkers/`,

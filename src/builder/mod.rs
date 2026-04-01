@@ -105,19 +105,21 @@ macro_rules! gen_processor_dispatch {
             processors
         }
     };
-    (@construct $proc_type:ident, $cfg:ident) => {
-        Ok(Some(Box::new(proc_mod::$proc_type::new($cfg))))
-    };
+    // Construct a processor. new() must return Self (not Result<Self>).
+    // This is enforced by the type annotation: if new() returns Result,
+    // the assignment to `proc` will fail to compile with a clear error.
+    (@construct $proc_type:ident, $cfg:ident) => {{
+        let proc: proc_mod::$proc_type = proc_mod::$proc_type::new($cfg);
+        Ok(Some(Box::new(proc)))
+    }};
+    // Register a processor with default config. new() must return Self (not Result<Self>).
     (@register_default $processors:ident, $const_name:ident, $field:ident, $config_type:ty, $proc_type:ident,
      $scan_dir:expr, $exts:expr, $excl:expr) => {
         {
             let mut cfg = <$config_type>::default();
             cfg.scan.resolve($scan_dir, $exts, $excl);
-            Builder::register(
-                &mut $processors,
-                proc_names::$const_name,
-                proc_mod::$proc_type::new(cfg),
-            );
+            let proc: proc_mod::$proc_type = proc_mod::$proc_type::new(cfg);
+            Builder::register(&mut $processors, proc_names::$const_name, proc);
         }
     };
 }

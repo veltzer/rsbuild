@@ -528,7 +528,7 @@ impl ProcessorConfig {
     }
 }
 
-pub(crate) fn default_script_check_linter() -> String {
+pub(crate) fn default_script_linter() -> String {
     "true".into()
 }
 
@@ -700,7 +700,7 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         ("cargo", "profiles") => Some(FieldType::StringArray),
         ("cargo" | "clippy", "cargo" | "command") => Some(FieldType::String),
         // mypy, pyrefly, shellcheck, rumdl, yamllint, jq, jsonlint, taplo
-        ("mypy" | "pyrefly" | "shellcheck" | "luacheck" | "script_check", "checker") => Some(FieldType::String),
+        ("mypy" | "pyrefly" | "shellcheck" | "luacheck" | "script", "checker") => Some(FieldType::String),
         ("rumdl" | "yamllint" | "jsonlint" | "taplo", "linter") => Some(FieldType::String),
         ("jq", "checker") => Some(FieldType::String),
         // tags

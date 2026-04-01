@@ -57,7 +57,7 @@ macro_rules! for_each_processor {
             DRAWIO,         drawio,         DrawioConfig,          DrawioProcessor,          ("", &[".drawio"], BUILD_TOOL_EXCLUDES);
             LIBREOFFICE,    libreoffice,    LibreofficeConfig,     LibreofficeProcessor,     ("", &[".odp"], BUILD_TOOL_EXCLUDES);
             PDFUNITE,       pdfunite,       PdfuniteConfig,        PdfuniteProcessor,        ("", &["course.yaml"], BUILD_TOOL_EXCLUDES);
-            SCRIPT_CHECK,   script_check,   ScriptCheckConfig,     ScriptCheckProcessor,     ("", &[], &[]);
+            SCRIPT,   script,   ScriptConfig,     ScriptProcessor,     ("", &[], &[]);
             LINUX_MODULE,   linux_module,   LinuxModuleConfig,     LinuxModuleProcessor,     ("", &["linux-module.yaml"], BUILD_TOOL_EXCLUDES);
             CPPLINT,        cpplint,        CpplintConfig,         CpplintProcessor,         ("src", &[".c", ".cc", ".h", ".hh"], CC_EXCLUDE_DIRS);
             CHECKPATCH,     checkpatch,     CheckpatchConfig,      CheckpatchProcessor,      ("src", &[".c", ".h"], CC_EXCLUDE_DIRS);

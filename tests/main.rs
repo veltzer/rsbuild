@@ -65,7 +65,7 @@ mod processors {
     pub mod pyrefly;
     pub mod ruff;
     pub mod rumdl;
-    pub mod script_check;
+    pub mod script;
     pub mod shellcheck;
     pub mod zspell;
     pub mod sphinx;

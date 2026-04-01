@@ -443,13 +443,13 @@ fn checker_and_generator_both_rebuild_on_shared_input_change() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
-    // Enable both tera (generator) and script_check (checker) on .tera files
+    // Enable both tera (generator) and script (checker) on .tera files
     fs::write(
         project_path.join("rsconstruct.toml"),
         concat!(
             "[processor.tera]\n",
             "\n",
-            "[processor.script_check]\n",
+            "[processor.script]\n",
             "scan_dir = \"tera.templates\"\n",
             "extensions = [\".tera\"]\n",
             "linter = \"true\"\n",

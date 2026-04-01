@@ -61,7 +61,7 @@
     - [Pyrefly](processors/pyrefly.md)
     - [Ruff](processors/ruff.md)
     - [Rumdl](processors/rumdl.md)
-    - [Script Check](processors/script_check.md)
+    - [Script](processors/script.md)
     - [Shellcheck](processors/shellcheck.md)
     - [Slidev](processors/slidev.md)
     - [Zspell](processors/zspell.md)

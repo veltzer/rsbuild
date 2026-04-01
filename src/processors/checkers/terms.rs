@@ -158,7 +158,8 @@ fn sorted_terms(terms: &HashSet<String>) -> Vec<&str> {
 // --- Text analysis helpers ---
 
 /// Find ranges in the text that should be excluded from term processing:
-/// YAML frontmatter (--- ... ---) and fenced code blocks (``` ... ```).
+/// YAML frontmatter (--- ... ---), fenced code blocks (``` ... ```),
+/// and HTML comments (<!-- ... -->).
 fn excluded_ranges(text: &str) -> Vec<(usize, usize)> {
     let mut ranges = Vec::new();
 
@@ -221,6 +222,28 @@ fn excluded_ranges(text: &str) -> Vec<(usize, usize)> {
             pos += 1;
         }
     }
+
+    // HTML comments: <!-- ... -->
+    let comment_open = b"<!--";
+    let comment_close = b"-->";
+    pos = 0;
+    while pos + 4 <= bytes.len() {
+        if &bytes[pos..pos + 4] == comment_open {
+            let start = pos;
+            pos += 4;
+            while pos + 3 <= bytes.len() {
+                if &bytes[pos..pos + 3] == comment_close {
+                    pos += 3;
+                    ranges.push((start, pos));
+                    break;
+                }
+                pos += 1;
+            }
+        } else {
+            pos += 1;
+        }
+    }
+
     ranges
 }
 

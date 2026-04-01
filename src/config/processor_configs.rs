@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::{default_true, default_script_check_linter, default_cc_compiler, default_cxx_compiler, default_output_suffix, KnownFields, ScanConfig};
+use super::{default_true, default_script_linter, default_cc_compiler, default_cxx_compiler, default_output_suffix, KnownFields, ScanConfig};
 
 /// Generate a checker config struct with standard fields.
 ///
@@ -1080,8 +1080,8 @@ checker_config!(ShellcheckConfig, extensions: [".sh", ".bash"], linter: "shellch
 checker_config!(LuacheckConfig, extensions: [".lua"], linter: "luacheck", auto_inputs: [".luacheckrc"]);
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ScriptCheckConfig {
-    #[serde(default = "default_script_check_linter")]
+pub struct ScriptConfig {
+    #[serde(default = "default_script_linter")]
     pub linter: String,
     #[serde(default)]
     pub args: Vec<String>,
@@ -1095,7 +1095,7 @@ pub struct ScriptCheckConfig {
     pub scan: ScanConfig,
 }
 
-impl Default for ScriptCheckConfig {
+impl Default for ScriptConfig {
     fn default() -> Self {
         Self {
             linter: "true".into(),
@@ -1114,7 +1114,7 @@ impl Default for ScriptCheckConfig {
     }
 }
 
-impl KnownFields for ScriptCheckConfig {
+impl KnownFields for ScriptConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
             "linter", "args", "extra_inputs", "auto_inputs", "batch",

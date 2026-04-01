@@ -1033,6 +1033,9 @@ pub struct TagsConfig {
     /// Require list-type fields to have items in sorted order.
     #[serde(default)]
     pub sorted_tags: bool,
+    /// Fail the build when tags in the allowlist are not used by any file.
+    #[serde(default)]
+    pub check_unused: bool,
     #[serde(default)]
     pub extra_inputs: Vec<String>,
     #[serde(default)]
@@ -1054,6 +1057,7 @@ impl Default for TagsConfig {
             field_types: HashMap::new(),
             required_field_groups: Vec::new(),
             sorted_tags: false,
+            check_unused: false,
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             batch: true,
@@ -1067,7 +1071,7 @@ impl KnownFields for TagsConfig {
         &[
             "output", "tags_dir", "required_fields", "required_values",
             "unique_fields", "field_types", "required_field_groups", "sorted_tags",
-            "extra_inputs", "auto_inputs", "batch",
+            "check_unused", "extra_inputs", "auto_inputs", "batch",
         ]
     }
 }

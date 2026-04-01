@@ -228,7 +228,7 @@ fn backtick_span_ranges(text: &str, fenced: &[(usize, usize)]) -> Vec<(usize, us
             while i < bytes.len() && bytes[i] != b'`' && bytes[i] != b'\n' {
                 i += 1;
             }
-            if i < bytes.len() && bytes[i] == b'`' && i > open + 1 {
+            if i < bytes.len() && bytes[i] == b'`' && i > open {
                 spans.push((open, i + 1)); // include both backticks
             }
             if i < bytes.len() {
@@ -265,9 +265,16 @@ fn find_case_insensitive(haystack: &str, needle: &str, start: usize) -> Option<u
     if n.is_empty() || start + n.len() > h.len() {
         return None;
     }
-    for i in start..=(h.len() - n.len()) {
+    let mut i = start;
+    let limit = h.len() - n.len();
+    while i <= limit {
         if h[i..i + n.len()].eq_ignore_ascii_case(n) {
             return Some(i);
+        }
+        // Advance to next UTF-8 char boundary
+        i += 1;
+        while i <= limit && !haystack.is_char_boundary(i) {
+            i += 1;
         }
     }
     None
@@ -286,8 +293,14 @@ fn find_term_occurrences(text: &str, term: &str) -> Vec<(usize, usize)> {
         let after_ok = end >= bytes.len() || is_word_boundary(bytes, end);
         if before_ok && after_ok {
             results.push((start, end));
+            pos = end;
+        } else {
+            // Advance to next UTF-8 char boundary
+            pos = start + 1;
+            while pos < text.len() && !text.is_char_boundary(pos) {
+                pos += 1;
+            }
         }
-        pos = start + 1;
     }
     results
 }

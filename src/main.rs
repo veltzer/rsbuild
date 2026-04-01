@@ -399,6 +399,7 @@ fn run() -> Result<()> {
                     processors::tags_cmd::check_tags(&tags_config)?;
                 }
                 cli::TagsAction::Suggest { path } => processors::tags_cmd::suggest_tags(&db_path, &path)?,
+                cli::TagsAction::Merge { path } => processors::tags_cmd::merge_tags(&tags_dir, &path)?,
             }
         }
         Commands::Tools { action } => {

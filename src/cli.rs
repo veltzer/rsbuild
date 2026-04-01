@@ -573,6 +573,11 @@ pub enum TagsAction {
         /// Path to the file
         path: String,
     },
+    /// Merge tags from another project's tag_lists directory into the current one
+    Merge {
+        /// Path to the other project's tag_lists directory
+        path: String,
+    },
 }
 
 /// CLI arguments shared between Build and Watch commands.

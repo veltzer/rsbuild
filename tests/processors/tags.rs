@@ -244,14 +244,15 @@ fn tags_frontmatter() {
 
 #[test]
 fn tags_unused_strict_fails() {
-    // Build should fail when tag_lists contains unused tags
-    let temp_dir = setup_tags_project(
+    // Build should fail when tag_lists contains unused tags and check_unused is enabled
+    let temp_dir = setup_tags_project_with_config(
         &[
             ("a.md", "---\ntags:\n  - tools:active\n---\n"),
         ],
         &[
             ("tools.txt", "active\nobsolete\n"),
         ],
+        "[processor.tags]\ncheck_unused = true\n",
     );
     let p = temp_dir.path();
 

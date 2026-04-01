@@ -277,17 +277,19 @@ impl ProductDiscovery for TagsProcessor {
             }
 
             // Check for unused tags (in allowlist but not used by any file)
-            let used_tags: HashSet<&String> = tag_to_files.keys().collect();
-            let mut unused: Vec<&String> = allowed.iter()
-                .filter(|t| !used_tags.contains(t))
-                .collect();
-            if !unused.is_empty() {
-                unused.sort();
-                let mut msg = format!("Unused tags in {} (not used by any file):\n", self.config.tags_dir);
-                for tag in &unused {
-                    msg.push_str(&format!("  {}\n", tag));
+            if self.config.check_unused {
+                let used_tags: HashSet<&String> = tag_to_files.keys().collect();
+                let mut unused: Vec<&String> = allowed.iter()
+                    .filter(|t| !used_tags.contains(t))
+                    .collect();
+                if !unused.is_empty() {
+                    unused.sort();
+                    let mut msg = format!("Unused tags in {} (not used by any file):\n", self.config.tags_dir);
+                    for tag in &unused {
+                        msg.push_str(&format!("  {}\n", tag));
+                    }
+                    bail!("{}", msg.trim_end());
                 }
-                bail!("{}", msg.trim_end());
             }
         }
 
@@ -1505,6 +1507,87 @@ pub(crate) fn load_tags_dir(dir: &Path) -> Result<HashSet<String>> {
     }
 
     Ok(tags)
+}
+
+/// Merge tags from another project's tag_lists directory into the current one.
+/// For each .txt file in `source_dir`:
+///   - If a file with the same name exists in `tags_dir`, merge (union) and sort the entries.
+///   - Otherwise, copy the file as-is.
+///
+/// Also copies files that exist in the destination but not the source back to the source.
+pub fn merge_tags(tags_dir: &str, source_dir: &str) -> Result<()> {
+    let src = Path::new(source_dir);
+    if !src.is_dir() {
+        bail!("Source directory `{}` does not exist or is not a directory", source_dir);
+    }
+    let dest = Path::new(tags_dir);
+    if !dest.is_dir() {
+        bail!("Tags directory `{}` does not exist or is not a directory", tags_dir);
+    }
+
+    let mut merged_count = 0;
+    let mut copied_count = 0;
+
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().is_none_or(|e| e != "txt") {
+            continue;
+        }
+        let filename = path.file_name().unwrap();
+        let dest_path = dest.join(filename);
+
+        let source_content = fs::read_to_string(&path)?;
+        let source_entries: HashSet<String> = source_content
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty() && !l.starts_with('#'))
+            .collect();
+
+        if dest_path.exists() {
+            let dest_content = fs::read_to_string(&dest_path)?;
+            let mut all_entries: HashSet<String> = dest_content
+                .lines()
+                .map(|l| l.trim().to_string())
+                .filter(|l| !l.is_empty() && !l.starts_with('#'))
+                .collect();
+            let before = all_entries.len();
+            all_entries.extend(source_entries);
+            let added = all_entries.len() - before;
+            if added > 0 {
+                let mut sorted: Vec<String> = all_entries.into_iter().collect();
+                sorted.sort();
+                fs::write(&dest_path, sorted.join("\n") + "\n")?;
+                merged_count += 1;
+                println!("  Merged: {} ({} new entries)", filename.to_string_lossy(), added);
+            }
+        } else {
+            let mut sorted: Vec<String> = source_entries.into_iter().collect();
+            sorted.sort();
+            fs::write(&dest_path, sorted.join("\n") + "\n")?;
+            copied_count += 1;
+            println!("  Copied: {}", filename.to_string_lossy());
+        }
+    }
+
+    // Copy files that exist in destination but not in source back to source
+    for entry in fs::read_dir(dest)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().is_none_or(|e| e != "txt") {
+            continue;
+        }
+        let filename = path.file_name().unwrap();
+        let src_path = src.join(filename);
+        if !src_path.exists() {
+            fs::copy(&path, &src_path)?;
+            copied_count += 1;
+            println!("  Copied to source: {}", filename.to_string_lossy());
+        }
+    }
+
+    println!("Done. Merged {} file(s), copied {} new file(s).", merged_count, copied_count);
+    Ok(())
 }
 
 /// Check if a tag is in the allowed set.

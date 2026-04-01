@@ -545,6 +545,22 @@ pub fn merge_terms(config: &TermsConfig, source_dir: &str) -> Result<()> {
         }
     }
 
+    // Copy files that exist in destination but not in source back to source
+    for entry in fs::read_dir(dest)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().is_none_or(|e| e != "txt") {
+            continue;
+        }
+        let filename = path.file_name().unwrap();
+        let src_path = src.join(filename);
+        if !src_path.exists() {
+            fs::copy(&path, &src_path)?;
+            copied_count += 1;
+            println!("  Copied to source: {}", filename.to_string_lossy());
+        }
+    }
+
     println!("Done. Merged {} file(s), copied {} new file(s).", merged_count, copied_count);
     Ok(())
 }

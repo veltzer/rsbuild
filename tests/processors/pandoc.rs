@@ -1,5 +1,4 @@
 use std::fs;
-use std::path::Path;
 use tempfile::TempDir;
 use crate::common::{run_rsconstruct_with_env, tool_available};
 

@@ -39,6 +39,16 @@ When adding a new processor, use the identity string everywhere. Do not
 abbreviate, rename, or add suffixes (`Gen`, `Bin`, etc.) to any of the
 derived names.
 
+## Processor directory layout
+
+Each processor category directory (`src/processors/checkers/`,
+`src/processors/generators/`, `src/processors/mass_generators/`) must contain
+only processor implementation files — one processor per `.rs` file (plus
+`mod.rs`). Shared utilities, helpers, or supporting code used by multiple
+processors must live in `src/processors/` directly, not inside a category
+subdirectory. This keeps each category directory a flat, scannable list of
+processors.
+
 ## Test naming for processors
 
 Test functions for a processor must be prefixed with the processor name.

@@ -187,19 +187,28 @@ impl BuildGraph {
         let id = self.products.len();
 
         // Check for output conflicts before mutating anything.
-        // If the exact same product (same inputs and outputs) is re-added during
-        // fixed-point discovery, silently return the existing product id.
-        // The processor name may differ due to instance remapping (e.g., the
-        // existing product was remapped from "cc_single_file" to "cc_single_file.clang"
-        // but discover still passes the type name "cc_single_file"), so we also
-        // accept when one name is a prefix of the other with a "." separator.
+        // During fixed-point discovery, the same processor may re-declare the same
+        // outputs with a potentially expanded input set (due to virtual files from
+        // upstream generators). When the same processor (or its remapped instance
+        // name) re-declares the same outputs, update the existing product's inputs
+        // to the new (superset) list and return the existing id.
         for output in &outputs {
             if let Some(&existing_id) = self.output_to_product.get(output) {
                 let existing = self.products.get(existing_id).expect(crate::errors::INVALID_PRODUCT_ID);
                 let same_processor = existing.processor == processor
                     || existing.processor.starts_with(&format!("{}.", processor))
                     || processor.starts_with(&format!("{}.", existing.processor));
-                if same_processor && existing.inputs == inputs && existing.outputs == outputs {
+                // During fixed-point discovery, the same processor may re-declare
+                // the same product with an expanded input set (virtual files from
+                // upstream generators were added to the FileIndex). Detect this as:
+                // same processor, same outputs, and new inputs are a superset of
+                // (or equal to) the existing inputs.
+                let is_superset = same_processor && existing.outputs == outputs
+                    && existing.inputs.iter().all(|i| inputs.contains(i));
+                if is_superset {
+                    if existing.inputs != inputs {
+                        self.products[existing_id].inputs = inputs;
+                    }
                     return Ok(existing_id);
                 }
                 return Err(crate::exit_code::RsconstructError::new(

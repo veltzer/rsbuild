@@ -162,15 +162,17 @@ impl Builder {
             .map(PathBuf::from)
             .collect();
 
-        // Walk the entire project tree. We disable .gitignore handling because
-        // unknown files often live in gitignored directories (e.g. out/).
-        // We do our own filtering against git-tracked and RSConstruct output sets.
+        // Walk the project tree, respecting .gitignore so that intentionally
+        // ignored files (IDE configs, virtualenvs, *.pyc, etc.) are not flagged
+        // as unknown. RSConstruct outputs in gitignored directories (e.g. out/)
+        // are already excluded via the rsconstruct_outputs/rsconstruct_output_dirs
+        // checks, so respecting .gitignore doesn't hide anything we care about.
         let mut unknown_files: Vec<PathBuf> = Vec::new();
         let walker = WalkBuilder::new(".")
             .hidden(false)
-            .git_ignore(false)
-            .git_global(false)
-            .git_exclude(false)
+            .git_ignore(true)
+            .git_global(true)
+            .git_exclude(true)
             .build();
 
         for entry in walker {

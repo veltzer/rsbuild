@@ -36,7 +36,7 @@ Items from `suggestions.md` that have been implemented.
 - **markdownlint** — Lint Markdown files for structural issues. Uses `mdl` or `markdownlint-cli`.
 - **pandoc** — Convert Markdown to other formats (PDF, HTML, EPUB). Generator processor.
 - **jinja2** — Render Jinja2 templates (`.j2`) via Python jinja2 library. `src/processors/generators/jinja2.rs`.
-- **black-check** — Python formatting verification using `black --check`. `src/processors/checkers/black_check.rs`.
+- **black** — Python formatting verification using `black --check`. `src/processors/checkers/black.rs`.
 - **rust_single_file** — Compile single-file Rust programs to executables. `src/processors/generators/rust_single_file.rs`.
 - **sass** — Compile SCSS/SASS files to CSS. `src/processors/generators/sass.rs`.
 - **protobuf** — Compile `.proto` files to generated code using `protoc`. `src/processors/generators/protobuf.rs`.

@@ -426,7 +426,7 @@ checker_config!(PylintConfig, extensions: [".py"], auto_inputs: [".pylintrc"]);
 
 checker_config!(PytestConfig, extensions: [".py"], auto_inputs: ["conftest.py", "pytest.ini", "pyproject.toml"]);
 
-checker_config!(BlackCheckConfig, extensions: [".py"], auto_inputs: ["pyproject.toml"]);
+checker_config!(BlackConfig, extensions: [".py"], auto_inputs: ["pyproject.toml"]);
 
 checker_config!(DoctestConfig, extensions: [".py"]);
 

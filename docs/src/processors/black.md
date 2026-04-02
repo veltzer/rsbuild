@@ -1,4 +1,4 @@
-# Black Check Processor
+# Black Processor
 
 ## Purpose
 
@@ -15,7 +15,7 @@ Python files matching configured extensions are checked via `black --check`. The
 ## Configuration
 
 ```toml
-[processor.black_check]
+[processor.black]
 extensions = [".py"]                      # File extensions to check (default: [".py"])
 extra_inputs = []                         # Additional files that trigger rechecks when changed
 args = []                                 # Extra arguments passed to black

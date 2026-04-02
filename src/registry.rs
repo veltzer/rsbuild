@@ -19,7 +19,7 @@ macro_rules! for_each_processor {
             PYLINT,         pylint,         PylintConfig,          PylintProcessor,          ("", &[".py"], PYTHON_EXCLUDE_DIRS);
             MYPY,           mypy,           MypyConfig,            MypyProcessor,            ("", &[".py"], PYTHON_EXCLUDE_DIRS);
             PYREFLY,        pyrefly,        PyreflyConfig,         PyreflyProcessor,         ("", &[".py"], PYTHON_EXCLUDE_DIRS);
-            BLACK_CHECK,    black_check,    BlackCheckConfig,      BlackCheckProcessor,      ("", &[".py"], PYTHON_EXCLUDE_DIRS);
+            BLACK,          black,          BlackConfig,           BlackProcessor,           ("", &[".py"], PYTHON_EXCLUDE_DIRS);
             DOCTEST,        doctest,        DoctestConfig,         DoctestProcessor,         ("", &[".py"], PYTHON_EXCLUDE_DIRS);
             PYTEST,         pytest,         PytestConfig,          PytestProcessor,          ("tests", &[".py"], PYTHON_EXCLUDE_DIRS);
             CC_SINGLE_FILE, cc_single_file, CcSingleFileConfig,    CcSingleFileProcessor,    ("src", &[".c", ".cc"], &[]);

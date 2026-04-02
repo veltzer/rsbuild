@@ -466,7 +466,7 @@ macro_rules! simple_checker {
 
 mod aspell;
 mod ascii;
-mod black_check;
+mod black;
 mod checkpatch;
 mod clippy;
 mod clang_tidy;
@@ -514,7 +514,7 @@ pub(crate) mod terms;
 
 pub use aspell::AspellProcessor;
 pub use ascii::AsciiProcessor;
-pub use black_check::BlackCheckProcessor;
+pub use black::BlackProcessor;
 pub use checkpatch::CheckpatchProcessor;
 pub use clippy::ClippyProcessor;
 pub use clang_tidy::ClangTidyProcessor;

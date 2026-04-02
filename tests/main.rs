@@ -34,7 +34,7 @@ mod processors {
     pub mod a2x;
     pub mod ascii;
     pub mod aspell;
-    pub mod black_check;
+    pub mod black;
     pub mod cargo;
     pub mod cc;
     pub mod clippy;

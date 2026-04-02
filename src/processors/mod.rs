@@ -705,7 +705,7 @@ where
 
 // Re-export from subdirectories
 pub use checkers::{
-    AsciiProcessor, AspellProcessor, BlackCheckProcessor,
+    AsciiProcessor, AspellProcessor, BlackProcessor,
     CheckpatchProcessor, ClippyProcessor, ClangTidyProcessor, CppcheckProcessor, CpplintProcessor,
     CheckstyleProcessor, CmakeProcessor, DoctestProcessor,
     HadolintProcessor, EslintProcessor, HtmlhintProcessor, HtmllintProcessor,

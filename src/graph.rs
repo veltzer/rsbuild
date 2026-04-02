@@ -187,12 +187,19 @@ impl BuildGraph {
         let id = self.products.len();
 
         // Check for output conflicts before mutating anything.
-        // If the exact same product (same processor, inputs, outputs) is re-added
-        // during fixed-point discovery, silently return the existing product id.
+        // If the exact same product (same inputs and outputs) is re-added during
+        // fixed-point discovery, silently return the existing product id.
+        // The processor name may differ due to instance remapping (e.g., the
+        // existing product was remapped from "cc_single_file" to "cc_single_file.clang"
+        // but discover still passes the type name "cc_single_file"), so we also
+        // accept when one name is a prefix of the other with a "." separator.
         for output in &outputs {
             if let Some(&existing_id) = self.output_to_product.get(output) {
                 let existing = self.products.get(existing_id).expect(crate::errors::INVALID_PRODUCT_ID);
-                if existing.processor == processor && existing.inputs == inputs && existing.outputs == outputs {
+                let same_processor = existing.processor == processor
+                    || existing.processor.starts_with(&format!("{}.", processor))
+                    || processor.starts_with(&format!("{}.", existing.processor));
+                if same_processor && existing.inputs == inputs && existing.outputs == outputs {
                     return Ok(existing_id);
                 }
                 return Err(crate::exit_code::RsconstructError::new(

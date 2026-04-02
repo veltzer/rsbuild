@@ -223,9 +223,9 @@ fn run() -> Result<()> {
                     let builder = Builder::new()?;
                     builder.hardclean()?;
                 }
-                CleanAction::Unknown { dry_run } => {
+                CleanAction::Unknown { dry_run, no_gitignore } => {
                     let builder = Builder::new()?;
-                    builder.clean_unknown(!dry_run, cli.verbose)?;
+                    builder.clean_unknown(!dry_run, cli.verbose, !no_gitignore)?;
                 }
             }
         }

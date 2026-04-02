@@ -349,6 +349,9 @@ pub enum CleanAction {
         /// Show what would be removed without actually deleting
         #[arg(long)]
         dry_run: bool,
+        /// Include gitignored files as unknown (by default they are skipped)
+        #[arg(long)]
+        no_gitignore: bool,
     },
 }
 

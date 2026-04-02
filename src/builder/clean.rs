@@ -124,7 +124,7 @@ impl Builder {
 
     /// Remove files not tracked by git and not known as RSConstruct build outputs.
     /// Dry-run by default (lists files); use `force` to actually delete.
-    pub fn clean_unknown(&self, force: bool, verbose: bool) -> Result<()> {
+    pub fn clean_unknown(&self, force: bool, verbose: bool, respect_gitignore: bool) -> Result<()> {
         use ignore::WalkBuilder;
         use std::process::Command;
 
@@ -170,9 +170,9 @@ impl Builder {
         let mut unknown_files: Vec<PathBuf> = Vec::new();
         let walker = WalkBuilder::new(".")
             .hidden(false)
-            .git_ignore(true)
-            .git_global(true)
-            .git_exclude(true)
+            .git_ignore(respect_gitignore)
+            .git_global(respect_gitignore)
+            .git_exclude(respect_gitignore)
             .build();
 
         for entry in walker {

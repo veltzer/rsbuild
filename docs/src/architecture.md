@@ -119,13 +119,96 @@ Processors never walk the filesystem themselves. Instead, `auto_detect` and `dis
 
 ## Build pipeline
 
-1. **File indexing** — The project tree is walked once to build the `FileIndex`
-2. **Discovery** — Each enabled processor queries the file index and creates products
-3. **Graph construction** — Products are added to the `BuildGraph` with their dependencies
-4. **Topological sort** — The graph is sorted to determine build order
-5. **Cache check** — Each product's inputs are hashed (SHA-256) and compared against the cache
-6. **Execution** — Stale products are rebuilt; up-to-date products are skipped or restored from cache
-7. **Cache update** — Successfully built products have their outputs stored in the cache
+This is the core algorithm — every `rsconstruct build` follows these phases
+in order. Use `--phases` to see timing for each phase.
+
+### Phase 1: File indexing
+
+The project tree is walked once to build the `FileIndex` — a sorted list of
+all non-ignored files. This is the only filesystem walk; all subsequent file
+lookups go through the index. See [File indexing](#file-indexing) below.
+
+### Phase 2: Discovery (fixed-point loop)
+
+Each enabled processor queries the file index and adds products to the
+`BuildGraph`. Discovery runs in a **fixed-point loop** to handle
+cross-processor dependencies:
+
+```
+file_index = walk filesystem
+loop (max 10 passes):
+    for each processor:
+        processor.discover(graph, file_index)
+    if no new products were added → break
+    collect outputs from new products
+    inject them as virtual files into file_index
+```
+
+On each pass, processors may re-declare existing products (silently
+deduplicated) or discover new products whose inputs are virtual files from
+upstream generators. The loop converges when a full pass adds nothing new.
+Most projects converge in 1 pass; projects with generator → checker/generator
+chains converge in 2.
+
+See [Cross-Processor Dependencies](cross-processor-dependencies.md) for
+details on deduplication and the virtual file mechanism.
+
+### Phase 3: Dependency analysis
+
+Dependency analyzers (e.g., the C/C++ header scanner) run against the graph
+to add additional input edges. For example, if `main.c` includes `util.h`,
+the analyzer adds `util.h` as an input to the `main.c` product. Results are
+cached in `deps.redb` for incremental builds.
+
+### Phase 4: Tool version hashing
+
+For each processor with a tool lock entry (`rsconstruct tools lock`), the
+locked tool version hash is appended to the product's config hash. This
+ensures that upgrading a tool (e.g., `ruff` 0.4 → 0.5) triggers rebuilds
+even if source files haven't changed.
+
+### Phase 5: Dependency resolution
+
+`resolve_dependencies()` scans the graph for products whose inputs match
+other products' outputs. When found, it creates a dependency edge — the
+producer must complete before the consumer can start. This is how
+cross-processor ordering works automatically (e.g., pandoc runs before the
+explicit site generator because pandoc's HTML outputs are the site
+generator's inputs).
+
+After resolution, the graph is topologically sorted to produce the execution
+order.
+
+### Phase 6: Classify
+
+Each product is classified as one of:
+
+- **Skip (up-to-date)** — input checksum matches the cache entry and all
+  outputs exist on disk. No work needed.
+- **Restore** — input checksum matches a cache entry but outputs are missing
+  (e.g., after `rsconstruct clean`). Outputs are restored from cache via
+  hardlink or copy.
+- **Build (stale)** — input checksum doesn't match any cache entry. The
+  product must be rebuilt.
+
+Input checksums are computed by hashing all input files (SHA-256). The mtime
+pre-check (`mtime_check = true`, default) skips rehashing files whose mtime
+hasn't changed since the last build.
+
+### Phase 7: Execute
+
+Products are executed in topological order, respecting dependency edges.
+Independent products at the same dependency level run in parallel (controlled
+by `-j` / `RSCONSTRUCT_THREADS`). Batch-capable processors group their
+products into a single tool invocation.
+
+For each product:
+1. Compute input checksum (if not already done in classify)
+2. Check cache — skip or restore if possible
+3. Execute the processor's command
+4. On success: store outputs in the cache (content-addressed under
+   `.rsconstruct/objects/`)
+5. On failure: report error (or continue if `--keep-going`)
 
 ## Determinism
 

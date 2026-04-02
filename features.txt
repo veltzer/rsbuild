@@ -3,3 +3,5 @@ allow to override the out folder at the processor level. I don't see the out fol
 
 why cant I do "rsconstruct prcoessors config pyrefly"
 I cant only do defconfig
+
+when I do "tags collect" I want to scan source files and collect back to the tag collection any tags which are missing from it.

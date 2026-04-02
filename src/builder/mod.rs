@@ -325,6 +325,26 @@ impl Builder {
         Ok(available)
     }
 
+    /// Return the set of configured processor instance names that have 0 products
+    /// (i.e., don't match any files).
+    pub fn no_file_processors(&self) -> Result<Vec<String>> {
+        let processors = self.create_processors()?;
+        let graph = self.build_graph_with_processors(&processors)?;
+
+        let mut has_products: std::collections::HashSet<&str> = std::collections::HashSet::new();
+        for product in graph.products() {
+            has_products.insert(product.processor.as_str());
+        }
+
+        let mut empty: Vec<String> = sorted_keys(&processors)
+            .into_iter()
+            .filter(|name| !has_products.contains(name.as_str()))
+            .cloned()
+            .collect();
+        empty.sort();
+        Ok(empty)
+    }
+
     /// Check whether a processor should run. In the instance-based model,
     /// all declared processors are active (existence in config = enabled).
     fn is_processor_active(&self, _name: &str, _processor: &dyn ProductDiscovery) -> bool {

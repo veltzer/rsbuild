@@ -308,6 +308,8 @@ pub enum SmartAction {
         #[arg(required = true)]
         names: Vec<String>,
     },
+    /// Remove processors from rsconstruct.toml that don't match any files
+    RemoveNoFileProcessors,
 }
 
 #[derive(Subcommand)]

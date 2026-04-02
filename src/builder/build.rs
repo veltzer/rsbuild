@@ -237,6 +237,10 @@ impl Builder {
         let graph = self.build_graph_with_processors(&processors)?;
 
         let products: Vec<&_> = graph.products().iter().collect();
+        if products.is_empty() && processors.is_empty() {
+            println!("No products discovered.");
+            return Ok(());
+        }
 
         let labels = ProductStatusLabels {
             current: (color::green("UP-TO-DATE"), "up-to-date"),
@@ -254,6 +258,10 @@ impl Builder {
         if breakdown {
             // Collect unique source files per processor, then count by extension
             let mut per_processor_files: BTreeMap<&str, std::collections::HashSet<&std::path::Path>> = BTreeMap::new();
+            // Seed with all processors so 0-file processors are shown
+            for name in &all_proc_names {
+                per_processor_files.entry(name).or_default();
+            }
             for product in &products {
                 let files = per_processor_files.entry(&product.processor).or_default();
                 for input in &product.inputs {
@@ -275,11 +283,15 @@ impl Builder {
             let max_name = per_processor.keys().map(|n| n.len()).max().unwrap_or(0);
             for (proc_name, ext_counts) in &per_processor {
                 let total: usize = ext_counts.values().sum();
-                let breakdown_str = ext_counts.iter()
-                    .map(|(ext, count)| format!("{} .{}", count, ext))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                println!("  {:<width$} {} files ({})", format!("{}:", proc_name), total, breakdown_str, width = max_name + 1);
+                if total == 0 {
+                    println!("  {:<width$} 0 files", format!("{}:", proc_name), width = max_name + 1);
+                } else {
+                    let breakdown_str = ext_counts.iter()
+                        .map(|(ext, count)| format!("{} .{}", count, ext))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    println!("  {:<width$} {} files ({})", format!("{}:", proc_name), total, breakdown_str, width = max_name + 1);
+                }
             }
         }
 

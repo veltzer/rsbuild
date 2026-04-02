@@ -352,6 +352,11 @@ fn run() -> Result<()> {
                     let detected = builder.detected_and_available_processors()?;
                     builder::smart::auto(&detected)?;
                 }
+                cli::SmartAction::RemoveNoFileProcessors => {
+                    let builder = Builder::new()?;
+                    let empty = builder.no_file_processors()?;
+                    builder::smart::remove_no_file_processors(&empty)?;
+                }
             }
         }
         Commands::Status { breakdown } => {

@@ -213,3 +213,43 @@ pub(crate) fn auto(available: &HashSet<String>) -> Result<()> {
     }
     Ok(())
 }
+
+/// Remove processors from rsconstruct.toml that don't match any files.
+pub(crate) fn remove_no_file_processors(empty_processors: &[String]) -> Result<()> {
+    if empty_processors.is_empty() {
+        println!("All processors match at least one file.");
+        return Ok(());
+    }
+
+    let mut doc = load_doc()?;
+    let table = processor_table(&mut doc)?;
+    let mut removed = Vec::new();
+
+    for name in empty_processors {
+        // Handle both single-instance (pylint) and the type part of named instances (pylint.core)
+        let type_name = name.split('.').next().unwrap_or(name);
+        if name.contains('.') {
+            // Named instance: remove the sub-key from [processor.TYPE]
+            if let Some(type_table) = table.get_mut(type_name).and_then(|t| t.as_table_mut()) {
+                let sub_name = &name[type_name.len() + 1..];
+                if type_table.remove(sub_name).is_some() {
+                    removed.push(name.as_str());
+                    // If the type table is now empty, remove it entirely
+                    if type_table.is_empty() {
+                        table.remove(type_name);
+                    }
+                }
+            }
+        } else if table.remove(name.as_str()).is_some() {
+            removed.push(name.as_str());
+        }
+    }
+
+    if removed.is_empty() {
+        println!("No processors to remove.");
+    } else {
+        save_doc(&doc)?;
+        println!("Removed {} processor(s) with no files: {}", removed.len(), removed.join(", "));
+    }
+    Ok(())
+}

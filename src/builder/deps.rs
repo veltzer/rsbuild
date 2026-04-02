@@ -40,14 +40,27 @@ impl Builder {
                     .map(|inst| (inst.instance_name.as_str(), inst.type_name.as_str()))
                     .collect();
 
-                // Phase 1: Discover products
-                for name in sorted_keys(&processors) {
-                    if self.is_processor_active(name, processors[name].as_ref()) {
-                        processors[name].discover(&mut graph, &self.file_index)?;
+                // Phase 1: Discover products (fixed-point loop for cross-processor deps)
+                let active: Vec<String> = sorted_keys(&processors).into_iter()
+                    .filter(|name| self.is_processor_active(name, processors[*name].as_ref()))
+                    .cloned()
+                    .collect();
+                let mut file_index = self.file_index.clone();
+                for _pass in 0..10 {
+                    let before = graph.products().len();
+                    for name in &active {
+                        processors[name].discover(&mut graph, &file_index)?;
                         if let Some(&type_name) = instance_to_type.get(name.as_str()) {
                             graph.remap_processor_name(type_name, name);
                         }
                     }
+                    let after = graph.products().len();
+                    if after == before { break; }
+                    let outputs: Vec<std::path::PathBuf> = graph.products()[before..after]
+                        .iter()
+                        .flat_map(|p| p.outputs.iter().cloned())
+                        .collect();
+                    if file_index.add_virtual_files(&outputs) == 0 { break; }
                 }
 
                 let product_count = graph.products().len();

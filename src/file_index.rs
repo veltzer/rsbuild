@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::config::ScanConfig;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileIndex {
     files: Vec<PathBuf>,
 }
@@ -143,6 +143,24 @@ impl FileIndex {
         results.sort();
         results.dedup();
         results
+    }
+
+    /// Add virtual files (declared outputs from generators) to the index.
+    /// Used by the fixed-point discovery loop so downstream processors can
+    /// discover products for files that don't exist on disk yet.
+    /// Returns the number of files actually added (not already present).
+    pub fn add_virtual_files(&mut self, paths: &[PathBuf]) -> usize {
+        let mut added = 0;
+        for path in paths {
+            if self.files.binary_search(path).is_err() {
+                self.files.push(path.clone());
+                added += 1;
+            }
+        }
+        if added > 0 {
+            self.files.sort();
+        }
+        added
     }
 
     /// Return all files in the index.

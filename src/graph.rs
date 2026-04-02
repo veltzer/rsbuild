@@ -186,10 +186,15 @@ impl BuildGraph {
     pub fn add_product_with_variant(&mut self, inputs: Vec<PathBuf>, outputs: Vec<PathBuf>, processor: &str, config_hash: Option<String>, variant: Option<&str>) -> Result<usize> {
         let id = self.products.len();
 
-        // Check for output conflicts before mutating anything
+        // Check for output conflicts before mutating anything.
+        // If the exact same product (same processor, inputs, outputs) is re-added
+        // during fixed-point discovery, silently return the existing product id.
         for output in &outputs {
             if let Some(&existing_id) = self.output_to_product.get(output) {
                 let existing = self.products.get(existing_id).expect(crate::errors::INVALID_PRODUCT_ID);
+                if existing.processor == processor && existing.inputs == inputs && existing.outputs == outputs {
+                    return Ok(existing_id);
+                }
                 return Err(crate::exit_code::RsconstructError::new(
                     crate::exit_code::RsconstructExitCode::GraphError,
                     format!(

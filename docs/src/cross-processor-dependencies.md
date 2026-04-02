@@ -213,7 +213,19 @@ already available.
 
 ## Current Status
 
-Cross-processor dependencies are **not yet implemented**. The dependency graph
-machinery (`resolve_dependencies()`, topological sort, executor ordering) is
-correct and would handle cross-processor edges properly once downstream products
-are discovered. The gap is purely in the discovery phase.
+Cross-processor dependencies are **implemented** using Approach C (fixed-point
+discovery loop). After each discovery pass, newly declared outputs are injected
+as virtual files into the `FileIndex`. Discovery re-runs with the expanded index
+until no new products are found (up to 10 iterations).
+
+Key implementation details:
+
+- `FileIndex::add_virtual_files()` inserts declared output paths into the index
+  so downstream processors can discover them via `scan()`.
+- `BuildGraph::add_product()` silently deduplicates exact re-declarations (same
+  processor, inputs, and outputs) so processors can safely re-run on each pass.
+- The loop runs in all three discovery sites: the main build graph builder,
+  `build_graph_filtered`, and the deps builder.
+- `--phases` output shows per-pass statistics when multiple passes are needed.
+- Most projects converge in 1 pass (no cross-processor chains). Projects with
+  generator → checker chains converge in 2 passes.

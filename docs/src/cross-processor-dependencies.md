@@ -222,10 +222,35 @@ Key implementation details:
 
 - `FileIndex::add_virtual_files()` inserts declared output paths into the index
   so downstream processors can discover them via `scan()`.
-- `BuildGraph::add_product()` silently deduplicates exact re-declarations (same
-  processor, inputs, and outputs) so processors can safely re-run on each pass.
+- `BuildGraph::add_product()` handles re-declarations during multi-pass
+  discovery (see below).
 - The loop runs in all three discovery sites: the main build graph builder,
   `build_graph_filtered`, and the deps builder.
 - `--phases` output shows per-pass statistics when multiple passes are needed.
 - Most projects converge in 1 pass (no cross-processor chains). Projects with
   generator → checker chains converge in 2 passes.
+
+### Deduplication during multi-pass discovery
+
+When processors re-run on subsequent passes, they may try to add products that
+already exist. `add_product()` detects this and handles two cases:
+
+1. **Identical re-declaration** — Same processor, same outputs, same inputs.
+   The product is silently skipped.
+
+2. **Expanded inputs** — Same processor, same outputs, but the new inputs are a
+   superset of the existing inputs. This happens when a processor like `tags`
+   collects all matching files into a single product. On pass 2, virtual files
+   from generator outputs are now in the `FileIndex`, so `tags` discovers the
+   same product with additional inputs. The existing product's inputs are
+   updated to the expanded set.
+
+Both cases account for instance name remapping: a product may have been
+remapped from `cc_single_file` to `cc_single_file.clang` after pass 1, but
+`discover()` still passes the type name `cc_single_file` on pass 2. The
+dedup check accepts processor names where one is a qualified instance of the
+other (e.g., `cc_single_file` matches `cc_single_file.clang`).
+
+Genuinely conflicting products — different processors (or the same processor
+with different inputs that are not a superset) declaring the same output —
+still produce an `Output conflict` error.

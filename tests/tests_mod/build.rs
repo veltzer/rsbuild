@@ -632,3 +632,73 @@ outputs = ["out/report.html"]
         .iter().map(|v| v.as_str().unwrap()).collect();
     assert_eq!(outputs, vec!["out/report.html"]);
 }
+
+/// Test that a downstream processor discovers files in a directory that doesn't
+/// exist on disk yet — the directory is created by an upstream generator.
+/// This is a clean-build scenario: the generator outputs to out/generated/,
+/// and ascii is configured to scan out/generated/ for .txt files.
+/// The out/generated/ directory does NOT exist before the build.
+#[test]
+fn cross_processor_nonexistent_output_dir() {
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let project_path = temp_dir.path();
+
+    // Create a tera template that generates a .txt file into a subdirectory.
+    // Tera scans tera.templates/ and strips the scan_dir prefix, so
+    // tera.templates/out/generated/hello.txt.tera → out/generated/hello.txt
+    fs::create_dir_all(project_path.join("tera.templates/out/generated")).unwrap();
+    fs::write(
+        project_path.join("tera.templates/out/generated/hello.txt.tera"),
+        "hello world",
+    ).unwrap();
+
+    // Configure tera (generator) and ascii (checker scanning out/generated/).
+    // The directory out/generated/ does NOT exist on disk.
+    fs::write(
+        project_path.join("rsconstruct.toml"),
+        r#"
+[processor.tera]
+
+[processor.ascii]
+scan_dirs = ["out/generated"]
+extensions = [".txt"]
+"#,
+    ).unwrap();
+
+    // Verify out/generated/ does not exist on disk
+    assert!(!project_path.join("out/generated").exists(),
+        "out/generated/ should not exist before discovery");
+
+    // Run discovery via processors files (JSON)
+    let output = run_rsconstruct_with_env(
+        project_path,
+        &["--json", "processors", "files"],
+        &[("NO_COLOR", "1")],
+    );
+    assert!(output.status.success(), "processors files failed: {}",
+        String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let parsed: Vec<serde_json::Value> = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("JSON parse failed: {}\nOutput: {}", e, stdout));
+
+    // Tera should have 1 product
+    let tera_products: Vec<&serde_json::Value> = parsed.iter()
+        .filter(|p| p["processor"].as_str() == Some("tera"))
+        .collect();
+    assert_eq!(tera_products.len(), 1, "Expected 1 tera product: {:?}", tera_products);
+
+    // ASCII should discover the tera output even though out/generated/ doesn't exist on disk.
+    // The fixed-point discovery loop injects tera's declared output as a virtual file.
+    let ascii_products: Vec<&serde_json::Value> = parsed.iter()
+        .filter(|p| p["processor"].as_str() == Some("ascii"))
+        .collect();
+    assert_eq!(ascii_products.len(), 1,
+        "ascii should discover 1 product from tera's output in nonexistent dir.\n\
+         All products: {:?}", parsed);
+
+    // Verify the ascii product's input is the tera output
+    let ascii_input = ascii_products[0]["inputs"].as_array().unwrap()[0].as_str().unwrap();
+    assert!(ascii_input.contains("out/generated/hello.txt"),
+        "ascii input should be out/generated/hello.txt, got: {}", ascii_input);
+}

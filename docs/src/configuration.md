@@ -206,4 +206,4 @@ Declare project dependencies by package manager. Used by `rsconstruct doctor` to
 | `pip` | array of strings | `[]` | Python packages to install via `pip install`. Supports version specifiers (e.g., `"ruff>=0.4"`). |
 | `npm` | array of strings | `[]` | Node.js packages to install via `npm install`. |
 | `gem` | array of strings | `[]` | Ruby gems to install via `gem install`. |
-| `system` | array of strings | `[]` | System packages checked via `which`. Not auto-installed — `rsconstruct doctor` reports missing ones. |
+| `system` | array of strings | `[]` | System packages installed via the detected package manager (`apt-get`, `dnf`, `pacman`, or `brew`). |

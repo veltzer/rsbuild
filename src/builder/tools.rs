@@ -461,13 +461,25 @@ fn run_tools_command(
                 ));
             }
             if !config.system.is_empty() {
-                println!("{}: system packages must be installed manually: {}",
-                    color::yellow("Note"),
-                    config.system.join(", "));
+                let pkgs = config.system.join(" ");
+                let (mgr, cmd) = if which::which("apt-get").is_ok() {
+                    ("apt", format!("sudo apt-get install -y {}", pkgs))
+                } else if which::which("dnf").is_ok() {
+                    ("dnf", format!("sudo dnf install -y {}", pkgs))
+                } else if which::which("pacman").is_ok() {
+                    ("pacman", format!("sudo pacman -S --noconfirm {}", pkgs))
+                } else if which::which("brew").is_ok() {
+                    ("brew", format!("brew install {}", pkgs))
+                } else {
+                    ("system", format!("echo 'No supported package manager found; install manually: {}'", pkgs))
+                };
+                commands.push((
+                    format!("[{}] {}", mgr, config.system.join(", ")),
+                    cmd,
+                ));
             }
 
             if commands.is_empty() {
-                println!("No installable dependencies (only system packages declared).");
                 return Ok(());
             }
 

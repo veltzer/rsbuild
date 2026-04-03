@@ -65,7 +65,7 @@ impl Builder {
                     println!("{} {} (system)", color::green("[ok]"), pkg);
                     ok_count += 1;
                 } else {
-                    println!("{} {} not found (system)", color::red("[FAIL]"), pkg);
+                    println!("{} {} not found (run `rsconstruct tools install-deps`)", color::red("[FAIL]"), pkg);
                     fail_count += 1;
                 }
             }

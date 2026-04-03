@@ -300,8 +300,11 @@ pub(crate) fn check_command_output(output: &Output, context: impl std::fmt::Disp
 /// Compute the scan root directory from a ScanConfig.
 /// Returns empty path if scan_dir is empty, otherwise the scan_dir as a relative path.
 /// Check if all scan roots are valid (empty means current dir, otherwise must exist).
-pub(crate) fn scan_root_valid(scan: &crate::config::ScanConfig) -> bool {
-    scan.scan_dirs().iter().all(|dir| dir.is_empty() || Path::new(dir).exists())
+/// Check if scan directories are valid. Always returns true because scan directories
+/// may not exist on disk yet but contain virtual files from the fixed-point discovery
+/// loop (upstream generator outputs). The actual filtering is done by `file_index.scan()`.
+pub(crate) fn scan_root_valid(_scan: &crate::config::ScanConfig) -> bool {
+    true
 }
 
 /// Compute a stub path for a source file.

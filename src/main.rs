@@ -472,7 +472,7 @@ fn init_project() -> Result<()> {
 # batch_size = 0
 
 [cache]
-# restore_method = "hardlink"  # or "copy"
+# restore_method = "auto"  # auto (default: copy in CI, hardlink otherwise), hardlink, or copy
 
 # Uncomment processors you want to use:
 

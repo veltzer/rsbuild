@@ -131,7 +131,7 @@ impl Builder {
                 if trimmed.starts_with("parallel = ") {
                     format!("{} # 0 = auto-detect CPU cores", line)
                 } else if trimmed.starts_with("restore_method = ") {
-                    format!("{} # options: hardlink, copy", line)
+                    format!("{} # options: auto, hardlink, copy (auto = copy in CI, hardlink otherwise)", line)
                 } else {
                     line.to_string()
                 }

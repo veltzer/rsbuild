@@ -271,7 +271,7 @@ The cache lives in `.rsconstruct/` and consists of:
 - `objects/` — stored build artifacts (addressed by content hash)
 - `deps.redb` — redb database storing source file dependencies (see [Dependency Caching](dependency-caching.md))
 
-Cache restoration can use either hardlinks (fast, same filesystem) or copies (works across filesystems), configured via `restore_method`.
+Cache restoration can use either hardlinks (fast, same filesystem) or copies (works across filesystems), configured via `restore_method`. The default is `"auto"`, which detects CI environments (via `CI=true` environment variable) and uses `"copy"` there, falling back to `"hardlink"` for local development. This avoids hardlink failures on CI runners where the cache may be on a different filesystem.
 
 ## Caching and clean behavior
 

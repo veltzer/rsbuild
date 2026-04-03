@@ -29,7 +29,7 @@ output_dir = "out"    # Global output directory prefix for generator processors
 my_excludes = ["/vendor/", "/third_party/"]  # Define variables for reuse with ${var_name}
 
 [cache]
-restore_method = "hardlink"  # or "copy" (hardlink is faster, copy works across filesystems)
+restore_method = "auto"  # auto (default: copy in CI, hardlink otherwise), hardlink, or copy
 compression = false      # Compress cached objects with zstd (requires restore_method = "copy")
 remote = "s3://my-bucket/rsconstruct-cache"  # Optional: remote cache URL
 remote_push = true       # Push local builds to remote (default: true)
@@ -165,7 +165,7 @@ Processor-specific fields are documented on each processor's page under [Process
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `restore_method` | string | `"hardlink"` | How to restore cached outputs. `"hardlink"` is faster; `"copy"` works across filesystems. |
+| `restore_method` | string | `"auto"` | How to restore cached outputs. `"auto"` (default) uses `"copy"` in CI environments (`CI=true`) and `"hardlink"` otherwise. `"hardlink"` is faster but requires same filesystem; `"copy"` works everywhere. |
 | `compression` | boolean | `false` | Compress cached objects with zstd. Incompatible with `restore_method = "hardlink"` — requires `"copy"`. |
 | `remote` | string | none | Remote cache URL. See [Remote Caching](remote-caching.md). |
 | `remote_push` | boolean | `true` | Push locally built artifacts to remote cache. |

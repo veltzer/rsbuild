@@ -319,6 +319,7 @@ impl ObjectStore {
                 crate::platform::set_permissions_mode(output_path, 0o644)
                     .context("Failed to make restored file writable")?;
             }
+            RestoreMethod::Auto => unreachable!("Auto should be resolved before use"),
         }
 
         Ok(())

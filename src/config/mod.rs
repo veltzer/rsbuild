@@ -289,9 +289,27 @@ impl Default for BuildConfig {
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, Default, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum RestoreMethod {
+    /// Auto-detect: use copy in CI environments (CI=true), hardlink otherwise.
     #[default]
+    Auto,
     Hardlink,
     Copy,
+}
+
+impl RestoreMethod {
+    /// Resolve `Auto` to a concrete method based on environment.
+    pub fn resolve(self) -> Self {
+        match self {
+            RestoreMethod::Auto => {
+                if std::env::var("CI").is_ok_and(|v| v == "true") {
+                    RestoreMethod::Copy
+                } else {
+                    RestoreMethod::Hardlink
+                }
+            }
+            other => other,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

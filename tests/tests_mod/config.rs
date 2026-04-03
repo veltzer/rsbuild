@@ -55,7 +55,7 @@ fn config_show_includes_annotations() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     // The annotate_config function adds comments for constrained values
     assert!(stdout.contains("# 0 = auto-detect CPU cores"), "Expected parallel annotation");
-    assert!(stdout.contains("# options: hardlink, copy"), "Expected restore_method annotation");
+    assert!(stdout.contains("# options: auto, hardlink, copy"), "Expected restore_method annotation");
 }
 
 #[test]

@@ -153,6 +153,7 @@ Common fields available to all processors:
 | `extra_inputs` | array of strings | `[]` | Additional input files that trigger rebuild when changed. |
 | `auto_inputs` | array of strings | varies | Config files auto-detected as inputs (e.g., `.pylintrc`). |
 | `batch` | boolean | `true` | Whether to batch multiple files into a single tool invocation. |
+| `max_jobs` | integer | none | Maximum concurrent jobs for this processor. When set, limits how many instances of this processor run in parallel, regardless of the global `-j` setting. Useful for heavyweight processors (e.g., `marp` spawns Chromium). Omit to use the global parallelism. |
 | `scan_dirs` | string | varies | Directory to scan for source files (empty = project root). |
 | `extensions` | array of strings | varies | File extensions to match. |
 | `exclude_dirs` | array of strings | varies | Directory path segments to exclude from scanning. |

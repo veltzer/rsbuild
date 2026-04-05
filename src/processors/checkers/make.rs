@@ -5,22 +5,19 @@ use std::process::Command;
 use crate::config::MakeConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, SiblingFilter, DirectoryProductOpts, discover_directory_products, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProcessorBase, ProductDiscovery, SiblingFilter, DirectoryProductOpts, discover_directory_products, run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 pub struct MakeProcessor {
+    base: ProcessorBase,
     config: MakeConfig,
 }
 
 impl MakeProcessor {
     pub fn new(config: MakeConfig) -> Self {
         Self {
+            base: ProcessorBase::checker(crate::processors::names::MAKE, "Run make in directories containing Makefiles"),
             config,
         }
-    }
-
-    /// Check if make processing should be enabled
-    fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan)
     }
 
     /// Run make in the Makefile's directory
@@ -38,20 +35,14 @@ impl MakeProcessor {
 }
 
 impl ProductDiscovery for MakeProcessor {
-    fn description(&self) -> &str {
-        "Run make in directories containing Makefiles"
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        self.should_process() && !file_index.scan(&self.config.scan, true).is_empty()
-    }
+    delegate_base!(checker);
 
     fn required_tools(&self) -> Vec<String> {
         vec![self.config.make.clone()]
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-        if !self.should_process() {
+        if !crate::processors::scan_root_valid(&self.config.scan) {
             return Ok(());
         }
 
@@ -69,15 +60,7 @@ impl ProductDiscovery for MakeProcessor {
         })
     }
 
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_make(product.primary_input())
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

@@ -1,18 +1,49 @@
 use anyhow::Result;
 use std::process::Command;
 
-use crate::graph::Product;
-use crate::processors::{run_command, check_command_output};
+use crate::config::SassConfig;
+use crate::file_index::FileIndex;
+use crate::graph::{BuildGraph, Product};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output};
 
-impl_generator!(SassProcessor, crate::config::SassConfig,
-    description: "Compile SCSS/SASS files to CSS",
-    name: crate::processors::names::SASS,
-    discover: single_format, extension: "css",
-    tool_field: sass_bin
-);
+use super::DiscoverParams;
+
+pub struct SassProcessor {
+    base: ProcessorBase,
+    config: SassConfig,
+}
 
 impl SassProcessor {
-    fn execute_product(&self, product: &Product) -> Result<()> {
+    pub fn new(config: SassConfig) -> Self {
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::SASS,
+                "Compile SCSS/SASS files to CSS",
+            ),
+            config,
+        }
+    }
+}
+
+impl ProductDiscovery for SassProcessor {
+    delegate_base!(generator);
+
+    fn required_tools(&self) -> Vec<String> {
+        vec![self.config.sass_bin.clone()]
+    }
+
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+        let params = DiscoverParams {
+            scan: &self.config.scan,
+            extra_inputs: &self.config.extra_inputs,
+            config: &self.config,
+            output_dir: &self.config.output_dir,
+            processor_name: crate::processors::names::SASS,
+        };
+        super::discover_single_format(graph, file_index, &params, "css")
+    }
+
+    fn execute(&self, product: &Product) -> Result<()> {
         let input = product.primary_input();
         let output = product.primary_output();
 

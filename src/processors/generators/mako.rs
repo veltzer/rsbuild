@@ -4,7 +4,7 @@ use std::process::Command;
 use crate::config::{MakoConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, clean_outputs, run_command, check_command_output};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output};
 
 use super::TemplateItem;
 
@@ -37,23 +37,24 @@ with open('{}', 'w') as f:
 }
 
 pub struct MakoProcessor {
+    base: ProcessorBase,
     config: MakoConfig,
 }
 
 impl MakoProcessor {
     pub fn new(config: MakoConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::MAKO,
+                "Render Mako templates into output files",
+            ),
+            config,
+        }
     }
 }
 
 impl ProductDiscovery for MakoProcessor {
-    fn description(&self) -> &str {
-        "Render Mako templates into output files"
-    }
-
-    fn processor_type(&self) -> crate::processors::ProcessorType {
-        crate::processors::ProcessorType::Generator
-    }
+    delegate_base!(generator_no_auto_detect);
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
         super::find_templates(&self.config.scan, file_index).is_ok_and(|t| !t.is_empty())
@@ -88,17 +89,5 @@ impl ProductDiscovery for MakoProcessor {
             product.primary_output().to_path_buf(),
         );
         render_mako(&item)
-    }
-
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::MAKO, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

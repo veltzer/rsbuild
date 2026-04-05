@@ -6,18 +6,25 @@ use crate::config::ExplicitConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{
-    ProductDiscovery, ProcessorType, clean_outputs,
+    ProcessorBase, ProductDiscovery,
     run_command, check_command_output, ensure_output_dir,
 };
 use crate::config::output_config_hash;
 
 pub struct ExplicitProcessor {
+    base: ProcessorBase,
     config: ExplicitConfig,
 }
 
 impl ExplicitProcessor {
     pub fn new(config: ExplicitConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::explicit(
+                crate::processors::names::EXPLICIT,
+                "Run a command with explicitly declared inputs and outputs",
+            ),
+            config,
+        }
     }
 
     /// Resolve literal inputs. Unlike extra_inputs, missing files are silently
@@ -62,11 +69,11 @@ impl ExplicitProcessor {
 
 impl ProductDiscovery for ExplicitProcessor {
     fn description(&self) -> &str {
-        "Run a command with explicitly declared inputs and outputs"
+        self.base.description()
     }
 
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::Explicit
+    fn processor_type(&self) -> crate::processors::ProcessorType {
+        self.base.processor_type()
     }
 
     fn auto_detect(&self, _file_index: &FileIndex) -> bool {
@@ -136,11 +143,10 @@ impl ProductDiscovery for ExplicitProcessor {
     }
 
     fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::EXPLICIT, verbose)
+        ProcessorBase::clean(product, self.base.name, verbose)
     }
 
     fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
+        ProcessorBase::config_json(&self.config)
     }
-
 }

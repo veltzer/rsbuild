@@ -1,0 +1,3 @@
+pdfunite should scan recursively to find folders filled with pdfs.
+
+why does tera processor have trim_block parameter?

@@ -2,18 +2,49 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::process::Command;
 
-use crate::graph::Product;
-use crate::processors::{run_command_capture, check_command_output};
+use crate::config::MarkdownConfig;
+use crate::file_index::FileIndex;
+use crate::graph::{BuildGraph, Product};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command_capture, check_command_output};
 
-impl_generator!(MarkdownProcessor, crate::config::MarkdownConfig,
-    description: "Convert Markdown to HTML using markdown",
-    name: crate::processors::names::MARKDOWN,
-    discover: single_format, extension: "html",
-    tool_field_extra: markdown_bin ["perl".to_string()]
-);
+use super::DiscoverParams;
+
+pub struct MarkdownProcessor {
+    base: ProcessorBase,
+    config: MarkdownConfig,
+}
 
 impl MarkdownProcessor {
-    fn execute_product(&self, product: &Product) -> Result<()> {
+    pub fn new(config: MarkdownConfig) -> Self {
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::MARKDOWN,
+                "Convert Markdown to HTML using markdown",
+            ),
+            config,
+        }
+    }
+}
+
+impl ProductDiscovery for MarkdownProcessor {
+    delegate_base!(generator);
+
+    fn required_tools(&self) -> Vec<String> {
+        vec![self.config.markdown_bin.clone(), "perl".to_string()]
+    }
+
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+        let params = DiscoverParams {
+            scan: &self.config.scan,
+            extra_inputs: &self.config.extra_inputs,
+            config: &self.config,
+            output_dir: &self.config.output_dir,
+            processor_name: crate::processors::names::MARKDOWN,
+        };
+        super::discover_single_format(graph, file_index, &params, "html")
+    }
+
+    fn execute(&self, product: &Product) -> Result<()> {
         let input = product.primary_input();
         let output = product.primary_output();
 

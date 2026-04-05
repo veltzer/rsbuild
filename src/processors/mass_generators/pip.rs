@@ -5,15 +5,22 @@ use std::process::Command;
 use crate::config::{PipConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProcessorBase, ProductDiscovery, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 pub struct PipProcessor {
+    base: ProcessorBase,
     config: PipConfig,
 }
 
 impl PipProcessor {
     pub fn new(config: PipConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::mass_generator(
+                crate::processors::names::PIP,
+                "Install Python dependencies using pip",
+            ),
+            config,
+        }
     }
 
     /// Run pip install -r requirements.txt in the file's directory
@@ -31,15 +38,23 @@ impl PipProcessor {
 
 impl ProductDiscovery for PipProcessor {
     fn description(&self) -> &str {
-        "Install Python dependencies using pip"
+        self.base.description()
     }
 
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::MassGenerator
+    fn processor_type(&self) -> crate::processors::ProcessorType {
+        self.base.processor_type()
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
         scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, false).is_empty()
+    }
+
+    fn config_json(&self) -> Option<String> {
+        serde_json::to_string(&self.config).ok()
+    }
+
+    fn max_jobs(&self) -> Option<usize> {
+        self.config.max_jobs
     }
 
     fn required_tools(&self) -> Vec<String> {
@@ -72,17 +87,5 @@ impl ProductDiscovery for PipProcessor {
 
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_pip(product.primary_input())
-    }
-
-    fn clean(&self, _product: &Product, _verbose: bool) -> Result<usize> {
-        Ok(0)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

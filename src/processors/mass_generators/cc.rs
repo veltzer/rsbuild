@@ -6,15 +6,22 @@ use std::process::Command;
 use crate::config::{CcConfig, CcManifest, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, scan_root_valid, run_command, check_command_output, anchor_display_dir};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output, anchor_display_dir};
 
 pub struct CcProcessor {
+    base: ProcessorBase,
     config: CcConfig,
 }
 
 impl CcProcessor {
     pub fn new(config: CcConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::mass_generator(
+                crate::processors::names::CC,
+                "Build C/C++ projects from cc.yaml manifests",
+            ),
+            config,
+        }
     }
 
     /// Determine whether a source file is C++ based on extension.
@@ -253,17 +260,7 @@ impl CcProcessor {
 }
 
 impl ProductDiscovery for CcProcessor {
-    fn description(&self) -> &str {
-        "Build C/C++ projects from cc.yaml manifests"
-    }
-
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::MassGenerator
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
-    }
+    delegate_base!(mass_generator);
 
     fn required_tools(&self) -> Vec<String> {
         vec![self.config.cc.clone(), self.config.cxx.clone(), "ar".to_string()]
@@ -321,17 +318,5 @@ impl ProductDiscovery for CcProcessor {
         let display_dir = anchor_display_dir(yaml_path);
         self.execute_build(yaml_path)
             .with_context(|| format!("cc build failed in {}", display_dir))
-    }
-
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        crate::processors::clean_output_dir(product, crate::processors::names::CC, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

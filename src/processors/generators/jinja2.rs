@@ -4,7 +4,7 @@ use std::process::Command;
 use crate::config::{Jinja2Config, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, clean_outputs, run_command, check_command_output};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output};
 
 use super::TemplateItem;
 
@@ -37,23 +37,24 @@ with open('{}', 'w') as f:
 }
 
 pub struct Jinja2Processor {
+    base: ProcessorBase,
     config: Jinja2Config,
 }
 
 impl Jinja2Processor {
     pub fn new(config: Jinja2Config) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::JINJA2,
+                "Render Jinja2 templates into output files",
+            ),
+            config,
+        }
     }
 }
 
 impl ProductDiscovery for Jinja2Processor {
-    fn description(&self) -> &str {
-        "Render Jinja2 templates into output files"
-    }
-
-    fn processor_type(&self) -> crate::processors::ProcessorType {
-        crate::processors::ProcessorType::Generator
-    }
+    delegate_base!(generator_no_auto_detect);
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
         super::find_templates(&self.config.scan, file_index).is_ok_and(|t| !t.is_empty())
@@ -88,17 +89,5 @@ impl ProductDiscovery for Jinja2Processor {
             product.primary_output().to_path_buf(),
         );
         render_jinja2(&item)
-    }
-
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::JINJA2, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

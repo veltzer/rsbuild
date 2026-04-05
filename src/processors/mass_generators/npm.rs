@@ -5,15 +5,22 @@ use std::process::Command;
 use crate::config::{NpmConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProcessorBase, ProductDiscovery, SiblingFilter, run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 pub struct NpmProcessor {
+    base: ProcessorBase,
     config: NpmConfig,
 }
 
 impl NpmProcessor {
     pub fn new(config: NpmConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::mass_generator(
+                crate::processors::names::NPM,
+                "Install Node.js dependencies using npm",
+            ),
+            config,
+        }
     }
 
     /// Run npm install in the package.json's directory
@@ -29,17 +36,7 @@ impl NpmProcessor {
 }
 
 impl ProductDiscovery for NpmProcessor {
-    fn description(&self) -> &str {
-        "Install Node.js dependencies using npm"
-    }
-
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::MassGenerator
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
-    }
+    delegate_base!(mass_generator);
 
     fn required_tools(&self) -> Vec<String> {
         vec![self.config.npm.clone(), "node".to_string()]
@@ -88,17 +85,5 @@ impl ProductDiscovery for NpmProcessor {
 
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_npm(product.primary_input())
-    }
-
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        crate::processors::clean_output_dir(product, crate::processors::names::NPM, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

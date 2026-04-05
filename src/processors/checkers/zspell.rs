@@ -9,12 +9,13 @@ use crate::config::ZspellConfig;
 use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, config_file_inputs, discover_checker_products};
+use crate::processors::{ProcessorBase, ProductDiscovery, config_file_inputs, discover_checker_products};
 use crate::processors::word_manager::WordManager;
 
 const DICT_DIR: &str = "/usr/share/hunspell";
 
 pub struct ZspellProcessor {
+    base: ProcessorBase,
     config: ZspellConfig,
     /// Cached dictionary, built once on first use and reused across all execute() calls
     cached_dict: OnceLock<Result<zspell::Dictionary, String>>,
@@ -35,6 +36,7 @@ impl ZspellProcessor {
             None,
         );
         Self {
+            base: ProcessorBase::checker(crate::processors::names::ZSPELL, "Check documentation files for spelling errors"),
             config,
             cached_dict: OnceLock::new(),
             words,
@@ -169,13 +171,7 @@ impl ZspellProcessor {
 }
 
 impl ProductDiscovery for ZspellProcessor {
-    fn description(&self) -> &str {
-        "Check documentation files for spelling errors"
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        !file_index.scan(&self.config.scan, true).is_empty()
-    }
+    delegate_base!(checker);
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
         let mut extra_inputs = self.config.extra_inputs.clone();
@@ -201,10 +197,6 @@ impl ProductDiscovery for ZspellProcessor {
         )
     }
 
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
     fn supports_batch(&self) -> bool {
         self.config.auto_add_words
     }
@@ -216,9 +208,5 @@ impl ProductDiscovery for ZspellProcessor {
             |file| self.check_file(file),
             "zspell",
         )
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

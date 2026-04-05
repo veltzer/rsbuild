@@ -5,15 +5,22 @@ use std::process::Command;
 use crate::config::JekyllConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, DirectoryProductOpts, discover_directory_products, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProcessorBase, ProductDiscovery, SiblingFilter, DirectoryProductOpts, discover_directory_products, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 pub struct JekyllProcessor {
+    base: ProcessorBase,
     config: JekyllConfig,
 }
 
 impl JekyllProcessor {
     pub fn new(config: JekyllConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::mass_generator(
+                crate::processors::names::JEKYLL,
+                "Build Jekyll sites",
+            ),
+            config,
+        }
     }
 
     fn should_process(&self) -> bool {
@@ -32,13 +39,7 @@ impl JekyllProcessor {
 }
 
 impl ProductDiscovery for JekyllProcessor {
-    fn description(&self) -> &str {
-        "Build Jekyll sites"
-    }
-
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::MassGenerator
-    }
+    delegate_base!(mass_generator_no_auto_detect);
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
         self.should_process() && !file_index.scan(&self.config.scan, true).is_empty()
@@ -67,15 +68,7 @@ impl ProductDiscovery for JekyllProcessor {
         })
     }
 
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_jekyll(product.primary_input())
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

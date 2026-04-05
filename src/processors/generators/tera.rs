@@ -12,7 +12,7 @@ use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value}
 use crate::config::{TeraConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, clean_outputs, run_command_capture};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command_capture};
 
 use super::TemplateItem;
 
@@ -93,23 +93,24 @@ fn trim_block_newlines(content: &str) -> String {
 }
 
 pub struct TeraProcessor {
+    base: ProcessorBase,
     config: TeraConfig,
 }
 
 impl TeraProcessor {
     pub fn new(config: TeraConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::TERA,
+                "Render Tera templates into output files",
+            ),
+            config,
+        }
     }
 }
 
 impl ProductDiscovery for TeraProcessor {
-    fn description(&self) -> &str {
-        "Render Tera templates into output files"
-    }
-
-    fn processor_type(&self) -> crate::processors::ProcessorType {
-        crate::processors::ProcessorType::Generator
-    }
+    delegate_base!(generator_no_auto_detect);
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
         super::find_templates(&self.config.scan, file_index).is_ok_and(|t| !t.is_empty())
@@ -144,18 +145,6 @@ impl ProductDiscovery for TeraProcessor {
             product.primary_output().to_path_buf(),
         );
         render_template(&item, &self.config)
-    }
-
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::TERA, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }
 

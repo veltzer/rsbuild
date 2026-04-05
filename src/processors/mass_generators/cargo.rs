@@ -5,15 +5,22 @@ use std::process::Command;
 use crate::config::{CargoConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProcessorBase, ProductDiscovery, SiblingFilter, run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 pub struct CargoProcessor {
+    base: ProcessorBase,
     config: CargoConfig,
 }
 
 impl CargoProcessor {
     pub fn new(config: CargoConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::mass_generator(
+                crate::processors::names::CARGO,
+                "Build Rust projects using Cargo",
+            ),
+            config,
+        }
     }
 
     /// Run cargo build in the Cargo.toml's directory with the given profile
@@ -30,17 +37,7 @@ impl CargoProcessor {
 }
 
 impl ProductDiscovery for CargoProcessor {
-    fn description(&self) -> &str {
-        "Build Rust projects using Cargo"
-    }
-
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::MassGenerator
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
-    }
+    delegate_base!(mass_generator);
 
     fn required_tools(&self) -> Vec<String> {
         vec![self.config.cargo.clone()]
@@ -105,17 +102,5 @@ impl ProductDiscovery for CargoProcessor {
     fn execute(&self, product: &Product) -> Result<()> {
         let profile = product.variant.as_deref().unwrap_or("dev");
         self.execute_cargo(product.primary_input(), profile)
-    }
-
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        crate::processors::clean_output_dir(product, crate::processors::names::CARGO, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

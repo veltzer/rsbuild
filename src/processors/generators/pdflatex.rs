@@ -6,7 +6,7 @@ use std::process::Command;
 use crate::config::PdflatexConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, clean_outputs, scan_root_valid, run_command, check_command_output};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output};
 
 use super::DiscoverParams;
 
@@ -14,12 +14,19 @@ use super::DiscoverParams;
 const PDFLATEX_TEMP_EXTENSIONS: &[&str] = &[".log", ".out", ".toc", ".aux", ".nav", ".snm", ".vrb"];
 
 pub struct PdflatexProcessor {
+    base: ProcessorBase,
     config: PdflatexConfig,
 }
 
 impl PdflatexProcessor {
     pub fn new(config: PdflatexConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::PDFLATEX,
+                "Compile LaTeX documents using pdflatex",
+            ),
+            config,
+        }
     }
 
     /// Remove temporary files produced by pdflatex in the given directory.
@@ -32,17 +39,7 @@ impl PdflatexProcessor {
 }
 
 impl ProductDiscovery for PdflatexProcessor {
-    fn description(&self) -> &str {
-        "Compile LaTeX documents using pdflatex"
-    }
-
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::Generator
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
-    }
+    delegate_base!(generator);
 
     fn required_tools(&self) -> Vec<String> {
         let mut tools = vec![self.config.pdflatex.clone()];
@@ -125,15 +122,4 @@ impl ProductDiscovery for PdflatexProcessor {
         Ok(())
     }
 
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::PDFLATEX, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
-    }
 }

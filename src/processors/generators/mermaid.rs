@@ -1,18 +1,49 @@
 use anyhow::Result;
 use std::process::Command;
 
-use crate::graph::Product;
-use crate::processors::{run_command, check_command_output};
+use crate::config::MermaidConfig;
+use crate::file_index::FileIndex;
+use crate::graph::{BuildGraph, Product};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output};
 
-impl_generator!(MermaidProcessor, crate::config::MermaidConfig,
-    description: "Convert Mermaid diagrams to PNG/SVG/PDF",
-    name: crate::processors::names::MERMAID,
-    discover: multi_format, formats_field: formats,
-    tool_field_extra: mmdc_bin ["node".to_string()]
-);
+use super::DiscoverParams;
+
+pub struct MermaidProcessor {
+    base: ProcessorBase,
+    config: MermaidConfig,
+}
 
 impl MermaidProcessor {
-    fn execute_product(&self, product: &Product) -> Result<()> {
+    pub fn new(config: MermaidConfig) -> Self {
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::MERMAID,
+                "Convert Mermaid diagrams to PNG/SVG/PDF",
+            ),
+            config,
+        }
+    }
+}
+
+impl ProductDiscovery for MermaidProcessor {
+    delegate_base!(generator);
+
+    fn required_tools(&self) -> Vec<String> {
+        vec![self.config.mmdc_bin.clone(), "node".to_string()]
+    }
+
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+        let params = DiscoverParams {
+            scan: &self.config.scan,
+            extra_inputs: &self.config.extra_inputs,
+            config: &self.config,
+            output_dir: &self.config.output_dir,
+            processor_name: crate::processors::names::MERMAID,
+        };
+        super::discover_multi_format(graph, file_index, &params, &self.config.formats)
+    }
+
+    fn execute(&self, product: &Product) -> Result<()> {
         let input = product.primary_input();
         let output = product.primary_output();
 

@@ -1,18 +1,49 @@
 use anyhow::{Context, Result};
 use std::process::Command;
 
-use crate::graph::Product;
-use crate::processors::{run_command, check_command_output};
+use crate::config::DrawioConfig;
+use crate::file_index::FileIndex;
+use crate::graph::{BuildGraph, Product};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output};
 
-impl_generator!(DrawioProcessor, crate::config::DrawioConfig,
-    description: "Convert Draw.io diagrams to PNG/SVG/PDF",
-    name: crate::processors::names::DRAWIO,
-    discover: multi_format, formats_field: formats,
-    tool_field: drawio_bin
-);
+use super::DiscoverParams;
+
+pub struct DrawioProcessor {
+    base: ProcessorBase,
+    config: DrawioConfig,
+}
 
 impl DrawioProcessor {
-    fn execute_product(&self, product: &Product) -> Result<()> {
+    pub fn new(config: DrawioConfig) -> Self {
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::DRAWIO,
+                "Convert Draw.io diagrams to PNG/SVG/PDF",
+            ),
+            config,
+        }
+    }
+}
+
+impl ProductDiscovery for DrawioProcessor {
+    delegate_base!(generator);
+
+    fn required_tools(&self) -> Vec<String> {
+        vec![self.config.drawio_bin.clone()]
+    }
+
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+        let params = DiscoverParams {
+            scan: &self.config.scan,
+            extra_inputs: &self.config.extra_inputs,
+            config: &self.config,
+            output_dir: &self.config.output_dir,
+            processor_name: crate::processors::names::DRAWIO,
+        };
+        super::discover_multi_format(graph, file_index, &params, &self.config.formats)
+    }
+
+    fn execute(&self, product: &Product) -> Result<()> {
         let input = product.primary_input();
         let output = product.primary_output();
 

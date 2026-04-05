@@ -7,29 +7,30 @@ use std::path::{Path, PathBuf};
 use crate::config::{TagsConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorType, ProductDiscovery, clean_outputs, scan_root_valid};
+use crate::processors::{ProcessorBase, ProductDiscovery, scan_root_valid};
 
 const FRONTMATTER: TableDefinition<&str, &str> = TableDefinition::new("frontmatter");
 const TAG_INDEX: TableDefinition<&str, &str> = TableDefinition::new("tag_index");
 
 pub struct TagsProcessor {
+    base: ProcessorBase,
     config: TagsConfig,
 }
 
 impl TagsProcessor {
     pub fn new(config: TagsConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::TAGS,
+                "Extract YAML frontmatter tags from markdown files into a searchable database",
+            ),
+            config,
+        }
     }
 }
 
 impl ProductDiscovery for TagsProcessor {
-    fn description(&self) -> &str {
-        "Extract YAML frontmatter tags from markdown files into a searchable database"
-    }
-
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::Generator
-    }
+    delegate_base!(generator_no_auto_detect);
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
         if !scan_root_valid(&self.config.scan)
@@ -454,17 +455,6 @@ impl ProductDiscovery for TagsProcessor {
         Ok(())
     }
 
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::TAGS, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
-    }
 }
 
 /// Parse YAML frontmatter from a markdown file.

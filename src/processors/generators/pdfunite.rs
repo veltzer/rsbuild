@@ -6,26 +6,27 @@ use std::process::Command;
 use crate::config::{PdfuniteConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, clean_outputs, run_command, check_command_output};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output};
 
 pub struct PdfuniteProcessor {
+    base: ProcessorBase,
     config: PdfuniteConfig,
 }
 
 impl PdfuniteProcessor {
     pub fn new(config: PdfuniteConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::PDFUNITE,
+                "Merge PDFs from subdirectories into course bundles",
+            ),
+            config,
+        }
     }
 }
 
 impl ProductDiscovery for PdfuniteProcessor {
-    fn description(&self) -> &str {
-        "Merge PDFs from subdirectories into course bundles"
-    }
-
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::Generator
-    }
+    delegate_base!(generator_no_auto_detect);
 
     fn auto_detect(&self, _file_index: &FileIndex) -> bool {
         let base = Path::new(&self.config.source_dir);
@@ -132,15 +133,4 @@ impl ProductDiscovery for PdfuniteProcessor {
         check_command_output(&out, format_args!("pdfunite {}", output.display()))
     }
 
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::PDFUNITE, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
-    }
 }

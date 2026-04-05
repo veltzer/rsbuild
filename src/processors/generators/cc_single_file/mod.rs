@@ -7,11 +7,12 @@ use std::process::Command;
 use crate::config::{CcSingleFileConfig, CompilerProfile, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, clean_outputs, check_command_output, format_command, run_command};
+use crate::processors::{ProcessorBase, ProductDiscovery, check_command_output, format_command, run_command};
 
 use source_flags::{SourceFlags, parse_source_flags, should_exclude_for_profile};
 
 pub struct CcSingleFileProcessor {
+    base: ProcessorBase,
     config: CcSingleFileConfig,
     profiles: Vec<CompilerProfile>,
     output_dir: PathBuf,
@@ -22,6 +23,10 @@ impl CcSingleFileProcessor {
         let profiles = config.get_compiler_profiles();
         let output_dir = PathBuf::from(&config.output_dir);
         Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::CC_SINGLE_FILE,
+                "Compile C/C++ source files into executables (single-file)",
+            ),
             config,
             profiles,
             output_dir,
@@ -181,13 +186,7 @@ impl CcSingleFileProcessor {
 }
 
 impl ProductDiscovery for CcSingleFileProcessor {
-    fn description(&self) -> &str {
-        "Compile C/C++ source files into executables (single-file)"
-    }
-
-    fn processor_type(&self) -> crate::processors::ProcessorType {
-        crate::processors::ProcessorType::Generator
-    }
+    delegate_base!(generator_no_auto_detect);
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
         self.should_process() && !self.find_source_files(file_index).is_empty()
@@ -220,15 +219,4 @@ impl ProductDiscovery for CcSingleFileProcessor {
         self.compile_source(source, executable, profile, is_cpp)
     }
 
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::CC_SINGLE_FILE, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
-    }
 }

@@ -5,25 +5,27 @@ use std::process::Command;
 use crate::config::{MdlConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, check_command_output, config_file_inputs, run_command};
+use crate::processors::{ProcessorBase, ProductDiscovery, check_command_output, config_file_inputs, run_command};
 
 pub struct MdlProcessor {
+    base: ProcessorBase,
     config: MdlConfig,
 }
 
 impl MdlProcessor {
     pub fn new(config: MdlConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::checker(crate::processors::names::MDL, "Lint Markdown files using mdl (markdownlint)"),
+            config,
+        }
     }
 }
 
 impl ProductDiscovery for MdlProcessor {
-    fn description(&self) -> &str {
-        "Lint Markdown files using mdl (markdownlint)"
-    }
+    delegate_base!(checker);
 
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        !file_index.scan(&self.config.scan, true).is_empty()
+    fn required_tools(&self) -> Vec<String> {
+        vec![self.config.mdl_bin.clone(), "ruby".to_string()]
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
@@ -57,10 +59,6 @@ impl ProductDiscovery for MdlProcessor {
         Ok(())
     }
 
-    fn required_tools(&self) -> Vec<String> {
-        vec![self.config.mdl_bin.clone(), "ruby".to_string()]
-    }
-
     fn execute(&self, product: &Product) -> Result<()> {
         let file = product.primary_input();
         let mut cmd = Command::new(&self.config.mdl_bin);
@@ -74,13 +72,5 @@ impl ProductDiscovery for MdlProcessor {
         }
         let output = run_command(&mut cmd)?;
         check_command_output(&output, format_args!("mdl {}", file.display()))
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

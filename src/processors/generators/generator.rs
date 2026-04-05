@@ -6,19 +6,26 @@ use crate::config::GeneratorConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{
-    ProductDiscovery, ProcessorType, clean_outputs, scan_root_valid,
+    ProcessorBase, ProductDiscovery, scan_root_valid,
     run_command, check_command_output, execute_generator_batch,
     config_file_inputs,
 };
 use crate::config::{output_config_hash, resolve_extra_inputs};
 
 pub struct GeneratorProcessor {
+    base: ProcessorBase,
     config: GeneratorConfig,
 }
 
 impl GeneratorProcessor {
     pub fn new(config: GeneratorConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::GENERATOR,
+                "Run a user-configured script as a generator",
+            ),
+            config,
+        }
     }
 
     fn should_process(&self) -> bool {
@@ -49,13 +56,7 @@ impl GeneratorProcessor {
 }
 
 impl ProductDiscovery for GeneratorProcessor {
-    fn description(&self) -> &str {
-        "Run a user-configured script as a generator"
-    }
-
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::Generator
-    }
+    delegate_base!(generator_no_auto_detect);
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
         self.should_process() && !file_index.scan(&self.config.scan, true).is_empty()
@@ -98,23 +99,11 @@ impl ProductDiscovery for GeneratorProcessor {
         self.execute_product(product)
     }
 
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::GENERATOR, verbose)
-    }
-
     fn supports_batch(&self) -> bool {
         self.config.batch
     }
 
     fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
         execute_generator_batch(products, |pairs| self.run_pairs(pairs))
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

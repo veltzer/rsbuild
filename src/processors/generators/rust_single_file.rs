@@ -5,15 +5,22 @@ use std::process::Command;
 use crate::config::{RustSingleFileConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, clean_outputs, run_command, check_command_output, scan_root_valid};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output};
 
 pub struct RustSingleFileProcessor {
+    base: ProcessorBase,
     config: RustSingleFileConfig,
 }
 
 impl RustSingleFileProcessor {
     pub fn new(config: RustSingleFileConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::RUST_SINGLE_FILE,
+                "Compile single-file Rust programs into executables",
+            ),
+            config,
+        }
     }
 
     fn get_output_path(&self, source: &Path) -> PathBuf {
@@ -30,18 +37,7 @@ impl RustSingleFileProcessor {
 }
 
 impl ProductDiscovery for RustSingleFileProcessor {
-    fn description(&self) -> &str {
-        "Compile single-file Rust programs into executables"
-    }
-
-    fn processor_type(&self) -> crate::processors::ProcessorType {
-        crate::processors::ProcessorType::Generator
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        scan_root_valid(&self.config.scan)
-            && !file_index.scan(&self.config.scan, true).is_empty()
-    }
+    delegate_base!(generator);
 
     fn required_tools(&self) -> Vec<String> {
         vec![self.config.rustc.clone()]
@@ -90,15 +86,4 @@ impl ProductDiscovery for RustSingleFileProcessor {
         check_command_output(&out, format_args!("rustc {}", source.display()))
     }
 
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::RUST_SINGLE_FILE, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
-    }
 }

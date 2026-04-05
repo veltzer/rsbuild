@@ -7,10 +7,11 @@ use std::io::Write;
 use crate::config::AspellConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, config_file_inputs, scan_root_valid, log_command, format_command};
+use crate::processors::{ProcessorBase, ProductDiscovery, config_file_inputs, scan_root_valid, log_command, format_command};
 use crate::processors::word_manager::WordManager;
 
 pub struct AspellProcessor {
+    base: ProcessorBase,
     config: AspellConfig,
     words: WordManager,
 }
@@ -23,7 +24,11 @@ impl AspellProcessor {
             config.words_file.clone(),
             Some("personal_ws-1.1 en 0"),
         );
-        Self { config, words }
+        Self {
+            base: ProcessorBase::checker(crate::processors::names::ASPELL, "Check spelling using aspell"),
+            config,
+            words,
+        }
     }
 
     /// Load custom words from the aspell personal word list (.pws) file
@@ -88,13 +93,7 @@ impl AspellProcessor {
 }
 
 impl ProductDiscovery for AspellProcessor {
-    fn description(&self) -> &str {
-        "Check spelling using aspell"
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
-    }
+    delegate_base!(checker);
 
     fn required_tools(&self) -> Vec<String> {
         vec![self.config.aspell.clone()]
@@ -143,13 +142,5 @@ impl ProductDiscovery for AspellProcessor {
             |file| self.check_file(file),
             "aspell",
         )
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::MarpConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, clean_outputs, scan_root_valid, run_command, check_command_output};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output};
 
 use super::DiscoverParams;
 
@@ -34,27 +34,24 @@ fn cleanup_marp_tmp_dirs() {
 }
 
 pub struct MarpProcessor {
+    base: ProcessorBase,
     config: MarpConfig,
 }
 
 impl MarpProcessor {
     pub fn new(config: MarpConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::MARP,
+                "Convert Marp slides to PDF/PPTX/HTML",
+            ),
+            config,
+        }
     }
 }
 
 impl ProductDiscovery for MarpProcessor {
-    fn description(&self) -> &str {
-        "Convert Marp slides to PDF/PPTX/HTML"
-    }
-
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::Generator
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
-    }
+    delegate_base!(generator);
 
     fn required_tools(&self) -> Vec<String> {
         vec![self.config.marp_bin.clone(), "node".to_string()]
@@ -98,17 +95,5 @@ impl ProductDiscovery for MarpProcessor {
         cleanup_marp_tmp_dirs();
 
         result
-    }
-
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::MARP, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

@@ -5,15 +5,22 @@ use std::process::Command;
 use crate::config::{GemConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, SiblingFilter, scan_root_valid, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProcessorBase, ProductDiscovery, SiblingFilter, run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 pub struct GemProcessor {
+    base: ProcessorBase,
     config: GemConfig,
 }
 
 impl GemProcessor {
     pub fn new(config: GemConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::mass_generator(
+                crate::processors::names::GEM,
+                "Install Ruby dependencies using Bundler",
+            ),
+            config,
+        }
     }
 
     /// Run bundle install in the Gemfile's directory
@@ -31,17 +38,7 @@ impl GemProcessor {
 }
 
 impl ProductDiscovery for GemProcessor {
-    fn description(&self) -> &str {
-        "Install Ruby dependencies using Bundler"
-    }
-
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::MassGenerator
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
-    }
+    delegate_base!(mass_generator);
 
     fn required_tools(&self) -> Vec<String> {
         vec![self.config.bundler.clone(), "ruby".to_string()]
@@ -90,17 +87,5 @@ impl ProductDiscovery for GemProcessor {
 
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_gem(product.primary_input())
-    }
-
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        crate::processors::clean_output_dir(product, crate::processors::names::GEM, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

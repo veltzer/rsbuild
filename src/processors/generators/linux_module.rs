@@ -6,15 +6,22 @@ use std::process::Command;
 use crate::config::{LinuxModuleConfig, LinuxModuleManifest, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProductDiscovery, ProcessorType, clean_outputs, scan_root_valid, run_command, check_command_output, anchor_display_dir};
+use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output, anchor_display_dir};
 
 pub struct LinuxModuleProcessor {
+    base: ProcessorBase,
     config: LinuxModuleConfig,
 }
 
 impl LinuxModuleProcessor {
     pub fn new(config: LinuxModuleConfig) -> Self {
-        Self { config }
+        Self {
+            base: ProcessorBase::generator(
+                crate::processors::names::LINUX_MODULE,
+                "Build Linux kernel modules from linux-module.yaml manifests",
+            ),
+            config,
+        }
     }
 
     /// Parse a linux-module.yaml file.
@@ -143,17 +150,7 @@ impl LinuxModuleProcessor {
 }
 
 impl ProductDiscovery for LinuxModuleProcessor {
-    fn description(&self) -> &str {
-        "Build Linux kernel modules from linux-module.yaml manifests"
-    }
-
-    fn processor_type(&self) -> ProcessorType {
-        ProcessorType::Generator
-    }
-
-    fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, true).is_empty()
-    }
+    delegate_base!(generator);
 
     fn required_tools(&self) -> Vec<String> {
         vec!["make".to_string()]
@@ -203,15 +200,4 @@ impl ProductDiscovery for LinuxModuleProcessor {
             .with_context(|| format!("linux_module build failed in {}", display_dir))
     }
 
-    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
-        clean_outputs(product, crate::processors::names::LINUX_MODULE, verbose)
-    }
-
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
-    }
 }

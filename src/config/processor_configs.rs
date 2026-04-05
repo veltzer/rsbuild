@@ -73,6 +73,9 @@ macro_rules! checker_config {
             fn known_fields() -> &'static [&'static str] {
                 &["args", "extra_inputs", "auto_inputs", "batch", "max_jobs"]
             }
+            fn output_fields() -> &'static [&'static str] {
+                &["args"]
+            }
         }
     };
 
@@ -121,6 +124,9 @@ macro_rules! checker_config {
         impl KnownFields for $name {
             fn known_fields() -> &'static [&'static str] {
                 &["linter", "args", "extra_inputs", "auto_inputs", "batch", "max_jobs"]
+            }
+            fn output_fields() -> &'static [&'static str] {
+                &["linter", "args"]
             }
         }
     };
@@ -214,6 +220,9 @@ macro_rules! generator_config {
                 &[stringify!($tool_field), "formats", "args",
                   "extra_inputs", "auto_inputs", "output_dir", "batch", "max_jobs"]
             }
+            fn output_fields() -> &'static [&'static str] {
+                &[stringify!($tool_field), "formats", "args", "output_dir"]
+            }
         }
     };
 
@@ -273,6 +282,9 @@ macro_rules! generator_config {
                 &[stringify!($tool_field), "formats", "args",
                   "extra_inputs", "auto_inputs", "output_dir", "batch", "max_jobs"]
             }
+            fn output_fields() -> &'static [&'static str] {
+                &[stringify!($tool_field), "formats", "args", "output_dir"]
+            }
         }
     };
 
@@ -328,6 +340,9 @@ macro_rules! generator_config {
                 &[stringify!($tool_field), "args",
                   "extra_inputs", "auto_inputs", "output_dir", "batch", "max_jobs"]
             }
+            fn output_fields() -> &'static [&'static str] {
+                &[stringify!($tool_field), "args", "output_dir"]
+            }
         }
     };
 
@@ -374,6 +389,9 @@ impl KnownFields for TeraConfig {
             "strict", "trim_blocks", "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["strict", "trim_blocks"]
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -408,6 +426,9 @@ impl KnownFields for MakoConfig {
             "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &[]
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -441,6 +462,9 @@ impl KnownFields for Jinja2Config {
         &[
             "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &[]
     }
 }
 
@@ -500,6 +524,9 @@ impl KnownFields for CppcheckConfig {
             "args", "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["args"]
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -543,6 +570,9 @@ impl KnownFields for ClangTidyConfig {
         &[
             "args", "compiler_args", "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["args", "compiler_args"]
     }
 }
 
@@ -676,6 +706,12 @@ impl KnownFields for CcSingleFileConfig {
             "include_scanner", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &[
+            "cc", "cxx", "cflags", "cxxflags", "ldflags", "output_suffix",
+            "compilers", "include_paths", "output_dir", "include_scanner",
+        ]
+    }
 }
 
 // --- cc (full C/C++ project builds) ---
@@ -792,6 +828,12 @@ impl KnownFields for CcConfig {
             "extra_inputs", "cache_output_dir", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &[
+            "cc", "cxx", "cflags", "cxxflags", "ldflags",
+            "include_dirs", "single_invocation",
+        ]
+    }
 }
 
 // --- linux_module (Linux kernel module builds) ---
@@ -864,6 +906,9 @@ impl KnownFields for LinuxModuleConfig {
             "extra_inputs", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &[]
+    }
 }
 
 fn default_zspell_language() -> String {
@@ -919,6 +964,9 @@ impl KnownFields for ZspellConfig {
         &[
             "language", "words_file", "auto_add_words", "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["language", "auto_add_words"]
     }
 }
 
@@ -984,6 +1032,9 @@ impl KnownFields for CargoConfig {
             "exclude_paths",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["cargo", "command", "args", "profiles"]
+    }
 }
 
 fn default_clippy_command() -> String {
@@ -1031,6 +1082,9 @@ impl KnownFields for ClippyConfig {
             "cargo", "command", "args", "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["cargo", "command", "args"]
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -1073,6 +1127,9 @@ impl KnownFields for MakeConfig {
         &[
             "make", "args", "target", "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["make", "args", "target"]
     }
 }
 
@@ -1171,6 +1228,13 @@ impl KnownFields for TagsConfig {
             "check_unused", "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &[
+            "output", "tags_dir", "required_fields", "required_values",
+            "unique_fields", "field_types", "required_field_groups", "sorted_tags",
+            "check_unused",
+        ]
+    }
 }
 
 checker_config!(ShellcheckConfig, extensions: [".sh", ".bash"], linter: "shellcheck", auto_inputs: [".shellcheckrc"]);
@@ -1220,6 +1284,9 @@ impl KnownFields for ScriptConfig {
         &[
             "linter", "args", "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["linter", "args"]
     }
 }
 
@@ -1286,6 +1353,9 @@ impl KnownFields for GeneratorConfig {
             "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["command", "output_dir", "output_extension", "args"]
+    }
 }
 
 // --- explicit processor (many inputs → few outputs, fully declared) ---
@@ -1339,6 +1409,9 @@ impl KnownFields for ExplicitConfig {
     fn known_fields() -> &'static [&'static str] {
         &["command", "args", "inputs", "input_globs", "outputs"]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["command", "args", "inputs", "input_globs", "outputs"]
+    }
 }
 
 fn default_pip() -> String {
@@ -1379,6 +1452,9 @@ impl KnownFields for PipConfig {
         &[
             "pip", "args", "extra_inputs", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["pip", "args"]
     }
 }
 
@@ -1434,6 +1510,9 @@ impl KnownFields for SphinxConfig {
             "sphinx_build", "output_dir", "working_dir", "args", "extra_inputs", "cache_output_dir", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["sphinx_build", "output_dir", "working_dir", "args"]
+    }
 }
 
 fn default_mdbook() -> String {
@@ -1485,6 +1564,9 @@ impl KnownFields for MdbookConfig {
             "mdbook", "output_dir", "args", "extra_inputs", "cache_output_dir", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["mdbook", "output_dir", "args"]
+    }
 }
 
 fn default_npm() -> String {
@@ -1535,6 +1617,9 @@ impl KnownFields for NpmConfig {
         &[
             "npm", "command", "args", "extra_inputs", "cache_output_dir", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["npm", "command", "args"]
     }
 }
 
@@ -1601,6 +1686,9 @@ impl KnownFields for MdlConfig {
             "local_repo", "gem_home", "mdl_bin", "args", "extra_inputs", "auto_inputs", "gem_stamp", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["local_repo", "gem_home", "mdl_bin", "args", "gem_stamp"]
+    }
 }
 
 fn default_markdownlint_bin() -> String {
@@ -1658,6 +1746,9 @@ impl KnownFields for MarkdownlintConfig {
         &[
             "local_repo", "markdownlint_bin", "args", "extra_inputs", "auto_inputs", "npm_stamp", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["local_repo", "markdownlint_bin", "args", "npm_stamp"]
     }
 }
 
@@ -1731,6 +1822,9 @@ impl KnownFields for AspellConfig {
             "aspell", "args", "conf_dir", "conf", "auto_add_words", "words_file", "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["aspell", "args", "conf_dir", "conf", "auto_add_words"]
+    }
 }
 
 checker_config!(AsciiConfig, extensions: [".md"]);
@@ -1771,6 +1865,9 @@ impl Default for TermsConfig {
 impl KnownFields for TermsConfig {
     fn known_fields() -> &'static [&'static str] {
         &["terms_dir", "extra_inputs", "auto_inputs", "batch", "max_jobs"]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["terms_dir"]
     }
 }
 
@@ -1836,6 +1933,9 @@ impl KnownFields for PandocConfig {
         &[
             "pandoc", "from", "formats", "args", "extra_inputs", "auto_inputs", "output_dir", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["pandoc", "from", "formats", "args", "output_dir"]
     }
 }
 
@@ -1909,6 +2009,9 @@ impl KnownFields for PdflatexConfig {
             "pdflatex", "args", "extra_inputs", "auto_inputs", "runs", "qpdf", "output_dir", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["pdflatex", "args", "runs", "qpdf", "output_dir"]
+    }
 }
 
 fn default_a2x() -> String {
@@ -1966,6 +2069,9 @@ impl KnownFields for A2xConfig {
         &[
             "a2x", "format", "args", "extra_inputs", "auto_inputs", "output_dir", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["a2x", "format", "args", "output_dir"]
     }
 }
 
@@ -2025,6 +2131,9 @@ impl KnownFields for GemConfig {
         &[
             "bundler", "command", "gem_home", "args", "extra_inputs", "cache_output_dir", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["bundler", "command", "gem_home", "args"]
     }
 }
 
@@ -2099,6 +2208,9 @@ impl KnownFields for RustSingleFileConfig {
     fn known_fields() -> &'static [&'static str] {
         &["rustc", "flags", "output_suffix", "extra_inputs", "auto_inputs", "output_dir", "batch", "max_jobs"]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &["rustc", "flags", "output_suffix", "output_dir"]
+    }
 }
 
 fn default_pdfunite_bin() -> String {
@@ -2172,6 +2284,12 @@ impl KnownFields for PdfuniteConfig {
             "args", "extra_inputs", "auto_inputs", "output_dir", "batch", "max_jobs",
         ]
     }
+    fn output_fields() -> &'static [&'static str] {
+        &[
+            "pdfunite_bin", "source_dir", "source_ext", "source_output_dir",
+            "args", "output_dir",
+        ]
+    }
 }
 
 checker_config!(CpplintConfig, scan_dir: "src", extensions: [".c", ".cc", ".h", ".hh"]);
@@ -2216,6 +2334,9 @@ impl KnownFields for ObjdumpConfig {
         &[
             "args", "extra_inputs", "output_dir", "batch", "max_jobs",
         ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["args", "output_dir"]
     }
 }
 
@@ -2312,5 +2433,8 @@ impl Default for LicenseHeaderConfig {
 impl KnownFields for LicenseHeaderConfig {
     fn known_fields() -> &'static [&'static str] {
         &["args", "extra_inputs", "auto_inputs", "batch", "max_jobs", "header_lines"]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["args", "header_lines"]
     }
 }

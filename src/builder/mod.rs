@@ -238,6 +238,12 @@ impl Builder {
                 None => continue,
             };
 
+            // Keep only output-affecting fields for change detection.
+            // Each processor declares which config fields affect its output;
+            // changes to other fields (scan_dirs, batch, max_jobs, etc.)
+            // should not trigger config change detection.
+            let config_json = Self::filter_output_fields(name, &config_json);
+
             // Store the config and check if it changed
             if let Ok(Some(old_json)) = self.object_store.store_processor_config(name, &config_json) {
                 // Config changed - show diff
@@ -247,6 +253,30 @@ impl Builder {
                     println!("{}", diff);
                 }
             }
+        }
+    }
+
+    /// Filter a config JSON string to only include output-affecting fields.
+    /// Uses the processor's `output_fields()` declaration to determine which
+    /// fields matter for build output.
+    fn filter_output_fields(processor_name: &str, json: &str) -> String {
+        let output_fields = ProcessorConfig::output_fields_for(processor_name);
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(json) else {
+            return json.to_string();
+        };
+        let Some(obj) = value.as_object() else {
+            return json.to_string();
+        };
+        match output_fields {
+            Some(fields) => {
+                let filtered: serde_json::Map<String, serde_json::Value> = obj.iter()
+                    .filter(|(k, _)| fields.contains(&k.as_str()))
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
+                serde_json::to_string(&filtered).unwrap_or_else(|_| json.to_string())
+            }
+            // Lua plugins: no output_fields declaration, use full config
+            None => json.to_string(),
         }
     }
 

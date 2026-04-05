@@ -28,6 +28,12 @@ pub(crate) const SCAN_CONFIG_FIELDS: &[&str] = &[
 pub(crate) trait KnownFields {
     /// Return the known fields for this config struct, excluding ScanConfig fields.
     fn known_fields() -> &'static [&'static str];
+
+    /// Return only the fields that affect build output.
+    /// Changes to these fields should trigger config change detection.
+    /// Fields not listed here (e.g., scan_dirs, exclude_dirs, batch, max_jobs)
+    /// are discovery or execution parameters that don't affect what the tool produces.
+    fn output_fields() -> &'static [&'static str];
 }
 
 
@@ -424,6 +430,14 @@ macro_rules! gen_processor_config {
             pub(crate) fn known_fields_for(type_name: &str) -> Option<&'static [&'static str]> {
                 match type_name {
                     $( stringify!($field) => Some(<$config_type as KnownFields>::known_fields()), )*
+                    _ => None,
+                }
+            }
+
+            /// Return output-affecting fields for a builtin processor type, or None for Lua plugins.
+            pub(crate) fn output_fields_for(type_name: &str) -> Option<&'static [&'static str]> {
+                match type_name {
+                    $( stringify!($field) => Some(<$config_type as KnownFields>::output_fields()), )*
                     _ => None,
                 }
             }

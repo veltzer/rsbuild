@@ -24,13 +24,6 @@ fn render_template(item: &TemplateItem, config: &TeraConfig) -> Result<()> {
     // Read template content
     let template_content = fs::read_to_string(&item.source_path)?;
 
-    // Optionally trim blocks (remove first newline after block tags)
-    let template_content = if config.trim_blocks {
-        trim_block_newlines(&template_content)
-    } else {
-        template_content
-    };
-
     // Create a new Tera instance for this template
     let mut tera = Tera::default();
 
@@ -84,12 +77,6 @@ fn render_template(item: &TemplateItem, config: &TeraConfig) -> Result<()> {
     fs::write(&item.output_path, rendered)?;
 
     Ok(())
-}
-
-/// Remove first newline after block tags ({% ... %})
-fn trim_block_newlines(content: &str) -> String {
-    // Simple implementation: remove newline immediately after %}
-    content.replace("%}\n", "%}")
 }
 
 pub struct TeraProcessor {

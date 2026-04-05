@@ -794,7 +794,7 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
     // Processor-specific fields
     match (processor, field) {
         // tera
-        ("tera", "strict" | "trim_blocks") => Some(FieldType::Bool),
+        ("tera", "strict") => Some(FieldType::Bool),
         // ruff
         ("ruff", "linter") => Some(FieldType::String),
         // cc_single_file

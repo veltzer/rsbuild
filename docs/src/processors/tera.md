@@ -52,7 +52,6 @@ version = "{{ config.version }}"
 [processor.tera]
 strict = true                              # Fail on undefined variables (default: true)
 extensions = [".tera"]                     # File extensions to process (default: [".tera"])
-trim_blocks = false                        # Remove newline after block tags (default: false)
 extra_inputs = ["config/settings.py"]      # Additional files that trigger rebuilds when changed
 ```
 
@@ -60,7 +59,6 @@ extra_inputs = ["config/settings.py"]      # Additional files that trigger rebui
 |-----|------|---------|-------------|
 | `strict` | bool | `true` | Fail on undefined tera variables |
 | `extensions` | string[] | `[".tera"]` | File extensions to discover |
-| `trim_blocks` | bool | `false` | Remove first newline after block tags |
 | `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support

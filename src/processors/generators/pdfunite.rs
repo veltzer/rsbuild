@@ -8,6 +8,43 @@ use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output};
 
+/// Recursively find directories under `base` that contain files with the given extension.
+/// Results are sorted for deterministic output.
+fn find_dirs_with_ext(base: &Path, ext: &str) -> Vec<PathBuf> {
+    let mut result = Vec::new();
+    collect_dirs_with_ext(base, ext, &mut result);
+    result.sort();
+    result
+}
+
+fn collect_dirs_with_ext(dir: &Path, ext: &str, result: &mut Vec<PathBuf>) {
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    let mut has_matching_file = false;
+    let mut subdirs = Vec::new();
+    for entry in entries.flatten() {
+        let ft = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(_) => continue,
+        };
+        if ft.is_dir() {
+            subdirs.push(entry.path());
+        } else if !has_matching_file && ft.is_file() {
+            if entry.path().extension().is_some_and(|e| e == ext) {
+                has_matching_file = true;
+            }
+        }
+    }
+    if has_matching_file {
+        result.push(dir.to_path_buf());
+    }
+    for subdir in subdirs {
+        collect_dirs_with_ext(&subdir, ext, result);
+    }
+}
+
 pub struct PdfuniteProcessor {
     base: ProcessorBase,
     config: PdfuniteConfig,
@@ -33,25 +70,8 @@ impl ProductDiscovery for PdfuniteProcessor {
         if !base.exists() {
             return false;
         }
-        // Check if any subdirectory contains source files
-        let ext = &self.config.source_ext;
-        if let Ok(entries) = fs::read_dir(base) {
-            for entry in entries.flatten() {
-                if entry.file_type().is_ok_and(|ft| ft.is_dir())
-                    && let Ok(files) = fs::read_dir(entry.path())
-                {
-                    for file in files.flatten() {
-                        if file.path().extension().is_some_and(|e| {
-                            let dot_ext = format!(".{}", e.to_string_lossy());
-                            dot_ext == *ext
-                        }) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        false
+        let ext = self.config.source_ext.strip_prefix('.').unwrap_or(&self.config.source_ext);
+        !find_dirs_with_ext(base, ext).is_empty()
     }
 
     fn required_tools(&self) -> Vec<String> {
@@ -68,44 +88,41 @@ impl ProductDiscovery for PdfuniteProcessor {
         let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
         let ext = self.config.source_ext.strip_prefix('.').unwrap_or(&self.config.source_ext);
 
-        let mut subdirs: Vec<_> = fs::read_dir(base)?
-            .filter_map(|e| e.ok())
-            .filter(|e| e.file_type().is_ok_and(|ft| ft.is_dir()))
-            .collect();
-        subdirs.sort_by_key(|e| e.file_name());
+        let dirs = find_dirs_with_ext(base, ext);
 
-        for entry in subdirs {
-            let subdir_name = entry.file_name();
+        // Compute upstream scan dir once
+        let upstream_scan_dir = Path::new(&self.config.source_dir)
+            .components()
+            .next()
+            .map(|c| c.as_os_str().to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let upstream_scan_dirs = [upstream_scan_dir];
 
-            // Find all source files in this subdirectory
-            let mut source_files: Vec<PathBuf> = Vec::new();
-            for file_entry in fs::read_dir(entry.path())?.filter_map(|e| e.ok()) {
-                let path = file_entry.path();
-                if path.extension().is_some_and(|e| e == ext) {
-                    source_files.push(path);
-                }
-            }
+        for dir_path in dirs {
+            // Find all source files in this directory
+            let mut source_files: Vec<PathBuf> = fs::read_dir(&dir_path)?
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .filter(|p| p.extension().is_some_and(|e| e == ext))
+                .collect();
             if source_files.is_empty() {
                 continue;
             }
             source_files.sort();
 
-            // Compute the expected PDF paths from the upstream processor.
-            // The upstream processor (e.g. marp) scans from its scan_dir root,
-            // which is the first component of source_dir.
-            let upstream_scan_dir = Path::new(&self.config.source_dir)
-                .components()
-                .next()
-                .map(|c| c.as_os_str().to_string_lossy().into_owned())
-                .unwrap_or_default();
-            let upstream_scan_dirs = [upstream_scan_dir];
             let inputs: Vec<PathBuf> = source_files.iter().map(|src| {
                 super::output_path(src, &upstream_scan_dirs, &self.config.source_output_dir, "pdf")
             }).chain(extra.iter().cloned()).collect();
 
-            let course_name = subdir_name.to_string_lossy();
+            // Use the relative path from source_dir as the output name,
+            // replacing path separators with dashes for a flat output.
+            let relative = dir_path.strip_prefix(base).unwrap_or(&dir_path);
+            let course_name = relative.components()
+                .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                .collect::<Vec<_>>()
+                .join("-");
             let outputs = vec![
-                Path::new(&self.config.output_dir).join(format!("{}.pdf", course_name)),
+                Path::new(&self.config.output_dir).join(format!("{course_name}.pdf")),
             ];
 
             graph.add_product(inputs, outputs, crate::processors::names::PDFUNITE, hash.clone())?;

@@ -356,8 +356,6 @@ pub struct TeraConfig {
     #[serde(default = "default_true")]
     pub strict: bool,
     #[serde(default)]
-    pub trim_blocks: bool,
-    #[serde(default)]
     pub extra_inputs: Vec<String>,
     #[serde(default)]
     pub auto_inputs: Vec<String>,
@@ -373,7 +371,6 @@ impl Default for TeraConfig {
     fn default() -> Self {
         Self {
             strict: true,
-            trim_blocks: false,
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
             batch: true,
@@ -386,11 +383,11 @@ impl Default for TeraConfig {
 impl KnownFields for TeraConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "strict", "trim_blocks", "extra_inputs", "auto_inputs", "batch", "max_jobs",
+            "strict", "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
     }
     fn output_fields() -> &'static [&'static str] {
-        &["strict", "trim_blocks"]
+        &["strict"]
     }
 }
 

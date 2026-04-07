@@ -44,7 +44,7 @@ impl ProductDiscovery for GemProcessor {
         vec![self.config.bundler.clone(), "ruby".to_string()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let Some(files) = crate::processors::scan_or_skip(&self.config.scan, file_index) else {
             return Ok(());
         };
@@ -76,9 +76,9 @@ impl ProductDiscovery for GemProcessor {
                 } else {
                     anchor_dir.join(&self.config.gem_home)
                 };
-                graph.add_product_with_output_dir(inputs, vec![], crate::processors::names::GEM, hash.clone(), output_dir)?;
+                graph.add_product_with_output_dir(inputs, vec![], instance_name, hash.clone(), output_dir)?;
             } else {
-                graph.add_product(inputs, vec![], crate::processors::names::GEM, hash.clone())?;
+                graph.add_product(inputs, vec![], instance_name, hash.clone())?;
             }
         }
 

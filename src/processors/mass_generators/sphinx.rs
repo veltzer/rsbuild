@@ -55,7 +55,7 @@ impl ProductDiscovery for SphinxProcessor {
         vec![self.config.sphinx_build.clone(), "python3".to_string()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let Some(files) = crate::processors::scan_or_skip(&self.config.scan, file_index) else {
             return Ok(());
         };
@@ -74,9 +74,9 @@ impl ProductDiscovery for SphinxProcessor {
             if self.config.cache_output_dir {
                 // output_dir is at project root, NOT joined with anchor_dir
                 let output_dir = PathBuf::from(&self.config.output_dir);
-                graph.add_product_with_output_dir(inputs, vec![], crate::processors::names::SPHINX, hash.clone(), output_dir)?;
+                graph.add_product_with_output_dir(inputs, vec![], instance_name, hash.clone(), output_dir)?;
             } else {
-                graph.add_product(inputs, vec![], crate::processors::names::SPHINX, hash.clone())?;
+                graph.add_product(inputs, vec![], instance_name, hash.clone())?;
             }
         }
         Ok(())

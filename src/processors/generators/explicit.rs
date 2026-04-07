@@ -89,7 +89,7 @@ impl ProductDiscovery for ExplicitProcessor {
         }
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         if self.config.outputs.is_empty() {
             return Ok(());
         }
@@ -105,7 +105,7 @@ impl ProductDiscovery for ExplicitProcessor {
         graph.add_product(
             inputs,
             outputs,
-            crate::processors::names::EXPLICIT,
+            instance_name,
             hash,
         )?;
 

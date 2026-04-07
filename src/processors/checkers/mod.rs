@@ -43,8 +43,9 @@ macro_rules! impl_checker {
                 &self,
                 graph: &mut $crate::graph::BuildGraph,
                 file_index: &$crate::file_index::FileIndex,
+                instance_name: &str,
             ) -> anyhow::Result<()> {
-                impl_checker!(@discover self, graph, file_index, $config_field, $name, [$($guard)?])
+                impl_checker!(@discover self, graph, file_index, $config_field, instance_name, [$($guard)?])
             }
 
             fn execute(&self, product: &$crate::graph::Product) -> anyhow::Result<()> {

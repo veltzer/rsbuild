@@ -66,7 +66,7 @@ impl ProductDiscovery for GeneratorProcessor {
         vec![self.config.command.clone()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         if !self.should_process() {
             return Ok(());
         }
@@ -90,7 +90,7 @@ impl ProductDiscovery for GeneratorProcessor {
             let mut inputs = Vec::with_capacity(1 + extra.len());
             inputs.push(source.clone());
             inputs.extend_from_slice(&extra);
-            graph.add_product(inputs, vec![output], crate::processors::names::GENERATOR, hash.clone())?;
+            graph.add_product(inputs, vec![output], instance_name, hash.clone())?;
         }
         Ok(())
     }

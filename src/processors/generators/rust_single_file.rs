@@ -43,7 +43,7 @@ impl ProductDiscovery for RustSingleFileProcessor {
         vec![self.config.rustc.clone()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let files = file_index.scan(&self.config.scan, true);
         if files.is_empty() {
             return Ok(());
@@ -62,7 +62,7 @@ impl ProductDiscovery for RustSingleFileProcessor {
             graph.add_product(
                 inputs,
                 vec![output],
-                crate::processors::names::RUST_SINGLE_FILE,
+                instance_name,
                 hash.clone(),
             )?;
         }

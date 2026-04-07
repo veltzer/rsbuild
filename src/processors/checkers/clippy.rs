@@ -39,7 +39,7 @@ impl ProductDiscovery for ClippyProcessor {
         vec![self.config.cargo.clone()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         if !crate::processors::scan_root_valid(&self.config.scan) {
             return Ok(());
         }
@@ -53,7 +53,7 @@ impl ProductDiscovery for ClippyProcessor {
                 extensions: &[".rs", ".toml"],
                 excludes: &["/.git/", "/target/", "/.rsconstruct/"],
             },
-            processor_name: crate::processors::names::CLIPPY,
+            processor_name: instance_name,
             output_dir_name: None,
         })
     }

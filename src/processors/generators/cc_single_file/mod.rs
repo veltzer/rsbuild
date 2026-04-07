@@ -144,7 +144,7 @@ impl CcSingleFileProcessor {
 
     /// Shared implementation for discover and discover_for_clean.
     /// When `for_clean` is true, skips config hash and extra inputs (only needs output mapping).
-    fn discover_impl(&self, graph: &mut BuildGraph, file_index: &FileIndex, for_clean: bool) -> Result<()> {
+    fn discover_impl(&self, graph: &mut BuildGraph, file_index: &FileIndex, for_clean: bool, instance_name: &str) -> Result<()> {
         if !self.should_process() {
             return Ok(());
         }
@@ -174,7 +174,7 @@ impl CcSingleFileProcessor {
                 graph.add_product_with_variant(
                     inputs,
                     vec![executable],
-                    crate::processors::names::CC_SINGLE_FILE,
+                    instance_name,
                     cfg_hash.clone(),
                     variant,
                 )?;
@@ -202,13 +202,13 @@ impl ProductDiscovery for CcSingleFileProcessor {
         tools
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-        self.discover_impl(graph, file_index, false)
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
+        self.discover_impl(graph, file_index, false, instance_name)
     }
 
     /// Fast discovery for clean: only find outputs, skip header scanning
-    fn discover_for_clean(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-        self.discover_impl(graph, file_index, true)
+    fn discover_for_clean(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
+        self.discover_impl(graph, file_index, true, instance_name)
     }
 
     fn execute(&self, product: &Product) -> Result<()> {

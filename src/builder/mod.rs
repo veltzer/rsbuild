@@ -395,14 +395,6 @@ impl Builder {
         true
     }
 
-    /// Build the instance_name → type_name mapping for named processor instances.
-    fn instance_to_type_map(&self) -> HashMap<String, String> {
-        self.config.processor.instances.iter()
-            .filter(|inst| inst.instance_name != inst.type_name)
-            .map(|inst| (inst.instance_name.clone(), inst.type_name.clone()))
-            .collect()
-    }
-
     /// Fixed-point product discovery loop.
     /// Runs discovery for all active processors, then injects declared outputs
     /// as virtual files so downstream processors can discover products for files
@@ -414,7 +406,6 @@ impl Builder {
         active: &[impl AsRef<str>],
         for_clean: bool,
     ) -> Result<()> {
-        let instance_to_type = self.instance_to_type_map();
         let mut file_index = self.file_index.clone();
         let debug = phases_debug();
 
@@ -423,12 +414,9 @@ impl Builder {
             for name in active {
                 let name = name.as_ref();
                 if for_clean {
-                    processors[name].discover_for_clean(graph, &file_index)?;
+                    processors[name].discover_for_clean(graph, &file_index, name)?;
                 } else {
-                    processors[name].discover(graph, &file_index)?;
-                }
-                if let Some(type_name) = instance_to_type.get(name) {
-                    graph.remap_processor_name(type_name, name);
+                    processors[name].discover(graph, &file_index, name)?;
                 }
             }
             let after = graph.products().len();

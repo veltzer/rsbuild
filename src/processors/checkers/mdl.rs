@@ -28,7 +28,7 @@ impl ProductDiscovery for MdlProcessor {
         vec![self.config.mdl_bin.clone(), "ruby".to_string()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let files = file_index.scan(&self.config.scan, true);
         if files.is_empty() {
             return Ok(());
@@ -54,7 +54,7 @@ impl ProductDiscovery for MdlProcessor {
             if let Some(ref stamp) = gem_stamp {
                 inputs.push(stamp.clone());
             }
-            graph.add_product(inputs, vec![], crate::processors::names::MDL, hash.clone())?;
+            graph.add_product(inputs, vec![], instance_name, hash.clone())?;
         }
         Ok(())
     }

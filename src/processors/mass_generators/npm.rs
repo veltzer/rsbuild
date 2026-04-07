@@ -42,7 +42,7 @@ impl ProductDiscovery for NpmProcessor {
         vec![self.config.npm.clone(), "node".to_string()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let Some(files) = crate::processors::scan_or_skip(&self.config.scan, file_index) else {
             return Ok(());
         };
@@ -74,9 +74,9 @@ impl ProductDiscovery for NpmProcessor {
                 } else {
                     anchor_dir.join("node_modules")
                 };
-                graph.add_product_with_output_dir(inputs, vec![], crate::processors::names::NPM, hash.clone(), output_dir)?;
+                graph.add_product_with_output_dir(inputs, vec![], instance_name, hash.clone(), output_dir)?;
             } else {
-                graph.add_product(inputs, vec![], crate::processors::names::NPM, hash.clone())?;
+                graph.add_product(inputs, vec![], instance_name, hash.clone())?;
             }
         }
 

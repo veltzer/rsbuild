@@ -49,7 +49,7 @@ impl ProductDiscovery for JekyllProcessor {
         vec!["jekyll".to_string(), "ruby".to_string()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         if !self.should_process() {
             return Ok(());
         }
@@ -63,7 +63,7 @@ impl ProductDiscovery for JekyllProcessor {
                 extensions: &[""],
                 excludes: &["/.git/", "/out/", "/.rsconstruct/", "/_site/"],
             },
-            processor_name: crate::processors::names::JEKYLL,
+            processor_name: instance_name,
             output_dir_name: Some("_site"),
         })
     }

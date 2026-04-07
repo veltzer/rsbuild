@@ -68,6 +68,7 @@ impl crate::processors::ProductDiscovery for TermsProcessor {
         &self,
         graph: &mut BuildGraph,
         file_index: &FileIndex,
+        instance_name: &str,
     ) -> Result<()> {
         if !Path::new(&self.config.terms_dir).is_dir() {
             return Ok(());
@@ -86,7 +87,7 @@ impl crate::processors::ProductDiscovery for TermsProcessor {
         }
         discover_checker_products(
             graph, &self.config.scan, file_index, &extra_inputs, &self.config,
-            crate::processors::names::TERMS,
+            instance_name,
         )
     }
 

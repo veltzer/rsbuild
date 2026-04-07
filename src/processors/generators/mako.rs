@@ -64,7 +64,7 @@ impl ProductDiscovery for MakoProcessor {
         vec!["python3".to_string()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let items = super::find_templates(&self.config.scan, file_index)?;
         let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
 
@@ -75,7 +75,7 @@ impl ProductDiscovery for MakoProcessor {
             graph.add_product(
                 inputs,
                 vec![item.output_path.clone()],
-                crate::processors::names::MAKO,
+                instance_name,
                 Some(output_config_hash(&self.config, &[])),
             )?;
         }

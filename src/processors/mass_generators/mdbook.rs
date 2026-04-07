@@ -43,7 +43,7 @@ impl ProductDiscovery for MdbookProcessor {
         vec![self.config.mdbook.clone()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         if !scan_root_valid(&self.config.scan) {
             return Ok(());
         }
@@ -57,7 +57,7 @@ impl ProductDiscovery for MdbookProcessor {
                 extensions: &[".md", ".toml"],
                 excludes: &["/.git/", "/out/", "/.rsconstruct/", "/book/"],
             },
-            processor_name: crate::processors::names::MDBOOK,
+            processor_name: instance_name,
             output_dir_name: if self.config.cache_output_dir {
                 Some(self.config.output_dir.as_str())
             } else {

@@ -156,7 +156,7 @@ impl ProductDiscovery for LinuxModuleProcessor {
         vec!["make".to_string()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let Some(files) = crate::processors::scan_or_skip(&self.config.scan, file_index) else {
             return Ok(());
         };
@@ -188,7 +188,7 @@ impl ProductDiscovery for LinuxModuleProcessor {
 
             inputs.extend_from_slice(&extra);
 
-            graph.add_product(inputs, outputs, crate::processors::names::LINUX_MODULE, hash.clone())?;
+            graph.add_product(inputs, outputs, instance_name, hash.clone())?;
         }
         Ok(())
     }

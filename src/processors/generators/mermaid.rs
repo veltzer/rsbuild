@@ -32,13 +32,13 @@ impl ProductDiscovery for MermaidProcessor {
         vec![self.config.mmdc_bin.clone(), "node".to_string()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let params = DiscoverParams {
             scan: &self.config.scan,
             extra_inputs: &self.config.extra_inputs,
             config: &self.config,
             output_dir: &self.config.output_dir,
-            processor_name: crate::processors::names::MERMAID,
+            processor_name: instance_name,
         };
         super::discover_multi_format(graph, file_index, &params, &self.config.formats)
     }

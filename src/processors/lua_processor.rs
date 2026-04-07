@@ -353,7 +353,7 @@ impl ProductDiscovery for LuaProcessor {
         }
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let files = file_index.scan(&self.scan_config, true);
         if files.is_empty() {
             return Ok(());
@@ -412,7 +412,7 @@ impl ProductDiscovery for LuaProcessor {
                 outputs.push(PathBuf::from(path));
             }
 
-            graph.add_product(inputs, outputs, &self.name, hash.clone())?;
+            graph.add_product(inputs, outputs, instance_name, hash.clone())?;
         }
 
         Ok(())

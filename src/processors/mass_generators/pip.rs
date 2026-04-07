@@ -61,7 +61,7 @@ impl ProductDiscovery for PipProcessor {
         vec![self.config.pip.clone(), "python3".to_string()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         if !scan_root_valid(&self.config.scan) {
             return Ok(());
         }
@@ -79,7 +79,7 @@ impl ProductDiscovery for PipProcessor {
             inputs.push(anchor.clone());
             inputs.extend_from_slice(&extra);
 
-            graph.add_product(inputs, vec![], crate::processors::names::PIP, hash.clone())?;
+            graph.add_product(inputs, vec![], instance_name, hash.clone())?;
         }
 
         Ok(())

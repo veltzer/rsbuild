@@ -940,8 +940,8 @@ impl ProcessorType {
 /// ```ignore
 /// impl ProductDiscovery for MyChecker {
 ///     fn description(&self) -> &str { "Check files with mytool" }
-///     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-///         discover_checker_products(graph, ..., "mychecker")  // empty outputs
+///     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
+///         discover_checker_products(graph, ..., instance_name)  // empty outputs
 ///     }
 ///     fn execute(&self, product: &Product) -> Result<()> {
 ///         run_mytool(product.primary_input())
@@ -958,8 +958,8 @@ impl ProcessorType {
 /// impl ProductDiscovery for MyGenerator {
 ///     fn description(&self) -> &str { "Generate files" }
 ///     fn processor_type(&self) -> ProcessorType { ProcessorType::Generator }
-///     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-///         graph.add_product(inputs, outputs, "mygen", ...)?;  // non-empty outputs
+///     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
+///         graph.add_product(inputs, outputs, instance_name, ...)?;  // non-empty outputs
 ///     }
 ///     fn execute(&self, product: &Product) -> Result<()> { ... }
 ///     fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
@@ -981,13 +981,13 @@ pub trait ProductDiscovery: Sync + Send {
     }
 
     /// Discover all products this processor can produce
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()>;
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()>;
 
     /// Discover products for clean operation (outputs only, skip expensive dependency scanning).
     /// Default implementation calls `discover()`. Override this for processors where
     /// dependency scanning is expensive (e.g., cc_single_file header scanning).
-    fn discover_for_clean(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
-        self.discover(graph, file_index)
+    fn discover_for_clean(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
+        self.discover(graph, file_index, instance_name)
     }
 
     /// Execute a single product

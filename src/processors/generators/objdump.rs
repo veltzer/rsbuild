@@ -33,13 +33,13 @@ impl ProductDiscovery for ObjdumpProcessor {
         vec!["objdump".to_string()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let params = DiscoverParams {
             scan: &self.config.scan,
             extra_inputs: &self.config.extra_inputs,
             config: &self.config,
             output_dir: &self.config.output_dir,
-            processor_name: crate::processors::names::OBJDUMP,
+            processor_name: instance_name,
         };
         super::discover_single_format(graph, file_index, &params, "dis")
     }

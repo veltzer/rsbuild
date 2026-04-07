@@ -196,9 +196,7 @@ impl BuildGraph {
                 if !existing.outputs.is_empty() || existing.inputs.is_empty() {
                     continue;
                 }
-                let same_processor = existing.processor == processor
-                    || existing.processor.starts_with(&format!("{}.", processor))
-                    || processor.starts_with(&format!("{}.", existing.processor));
+                let same_processor = existing.processor == processor;
                 if same_processor && existing.inputs[0] == inputs[0]
                     && existing.variant.as_deref() == variant
                 {
@@ -211,9 +209,7 @@ impl BuildGraph {
         for output in &outputs {
             if let Some(&existing_id) = self.output_to_product.get(output) {
                 let existing = self.products.get(existing_id).expect(crate::errors::INVALID_PRODUCT_ID);
-                let same_processor = existing.processor == processor
-                    || existing.processor.starts_with(&format!("{}.", processor))
-                    || processor.starts_with(&format!("{}.", existing.processor));
+                let same_processor = existing.processor == processor;
                 // Same processor re-declaring the same outputs: update inputs if
                 // they grew (virtual files from upstream generators were added).
                 let is_superset = same_processor && existing.outputs == outputs
@@ -264,16 +260,6 @@ impl BuildGraph {
         let id = self.add_product_with_variant(inputs, outputs, processor, config_hash, variant)?;
         self.products[id].output_dir = Some(Arc::new(output_dir));
         Ok(id)
-    }
-
-    /// Rename the processor field on all products that currently use `old_name` to `new_name`.
-    /// Used to remap type names to instance names for named processor instances.
-    pub fn remap_processor_name(&mut self, old_name: &str, new_name: &str) {
-        for product in &mut self.products {
-            if product.processor == old_name {
-                product.processor = new_name.to_string();
-            }
-        }
     }
 
     /// Incorporate tool version hashes into product config hashes.

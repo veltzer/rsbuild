@@ -78,7 +78,7 @@ impl ProductDiscovery for PdfuniteProcessor {
         vec![self.config.pdfunite_bin.clone()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, _file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, _file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let base = Path::new(&self.config.source_dir);
         if !base.exists() {
             return Ok(());
@@ -123,7 +123,7 @@ impl ProductDiscovery for PdfuniteProcessor {
                 Path::new(&self.config.output_dir).join(parent).join(format!("{}.pdf", leaf.to_string_lossy())),
             ];
 
-            graph.add_product(inputs, outputs, crate::processors::names::PDFUNITE, hash.clone())?;
+            graph.add_product(inputs, outputs, instance_name, hash.clone())?;
         }
 
         Ok(())

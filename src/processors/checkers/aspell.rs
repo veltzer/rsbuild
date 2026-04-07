@@ -102,6 +102,7 @@ impl ProductDiscovery for AspellProcessor {
         &self,
         graph: &mut BuildGraph,
         file_index: &FileIndex,
+        instance_name: &str,
     ) -> Result<()> {
         if !scan_root_valid(&self.config.scan) {
             return Ok(());
@@ -117,7 +118,7 @@ impl ProductDiscovery for AspellProcessor {
             file_index,
             &extra_inputs,
             &self.config,
-            crate::processors::names::ASPELL,
+            instance_name,
         )
     }
 

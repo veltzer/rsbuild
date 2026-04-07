@@ -46,7 +46,7 @@ impl ProductDiscovery for TagsProcessor {
         })
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let files = file_index.scan(&self.config.scan, true);
         if files.is_empty() {
             return Ok(());
@@ -75,7 +75,7 @@ impl ProductDiscovery for TagsProcessor {
         graph.add_product(
             inputs,
             vec![output],
-            crate::processors::names::TAGS,
+            instance_name,
             Some(output_config_hash(&self.config, &[
                 "required_fields", "required_values", "unique_fields",
                 "field_types", "required_field_groups", "sorted_tags",

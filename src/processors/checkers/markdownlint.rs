@@ -28,7 +28,7 @@ impl ProductDiscovery for MarkdownlintProcessor {
         vec![self.config.markdownlint_bin.clone()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let files = file_index.scan(&self.config.scan, true);
         if files.is_empty() {
             return Ok(());
@@ -54,7 +54,7 @@ impl ProductDiscovery for MarkdownlintProcessor {
             if let Some(ref stamp) = npm_stamp {
                 inputs.push(stamp.clone());
             }
-            graph.add_product(inputs, vec![], crate::processors::names::MARKDOWNLINT, hash.clone())?;
+            graph.add_product(inputs, vec![], instance_name, hash.clone())?;
         }
         Ok(())
     }

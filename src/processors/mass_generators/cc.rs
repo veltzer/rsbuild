@@ -266,7 +266,7 @@ impl ProductDiscovery for CcProcessor {
         vec![self.config.cc.clone(), self.config.cxx.clone(), "ar".to_string()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let Some(files) = crate::processors::scan_or_skip(&self.config.scan, file_index) else {
             return Ok(());
         };
@@ -304,10 +304,10 @@ impl ProductDiscovery for CcProcessor {
             if self.config.cache_output_dir {
                 let output_dir = Self::output_dir_for(&yaml_path);
                 graph.add_product_with_output_dir(
-                    inputs, vec![], crate::processors::names::CC, hash.clone(), output_dir,
+                    inputs, vec![], instance_name, hash.clone(), output_dir,
                 )?;
             } else {
-                graph.add_product(inputs, vec![], crate::processors::names::CC, hash.clone())?;
+                graph.add_product(inputs, vec![], instance_name, hash.clone())?;
             }
         }
         Ok(())

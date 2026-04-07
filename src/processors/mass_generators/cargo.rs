@@ -43,7 +43,7 @@ impl ProductDiscovery for CargoProcessor {
         vec![self.config.cargo.clone()]
     }
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let Some(files) = crate::processors::scan_or_skip(&self.config.scan, file_index) else {
             return Ok(());
         };
@@ -79,7 +79,7 @@ impl ProductDiscovery for CargoProcessor {
                     graph.add_product_with_output_dir_and_variant(
                         inputs,
                         vec![],
-                        crate::processors::names::CARGO,
+                        instance_name,
                         hash.clone(),
                         output_dir,
                         Some(profile),
@@ -88,7 +88,7 @@ impl ProductDiscovery for CargoProcessor {
                     graph.add_product_with_variant(
                         inputs,
                         vec![],
-                        crate::processors::names::CARGO,
+                        instance_name,
                         hash.clone(),
                         Some(profile),
                     )?;

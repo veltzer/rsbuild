@@ -173,7 +173,7 @@ impl ZspellProcessor {
 impl ProductDiscovery for ZspellProcessor {
     delegate_base!(checker);
 
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let mut extra_inputs = self.config.extra_inputs.clone();
         for ai in &self.config.auto_inputs {
             extra_inputs.extend(config_file_inputs(ai));
@@ -184,7 +184,7 @@ impl ProductDiscovery for ZspellProcessor {
             file_index,
             &extra_inputs,
             &self.config,
-            crate::processors::names::ZSPELL,
+            instance_name,
         )
     }
 

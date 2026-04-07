@@ -52,6 +52,9 @@ rsconstruct build --no-mtime                   # Disable mtime pre-check, always
 rsconstruct build --no-summary                 # Suppress the build summary
 rsconstruct build --batch-size 10              # Limit batch size for batch-capable processors
 rsconstruct build --verify-tool-versions       # Verify tool versions against .tools.versions
+rsconstruct build -t "src/*.c"                 # Only build products matching this glob pattern
+rsconstruct build -d src                       # Only build products under this directory
+rsconstruct build --show-all-config-changes    # Show all config changes, not just output-affecting
 ```
 
 By default, tool output (compiler messages, linter output) is only shown when a command fails. Use `--show-output` to see all output.

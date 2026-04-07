@@ -27,6 +27,11 @@ report on them.
 
 ## Deterministic discovery
 
+`discover()` receives an `instance_name` parameter identifying the processor
+instance (e.g., `"ruff"` or `"script.lint_a"` for multi-instance processors).
+Use this name when calling `graph.add_product()` — do not use hardcoded
+processor type constants.
+
 `discover()` must return the same products given the same filesystem state.
 File discovery, processor iteration, and topological sort must all produce
 sorted, deterministic output so builds are reproducible.

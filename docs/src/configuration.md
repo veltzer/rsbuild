@@ -154,7 +154,7 @@ Common fields available to all processors:
 | `auto_inputs` | array of strings | varies | Config files auto-detected as inputs (e.g., `.pylintrc`). |
 | `batch` | boolean | `true` | Whether to batch multiple files into a single tool invocation. |
 | `max_jobs` | integer | none | Maximum concurrent jobs for this processor. When set, limits how many instances of this processor run in parallel, regardless of the global `-j` setting. Useful for heavyweight processors (e.g., `marp` spawns Chromium). Omit to use the global parallelism. |
-| `scan_dirs` | string | varies | Directory to scan for source files (empty = project root). |
+| `scan_dirs` | array of strings | varies | Directories to scan for source files. **Required** for processors that default to scanning the project root (most processors). Processors with a specific default (e.g., `tera` defaults to `"tera.templates"`, `cc_single_file` defaults to `"src"`) do not require this. Use `rsconstruct processors defconfig <name>` to see a processor's defaults. |
 | `extensions` | array of strings | varies | File extensions to match. |
 | `exclude_dirs` | array of strings | varies | Directory path segments to exclude from scanning. |
 | `exclude_files` | array of strings | `[]` | File names to exclude. |

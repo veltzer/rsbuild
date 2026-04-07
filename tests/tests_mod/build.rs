@@ -896,3 +896,65 @@ batch = false
     assert!(peak > 2,
         "Without max_jobs, peak concurrency should exceed 2 with -j8, got {}", peak);
 }
+
+#[test]
+fn generator_non_batch_partial_failure_only_rebuilds_failed() {
+    // In non-batch mode (default fail-fast with chunk_size=1), each product
+    // executes independently. Successful products are cached and skipped on
+    // the next run — only the failed product needs rebuilding.
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let project_path = temp_dir.path();
+
+    // Script that copies input to output but fails if input contains "FAIL"
+    let script_path = project_path.join("transform.sh");
+    fs::write(&script_path, r#"#!/bin/bash
+input="$1"; output="$2"
+if grep -q "FAIL" "$input"; then
+    echo "Error: $input contains FAIL" >&2
+    exit 1
+fi
+cp "$input" "$output"
+"#).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    fs::create_dir_all(project_path.join("src")).unwrap();
+    fs::write(project_path.join("src/aaa_good1.txt"), "content1\n").unwrap();
+    fs::write(project_path.join("src/aaa_good2.txt"), "content2\n").unwrap();
+    fs::write(project_path.join("src/zzz_bad.txt"), "FAIL\n").unwrap();
+
+    fs::write(project_path.join("rsconstruct.toml"), format!(
+        r#"[processor.generator]
+command = "{script}"
+extensions = [".txt"]
+scan_dirs = ["src"]
+output_extension = "out"
+batch = false
+"#,
+        script = script_path.display(),
+    )).unwrap();
+
+    // First build with --keep-going: good files succeed, bad file fails
+    let result1 = run_rsconstruct_json_with_env(
+        project_path, &["build", "--keep-going"],
+        &[("NO_COLOR", "1")],
+    );
+    assert!(!result1.exit_success, "First build should fail (zzz_bad.txt)");
+    assert_eq!(result1.success, 2, "Two good files should succeed");
+    assert_eq!(result1.failed, 1, "One bad file should fail");
+
+    // Fix the bad file
+    fs::write(project_path.join("src/zzz_bad.txt"), "fixed\n").unwrap();
+
+    // Second build: good files should be skipped (cached), only bad file rebuilt
+    let result2 = run_rsconstruct_json_with_env(
+        project_path, &["build"],
+        &[("NO_COLOR", "1")],
+    );
+    assert!(result2.exit_success, "Second build should succeed");
+    assert_eq!(result2.skipped, 2, "Two good files should be skipped (cached)");
+    assert_eq!(result2.success, 1, "Only the fixed file should be rebuilt");
+}

@@ -1,1 +1,0 @@
-Lets say a generator that suppors batch opertions needs to create 800 files from 800 files (one to one), and in the middle it gets interrupted or there is an eror and rsconstruct stops. Next time when I run it will it only do the 400 that were left? Are we sure of that? Do we have a test that tests that?

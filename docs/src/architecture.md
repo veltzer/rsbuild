@@ -94,6 +94,28 @@ The executor runs products in dependency order. It supports:
 - Parallel execution of independent products (with `-j` flag)
 - Dry-run mode (show what would be built)
 - Keep-going mode (continue after errors)
+- Batch execution (group multiple products into one tool invocation)
+
+### Incremental rebuild after partial failure
+
+Each product is cached independently after successful execution. If a build is
+interrupted or fails partway through, the next run only rebuilds products that
+don't have valid cache entries:
+
+- **Non-batch mode** (default fail-fast, `chunk_size=1`): Each product executes
+  and is cached individually. If the build stops after 400 of 800 products, the
+  next run skips the 400 cached successes and rebuilds the remaining 400.
+
+- **Batch mode with external tools** (`--keep-going` or explicit `--batch-size`):
+  The external tool receives all files in the batch in one invocation. If the tool
+  exits with an error, all products in that batch are marked failed — there is no
+  way to determine which outputs are valid from a single exit code. On the next
+  run, all products from the failed batch are rebuilt.
+
+- **Batch mode with internal processors** (e.g., `imarkdown`, `isass`, `ipdfunite`):
+  These process files sequentially in-process and return per-file results, so
+  partial failure is handled correctly even in batch mode — only the failed
+  products are rebuilt.
 
 ## Interrupt handling
 
@@ -201,6 +223,12 @@ Products are executed in topological order, respecting dependency edges.
 Independent products at the same dependency level run in parallel (controlled
 by `-j` / `RSCONSTRUCT_THREADS`). Batch-capable processors group their
 products into a single tool invocation.
+
+**Batch chunk sizing:** In fail-fast mode (default), batch chunk size is 1 —
+each product executes independently even for batch-capable processors. With
+`--keep-going`, all products are sent in one chunk. With `--batch-size N`,
+chunks are limited to N products. This means fail-fast mode gives the best
+incremental recovery after partial failure.
 
 For each product:
 1. Compute input checksum (if not already done in classify)

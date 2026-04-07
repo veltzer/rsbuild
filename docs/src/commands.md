@@ -59,6 +59,12 @@ rsconstruct build --show-all-config-changes    # Show all config changes, not ju
 
 By default, tool output (compiler messages, linter output) is only shown when a command fails. Use `--show-output` to see all output.
 
+### Incremental recovery and batch behavior
+
+By default (fail-fast mode), rsconstruct executes each product independently, even for batch-capable processors. Successfully completed products are cached immediately, so if a build fails or is interrupted, the next run only rebuilds what wasn't completed.
+
+With `--keep-going`, batch-capable processors group all their products into a single tool invocation. If the tool fails, all products in the batch are marked failed and must be rebuilt. Use `--batch-size N` to limit batch chunks and improve recovery granularity.
+
 ### Processor Shortcuts (`@` aliases)
 
 The `-p` flag supports `@`-prefixed shortcuts that expand to groups of processors:

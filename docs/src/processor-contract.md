@@ -71,3 +71,23 @@ remove the output directory so it can be restored from cache.
 On failure, `execute()` returns an `Err` with a clear message including
 the relevant file path and the nature of the problem. The executor
 decides whether to abort or continue based on `--keep-going`.
+
+## Batch execution and partial failure
+
+Batch-capable processors implement `supports_batch()` and `execute_batch()`.
+The `execute_batch()` method receives multiple products and must return one
+`Result` per product, in the same order as the input.
+
+**External tool processors** that invoke a single subprocess for the entire
+batch typically use `execute_generator_batch()`, which maps a single exit code
+to all-success or all-failure. If the tool fails, all products in the batch
+are marked failed — there is no way to determine which outputs are valid.
+
+**Internal processors** (e.g., `imarkdown`, `isass`, `ipdfunite`) that process
+files in-process should return per-file results so that partial failure is
+handled correctly — only the actually-failed products are rebuilt on the next run.
+
+**Chunk sizing:** In fail-fast mode (default), the executor uses `chunk_size=1`
+even for batch-capable processors, so each product is cached individually. This
+gives the best incremental recovery. Larger chunks are used only with
+`--keep-going` or explicit `--batch-size`.

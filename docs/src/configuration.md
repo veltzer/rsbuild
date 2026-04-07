@@ -152,7 +152,7 @@ Common fields available to all processors:
 | `args` | array of strings | `[]` | Extra command-line arguments passed to the tool. |
 | `extra_inputs` | array of strings | `[]` | Additional input files that trigger rebuild when changed. |
 | `auto_inputs` | array of strings | varies | Config files auto-detected as inputs (e.g., `.pylintrc`). |
-| `batch` | boolean | `true` | Whether to batch multiple files into a single tool invocation. |
+| `batch` | boolean | `true` | Whether to batch multiple files into a single tool invocation. Note: in fail-fast mode (default), chunk size is 1 regardless of this setting — batch mode only groups files with `--keep-going` or `--batch-size`. For external tools, a batch failure marks all products in the chunk as failed. Internal processors (`i`-prefixed) return per-file results, so partial failure is handled correctly. |
 | `max_jobs` | integer | none | Maximum concurrent jobs for this processor. When set, limits how many instances of this processor run in parallel, regardless of the global `-j` setting. Useful for heavyweight processors (e.g., `marp` spawns Chromium). Omit to use the global parallelism. |
 | `scan_dirs` | array of strings | varies | Directories to scan for source files. **Required** for processors that default to scanning the project root (most processors). Processors with a specific default (e.g., `tera` defaults to `"tera.templates"`, `cc_single_file` defaults to `"src"`) do not require this. Use `rsconstruct processors defconfig <name>` to see a processor's defaults. |
 | `extensions` | array of strings | varies | File extensions to match. |

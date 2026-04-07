@@ -63,11 +63,18 @@ impl MarkdownDepAnalyzer {
                 continue;
             }
 
-            // Resolve relative to the source file's directory
-            let resolved = source_dir.join(path_str);
-            if resolved.is_file() && !seen.contains(&resolved) {
-                seen.insert(resolved.clone());
-                refs.push(resolved);
+            // Try resolving relative to the source file's directory first,
+            // then relative to the project root (cwd)
+            let candidates = [
+                source_dir.join(path_str),
+                PathBuf::from(path_str),
+            ];
+            for candidate in &candidates {
+                if candidate.is_file() && !seen.contains(candidate) {
+                    seen.insert(candidate.clone());
+                    refs.push(candidate.clone());
+                    break;
+                }
             }
         }
 

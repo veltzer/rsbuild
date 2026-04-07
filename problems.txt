@@ -13,3 +13,5 @@ which fields affect the output (which each proicessor already declares)
 
 between runs we show config changes if there were any. By default show only config
 changed that influence the output.
+
+If I mis-spell a linter I should get an error immediately!

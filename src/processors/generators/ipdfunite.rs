@@ -227,4 +227,12 @@ impl ProductDiscovery for IpdfuniteProcessor {
 
         merge_pdfs(&pdf_inputs, output)
     }
+
+    fn supports_batch(&self) -> bool {
+        self.config.batch
+    }
+
+    fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
+        products.iter().map(|p| self.execute(p)).collect()
+    }
 }

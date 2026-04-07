@@ -77,6 +77,85 @@ fn script_incremental_skip() {
 }
 
 #[test]
+fn script_misspelled_linter_fails_immediately() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsconstruct.toml"),
+        concat!(
+            "[processor.script]\n",
+            "linter = \"no_such_linter_xyzzy\"\n",
+            "extensions = [\".txt\"]\n",
+        ),
+    )
+    .unwrap();
+
+    fs::write(
+        project_path.join("test.txt"),
+        "hello world\n",
+    )
+    .unwrap();
+
+    let output = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(
+        !output.status.success(),
+        "Build should fail when linter does not exist"
+    );
+
+    let exit_code = output.status.code().unwrap();
+    assert_eq!(exit_code, 3, "Expected exit code 3 (TOOL_ERROR), got {}", exit_code);
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Missing required tools") || stderr.contains("TOOL_ERROR"),
+        "Should report missing tool error: {}",
+        stderr
+    );
+}
+
+#[test]
+fn script_multi_instance_both_discover_files() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsconstruct.toml"),
+        concat!(
+            "[processor.script.lint_a]\n",
+            "linter = \"true\"\n",
+            "extensions = [\".txt\"]\n",
+            "\n",
+            "[processor.script.lint_b]\n",
+            "linter = \"true\"\n",
+            "extensions = [\".txt\"]\n",
+        ),
+    )
+    .unwrap();
+
+    fs::write(project_path.join("test.txt"), "hello\n").unwrap();
+
+    let output = run_rsconstruct_with_env(project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
+    assert!(
+        output.status.success(),
+        "Build should succeed: stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("[script.lint_a]"),
+        "Should process script.lint_a: {}",
+        stdout
+    );
+    assert!(
+        stdout.contains("[script.lint_b]"),
+        "Should process script.lint_b: {}",
+        stdout
+    );
+}
+
+#[test]
 fn script_no_project_discovered() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();

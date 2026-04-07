@@ -4,10 +4,14 @@
 //! dependency information (like header files for C/C++ or imports for Python).
 
 mod cpp;
+mod markdown;
 mod python;
+mod tera;
 
 pub use cpp::CppDepAnalyzer;
+pub use markdown::MarkdownDepAnalyzer;
 pub use python::PythonDepAnalyzer;
+pub use tera::TeraDepAnalyzer;
 
 use anyhow::Result;
 use std::collections::HashSet;

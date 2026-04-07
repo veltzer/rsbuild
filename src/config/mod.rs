@@ -704,7 +704,7 @@ impl Default for CompletionsConfig {
 }
 
 fn default_analyzers() -> Vec<String> {
-    vec!["cpp".into(), "python".into()]
+    vec!["cpp".into(), "markdown".into(), "python".into(), "tera".into()]
 }
 
 /// Configuration for dependency analyzers

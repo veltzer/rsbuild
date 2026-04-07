@@ -150,7 +150,7 @@ impl Builder {
         }
 
         // Check for config changes and display diffs
-        self.detect_config_changes(&processors);
+        self.detect_config_changes(&processors, opts.show_all_config_changes);
 
         // Build the dependency graph (may stop early based on stop_after)
         let (mut graph, mut phase_timings) = self.build_graph_with_processors_and_phase(&processors, opts.stop_after, processor_filter, opts.verbose)?;

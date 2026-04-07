@@ -68,15 +68,19 @@ fn config_diff(name: &str, current: &serde_json::Value) -> serde_json::Value {
 /// Print metadata annotations (required fields and output-affecting fields) for a processor.
 /// Only shown in text mode (not JSON mode).
 fn print_processor_metadata(name: &str) {
-    if let Some(must) = ProcessorConfig::must_fields_for(name)
-        && !must.is_empty()
-    {
-        println!("Required fields: {}", must.join(", "));
+    if let Some(must) = ProcessorConfig::must_fields_for(name) {
+        if must.is_empty() {
+            println!("Required fields: (none)");
+        } else {
+            println!("Required fields: {}", must.join(", "));
+        }
     }
-    if let Some(output) = ProcessorConfig::output_fields_for(name)
-        && !output.is_empty()
-    {
-        println!("Output-affecting fields: {}", output.join(", "));
+    if let Some(output) = ProcessorConfig::output_fields_for(name) {
+        if output.is_empty() {
+            println!("Output-affecting fields: (none)");
+        } else {
+            println!("Output-affecting fields: {}", output.join(", "));
+        }
     }
 }
 

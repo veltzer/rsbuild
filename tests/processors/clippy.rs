@@ -14,7 +14,7 @@ fn clippy_valid_project() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.clippy]\n",
+        "[processor.clippy]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -61,7 +61,7 @@ fn clippy_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.clippy]\n",
+        "[processor.clippy]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -101,7 +101,7 @@ fn clippy_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.clippy]\n",
+        "[processor.clippy]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -135,7 +135,7 @@ fn clippy_lint_failure() {
     // Use -D warnings so clippy warnings become errors
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.clippy]\nargs = [\"--\", \"-D\", \"warnings\"]\n",
+        "[processor.clippy]\nargs = [\"--\", \"-D\", \"warnings\"]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 

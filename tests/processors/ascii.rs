@@ -9,7 +9,7 @@ fn ascii_valid_file() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.ascii]\n",
+        "[processor.ascii]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -42,7 +42,7 @@ fn ascii_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.ascii]\n",
+        "[processor.ascii]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -74,7 +74,7 @@ fn ascii_non_ascii_fails() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.ascii]\n",
+        "[processor.ascii]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 

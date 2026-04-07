@@ -14,7 +14,7 @@ fn gem_valid_project() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.gem]\n",
+        "[processor.gem]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -55,7 +55,7 @@ fn gem_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.gem]\n",
+        "[processor.gem]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -89,7 +89,7 @@ fn gem_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.gem]\n",
+        "[processor.gem]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 

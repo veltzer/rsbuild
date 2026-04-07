@@ -5,7 +5,7 @@ use tempfile::TempDir;
 /// Helper: create a tags test project with given .md files and optional tags directory.
 /// `tag_lists` is a slice of (filename, content) pairs for files in tags/.
 fn setup_tags_project(md_files: &[(&str, &str)], tag_lists: &[(&str, &str)]) -> TempDir {
-    setup_tags_project_with_config(md_files, tag_lists, "[processor.tags]\n")
+    setup_tags_project_with_config(md_files, tag_lists, "[processor.tags]\nscan_dirs = [\".\"]\n")
 }
 
 fn setup_tags_project_with_config(md_files: &[(&str, &str)], tag_lists: &[(&str, &str)], config: &str) -> TempDir {
@@ -252,7 +252,7 @@ fn tags_unused_strict_fails() {
         &[
             ("tools.txt", "active\nobsolete\n"),
         ],
-        "[processor.tags]\ncheck_unused = true\n",
+        "[processor.tags]\ncheck_unused = true\nscan_dirs = [\".\"]\n",
     );
     let p = temp_dir.path();
 
@@ -455,6 +455,7 @@ fn tags_required_fields_pass() {
     let config = r#"
 [processor.tags]
 required_fields = ["level", "tags"]
+scan_dirs = ["."]
 "#;
     let temp_dir = setup_tags_project_with_config(
         &[
@@ -474,6 +475,7 @@ fn tags_required_fields_missing_fails() {
     let config = r#"
 [processor.tags]
 required_fields = ["level", "tags", "category"]
+scan_dirs = ["."]
 "#;
     let temp_dir = setup_tags_project_with_config(
         &[
@@ -498,6 +500,7 @@ fn tags_required_fields_empty_list_fails() {
     let config = r#"
 [processor.tags]
 required_fields = ["tags"]
+scan_dirs = ["."]
 "#;
     let temp_dir = setup_tags_project_with_config(
         &[
@@ -520,6 +523,7 @@ fn tags_required_fields_no_frontmatter_fails() {
     let config = r#"
 [processor.tags]
 required_fields = ["level"]
+scan_dirs = ["."]
 "#;
     let temp_dir = setup_tags_project_with_config(
         &[
@@ -544,6 +548,7 @@ fn tags_required_field_groups_first_group() {
     let config = r#"
 [processor.tags]
 required_field_groups = [["duration_hours"], ["duration_hours_long", "duration_hours_short"]]
+scan_dirs = ["."]
 "#;
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\nduration_hours: 24\ntags:\n  - tools:docker\n---\n")],
@@ -558,6 +563,7 @@ fn tags_required_field_groups_second_group() {
     let config = r#"
 [processor.tags]
 required_field_groups = [["duration_hours"], ["duration_hours_long", "duration_hours_short"]]
+scan_dirs = ["."]
 "#;
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\nduration_hours_long: 40\nduration_hours_short: 16\ntags:\n  - tools:docker\n---\n")],
@@ -572,6 +578,7 @@ fn tags_required_field_groups_none_satisfied_fails() {
     let config = r#"
 [processor.tags]
 required_field_groups = [["duration_hours"], ["duration_hours_long", "duration_hours_short"]]
+scan_dirs = ["."]
 "#;
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\ntags:\n  - tools:docker\n---\n")],
@@ -590,6 +597,7 @@ fn tags_required_field_groups_partial_second_fails() {
     let config = r#"
 [processor.tags]
 required_field_groups = [["duration_hours"], ["duration_hours_long", "duration_hours_short"]]
+scan_dirs = ["."]
 "#;
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\nduration_hours_long: 40\ntags:\n  - tools:docker\n---\n")],
@@ -604,7 +612,7 @@ required_field_groups = [["duration_hours"], ["duration_hours_long", "duration_h
 
 #[test]
 fn tags_required_values_pass() {
-    let config = "[processor.tags]\nrequired_values = [\"level\"]\n";
+    let config = "[processor.tags]\nrequired_values = [\"level\"]\nscan_dirs = [\".\"]\n";
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\nlevel: beginner\ntags:\n  - tools:docker\n---\n")],
         &[("level.txt", "beginner\n"), ("tools.txt", "docker\n")],
@@ -615,7 +623,7 @@ fn tags_required_values_pass() {
 
 #[test]
 fn tags_required_values_invalid_fails() {
-    let config = "[processor.tags]\nrequired_values = [\"level\"]\n";
+    let config = "[processor.tags]\nrequired_values = [\"level\"]\nscan_dirs = [\".\"]\n";
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\nlevel: begginer\ntags:\n  - tools:docker\n---\n")],
         &[("level.txt", "beginner\nadvanced\n"), ("tools.txt", "docker\n")],
@@ -631,7 +639,7 @@ fn tags_required_values_invalid_fails() {
 
 #[test]
 fn tags_unique_fields_pass() {
-    let config = "[processor.tags]\nunique_fields = [\"title\"]\n";
+    let config = "[processor.tags]\nunique_fields = [\"title\"]\nscan_dirs = [\".\"]\n";
     let temp_dir = setup_tags_project_with_config(
         &[
             ("a.md", "---\ntitle: Course A\ntags:\n  - tools:docker\n---\n"),
@@ -645,7 +653,7 @@ fn tags_unique_fields_pass() {
 
 #[test]
 fn tags_unique_fields_duplicate_fails() {
-    let config = "[processor.tags]\nunique_fields = [\"title\"]\n";
+    let config = "[processor.tags]\nunique_fields = [\"title\"]\nscan_dirs = [\".\"]\n";
     let temp_dir = setup_tags_project_with_config(
         &[
             ("a.md", "---\ntitle: Same Title\ntags:\n  - tools:docker\n---\n"),
@@ -664,7 +672,7 @@ fn tags_unique_fields_duplicate_fails() {
 
 #[test]
 fn tags_field_types_pass() {
-    let config = "[processor.tags]\n[processor.tags.field_types]\ntags = \"list\"\nlevel = \"scalar\"\nduration_hours = \"number\"\n";
+    let config = "[processor.tags]\nscan_dirs = [\".\"]\n[processor.tags.field_types]\ntags = \"list\"\nlevel = \"scalar\"\nduration_hours = \"number\"\n";
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\ntags:\n  - tools:docker\nlevel: beginner\nduration_hours: 24\n---\n")],
         &[("tools.txt", "docker\n"), ("level.txt", "beginner\n"), ("duration_hours.txt", "24\n")],
@@ -675,7 +683,7 @@ fn tags_field_types_pass() {
 
 #[test]
 fn tags_field_types_wrong_type_fails() {
-    let config = "[processor.tags]\n[processor.tags.field_types]\nlevel = \"list\"\n";
+    let config = "[processor.tags]\nscan_dirs = [\".\"]\n[processor.tags.field_types]\nlevel = \"list\"\n";
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\nlevel: beginner\ntags:\n  - tools:docker\n---\n")],
         &[("tools.txt", "docker\n"), ("level.txt", "beginner\n")],
@@ -692,7 +700,7 @@ fn tags_field_types_wrong_type_fails() {
 
 #[test]
 fn tags_sorted_tags_pass() {
-    let config = "[processor.tags]\nsorted_tags = true\n";
+    let config = "[processor.tags]\nsorted_tags = true\nscan_dirs = [\".\"]\n";
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\ntags:\n  - tools:alpha\n  - tools:beta\n---\n")],
         &[("tools.txt", "alpha\nbeta\n")],
@@ -703,7 +711,7 @@ fn tags_sorted_tags_pass() {
 
 #[test]
 fn tags_sorted_tags_unsorted_fails() {
-    let config = "[processor.tags]\nsorted_tags = true\n";
+    let config = "[processor.tags]\nsorted_tags = true\nscan_dirs = [\".\"]\n";
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\ntags:\n  - tools:beta\n  - tools:alpha\n---\n")],
         &[("tools.txt", "alpha\nbeta\n")],
@@ -796,7 +804,7 @@ fn tags_suggest_shows_suggestions() {
 
 #[test]
 fn tags_check_passes_clean_project() {
-    let config = "[processor.tags]\nrequired_fields = [\"tags\"]\n";
+    let config = "[processor.tags]\nrequired_fields = [\"tags\"]\nscan_dirs = [\".\"]\n";
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\ntags:\n  - tools:docker\n---\n")],
         &[("tools.txt", "docker\n")],
@@ -810,7 +818,7 @@ fn tags_check_passes_clean_project() {
 
 #[test]
 fn tags_check_reports_issues() {
-    let config = "[processor.tags]\nrequired_fields = [\"level\"]\n";
+    let config = "[processor.tags]\nrequired_fields = [\"level\"]\nscan_dirs = [\".\"]\n";
     let temp_dir = setup_tags_project_with_config(
         &[("a.md", "---\ntags:\n  - tools:docker\n---\n")],
         &[("tools.txt", "docker\n")],

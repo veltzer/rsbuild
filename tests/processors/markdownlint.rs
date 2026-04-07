@@ -20,7 +20,7 @@ fn markdownlint_valid_file() {
     // Point markdownlint_bin to the system markdownlint, skip npm dependency
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.markdownlint]\nmarkdownlint_bin = \"markdownlint\"\n",
+        "[processor.markdownlint]\nmarkdownlint_bin = \"markdownlint\"\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 

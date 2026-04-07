@@ -14,7 +14,7 @@ fn mermaid_discovery() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.mermaid]\n",
+        "[processor.mermaid]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -48,7 +48,7 @@ fn mermaid_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.mermaid]\n",
+        "[processor.mermaid]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 

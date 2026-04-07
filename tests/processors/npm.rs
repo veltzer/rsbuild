@@ -14,7 +14,7 @@ fn npm_valid_project() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.npm]\n",
+        "[processor.npm]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -56,7 +56,7 @@ fn npm_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.npm]\n",
+        "[processor.npm]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -91,7 +91,7 @@ fn npm_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.npm]\n",
+        "[processor.npm]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 

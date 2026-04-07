@@ -457,6 +457,15 @@ macro_rules! gen_processor_config {
                 }
             }
 
+            /// Return the default scan_dir for a builtin processor type, or None for Lua plugins.
+            /// Returns `Some("")` for processors that default to scanning the project root.
+            pub(crate) fn default_scan_dir_for(type_name: &str) -> Option<&'static str> {
+                match type_name {
+                    $( stringify!($field) => Some($scan_dir), )*
+                    _ => None,
+                }
+            }
+
             /// Return the default config for a processor type as pretty JSON, or None if unknown.
             pub(crate) fn defconfig_json(type_name: &str) -> Option<String> {
                 let json: serde_json::Value = match type_name {
@@ -952,6 +961,38 @@ fn validate_single_processor(
                 }
                 _ => {} // present and non-empty: OK
             }
+        }
+    }
+
+    // Require scan_dirs for processors whose default would scan the project root.
+    // This prevents accidentally scanning everything when the user forgets to set scan_dirs.
+    // Exempt processors that don't use scan_dirs for file discovery.
+    const SCAN_DIRS_EXEMPT: &[&str] = &["explicit", "pdfunite"];
+    if let Some("") = ProcessorConfig::default_scan_dir_for(type_name)
+    && !SCAN_DIRS_EXEMPT.contains(&type_name) {
+        match table.get("scan_dirs") {
+            None => {
+                errors.push(format!(
+                    "[{}]: 'scan_dirs' must be specified (this processor defaults to scanning the project root)",
+                    section_label,
+                ));
+            }
+            Some(toml::Value::Array(arr)) if arr.is_empty() => {
+                errors.push(format!(
+                    "[{}]: 'scan_dirs' must not be empty (this processor defaults to scanning the project root)",
+                    section_label,
+                ));
+            }
+            Some(toml::Value::Array(arr))
+                if arr.len() == 1
+                    && arr[0].as_str().is_some_and(|s| s.is_empty()) =>
+            {
+                errors.push(format!(
+                    "[{}]: 'scan_dirs' must not contain empty strings; specify actual directories to scan",
+                    section_label,
+                ));
+            }
+            _ => {} // present and non-empty: OK
         }
     }
 }

@@ -14,7 +14,7 @@ fn aspell_valid_file() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.aspell]\n",
+        "[processor.aspell]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -59,7 +59,7 @@ fn aspell_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.aspell]\n",
+        "[processor.aspell]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 

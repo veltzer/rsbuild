@@ -523,7 +523,7 @@ fn cross_processor_discovery() {
 [processor.tera]
 
 [processor.ascii]
-scan_dirs = [""]
+scan_dirs = ["."]
 extensions = [".txt"]
 "#,
     ).unwrap();
@@ -595,6 +595,7 @@ command = "scripts/build_report.py"
 inputs = ["config.txt"]
 input_globs = ["data/*.csv"]
 outputs = ["out/report.html"]
+scan_dirs = ["."]
 "#,
     ).unwrap();
 

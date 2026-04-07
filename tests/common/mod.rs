@@ -235,7 +235,7 @@ macro_rules! test_checker {
 
                 std::fs::write(
                     project_path.join("rsconstruct.toml"),
-                    format!("[processor.{}]\n", $proc),
+                    format!("[processor.{}]\nscan_dirs = [\".\"]\n", $proc),
                 ).unwrap();
 
                 $( std::fs::write(project_path.join($fname), $content).unwrap(); )+
@@ -262,7 +262,7 @@ macro_rules! test_checker {
 
                 std::fs::write(
                     project_path.join("rsconstruct.toml"),
-                    format!("[processor.{}]\n", $proc),
+                    format!("[processor.{}]\nscan_dirs = [\".\"]\n", $proc),
                 ).unwrap();
 
                 $( std::fs::write(project_path.join($fname), $content).unwrap(); )+
@@ -298,7 +298,7 @@ macro_rules! test_checker {
 
                 std::fs::write(
                     project_path.join("rsconstruct.toml"),
-                    format!("[processor.{}]\n", $proc),
+                    format!("[processor.{}]\nscan_dirs = [\".\"]\n", $proc),
                 ).unwrap();
 
                 let output = crate::common::run_rsconstruct_with_env(

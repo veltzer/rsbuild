@@ -129,6 +129,7 @@ exclude_dirs = "${shared_excludes}"
 
 [processor.shellcheck]
 exclude_dirs = "${shared_excludes}"
+scan_dirs = ["."]
 "#
     ).unwrap();
 
@@ -223,7 +224,7 @@ fn config_validate_no_matching_files_warning() {
     // Enable yamllint processor but don't create any .yml files
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.yamllint]\n"
+        "[processor.yamllint]\nscan_dirs = [\".\"]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["config", "validate"], &[("NO_COLOR", "1")]);
@@ -242,7 +243,7 @@ fn config_validate_json() {
     // Enable yamllint processor but don't create any .yml files (to get a warning)
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.yamllint]\n"
+        "[processor.yamllint]\nscan_dirs = [\".\"]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["--json", "config", "validate"], &[("NO_COLOR", "1")]);
@@ -345,7 +346,7 @@ fn config_validate_explicit_missing_outputs() {
     // Configure explicit processor without the required 'outputs' field
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.explicit]\ncommand = \"my_script\"\n",
+        "[processor.explicit]\ncommand = \"my_script\"\nscan_dirs = [\".\"]\n",
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["config", "validate"], &[("NO_COLOR", "1")]);
@@ -363,7 +364,7 @@ fn config_validate_explicit_empty_outputs() {
     // Configure explicit processor with explicitly empty 'outputs'
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.explicit]\ncommand = \"my_script\"\noutputs = []\n",
+        "[processor.explicit]\ncommand = \"my_script\"\noutputs = []\nscan_dirs = [\".\"]\n",
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["config", "validate"], &[("NO_COLOR", "1")]);
@@ -380,7 +381,7 @@ fn config_validate_explicit_with_outputs_ok() {
     // Configure explicit processor with required 'outputs' field present
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.explicit]\ncommand = \"my_script\"\noutputs = [\"out/result.txt\"]\n",
+        "[processor.explicit]\ncommand = \"my_script\"\noutputs = [\"out/result.txt\"]\nscan_dirs = [\".\"]\n",
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["config", "validate"], &[("NO_COLOR", "1")]);

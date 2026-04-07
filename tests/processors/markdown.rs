@@ -14,7 +14,7 @@ fn markdown_valid_file() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.markdown]\n",
+        "[processor.markdown]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -52,7 +52,7 @@ fn markdown_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.markdown]\n",
+        "[processor.markdown]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 

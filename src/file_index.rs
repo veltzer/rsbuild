@@ -126,7 +126,9 @@ impl FileIndex {
 
         let mut results = Vec::new();
         for dir in scan.scan_dirs() {
-            let root = PathBuf::from(dir);
+            // Normalize "." to "" so depth calculations work correctly
+            // (files in the index are stored as relative paths without "./" prefix)
+            let root = if dir == "." { PathBuf::new() } else { PathBuf::from(dir) };
             let mut dir_results = self.query(&root, &ext_refs, &exclude_dir_refs, &exclude_file_refs, &exclude_path_refs);
 
             if !recursive {

@@ -14,6 +14,7 @@ fn script_valid_file() {
             "[processor.script]\n",
             "linter = \"true\"\n",
             "extensions = [\".txt\"]\n",
+            "scan_dirs = [\".\"]\n",
         ),
     )
     .unwrap();
@@ -51,6 +52,7 @@ fn script_incremental_skip() {
             "[processor.script]\n",
             "linter = \"true\"\n",
             "extensions = [\".txt\"]\n",
+            "scan_dirs = [\".\"]\n",
         ),
     )
     .unwrap();
@@ -87,6 +89,7 @@ fn script_misspelled_linter_fails_immediately() {
             "[processor.script]\n",
             "linter = \"no_such_linter_xyzzy\"\n",
             "extensions = [\".txt\"]\n",
+            "scan_dirs = [\".\"]\n",
         ),
     )
     .unwrap();
@@ -125,10 +128,12 @@ fn script_multi_instance_both_discover_files() {
             "[processor.script.lint_a]\n",
             "linter = \"true\"\n",
             "extensions = [\".txt\"]\n",
+            "scan_dirs = [\".\"]\n",
             "\n",
             "[processor.script.lint_b]\n",
             "linter = \"true\"\n",
             "extensions = [\".txt\"]\n",
+            "scan_dirs = [\".\"]\n",
         ),
     )
     .unwrap();
@@ -163,7 +168,7 @@ fn script_no_project_discovered() {
     // Without configuring extensions or checker, script should discover nothing
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.script]\n",
+        "[processor.script]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 

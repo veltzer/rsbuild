@@ -14,7 +14,7 @@ fn mdbook_valid_project() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.mdbook]\n",
+        "[processor.mdbook]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -67,7 +67,7 @@ fn mdbook_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.mdbook]\n",
+        "[processor.mdbook]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -113,7 +113,7 @@ fn mdbook_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.mdbook]\n",
+        "[processor.mdbook]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 

@@ -14,7 +14,7 @@ fn sphinx_valid_project() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.sphinx]\n",
+        "[processor.sphinx]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -57,7 +57,7 @@ fn sphinx_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.sphinx]\n",
+        "[processor.sphinx]\nscan_dirs = [\".\"]\n",
     )
     .unwrap();
 

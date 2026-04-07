@@ -651,6 +651,10 @@ pub struct SharedBuildArgs {
     /// Write a Chrome trace JSON file for build visualization (open in chrome://tracing or Perfetto)
     #[arg(long, value_name = "FILE")]
     pub trace: Option<String>,
+
+    /// Show all config changes between runs (not just output-affecting fields)
+    #[arg(long)]
+    pub show_all_config_changes: bool,
 }
 
 impl SharedBuildArgs {
@@ -684,6 +688,7 @@ impl SharedBuildArgs {
             retry: self.retry,
             targets,
             trace: self.trace.clone(),
+            show_all_config_changes: self.show_all_config_changes,
         }
     }
 }
@@ -707,6 +712,7 @@ pub struct BuildOptions {
     pub retry: usize,
     pub targets: Option<Vec<String>>,
     pub trace: Option<String>,
+    pub show_all_config_changes: bool,
 }
 
 /// Parse a shell name string into a Shell enum

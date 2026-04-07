@@ -223,7 +223,7 @@ impl Builder {
 
     /// Detect and display config changes for each processor.
     /// Shows colored diffs when processor configuration has changed since last build.
-    fn detect_config_changes(&self, processors: &ProcessorMap) {
+    fn detect_config_changes(&self, processors: &ProcessorMap, show_all: bool) {
         // Don't show config diffs in JSON or quiet mode
         if crate::json_output::is_json_mode() || crate::runtime_flags::quiet() {
             return;
@@ -238,11 +238,15 @@ impl Builder {
                 None => continue,
             };
 
-            // Keep only output-affecting fields for change detection.
+            // Keep only output-affecting fields for change detection (unless show_all).
             // Each processor declares which config fields affect its output;
             // changes to other fields (scan_dirs, batch, max_jobs, etc.)
-            // should not trigger config change detection.
-            let config_json = Self::filter_output_fields(name, &config_json);
+            // should not trigger config change detection by default.
+            let config_json = if show_all {
+                config_json
+            } else {
+                Self::filter_output_fields(name, &config_json)
+            };
 
             // Store the config and check if it changed
             if let Ok(Some(old_json)) = self.object_store.store_processor_config(name, &config_json) {

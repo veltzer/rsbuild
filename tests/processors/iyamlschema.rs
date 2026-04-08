@@ -5,9 +5,9 @@ use crate::common::run_rsconstruct_with_env;
 
 const SCHEMA_URL: &str = "https://example.com/test_schema.json";
 
-/// The schema content for tests. propertyOrdering is ["age", "name"] which
-/// matches alphabetical order (serde_json::Value uses BTreeMap so keys are
-/// always sorted alphabetically).
+/// The schema content for tests. propertyOrdering is ["name", "age"] which
+/// matches the YAML key order in test data (serde_json with preserve_order
+/// feature preserves insertion order from YAML parsing).
 const SCHEMA: &str = r#"{
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -15,7 +15,7 @@ const SCHEMA: &str = r#"{
         "name": { "type": "string" },
         "age": { "type": "integer" }
     },
-    "propertyOrdering": ["age", "name"],
+    "propertyOrdering": ["name", "age"],
     "required": ["name"]
 }"#;
 
@@ -84,7 +84,7 @@ fn iyamlschema_wrong_ordering_fails() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
-    // Use a schema where propertyOrdering does NOT match alphabetical order
+    // Schema expects ["age", "name"] but YAML has name before age
     let schema_wrong_order = r#"{
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
@@ -92,7 +92,7 @@ fn iyamlschema_wrong_ordering_fails() {
             "name": { "type": "string" },
             "age": { "type": "integer" }
         },
-        "propertyOrdering": ["name", "age"],
+        "propertyOrdering": ["age", "name"],
         "required": ["name"]
     }"#;
     let wrong_url = "https://example.com/wrong_order_schema.json";
@@ -103,8 +103,7 @@ fn iyamlschema_wrong_ordering_fails() {
         "[processor.iyamlschema]\nscan_dirs = [\".\"]\n",
     ).unwrap();
 
-    // Keys will be sorted alphabetically to ["age", "name"] but schema
-    // expects ["name", "age"], so ordering check should fail.
+    // YAML key order is ["name", "age"] but schema expects ["age", "name"]
     fs::write(
         project_path.join("data.yaml"),
         format!("$schema: \"{}\"\nname: Alice\nage: 30\n", wrong_url),

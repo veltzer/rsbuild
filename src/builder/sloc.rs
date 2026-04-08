@@ -3,6 +3,8 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::Result;
+use tabled::builder::Builder as TableBuilder;
+use tabled::settings::Style;
 
 use crate::file_index::FileIndex;
 use crate::json_output::{self, SlocCocomoEstimate, SlocLanguageEntry, SlocOutput, SlocTotals};
@@ -283,14 +285,20 @@ pub fn run_sloc(file_index: &FileIndex, cocomo: bool, salary: u64) -> Result<()>
         };
         println!("{}", serde_json::to_string_pretty(&output)?);
     } else {
-        let separator = "─".repeat(68);
-        println!("{:<20} {:>8} {:>10} {:>10} {:>10}", "Language", "Files", "Blank", "Comment", "Code");
-        println!("{}", separator);
+        let mut builder = TableBuilder::new();
+        builder.push_record(["Language", "Files", "Blank", "Comment", "Code"]);
         for (name, s) in &sorted {
-            println!("{:<20} {:>8} {:>10} {:>10} {:>10}", name, s.files, s.blank, s.comment, s.code);
+            builder.push_record([
+                name.to_string(), s.files.to_string(), s.blank.to_string(),
+                s.comment.to_string(), s.code.to_string(),
+            ]);
         }
-        println!("{}", separator);
-        println!("{:<20} {:>8} {:>10} {:>10} {:>10}", "Total", total_files, total_blank, total_comment, total_code);
+        builder.push_record([
+            "Total".to_string(), total_files.to_string(), total_blank.to_string(),
+            total_comment.to_string(), total_code.to_string(),
+        ]);
+        let table = builder.build().with(Style::modern()).to_string();
+        println!("{table}");
 
         if let Some(ref est) = cocomo_estimate {
             println!();

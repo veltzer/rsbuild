@@ -3,6 +3,8 @@ use redb::{ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefiniti
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use tabled::builder::Builder as TableBuilder;
+use tabled::settings::Style;
 
 use crate::config::{TagsConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
@@ -673,9 +675,13 @@ pub fn count_tags(db_path: &str) -> Result<()> {
             .collect();
         println!("{}", serde_json::to_string(&json_entries).expect(crate::errors::JSON_SERIALIZE));
     } else {
+        let mut builder = TableBuilder::new();
+        builder.push_record(["Count", "Tag"]);
         for (tag, count) in &entries {
-            println!("{:>4}  {}", count, tag);
+            builder.push_record([count.to_string(), tag.to_string()]);
         }
+        let table = builder.build().with(Style::modern()).to_string();
+        println!("{table}");
     }
 
     Ok(())
@@ -1062,25 +1068,20 @@ pub fn matrix_tags(db_path: &str) -> Result<()> {
         println!("{}", serde_json::to_string_pretty(&file_categories).expect(crate::errors::JSON_SERIALIZE));
     } else {
         let cats: Vec<&String> = categories.iter().collect();
-        // Header
-        print!("{:<50}", "File");
-        for cat in &cats {
-            print!(" {:>12}", cat);
-        }
-        println!();
-        // Rows
+        let mut builder = TableBuilder::new();
+        let mut header: Vec<String> = vec!["File".to_string()];
+        header.extend(cats.iter().map(|c| c.to_string()));
+        builder.push_record(header);
         for (file, file_cats) in &file_categories {
             let short = file.rsplit('/').next().unwrap_or(file);
-            print!("{:<50}", short);
+            let mut row: Vec<String> = vec![short.to_string()];
             for cat in &cats {
-                if file_cats.contains(*cat) {
-                    print!(" {:>12}", "Y");
-                } else {
-                    print!(" {:>12}", "-");
-                }
+                row.push(if file_cats.contains(*cat) { "Y".to_string() } else { "-".to_string() });
             }
-            println!();
+            builder.push_record(row);
         }
+        let table = builder.build().with(Style::modern()).to_string();
+        println!("{table}");
     }
     Ok(())
 }
@@ -1127,11 +1128,13 @@ pub fn coverage_tags(db_path: &str) -> Result<()> {
             .collect();
         println!("{}", serde_json::to_string_pretty(&json).expect(crate::errors::JSON_SERIALIZE));
     } else {
-        println!("{:<30} {:>6} {:>8}", "Category", "Files", "Coverage");
+        let mut builder = TableBuilder::new();
+        builder.push_record(["Category", "Files", "Coverage"]);
         for (cat, count, pct) in &coverage {
-            println!("{:<30} {:>6} {:>7.0}%", cat, count, pct);
+            builder.push_record([cat.to_string(), count.to_string(), format!("{:.0}%", pct)]);
         }
-        println!();
+        let table = builder.build().with(Style::modern()).to_string();
+        println!("{table}");
         println!("Total files: {}", total_files);
     }
     Ok(())
@@ -1458,9 +1461,13 @@ pub fn suggest_tags(db_path: &str, path: &str) -> Result<()> {
         println!("No suggestions — file already has all tags of similar files.");
     } else {
         println!("Suggested tags for {}:", path);
+        let mut builder = TableBuilder::new();
+        builder.push_record(["Tag", "Score"]);
         for (tag, score) in sorted_suggestions.iter().take(15) {
-            println!("  {:<40} (score: {:.2})", tag, score);
+            builder.push_record([tag.to_string(), format!("{:.2}", score)]);
         }
+        let table = builder.build().with(Style::modern()).to_string();
+        println!("{table}");
     }
     Ok(())
 }

@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use anyhow::{Result, bail};
+use tabled::builder::Builder as TableBuilder;
+use tabled::settings::Style;
 use crate::cli::ProcessorAction;
 use crate::color;
 use crate::config::ProcessorConfig;
@@ -30,19 +32,26 @@ pub fn list_processors_no_config(verbose: bool) -> Result<()> {
         return Ok(());
     }
 
+    let mut builder = TableBuilder::new();
+    let header = if verbose {
+        vec!["Name", "Type", "Native", "Batch", "Description"]
+    } else {
+        vec!["Name", "Type", "Description"]
+    };
+    builder.push_record(header);
     for name in &proc_names {
         let proc = &processors[name.as_str()];
-        let type_str = format!("[{}]", proc.processor_type().as_str());
-        let proc_type = color::dim(&type_str);
-        let extra = if verbose {
+        let type_str = proc.processor_type().as_str().to_string();
+        if verbose {
             let native_tag = if proc.is_native() { "native" } else { "external" };
             let batch_tag = if proc.supports_batch() { "batch" } else { "single" };
-            format!(" {} {}", color::dim(&format!("[{}]", native_tag)), color::dim(&format!("[{}]", batch_tag)))
+            builder.push_record([name.to_string(), type_str, native_tag.to_string(), batch_tag.to_string(), proc.description().to_string()]);
         } else {
-            String::new()
-        };
-        println!("{} {}{} \u{2014} {}", name, proc_type, extra, color::dim(proc.description()));
+            builder.push_record([name.to_string(), type_str, proc.description().to_string()]);
+        }
     }
+    let table = builder.build().with(Style::modern()).to_string();
+    println!("{table}");
 
     Ok(())
 }
@@ -128,19 +137,26 @@ impl Builder {
                     return Ok(());
                 }
 
+                let mut builder = TableBuilder::new();
+                let header = if verbose {
+                    vec!["Name", "Type", "Native", "Batch", "Description"]
+                } else {
+                    vec!["Name", "Type", "Description"]
+                };
+                builder.push_record(header);
                 for name in &proc_names {
                     let proc = &processors[name.as_str()];
-                    let type_str = format!("[{}]", proc.processor_type().as_str());
-                    let proc_type = color::dim(&type_str);
-                    let extra = if verbose {
+                    let type_str = proc.processor_type().as_str().to_string();
+                    if verbose {
                         let native_tag = if proc.is_native() { "native" } else { "external" };
                         let batch_tag = if proc.supports_batch() { "batch" } else { "single" };
-                        format!(" {} {}", color::dim(&format!("[{}]", native_tag)), color::dim(&format!("[{}]", batch_tag)))
+                        builder.push_record([name.to_string(), type_str, native_tag.to_string(), batch_tag.to_string(), proc.description().to_string()]);
                     } else {
-                        String::new()
-                    };
-                    println!("{} {}{} \u{2014} {}", name, proc_type, extra, color::dim(proc.description()));
+                        builder.push_record([name.to_string(), type_str, proc.description().to_string()]);
+                    }
                 }
+                let table = builder.build().with(Style::modern()).to_string();
+                println!("{table}");
             }
             ProcessorAction::Config { ref name, diff } => {
                 let names: Vec<&str> = if let Some(n) = name {

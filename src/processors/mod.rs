@@ -1418,10 +1418,13 @@ impl BuildStats {
 
             // Phase timings
             if !self.phase_timings.is_empty() {
-                let max_name_len = self.phase_timings.iter().map(|(n, _)| n.len()).max().unwrap_or(0);
+                let mut builder = tabled::builder::Builder::new();
+                builder.push_record(["Phase", "Duration"]);
                 for (name, dur) in &self.phase_timings {
-                    println!("  {:width$} {:.3}s", name, dur.as_secs_f64(), width = max_name_len);
+                    builder.push_record([name.to_string(), format!("{:.3}s", dur.as_secs_f64())]);
                 }
+                let table = builder.build().with(tabled::settings::Style::modern()).to_string();
+                println!("{table}");
             }
 
             // Per-product timings

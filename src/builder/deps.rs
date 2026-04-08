@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
 use anyhow::{Context, Result, bail};
+use tabled::builder::Builder as TableBuilder;
+use tabled::settings::Style;
 use crate::color;
 use crate::deps_cache::DepsCache;
 use super::{Builder, sorted_keys};
@@ -9,13 +11,17 @@ use super::{Builder, sorted_keys};
 fn print_deps_stats(stats: &std::collections::HashMap<String, (usize, usize)>) {
     let mut total_files = 0;
     let mut total_deps = 0;
+    let mut builder = TableBuilder::new();
+    builder.push_record(["Analyzer", "Files", "Dependencies"]);
     for name in sorted_keys(stats) {
         let (files, deps) = stats[name];
         total_files += files;
         total_deps += deps;
-        println!("{}: {} files, {} dependencies", color::bold(name), files, deps);
+        builder.push_record([name.to_string(), files.to_string(), deps.to_string()]);
     }
-    println!("{}: {} files, {} dependencies", color::bold("Total"), total_files, total_deps);
+    builder.push_record(["Total".to_string(), total_files.to_string(), total_deps.to_string()]);
+    let table = builder.build().with(Style::modern()).to_string();
+    println!("{table}");
 }
 
 impl Builder {
@@ -27,6 +33,8 @@ impl Builder {
             DepsAction::List => {
                 // List all available dependency analyzers
                 let analyzers = self.create_analyzers(false);
+                let mut builder = TableBuilder::new();
+                builder.push_record(["Name", "Status", "Description"]);
                 for name in sorted_keys(&analyzers) {
                     let analyzer = &analyzers[name];
                     let enabled = self.config.analyzer.is_enabled(name);
@@ -39,8 +47,10 @@ impl Builder {
                         (false, false) => color::dim("disabled"),
                     };
 
-                    println!("{:<10} {} — {}", name, status, color::dim(analyzer.description()));
+                    builder.push_record([name.to_string(), status.to_string(), analyzer.description().to_string()]);
                 }
+                let table = builder.build().with(Style::modern()).to_string();
+                println!("{table}");
             }
             DepsAction::Build => {
                 let processors = self.create_processors()?;

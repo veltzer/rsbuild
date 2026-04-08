@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use anyhow::Result;
+use tabled::settings::Style;
+use tabled::builder::Builder as TableBuilder;
 use crate::cli::{BuildOptions, BuildPhase, DisplayOptions};
 use crate::color;
 use crate::errors;
@@ -336,19 +338,22 @@ impl Builder {
             }
             println!();
             println!("{}:", color::bold("Source files by processor"));
-            let max_name = per_processor.keys().map(|n| n.len()).max().unwrap_or(0);
+            let mut builder = TableBuilder::new();
+            builder.push_record(["Processor", "Files", "Breakdown"]);
             for (proc_name, ext_counts) in &per_processor {
                 let total: usize = ext_counts.values().sum();
-                if total == 0 {
-                    println!("  {:<width$} 0 files", format!("{}:", proc_name), width = max_name + 1);
+                let breakdown_str = if total == 0 {
+                    String::new()
                 } else {
-                    let breakdown_str = ext_counts.iter()
+                    ext_counts.iter()
                         .map(|(ext, count)| format!("{} .{}", count, ext))
                         .collect::<Vec<_>>()
-                        .join(", ");
-                    println!("  {:<width$} {} files ({})", format!("{}:", proc_name), total, breakdown_str, width = max_name + 1);
-                }
+                        .join(", ")
+                };
+                builder.push_record([proc_name.to_string(), format!("{} files", total), breakdown_str]);
             }
+            let table = builder.build().with(Style::modern()).to_string();
+            println!("{table}");
         }
 
         Ok(())
@@ -383,10 +388,13 @@ impl Builder {
             println!("{}", serde_json::to_string_pretty(&json).expect(crate::errors::JSON_SERIALIZE));
         } else {
             println!("{}: {}", color::bold("Total source files"), all_inputs.len());
-            let max_ext_len = ext_counts.keys().map(|e| e.len()).max().unwrap_or(0);
+            let mut builder = TableBuilder::new();
+            builder.push_record(["Extension", "Count"]);
             for (ext, count) in &ext_counts {
-                println!("  .{:<width$} {}", ext, count, width = max_ext_len);
+                builder.push_record([format!(".{}", ext), count.to_string()]);
             }
+            let table = builder.build().with(Style::modern()).to_string();
+            println!("{table}");
         }
         Ok(())
     }
@@ -468,57 +476,27 @@ impl Builder {
             opts.labels.stale.1,
             opts.labels.new.1,
         ];
-        let max_name = per_processor.keys().map(|n| n.len()).max().unwrap_or(0)
-            .max("Processor".len());
-        let col_widths: [usize; NUM_STATES] = std::array::from_fn(|i| {
-            let data_max = per_processor.values()
-                .map(|pc| digit_width(pc[i]))
-                .max()
-                .unwrap_or(0)
-                .max(digit_width(counts[i]));
-            data_max.max(col_labels[i].len())
-        });
 
-        let total_line_width = max_name + 2
-            + col_widths.iter().map(|w| w + 2).sum::<usize>()
-            + "native".len();
-
-        // Header
-        println!("{}  {}  {}  {}  {}  {}",
-            color::bold(&format!("{:<width$}", "Processor", width = max_name)),
-            color::bold(&format!("{:>width$}", col_labels[0], width = col_widths[0])),
-            color::bold(&format!("{:>width$}", col_labels[1], width = col_widths[1])),
-            color::bold(&format!("{:>width$}", col_labels[2], width = col_widths[2])),
-            color::bold(&format!("{:>width$}", col_labels[3], width = col_widths[3])),
-            color::bold("native"));
-        // Separator
-        println!("{}", "\u{2500}".repeat(total_line_width));
-        // Rows
+        let mut builder = TableBuilder::new();
+        builder.push_record(["Processor", col_labels[0], col_labels[1], col_labels[2], col_labels[3], "native"]);
         for (name, pc) in &per_processor {
             let native = if opts.native_processors.contains(name) { "yes" } else { "" };
-            println!("{:<name_w$}  {:>w0$}  {:>w1$}  {:>w2$}  {:>w3$}  {}",
-                name,
-                pc[0], pc[1], pc[2], pc[3],
-                native,
-                name_w = max_name, w0 = col_widths[0], w1 = col_widths[1],
-                w2 = col_widths[2], w3 = col_widths[3]);
+            builder.push_record([
+                name.to_string(),
+                pc[0].to_string(), pc[1].to_string(), pc[2].to_string(), pc[3].to_string(),
+                native.to_string(),
+            ]);
         }
-        // Separator before summary
-        println!("{}", "\u{2500}".repeat(total_line_width));
-        // Summary row
-        println!("{}  {:>w0$}  {:>w1$}  {:>w2$}  {:>w3$}",
-            color::bold(&format!("{:<width$}", "Total", width = max_name)),
-            counts[0], counts[1], counts[2], counts[3],
-            w0 = col_widths[0], w1 = col_widths[1],
-            w2 = col_widths[2], w3 = col_widths[3]);
+        builder.push_record([
+            "Total".to_string(),
+            counts[0].to_string(), counts[1].to_string(), counts[2].to_string(), counts[3].to_string(),
+            String::new(),
+        ]);
+        let table = builder.build().with(Style::modern()).to_string();
+        println!("{table}");
     }
 }
 
-/// Number of decimal digits needed to display `n` (minimum 1).
-fn digit_width(n: usize) -> usize {
-    if n == 0 { return 1; }
-    ((n as f64).log10().floor() as usize) + 1
-}
 
 /// Write a Chrome trace format JSON file from build statistics.
 /// The file can be opened in chrome://tracing or https://ui.perfetto.dev

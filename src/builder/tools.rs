@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 use std::io::Write;
 use std::process::Command;
 use anyhow::Result;
+use tabled::builder::Builder as TableBuilder;
+use tabled::settings::Style;
 use crate::cli::{GraphFormat, ToolsAction};
 use crate::color;
 use crate::json_output;
@@ -271,8 +273,8 @@ fn run_tools_command(
                 };
                 println!("{}", serde_json::to_string_pretty(&output)?);
             } else {
-                println!("Tools:");
-                let max_name = tool_stats.iter().map(|t| t.name.len()).max().unwrap_or(0);
+                let mut builder = TableBuilder::new();
+                builder.push_record(["Tool", "Status", "Processors", "Install"]);
                 for stat in &tool_stats {
                     let status = if stat.installed {
                         color::green("\u{2713}")
@@ -280,14 +282,16 @@ fn run_tools_command(
                         color::red("\u{2717}")
                     };
                     let procs = stat.processors.join(", ");
-                    let install = stat.install_command.as_deref()
-                        .map(|c| format!("  ({})", color::dim(c)))
-                        .unwrap_or_default();
-                    println!("  {:width$}  {}  {}{}", stat.name, status, procs, install, width = max_name);
+                    let install = stat.install_command.as_deref().unwrap_or("").to_string();
+                    builder.push_record([stat.name.clone(), status.to_string(), procs, install]);
                 }
+                let table = builder.build().with(Style::modern()).to_string();
+                println!("{table}");
 
                 println!();
                 println!("Runtime summary:");
+                let mut rt_builder = TableBuilder::new();
+                rt_builder.push_record(["Runtime", "Installed"]);
                 let runtime_display: &[(&str, &str)] = &[
                     ("python", "Python"),
                     ("node", "Node.js"),
@@ -298,14 +302,17 @@ fn run_tools_command(
                 ];
                 for (key, label) in runtime_display {
                     if let Some(rs) = runtime_stats.iter().find(|r| r.runtime == *key) {
-                        let line = format!("  {:10}{}/{} installed", label, rs.installed, rs.total);
-                        if rs.missing > 0 {
-                            println!("{}", color::yellow(&line));
+                        let status_str = format!("{}/{}", rs.installed, rs.total);
+                        let line = if rs.missing > 0 {
+                            color::yellow(&status_str)
                         } else {
-                            println!("{}", color::green(&line));
-                        }
+                            color::green(&status_str)
+                        };
+                        rt_builder.push_record([label.to_string(), line.to_string()]);
                     }
                 }
+                let rt_table = rt_builder.build().with(Style::modern()).to_string();
+                println!("{rt_table}");
 
                 println!();
                 let total_line = format!("Total: {}/{} tools installed", installed_count, total_tools);

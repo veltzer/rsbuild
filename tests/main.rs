@@ -88,6 +88,7 @@ mod processors {
     pub mod jslint;
     pub mod standard;
     pub mod htmllint;
+    pub mod iyamlschema;
     pub mod php_lint;
     pub mod perlcritic;
     pub mod xmllint;

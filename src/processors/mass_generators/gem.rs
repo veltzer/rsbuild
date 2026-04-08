@@ -66,6 +66,7 @@ impl ProductDiscovery for GemProcessor {
                 siblings.excludes,
                 &[],
                 &[],
+                &[],
             );
 
             let inputs = crate::processors::build_anchor_inputs(&anchor, &sibling_files, &extra);

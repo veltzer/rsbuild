@@ -68,7 +68,7 @@ impl ProductDiscovery for SphinxProcessor {
         for anchor in files {
             let anchor_dir = anchor.parent().map(|p| p.to_path_buf()).unwrap_or_default();
             let sibling_files = file_index.query(
-                &anchor_dir, siblings.extensions, siblings.excludes, &[], &[],
+                &anchor_dir, siblings.extensions, siblings.excludes, &[], &[], &[],
             );
             let inputs = crate::processors::build_anchor_inputs(&anchor, &sibling_files, &extra);
             if self.config.cache_output_dir {

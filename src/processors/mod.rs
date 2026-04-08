@@ -646,6 +646,7 @@ pub(crate) fn discover_directory_products(
             siblings.excludes,
             &[],
             &[],
+            &[],
         );
 
         let inputs = build_anchor_inputs(&anchor, &sibling_files, &extra);

@@ -53,6 +53,7 @@ impl FileIndex {
     /// - `exclude_dirs`: directory path segments to skip (e.g., `["/.git/", "/out/"]`)
     /// - `exclude_files`: file names to skip (e.g., `["setup.py"]`)
     /// - `exclude_paths`: paths relative to project root to skip (e.g., `["Makefile"]`)
+    /// - `include_paths`: if non-empty, only these paths are matched (allowlist)
     pub fn query(
         &self,
         root: &Path,
@@ -60,6 +61,7 @@ impl FileIndex {
         exclude_dirs: &[&str],
         exclude_files: &[&str],
         exclude_paths: &[&str],
+        include_paths: &[&str],
     ) -> Vec<PathBuf> {
         self.files
             .iter()
@@ -71,6 +73,13 @@ impl FileIndex {
                     && !path.starts_with(root) {
                         return false;
                     }
+
+                // If include_paths is set, only match those exact paths
+                // (skip extension and exclude checks — the user explicitly listed files)
+                if !include_paths.is_empty() {
+                    let path_str = path.to_string_lossy();
+                    return include_paths.iter().any(|p| *p == path_str);
+                }
 
                 // Check exclude dirs
                 if !exclude_dirs.is_empty() {
@@ -123,13 +132,14 @@ impl FileIndex {
         let exclude_dir_refs: Vec<&str> = scan.exclude_dirs().iter().map(|s| s.as_str()).collect();
         let exclude_file_refs: Vec<&str> = scan.exclude_files().iter().map(|s| s.as_str()).collect();
         let exclude_path_refs: Vec<&str> = scan.exclude_paths().iter().map(|s| s.as_str()).collect();
+        let include_path_refs: Vec<&str> = scan.include_paths().iter().map(|s| s.as_str()).collect();
 
         let mut results = Vec::new();
         for dir in scan.scan_dirs() {
             // Normalize "." to "" so depth calculations work correctly
             // (files in the index are stored as relative paths without "./" prefix)
             let root = if dir == "." { PathBuf::new() } else { PathBuf::from(dir) };
-            let mut dir_results = self.query(&root, &ext_refs, &exclude_dir_refs, &exclude_file_refs, &exclude_path_refs);
+            let mut dir_results = self.query(&root, &ext_refs, &exclude_dir_refs, &exclude_file_refs, &exclude_path_refs, &include_path_refs);
 
             if !recursive {
                 // Filter to depth 1 from scan root: keep only files whose path has
@@ -237,7 +247,7 @@ mod tests {
     #[test]
     fn query_filters_by_extension() {
         let idx = sample_index();
-        let results = idx.query(Path::new(""), &[".c"], &[], &[], &[]);
+        let results = idx.query(Path::new(""), &[".c"], &[], &[], &[], &[]);
         assert_eq!(results.len(), 3); // main.c, lib.c, helper.c
         assert!(results.iter().all(|p| p.to_string_lossy().ends_with(".c")));
     }
@@ -245,7 +255,7 @@ mod tests {
     #[test]
     fn query_filters_by_root() {
         let idx = sample_index();
-        let results = idx.query(Path::new("tests"), &[".py"], &[], &[], &[]);
+        let results = idx.query(Path::new("tests"), &[".py"], &[], &[], &[], &[]);
         assert_eq!(results.len(), 2);
         assert!(results.iter().all(|p| p.starts_with("tests")));
     }
@@ -253,14 +263,14 @@ mod tests {
     #[test]
     fn query_excludes_dirs() {
         let idx = sample_index();
-        let results = idx.query(Path::new(""), &[".c", ".o"], &["/util/"], &[], &[]);
+        let results = idx.query(Path::new(""), &[".c", ".o"], &["/util/"], &[], &[], &[]);
         assert!(!results.iter().any(|p| p.to_string_lossy().contains("/util/")));
     }
 
     #[test]
     fn query_excludes_files() {
         let idx = sample_index();
-        let results = idx.query(Path::new(""), &[".c"], &[], &["lib.c"], &[]);
+        let results = idx.query(Path::new(""), &[".c"], &[], &["lib.c"], &[], &[]);
         assert!(!results.iter().any(|p| p.file_name().unwrap() == "lib.c"));
         assert!(results.iter().any(|p| p.file_name().unwrap() == "main.c"));
     }
@@ -268,7 +278,7 @@ mod tests {
     #[test]
     fn query_excludes_paths() {
         let idx = sample_index();
-        let results = idx.query(Path::new(""), &[".c"], &[], &[], &["src/main.c"]);
+        let results = idx.query(Path::new(""), &[".c"], &[], &[], &["src/main.c"], &[]);
         assert!(!results.contains(&PathBuf::from("src/main.c")));
         assert!(results.contains(&PathBuf::from("src/lib.c")));
     }
@@ -276,7 +286,7 @@ mod tests {
     #[test]
     fn query_empty_root_matches_all() {
         let idx = sample_index();
-        let results = idx.query(Path::new(""), &[".md"], &[], &[], &[]);
+        let results = idx.query(Path::new(""), &[".md"], &[], &[], &[], &[]);
         assert_eq!(results, vec![PathBuf::from("README.md")]);
     }
 }

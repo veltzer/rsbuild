@@ -64,6 +64,7 @@ impl ProductDiscovery for CargoProcessor {
                 siblings.excludes,
                 &[],
                 &[],
+                &[],
             );
 
             let base_inputs = crate::processors::build_anchor_inputs(&anchor, &sibling_files, &extra);

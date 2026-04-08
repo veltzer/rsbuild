@@ -23,6 +23,7 @@ mod rust_single_file;
 mod sass;
 pub mod tags;
 mod tera;
+mod yaml2json;
 
 pub use a2x::A2xProcessor;
 pub use cc_single_file::CcSingleFileProcessor;
@@ -49,6 +50,7 @@ pub use rust_single_file::RustSingleFileProcessor;
 pub use sass::SassProcessor;
 pub use tags::TagsProcessor;
 pub use tera::TeraProcessor;
+pub use yaml2json::Yaml2jsonProcessor;
 
 use std::path::{Path, PathBuf};
 use anyhow::Result;

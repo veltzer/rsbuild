@@ -2187,6 +2187,46 @@ impl KnownFields for ImarkdownConfig {
     }
 }
 
+fn default_yaml2json_output_dir() -> String { "out/yaml2json".into() }
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Yaml2jsonConfig {
+    #[serde(default)]
+    pub extra_inputs: Vec<String>,
+    #[serde(default)]
+    pub auto_inputs: Vec<String>,
+    #[serde(default = "default_yaml2json_output_dir")]
+    pub output_dir: String,
+    #[serde(default = "default_true")]
+    pub batch: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_jobs: Option<usize>,
+    #[serde(flatten)]
+    pub scan: ScanConfig,
+}
+
+impl Default for Yaml2jsonConfig {
+    fn default() -> Self {
+        Self {
+            extra_inputs: Vec::new(),
+            auto_inputs: Vec::new(),
+            output_dir: "out/yaml2json".into(),
+            batch: true,
+            max_jobs: None,
+            scan: default_scan!(extensions: [".yml", ".yaml"]),
+        }
+    }
+}
+
+impl KnownFields for Yaml2jsonConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &["extra_inputs", "auto_inputs", "output_dir", "batch", "max_jobs"]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["output_dir"]
+    }
+}
+
 fn default_isass_output_dir() -> String { "out/isass".into() }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

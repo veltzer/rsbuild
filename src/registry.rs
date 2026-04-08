@@ -94,6 +94,7 @@ macro_rules! for_each_processor {
             ITAPLO,         itaplo,         ItaploConfig,          ItaploProcessor,          ("", &[".toml"], BUILD_TOOL_EXCLUDES);
             IMARKDOWN,      imarkdown,      ImarkdownConfig,       ImarkdownProcessor,       ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
             ISASS,          isass,          IsassConfig,           IsassProcessor,           ("sass", &[".scss", ".sass"], &[]);
+            YAML2JSON,      yaml2json,      Yaml2jsonConfig,       Yaml2jsonProcessor,       ("", &[".yml", ".yaml"], BUILD_TOOL_EXCLUDES);
             RUST_SINGLE_FILE, rust_single_file, RustSingleFileConfig, RustSingleFileProcessor, ("src", &[".rs"], &[]);
             SLIDEV,         slidev,         SlidevConfig,          SlidevProcessor,          ("", &[".md"], BUILD_TOOL_EXCLUDES);
             ENCODING,       encoding,       EncodingConfig,        EncodingProcessor,        ("", &[".py", ".rs", ".js", ".ts", ".c", ".cc", ".h", ".hh", ".java", ".rb", ".go", ".sh", ".bash", ".lua", ".pl", ".pm", ".php", ".md", ".yaml", ".yml", ".json", ".toml", ".xml", ".html", ".htm", ".css", ".scss", ".sass", ".tex", ".txt"], BUILD_TOOL_EXCLUDES);

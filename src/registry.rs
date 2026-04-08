@@ -91,6 +91,7 @@ macro_rules! for_each_processor {
             IJQ,            ijq,            IjqConfig,             IjqProcessor,             ("", &[".json"], BUILD_TOOL_EXCLUDES);
             IJSONLINT,      ijsonlint,      IjsonlintConfig,       IjsonlintProcessor,       ("", &[".json"], BUILD_TOOL_EXCLUDES);
             IYAMLLINT,      iyamllint,      IyamllintConfig,       IyamllintProcessor,       ("", &[".yml", ".yaml"], BUILD_TOOL_EXCLUDES);
+            IYAMLSCHEMA,    iyamlschema,    IyamlschemaConfig,     IyamlschemaProcessor,     ("", &[".yml", ".yaml"], BUILD_TOOL_EXCLUDES);
             ITAPLO,         itaplo,         ItaploConfig,          ItaploProcessor,          ("", &[".toml"], BUILD_TOOL_EXCLUDES);
             IMARKDOWN2HTML, imarkdown2html, Imarkdown2htmlConfig,  Imarkdown2htmlProcessor,  ("", &[".md"], MARKDOWN_EXCLUDE_DIRS);
             ISASS,          isass,          IsassConfig,           IsassProcessor,           ("sass", &[".scss", ".sass"], &[]);

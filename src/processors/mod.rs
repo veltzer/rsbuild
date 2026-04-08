@@ -857,7 +857,7 @@ pub use checkers::{
     CheckstyleProcessor, CmakeProcessor, DoctestProcessor, DuplicateFilesProcessor,
     EncodingProcessor, EslintProcessor,
     HadolintProcessor, HtmlhintProcessor, HtmllintProcessor,
-    IjqProcessor, IjsonlintProcessor, ItaploProcessor, IyamllintProcessor,
+    IjqProcessor, IjsonlintProcessor, ItaploProcessor, IyamllintProcessor, IyamlschemaProcessor,
     JshintProcessor, JslintProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
     LicenseHeaderProcessor, LuacheckProcessor, MakeProcessor, MarpImagesProcessor,
     MarkdownlintProcessor, MdlProcessor, MypyProcessor,

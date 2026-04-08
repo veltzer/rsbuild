@@ -2150,6 +2150,8 @@ checker_config!(IjsonlintConfig, extensions: [".json"]);
 
 checker_config!(IyamllintConfig, extensions: [".yml", ".yaml"]);
 
+checker_config!(IyamlschemaConfig, extensions: [".yml", ".yaml"]);
+
 checker_config!(ItaploConfig, extensions: [".toml"]);
 
 fn default_imarkdown2html_output_dir() -> String { "out/imarkdown2html".into() }

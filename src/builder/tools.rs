@@ -63,8 +63,7 @@ fn tool_runtime(tool: &str) -> &'static str {
 /// even outside a project directory.
 pub fn tools_no_config(action: ToolsAction, verbose: bool) -> Result<()> {
     let processors = super::create_all_default_processors();
-    let file_index = crate::file_index::FileIndex::build().ok();
-    run_tools_command(&processors, &|_name| true, action, verbose, None, file_index.as_ref())
+    run_tools_command(&processors, &|_name| true, action, verbose, None)
 }
 
 impl Builder {
@@ -91,26 +90,22 @@ impl Builder {
             action,
             verbose,
             Some(self),
-            Some(&self.file_index),
         )
     }
 }
 
 /// Core implementation for `tools` subcommands, shared by `Builder::tools()` and `tools_no_config()`.
 /// `builder` is `Some` when running with a project config (needed for `open_file`, `Check`, `Lock`).
-/// `file_index` is `Some` when running inside a project (needed for auto-detection filtering).
 fn run_tools_command(
     processors: &crate::processors::ProcessorMap,
     is_enabled: &dyn Fn(&str) -> bool,
     action: ToolsAction,
     verbose: bool,
     builder: Option<&Builder>,
-    file_index: Option<&crate::file_index::FileIndex>,
 ) -> Result<()> {
     let show_all = matches!(&action, ToolsAction::List { all: true, .. });
     let show_methods = matches!(&action, ToolsAction::List { methods: true, .. });
     let install_yes = matches!(&action, ToolsAction::Install { yes: true, .. });
-    let install_all = matches!(&action, ToolsAction::Install { all: true, .. });
 
     let mut tool_map: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for name in sorted_keys(processors) {
@@ -348,17 +343,13 @@ fn run_tools_command(
                     }
                 }
             } else {
-                // Build tool list: filter by detected processors unless --all
+                // Build tool list from all enabled processors.
+                // Every processor in the config gets its tools installed —
+                // auto_detect is not checked because the tool itself may need
+                // to be installed before detection can succeed.
                 let mut install_tools: BTreeMap<String, Vec<String>> = BTreeMap::new();
                 for name in sorted_keys(processors) {
                     if !is_enabled(name) {
-                        continue;
-                    }
-                    // Skip undetected processors unless --all
-                    if !install_all
-                        && let Some(fi) = file_index
-                        && !processors[name].auto_detect(fi)
-                    {
                         continue;
                     }
                     for tool in processors[name].required_tools() {

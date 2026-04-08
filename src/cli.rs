@@ -440,14 +440,11 @@ pub enum ToolsAction {
     Lock,
     /// Install missing external tools (all missing, or a specific tool by name)
     Install {
-        /// Tool name to install (omit to install missing tools for detected processors)
+        /// Tool name to install (omit to install missing tools for enabled processors)
         name: Option<String>,
         /// Skip confirmation prompt
         #[arg(short, long)]
         yes: bool,
-        /// Install tools for all enabled processors, not just detected ones
-        #[arg(short, long)]
-        all: bool,
     },
     /// Install declared dependencies from the [dependencies] config section
     InstallDeps {

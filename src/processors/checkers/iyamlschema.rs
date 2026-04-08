@@ -5,6 +5,18 @@ use std::path::Path;
 use crate::config::IyamlschemaConfig;
 use crate::graph::Product;
 
+/// Custom retriever that fetches remote schemas via the webcache.
+struct WebCacheRetriever;
+
+impl jsonschema::Retrieve for WebCacheRetriever {
+    fn retrieve(&self, uri: &jsonschema::Uri<String>) -> std::result::Result<Value, Box<dyn std::error::Error + Send + Sync>> {
+        let url = uri.as_str();
+        let body = crate::webcache::fetch(url)?;
+        let value: Value = serde_json::from_str(&body)?;
+        Ok(value)
+    }
+}
+
 pub struct IyamlschemaProcessor {
     config: IyamlschemaConfig,
 }
@@ -53,8 +65,10 @@ impl IyamlschemaProcessor {
         let schema: Value = serde_json::from_str(&schema_str)
             .with_context(|| format!("Failed to parse schema from {}", schema_url))?;
 
-        // Validate data against schema
-        let validator = jsonschema::validator_for(&schema)
+        // Validate data against schema (with custom retriever for remote $ref resolution)
+        let validator = jsonschema::options()
+            .with_retriever(WebCacheRetriever)
+            .build(&schema)
             .with_context(|| format!("Failed to compile schema from {}", schema_url))?;
 
         let validation_errors: Vec<String> = validator.iter_errors(&data)

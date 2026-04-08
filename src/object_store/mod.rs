@@ -203,6 +203,11 @@ impl ObjectStore {
         self.mtime_check = enabled;
     }
 
+    /// Check if a cache entry exists for the given key (i.e. the product has been built before).
+    pub fn has_cache_entry(&self, cache_key: &str) -> bool {
+        self.get_entry(cache_key).is_some()
+    }
+
     /// Get a cache entry from the database
     fn get_entry(&self, cache_key: &str) -> Option<CacheEntry> {
         let read_txn = self.db.begin_read().ok()?;

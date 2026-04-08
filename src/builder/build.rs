@@ -265,6 +265,7 @@ impl Builder {
             current: (color::dim("SKIP"), "skip"),
             restorable: (color::cyan("RESTORE"), "restore"),
             stale: (color::yellow("BUILD"), "build"),
+            new: (color::yellow("BUILD"), "build-new"),
         };
 
         self.print_product_status(&products, &StatusPrintOptions {
@@ -291,6 +292,7 @@ impl Builder {
             current: (color::green("UP-TO-DATE"), "up-to-date"),
             restorable: (color::cyan("RESTORABLE"), "restorable"),
             stale: (color::yellow("STALE"), "stale"),
+            new: (color::magenta("NEW"), "new"),
         };
 
         // Collect all processor names so we also show processors with 0 files
@@ -398,14 +400,20 @@ impl Builder {
     ) {
         use crate::object_store::ExplainAction;
 
-        let mut counts = [0usize; 3]; // [current, restorable, stale]
-        let mut per_processor: BTreeMap<&str, [usize; 3]> = BTreeMap::new();
+        const NUM_STATES: usize = 4; // current, restorable, stale, new
+        let mut counts = [0usize; NUM_STATES];
+        let mut per_processor: BTreeMap<&str, [usize; NUM_STATES]> = BTreeMap::new();
         // Seed with all processor names so processors with 0 products are shown
         for name in opts.all_processor_names {
             per_processor.entry(name).or_default();
         }
 
-        let status_labels = [&opts.labels.current.0, &opts.labels.restorable.0, &opts.labels.stale.0];
+        let status_labels = [
+            &opts.labels.current.0,
+            &opts.labels.restorable.0,
+            &opts.labels.stale.0,
+            &opts.labels.new.0,
+        ];
 
         for product in products {
             let cache_key = product.cache_key();
@@ -414,11 +422,13 @@ impl Builder {
             let input_checksum = match self.object_store.combined_input_checksum_fast(&product.inputs) {
                 Ok(cs) => cs,
                 Err(_) => {
+                    // Can't compute checksum — classify as new or stale based on cache
+                    let idx = if self.object_store.has_cache_entry(&cache_key) { 2 } else { 3 };
                     if opts.verbose {
-                        println!("{} [{}] {}", status_labels[2], product.processor, display);
+                        println!("{} [{}] {}", status_labels[idx], product.processor, display);
                     }
-                    counts[2] += 1;
-                    per_processor.entry(&product.processor).or_default()[2] += 1;
+                    counts[idx] += 1;
+                    per_processor.entry(&product.processor).or_default()[idx] += 1;
                     continue;
                 }
             };
@@ -429,6 +439,7 @@ impl Builder {
                 let idx = match action {
                     ExplainAction::Skip => 0,
                     ExplainAction::Restore(_) => 1,
+                    ExplainAction::Rebuild(crate::object_store::RebuildReason::NoCacheEntry) => 3,
                     ExplainAction::Rebuild(_) => 2,
                 };
                 (idx, reason)
@@ -436,8 +447,10 @@ impl Builder {
                 (0, String::new())
             } else if !opts.force && self.object_store.can_restore(&cache_key, &input_checksum, &product.outputs) {
                 (1, String::new())
+            } else if self.object_store.has_cache_entry(&cache_key) {
+                (2, String::new()) // stale: was built before
             } else {
-                (2, String::new())
+                (3, String::new()) // new: never built
             };
 
             if opts.verbose {
@@ -449,13 +462,18 @@ impl Builder {
         }
 
         // Per-processor table
-        let col_labels = [opts.labels.current.1, opts.labels.restorable.1, opts.labels.stale.1];
+        let col_labels = [
+            opts.labels.current.1,
+            opts.labels.restorable.1,
+            opts.labels.stale.1,
+            opts.labels.new.1,
+        ];
         let max_name = if per_processor.len() > 1 {
             per_processor.keys().map(|n| n.len()).max().unwrap_or(0)
         } else {
             0
         }.max("Processor".len());
-        let col_widths: [usize; 3] = std::array::from_fn(|i| {
+        let col_widths: [usize; NUM_STATES] = std::array::from_fn(|i| {
             let data_max = per_processor.values()
                 .map(|pc| digit_width(pc[i]))
                 .max()
@@ -464,35 +482,40 @@ impl Builder {
             data_max.max(col_labels[i].len())
         });
 
-        let total_line_width = max_name + 2 + col_widths[0] + 2 + col_widths[1] + 2 + col_widths[2] + 2 + "native".len();
+        let total_line_width = max_name + 2
+            + col_widths.iter().map(|w| w + 2).sum::<usize>()
+            + "native".len();
 
         if per_processor.len() > 1 {
             // Header
-            println!("{}  {}  {}  {}  {}",
+            println!("{}  {}  {}  {}  {}  {}",
                 color::bold(&format!("{:<width$}", "Processor", width = max_name)),
                 color::bold(&format!("{:>width$}", col_labels[0], width = col_widths[0])),
                 color::bold(&format!("{:>width$}", col_labels[1], width = col_widths[1])),
                 color::bold(&format!("{:>width$}", col_labels[2], width = col_widths[2])),
+                color::bold(&format!("{:>width$}", col_labels[3], width = col_widths[3])),
                 color::bold("native"));
             // Separator
             println!("{}", "\u{2500}".repeat(total_line_width));
             // Rows
             for (name, pc) in &per_processor {
                 let native = if opts.native_processors.contains(name) { "yes" } else { "" };
-                println!("{:<name_w$}  {:>w0$}  {:>w1$}  {:>w2$}  {}",
+                println!("{:<name_w$}  {:>w0$}  {:>w1$}  {:>w2$}  {:>w3$}  {}",
                     name,
-                    pc[0], pc[1], pc[2],
+                    pc[0], pc[1], pc[2], pc[3],
                     native,
-                    name_w = max_name, w0 = col_widths[0], w1 = col_widths[1], w2 = col_widths[2]);
+                    name_w = max_name, w0 = col_widths[0], w1 = col_widths[1],
+                    w2 = col_widths[2], w3 = col_widths[3]);
             }
             // Separator before summary
             println!("{}", "\u{2500}".repeat(total_line_width));
         }
         // Summary row
-        println!("{}  {:>w0$}  {:>w1$}  {:>w2$}",
+        println!("{}  {:>w0$}  {:>w1$}  {:>w2$}  {:>w3$}",
             color::bold(&format!("{:<width$}", "Total", width = max_name)),
-            counts[0], counts[1], counts[2],
-            w0 = col_widths[0], w1 = col_widths[1], w2 = col_widths[2]);
+            counts[0], counts[1], counts[2], counts[3],
+            w0 = col_widths[0], w1 = col_widths[1],
+            w2 = col_widths[2], w3 = col_widths[3]);
     }
 }
 

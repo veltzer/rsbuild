@@ -66,11 +66,12 @@ fn phases_debug() -> bool {
     crate::runtime_flags::phases_debug()
 }
 
-/// Labels for the three product states used by dry_run and status.
+/// Labels for the four product states used by dry_run and status.
 struct ProductStatusLabels<'a> {
     current: (Cow<'a, str>, &'static str),
     restorable: (Cow<'a, str>, &'static str),
     stale: (Cow<'a, str>, &'static str),
+    new: (Cow<'a, str>, &'static str),
 }
 
 /// Options for `print_product_status`.

@@ -12,11 +12,11 @@ fn status_command() {
         "hello"
     ).unwrap();
 
-    // Before building, should be STALE (use -v to see per-file status)
+    // Before building, should be NEW (never built, use -v to see per-file status)
     let status1 = run_rsconstruct_with_env(project_path, &["-v", "status"], &[("NO_COLOR", "1")]);
     assert!(status1.status.success());
     let stdout1 = String::from_utf8_lossy(&status1.stdout);
-    assert!(stdout1.contains("STALE"), "Before build, product should be STALE: {}", stdout1);
+    assert!(stdout1.contains("NEW"), "Before build, product should be NEW: {}", stdout1);
 
     // Build it
     let build = run_rsconstruct(project_path, &["build"]);

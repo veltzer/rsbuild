@@ -28,6 +28,10 @@ pub fn yellow(text: &str) -> Cow<'_, str> {
     wrap("33", text)
 }
 
+pub fn magenta(text: &str) -> Cow<'_, str> {
+    wrap("35", text)
+}
+
 pub fn cyan(text: &str) -> Cow<'_, str> {
     wrap("36", text)
 }

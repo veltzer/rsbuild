@@ -135,10 +135,17 @@ impl FileIndex {
         let include_path_refs: Vec<&str> = scan.match_paths().iter().map(|s| s.as_str()).collect();
 
         let mut results = Vec::new();
-        for dir in scan.scan_dirs() {
+        // When match_paths is set but scan_dirs is empty, scan from project root
+        let scan_dirs = scan.scan_dirs();
+        let effective_dirs: Vec<&str> = if scan_dirs.is_empty() && !include_path_refs.is_empty() {
+            vec![""]
+        } else {
+            scan_dirs.iter().map(|s| s.as_str()).collect()
+        };
+        for dir in &effective_dirs {
             // Normalize "." to "" so depth calculations work correctly
             // (files in the index are stored as relative paths without "./" prefix)
-            let root = if dir == "." { PathBuf::new() } else { PathBuf::from(dir) };
+            let root = if *dir == "." || dir.is_empty() { PathBuf::new() } else { PathBuf::from(dir) };
             let mut dir_results = self.query(&root, &ext_refs, &exclude_dir_refs, &exclude_file_refs, &exclude_path_refs, &include_path_refs);
 
             if !recursive {

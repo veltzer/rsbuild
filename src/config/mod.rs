@@ -133,9 +133,15 @@ pub(crate) struct ScanConfig {
 
 impl ScanConfig {
     /// Fill in None fields with the given defaults (mutates in place).
+    /// A `scan_dir` of `""` means "no default" — `scan_dirs` will be set to `[]`
+    /// and the user must provide it in their config.
     pub(crate) fn resolve(&mut self, scan_dir: &str, extensions: &[&str], exclude_dirs: &[&str]) {
         if self.scan_dirs.is_none() {
-            self.scan_dirs = Some(vec![scan_dir.to_string()]);
+            if scan_dir.is_empty() {
+                self.scan_dirs = Some(Vec::new());
+            } else {
+                self.scan_dirs = Some(vec![scan_dir.to_string()]);
+            }
         }
         if self.extensions.is_none() {
             self.extensions = Some(extensions.iter().map(|s| s.to_string()).collect());

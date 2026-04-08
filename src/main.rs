@@ -26,11 +26,10 @@ mod runtime_flags;
 mod remote_cache;
 mod tool_lock;
 mod watcher;
-#[allow(dead_code)]
 mod webcache;
 
 use anyhow::{Context, bail, Result};
-use cli::{BuildPhase, CacheAction, CleanAction, Commands, parse_shell, print_completions};
+use cli::{BuildPhase, CacheAction, CleanAction, Commands, WebCacheAction, parse_shell, print_completions};
 use config::Config;
 use builder::Builder;
 use exit_code::{RsconstructExitCode, RsconstructError, classify_error};
@@ -443,6 +442,38 @@ fn run() -> Result<()> {
             println!("RUSTC_SEMVER: {}", env!("RUSTC_SEMVER"));
             println!("RUST_EDITION: {}", env!("RUST_EDITION"));
             println!("BUILD_TIMESTAMP: {}", env!("BUILD_TIMESTAMP"));
+        }
+        Commands::WebCache { action } => {
+            match action {
+                WebCacheAction::Clear => {
+                    let count = webcache::clear()?;
+                    println!("Removed {} cached entries.", count);
+                }
+                WebCacheAction::Stats => {
+                    let (bytes, count) = webcache::stats()?;
+                    println!("Web cache: {} ({} entries)",
+                        humansize::format_size(bytes, humansize::BINARY), count);
+                }
+                WebCacheAction::List => {
+                    let entries = webcache::list()?;
+                    if entries.is_empty() {
+                        println!("Web cache is empty.");
+                    } else {
+                        let mut builder = tabled::builder::Builder::new();
+                        builder.push_record(["Hash", "Size"]);
+                        for entry in &entries {
+                            builder.push_record([
+                                entry.url_hash.clone(),
+                                humansize::format_size(entry.size, humansize::BINARY),
+                            ]);
+                        }
+                        let table = builder.build()
+                            .with(tabled::settings::Style::modern())
+                            .to_string();
+                        println!("{table}");
+                    }
+                }
+            }
         }
         Commands::Watch { ref shared } => {
             let opts = shared.to_build_options(&cli, false, BuildPhase::Build);

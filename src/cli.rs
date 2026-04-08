@@ -275,6 +275,12 @@ pub enum Commands {
         #[command(flatten)]
         shared: SharedBuildArgs,
     },
+    /// Manage the web request cache
+    #[command(name = "webcache")]
+    WebCache {
+        #[command(subcommand)]
+        action: WebCacheAction,
+    },
 }
 
 #[derive(Subcommand)]
@@ -372,6 +378,16 @@ pub enum CacheAction {
     Stale,
     /// Show per-processor cache statistics
     Stats,
+}
+
+#[derive(Subcommand)]
+pub enum WebCacheAction {
+    /// Clear the web cache
+    Clear,
+    /// Show web cache statistics (size, entry count)
+    Stats,
+    /// List all cached entries
+    List,
 }
 
 #[derive(Subcommand)]

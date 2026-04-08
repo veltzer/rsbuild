@@ -11,10 +11,12 @@ const CACHE_DIR: &str = ".rsconstruct/webcache";
 pub struct CacheEntry {
     pub url_hash: String,
     pub size: u64,
+    #[allow(dead_code)]
     pub modified: Option<SystemTime>,
 }
 
 /// Return the cache file path for a given URL, using a 2-char prefix directory (like git objects).
+#[allow(dead_code)]
 fn cache_path(url: &str) -> (String, PathBuf) {
     let hash = hex::encode(Sha256::digest(url.as_bytes()));
     let prefix = &hash[..2];
@@ -25,6 +27,7 @@ fn cache_path(url: &str) -> (String, PathBuf) {
 
 /// Fetch URL content, returning cached content if available.
 /// On first fetch, the response is stored on disk under `.rsconstruct/webcache/`.
+#[allow(dead_code)]
 pub fn fetch(url: &str) -> Result<String> {
     let (_hash, path) = cache_path(url);
 

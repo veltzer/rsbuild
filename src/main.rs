@@ -460,10 +460,10 @@ fn run() -> Result<()> {
                         println!("Web cache is empty.");
                     } else {
                         let mut builder = tabled::builder::Builder::new();
-                        builder.push_record(["Hash", "Size"]);
+                        builder.push_record(["URL", "Size"]);
                         for entry in &entries {
                             builder.push_record([
-                                entry.url_hash.clone(),
+                                entry.url.clone(),
                                 humansize::format_size(entry.size, humansize::BINARY),
                             ]);
                         }

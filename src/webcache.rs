@@ -1,39 +1,42 @@
 use anyhow::{Context, Result};
-use sha2::{Sha256, Digest};
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+use redb::{Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
+use std::path::Path;
 
-/// Base directory for webcache files.
-const CACHE_DIR: &str = ".rsconstruct/webcache";
+const DB_PATH: &str = ".rsconstruct/webcache.redb";
+const TABLE: TableDefinition<&str, &str> = TableDefinition::new("webcache");
 
 /// An entry in the webcache.
 pub struct CacheEntry {
-    pub url_hash: String,
-    pub size: u64,
-    #[allow(dead_code)]
-    pub modified: Option<SystemTime>,
+    pub url: String,
+    pub size: usize,
 }
 
-/// Return the cache file path for a given URL, using a 2-char prefix directory (like git objects).
-fn cache_path(url: &str) -> (String, PathBuf) {
-    let hash = hex::encode(Sha256::digest(url.as_bytes()));
-    let prefix = &hash[..2];
-    let rest = &hash[2..];
-    let path = Path::new(CACHE_DIR).join(prefix).join(rest);
-    (hash, path)
+fn open_db() -> Result<Database> {
+    let path = Path::new(DB_PATH);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create directory {}", parent.display()))?;
+    }
+    Database::create(path)
+        .with_context(|| format!("Failed to open webcache database {}", path.display()))
 }
 
 /// Fetch URL content, returning cached content if available.
-/// On first fetch, the response is stored on disk under `.rsconstruct/webcache/`.
+/// On first fetch, the response is stored in the database.
 pub fn fetch(url: &str) -> Result<String> {
-    let (_hash, path) = cache_path(url);
+    let db = open_db()?;
 
-    if path.exists() {
-        return fs::read_to_string(&path)
-            .with_context(|| format!("Failed to read cached file {}", path.display()));
+    // Check cache
+    {
+        let read_txn = db.begin_read()?;
+        if let Ok(table) = read_txn.open_table(TABLE) {
+            if let Some(entry) = table.get(url)? {
+                return Ok(entry.value().to_string());
+            }
+        }
     }
 
+    // Fetch from network
     let body = ureq::get(url)
         .call()
         .with_context(|| format!("Failed to fetch {url}"))?
@@ -41,71 +44,53 @@ pub fn fetch(url: &str) -> Result<String> {
         .read_to_string()
         .with_context(|| format!("Failed to read response body from {url}"))?;
 
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("Failed to create cache directory {}", parent.display()))?;
+    // Store in cache
+    let write_txn = db.begin_write()?;
+    {
+        let mut table = write_txn.open_table(TABLE)?;
+        table.insert(url, body.as_str())?;
     }
-    fs::write(&path, &body)
-        .with_context(|| format!("Failed to write cache file {}", path.display()))?;
+    write_txn.commit()?;
 
     Ok(body)
 }
 
-/// Delete all webcache files. Returns the number of files removed.
+/// Delete all webcache entries. Returns the number of entries removed.
 pub fn clear() -> Result<usize> {
-    let cache_dir = Path::new(CACHE_DIR);
-    if !cache_dir.exists() {
+    let path = Path::new(DB_PATH);
+    if !path.exists() {
         return Ok(0);
     }
-    let mut count = 0;
-    for prefix_entry in fs::read_dir(cache_dir)? {
-        let prefix_entry = prefix_entry?;
-        let prefix_path = prefix_entry.path();
-        if prefix_path.is_dir() {
-            for file_entry in fs::read_dir(&prefix_path)? {
-                let file_entry = file_entry?;
-                if file_entry.path().is_file() {
-                    fs::remove_file(file_entry.path())?;
-                    count += 1;
-                }
-            }
-            // Remove the now-empty prefix directory
-            let _ = fs::remove_dir(&prefix_path);
-        }
-    }
+    let db = open_db()?;
+    let write_txn = db.begin_write()?;
+    let count = {
+        let table = write_txn.open_table(TABLE)?;
+        table.len()? as usize
+    };
+    write_txn.delete_table(TABLE)?;
+    write_txn.commit()?;
     Ok(count)
 }
 
-/// List all cache entries with hash, size, and modified time.
+/// List all cache entries with URL and size.
 pub fn list() -> Result<Vec<CacheEntry>> {
-    let cache_dir = Path::new(CACHE_DIR);
-    if !cache_dir.exists() {
+    let path = Path::new(DB_PATH);
+    if !path.exists() {
         return Ok(Vec::new());
     }
+    let db = open_db()?;
+    let read_txn = db.begin_read()?;
+    let table = match read_txn.open_table(TABLE) {
+        Ok(t) => t,
+        Err(_) => return Ok(Vec::new()),
+    };
     let mut entries = Vec::new();
-    for prefix_entry in fs::read_dir(cache_dir)? {
-        let prefix_entry = prefix_entry?;
-        let prefix_path = prefix_entry.path();
-        if !prefix_path.is_dir() {
-            continue;
-        }
-        let prefix_name = prefix_entry.file_name();
-        let prefix_str = prefix_name.to_string_lossy();
-        for file_entry in fs::read_dir(&prefix_path)? {
-            let file_entry = file_entry?;
-            if !file_entry.path().is_file() {
-                continue;
-            }
-            let file_name = file_entry.file_name();
-            let rest = file_name.to_string_lossy();
-            let url_hash = format!("{prefix_str}{rest}");
-            let metadata = file_entry.metadata()?;
-            entries.push(CacheEntry {
-                url_hash,
-                size: metadata.len(),
-                modified: metadata.modified().ok(),
-            });
-        }
+    for result in table.iter()? {
+        let (key, value) = result?;
+        entries.push(CacheEntry {
+            url: key.value().to_string(),
+            size: value.value().len(),
+        });
     }
     Ok(entries)
 }
@@ -113,7 +98,6 @@ pub fn list() -> Result<Vec<CacheEntry>> {
 /// Return (total_bytes, entry_count) for the webcache.
 pub fn stats() -> Result<(u64, usize)> {
     let entries = list()?;
-    let total_bytes: u64 = entries.iter().map(|e| e.size).sum();
-    let count = entries.len();
-    Ok((total_bytes, count))
+    let total: u64 = entries.iter().map(|e| e.size as u64).sum();
+    Ok((total, entries.len()))
 }

@@ -1,6 +1,6 @@
 use std::fs;
 use tempfile::TempDir;
-use sha2::{Sha256, Digest};
+use redb::{Database, TableDefinition};
 use crate::common::run_rsconstruct_with_env;
 
 const SCHEMA_URL: &str = "https://example.com/test_schema.json";
@@ -19,16 +19,20 @@ const SCHEMA: &str = r#"{
     "required": ["name"]
 }"#;
 
-/// Pre-populate the webcache so the processor can find the schema without
-/// network access. The webcache stores files under
-/// `.rsconstruct/webcache/<first-2-chars-of-sha256>/<rest-of-sha256>`.
+const WEBCACHE_TABLE: TableDefinition<&str, &str> = TableDefinition::new("webcache");
+
+/// Pre-populate the webcache redb database so the processor can find the
+/// schema without network access.
 fn populate_webcache(project_path: &std::path::Path, url: &str, content: &str) {
-    let hash = hex::encode(Sha256::digest(url.as_bytes()));
-    let prefix = &hash[..2];
-    let rest = &hash[2..];
-    let cache_dir = project_path.join(".rsconstruct/webcache").join(prefix);
-    fs::create_dir_all(&cache_dir).unwrap();
-    fs::write(cache_dir.join(rest), content).unwrap();
+    let db_path = project_path.join(".rsconstruct/webcache.redb");
+    fs::create_dir_all(db_path.parent().unwrap()).unwrap();
+    let db = Database::create(&db_path).unwrap();
+    let write_txn = db.begin_write().unwrap();
+    {
+        let mut table = write_txn.open_table(WEBCACHE_TABLE).unwrap();
+        table.insert(url, content).unwrap();
+    }
+    write_txn.commit().unwrap();
 }
 
 #[test]

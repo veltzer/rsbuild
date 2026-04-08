@@ -68,6 +68,10 @@ Use `rsconstruct processors files` to see which files each processor discovers.
 - [Taplo](processors/taplo.md) — checks TOML files with taplo
 - [Terms](processors/terms.md) — checks that technical terms are backtick-quoted in Markdown files
 - [Json Schema](processors/json_schema.md) — validates JSON schema propertyOrdering
+- [Iyamlschema](processors/iyamlschema.md) — validates YAML files against JSON schemas (native)
+- [Yaml2json](processors/yaml2json.md) — converts YAML files to JSON (native)
+- [Markdown2html](processors/markdown2html.md) — converts Markdown to HTML using markdown CLI
+- [Imarkdown2html](processors/imarkdown2html.md) — converts Markdown to HTML (native)
 
 ## Output Directory Caching
 

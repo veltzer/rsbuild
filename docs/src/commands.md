@@ -188,6 +188,16 @@ rsconstruct cache stats         # Show per-processor cache statistics
 rsconstruct cache remove-stale  # Remove stale index entries not matching any current product
 ```
 
+## `rsconstruct webcache`
+
+Manage the web request cache. Schemas fetched by `iyamlschema` (and any future processors that fetch URLs) are cached in `.rsconstruct/webcache.redb`.
+
+```bash
+rsconstruct webcache clear   # Clear all cached web responses
+rsconstruct webcache stats   # Show cache size and entry count
+rsconstruct webcache list    # List all cached URLs and their sizes
+```
+
 ## `rsconstruct deps`
 
 Show or manage source file dependencies from the dependency cache. The cache is populated during builds when dependency analyzers scan source files (e.g., C/C++ headers, Python imports).

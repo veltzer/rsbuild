@@ -70,6 +70,9 @@ Detection heuristics per processor:
 | `pdflatex` | Generator | Project contains `.tex` files |
 | `libreoffice` | Generator | Project contains `.odp` files |
 | `pdfunite` | Generator | Source directory contains subdirectories with PDF-source files |
+| `iyamlschema` | Checker | Project contains `.yml` or `.yaml` files |
+| `yaml2json` | Generator | Project contains `.yml` or `.yaml` files |
+| `imarkdown2html` | Generator | Project contains `.md` files |
 | `tags` | Generator | Project contains `.md` files with YAML frontmatter |
 
 Run `rsconstruct processors list` to see the auto-detection results for the current project.

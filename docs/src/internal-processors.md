@@ -71,6 +71,22 @@ Markdown parser written in Rust.
 **Crate:** `pulldown-cmark`
 **Complexity:** Low — parse and render to HTML string, write to output file
 
+### iyamlschema — YAML Schema Validation
+
+Validates YAML files against JSON schemas referenced by `$schema` URLs.
+Fetches and caches schemas via the webcache, validates data against the schema
+(including remote `$ref` resolution), and checks property ordering.
+
+**Crate:** `jsonschema`, `ureq`, `serde_yml`
+**Complexity:** Medium — HTTP fetching, schema compilation, recursive ordering checks
+
+### yaml2json — YAML to JSON Conversion
+
+Convert YAML files to pretty-printed JSON.
+
+**Crate:** `serde_yml`, `serde_json`
+**Complexity:** Low — parse YAML, serialize as JSON
+
 ### isass — Sass/SCSS to CSS
 
 Replaces: `sass` (Dart Sass CLI)

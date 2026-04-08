@@ -154,11 +154,12 @@ Common fields available to all processors:
 | `auto_inputs` | array of strings | varies | Config files auto-detected as inputs (e.g., `.pylintrc`). |
 | `batch` | boolean | `true` | Whether to batch multiple files into a single tool invocation. Note: in fail-fast mode (default), chunk size is 1 regardless of this setting — batch mode only groups files with `--keep-going` or `--batch-size`. For external tools, a batch failure marks all products in the chunk as failed. Internal processors (`i`-prefixed) return per-file results, so partial failure is handled correctly. |
 | `max_jobs` | integer | none | Maximum concurrent jobs for this processor. When set, limits how many instances of this processor run in parallel, regardless of the global `-j` setting. Useful for heavyweight processors (e.g., `marp` spawns Chromium). Omit to use the global parallelism. |
-| `scan_dirs` | array of strings | varies | Directories to scan for source files. **Required** for processors that default to scanning the project root (most processors). Processors with a specific default (e.g., `tera` defaults to `"tera.templates"`, `cc_single_file` defaults to `"src"`) do not require this. Use `rsconstruct processors defconfig <name>` to see a processor's defaults. |
+| `scan_dirs` | array of strings | varies | Directories to scan for source files. **Required** for most processors (defaults to `[]`). Processors with a specific default (e.g., `tera` defaults to `"tera.templates"`, `cc_single_file` defaults to `"src"`) do not require this. Not required when `match_paths` is set. Use `rsconstruct processors defconfig <name>` to see a processor's defaults. |
 | `extensions` | array of strings | varies | File extensions to match. |
 | `exclude_dirs` | array of strings | varies | Directory path segments to exclude from scanning. |
 | `exclude_files` | array of strings | `[]` | File names to exclude. |
 | `exclude_paths` | array of strings | `[]` | Paths (relative to project root) to exclude. |
+| `match_paths` | array of strings | `[]` | When non-empty, only these exact paths are matched — `scan_dirs`, `extensions`, and exclude filters are bypassed. Useful for processors that operate on specific files rather than scanning directories. |
 
 Processor-specific fields are documented on each processor's page under [Processors](processors.md).
 

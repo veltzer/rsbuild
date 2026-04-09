@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::{default_true, default_script_linter, default_cc_compiler, default_cxx_compiler, default_output_suffix, KnownFields, ScanConfig};
+use super::{default_true, default_cc_compiler, default_cxx_compiler, default_output_suffix, KnownFields, ScanConfig};
 
 /// Generate a checker config struct with standard fields.
 ///
@@ -1239,8 +1239,7 @@ checker_config!(LuacheckConfig, extensions: [".lua"], linter: "luacheck", auto_i
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ScriptConfig {
-    #[serde(default = "default_script_linter")]
-    pub linter: String,
+    pub linter: Option<String>,
     #[serde(default)]
     pub args: Vec<String>,
     #[serde(default)]
@@ -1258,7 +1257,7 @@ pub struct ScriptConfig {
 impl Default for ScriptConfig {
     fn default() -> Self {
         Self {
-            linter: "true".into(),
+            linter: None,
             args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
@@ -1287,10 +1286,6 @@ impl KnownFields for ScriptConfig {
     }
 }
 
-fn default_generator_command() -> String {
-    "true".into()
-}
-
 fn default_generator_output_dir() -> String {
     "out/generator".into()
 }
@@ -1301,8 +1296,7 @@ fn default_generator_output_extension() -> String {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct GeneratorConfig {
-    #[serde(default = "default_generator_command")]
-    pub command: String,
+    pub command: Option<String>,
     #[serde(default = "default_generator_output_dir")]
     pub output_dir: String,
     #[serde(default = "default_generator_output_extension")]
@@ -1324,7 +1318,7 @@ pub struct GeneratorConfig {
 impl Default for GeneratorConfig {
     fn default() -> Self {
         Self {
-            command: "true".into(),
+            command: None,
             output_dir: "out/generator".into(),
             output_extension: "out".into(),
             args: Vec::new(),

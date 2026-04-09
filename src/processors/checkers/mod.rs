@@ -94,6 +94,10 @@ macro_rules! impl_checker {
     (@tools $self:ident, $cfg:ident, [field_and_extra: $tool_field:ident, [$($extra:expr),+]]) => {
         vec![$self.$cfg.$tool_field.clone(), $($extra),+]
     };
+    // Optional tool from a config field (Option<String>)
+    (@tools $self:ident, $cfg:ident, [option_field: $tool_field:ident]) => {
+        $self.$cfg.$tool_field.iter().cloned().collect()
+    };
 
     // --- discover ---
     // Shared body: build extra_inputs and call discover_checker_products
@@ -220,6 +224,25 @@ macro_rules! impl_checker {
         impl_checker!(@parse $processor, $config_field, $desc, $name, $execute,
             guard: [$($guard)?],
             tools_kind: [field: $tool_field],
+            config_json: $cj,
+            native: $native,
+            batch: [$($batch)?],
+            ; $($($rest)*)?
+        );
+    };
+
+    // Parse tool_field_option (Option<String> field — emits option_field tools_kind)
+    (@parse $processor:ty, $config_field:ident, $desc:expr, $name:expr, $execute:ident,
+     guard: [$($guard:ident)?],
+     tools_kind: [none],
+     config_json: $cj:tt,
+     native: $native:tt,
+     batch: [$($batch:ident)?],
+     ; tool_field_option: $tool_field:ident $(, $($rest:tt)*)?
+    ) => {
+        impl_checker!(@parse $processor, $config_field, $desc, $name, $execute,
+            guard: [$($guard)?],
+            tools_kind: [option_field: $tool_field],
             config_json: $cj,
             native: $native,
             batch: [$($batch)?],

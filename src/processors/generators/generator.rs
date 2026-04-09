@@ -29,7 +29,7 @@ impl GeneratorProcessor {
     }
 
     fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan) && !self.config.command.is_empty()
+        scan_root_valid(&self.config.scan) && self.config.command.is_some()
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
@@ -41,7 +41,8 @@ impl GeneratorProcessor {
             crate::processors::ensure_output_dir(pair.1)?;
         }
 
-        let mut cmd = Command::new(&self.config.command);
+        let command = self.config.command.as_deref().unwrap();
+        let mut cmd = Command::new(command);
         for arg in &self.config.args {
             cmd.arg(arg);
         }
@@ -51,7 +52,7 @@ impl GeneratorProcessor {
         }
 
         let out = run_command(&mut cmd)?;
-        check_command_output(&out, format_args!("{} ({} file(s))", self.config.command, pairs.len()))
+        check_command_output(&out, format_args!("{} ({} file(s))", command, pairs.len()))
     }
 }
 
@@ -63,7 +64,10 @@ impl ProductDiscovery for GeneratorProcessor {
     }
 
     fn required_tools(&self) -> Vec<String> {
-        vec![self.config.command.clone()]
+        match &self.config.command {
+            Some(cmd) => vec![cmd.clone()],
+            None => vec![],
+        }
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {

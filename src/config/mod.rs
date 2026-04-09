@@ -688,9 +688,6 @@ impl ProcessorConfig {
     }
 }
 
-pub(crate) fn default_script_linter() -> String {
-    "true".into()
-}
 
 pub(crate) fn default_cc_compiler() -> String {
     "gcc".into()

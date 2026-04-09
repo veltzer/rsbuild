@@ -997,12 +997,6 @@ fn validate_single_processor(
                     section_label,
                 ));
             }
-            Some(toml::Value::Array(arr)) if arr.is_empty() => {
-                errors.push(format!(
-                    "[{}]: 'scan_dirs' must not be empty (this processor defaults to scanning the project root)",
-                    section_label,
-                ));
-            }
             Some(toml::Value::Array(arr))
                 if arr.len() == 1
                     && arr[0].as_str().is_some_and(|s| s.is_empty()) =>

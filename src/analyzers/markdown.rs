@@ -84,7 +84,7 @@ impl MarkdownDepAnalyzer {
 
 impl DepAnalyzer for MarkdownDepAnalyzer {
     fn description(&self) -> &str {
-        "Scan Markdown files for image and file reference dependencies"
+        "Scan Markdown files for local file dependencies"
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {

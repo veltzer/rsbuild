@@ -186,52 +186,52 @@ pub enum Commands {
         #[command(flatten)]
         shared: SharedBuildArgs,
     },
-    /// Manage the build cache
+    /// Manage the build cache (requires config, except 'clear')
     Cache {
         #[command(subcommand)]
         action: CacheAction,
     },
-    /// Clean build artifacts
+    /// Clean build artifacts (requires config)
     Clean {
         #[command(subcommand)]
         action: Option<CleanAction>,
     },
-    /// Generate shell completion scripts
+    /// Generate shell completion scripts (no config needed with shell args)
     Complete {
         /// The shells to generate completions for (if none specified, uses config file)
         #[arg(value_enum)]
         shells: Vec<Shell>,
     },
-    /// Show or inspect configuration
+    /// Show or inspect configuration (requires config)
     Config {
         #[command(subcommand)]
         action: ConfigAction,
     },
-    /// Show source file dependencies (e.g., header files for C/C++)
+    /// Show source file dependencies (requires config, except 'list')
     Deps {
         #[command(subcommand)]
         action: DepsAction,
     },
-    /// Check build environment: tool availability, config validity, common problems
+    /// Check build environment (requires config)
     Doctor,
-    /// Display the build dependency graph
+    /// Display the build dependency graph (requires config)
     Graph {
         #[command(subcommand)]
         action: GraphAction,
     },
-    /// Show project information
+    /// Show project information (requires config)
     Info {
         #[command(subcommand)]
         action: InfoAction,
     },
-    /// Initialize a new rsconstruct project in the current directory
+    /// Initialize a new rsconstruct project in the current directory (no config needed)
     Init,
-    /// Manage processors
+    /// Manage processors (some subcommands work without config)
     Processors {
         #[command(subcommand)]
         action: ProcessorAction,
     },
-    /// Count source lines of code (SLOC) by language
+    /// Count source lines of code (SLOC) by language (no config needed)
     Sloc {
         /// Show COCOMO effort/cost estimation
         #[arg(long)]
@@ -240,42 +240,42 @@ pub enum Commands {
         #[arg(long, default_value = "56286")]
         salary: u64,
     },
-    /// Smart config manipulation commands
+    /// Smart config manipulation commands (requires config)
     Smart {
         #[command(subcommand)]
         action: SmartAction,
     },
-    /// Show the status of each product (up-to-date, stale, or restorable)
+    /// Show the status of each product (requires config)
     Status {
         /// Show source file counts by extension per processor
         #[arg(long)]
         breakdown: bool,
     },
-    /// Manage term checking and fixing in markdown files
+    /// Manage term checking and fixing in markdown files (requires config)
     Terms {
         #[command(subcommand)]
         action: TermsAction,
     },
-    /// Search and query frontmatter tags from markdown files
+    /// Search and query frontmatter tags from markdown files (requires config)
     Tags {
         #[command(subcommand)]
         action: TagsAction,
     },
-    /// Manage external tool dependencies
+    /// Manage external tool dependencies (works with or without config)
     Tools {
         #[command(subcommand)]
         action: ToolsAction,
     },
-    /// Create symlinks from source folders to target folders (for local development installs)
+    /// Create symlinks from source folders to target folders (requires config)
     SymlinkInstall,
-    /// Print version information
+    /// Print version information (no config needed)
     Version,
-    /// Watch source files and auto-rebuild on changes
+    /// Watch source files and auto-rebuild on changes (requires config)
     Watch {
         #[command(flatten)]
         shared: SharedBuildArgs,
     },
-    /// Manage the web request cache
+    /// Manage the web request cache (no config needed)
     #[command(name = "webcache")]
     WebCache {
         #[command(subcommand)]

@@ -112,3 +112,15 @@ impractical to reimplement:
 - **chromium, libreoffice, drawio** — GUI applications used for rendering
 - **protobuf** — Protocol buffer compiler
 - **pdflatex** — LaTeX to PDF (entire TeX distribution)
+
+## Binary Plugin System
+
+As of now, rsconstruct does not have a binary plugin system. This section documents the approach for future consideration.
+
+Rust applications can dynamically load plugins written in Rust via `dlopen`/`dlsym` on shared libraries (`.so` on Linux, `.dylib` on macOS, `.dll` on Windows). The plugin compiles as a `cdylib` crate, exports `extern "C"` functions, and the host loads them at runtime using a crate like `libloading`.
+
+The main constraint is that Rust has no stable ABI. You cannot use Rust traits, generics, or standard library types across the dynamic library boundary. The plugin interface must be C-compatible: `extern "C"` functions returning opaque pointers, with a vtable or function-pointer struct defining the plugin API.
+
+Crates like `abi_stable` attempt to provide a stable ABI layer for Rust-to-Rust dynamic loading, but they add significant complexity.
+
+The current Lua plugin system avoids this problem entirely — Lua has a stable, simple FFI. A binary plugin system would offer better performance but at the cost of a much more complex plugin interface and build process (plugins would need to be compiled separately and matched to the host's ABI).

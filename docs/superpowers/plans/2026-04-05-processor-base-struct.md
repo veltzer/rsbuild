@@ -252,7 +252,7 @@ impl ProductDiscovery for MarpProcessor {
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
         let params = DiscoverParams {
             scan: &self.config.scan,
-            extra_inputs: &self.config.extra_inputs,
+            dep_inputs: &self.config.dep_inputs,
             config: &self.config,
             output_dir: &self.config.output_dir,
             processor_name: crate::processors::names::MARP,
@@ -384,7 +384,7 @@ impl ProductDiscovery for MakoProcessor {
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
         let items = super::find_templates(&self.config.scan, file_index)?;
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
 
         for item in items {
             let mut inputs = Vec::with_capacity(1 + extra.len());
@@ -534,7 +534,7 @@ impl ProductDiscovery for PandocProcessor {
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex) -> Result<()> {
         let params = super::DiscoverParams {
             scan: &self.config.scan,
-            extra_inputs: &self.config.extra_inputs,
+            dep_inputs: &self.config.dep_inputs,
             config: &self.config,
             output_dir: &self.config.output_dir,
             processor_name: crate::processors::names::PANDOC,

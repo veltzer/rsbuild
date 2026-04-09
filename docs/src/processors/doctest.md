@@ -18,14 +18,14 @@ Python files (`.py`) are checked for embedded doctests. Each file is run through
 
 ```toml
 [processor.doctest]
-extensions = [".py"]                      # File extensions to process (default: [".py"])
-extra_inputs = []                         # Additional files that trigger rebuilds
+src_extensions = [".py"]                      # File extensions to process (default: [".py"])
+dep_inputs = []                         # Additional files that trigger rebuilds
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `extensions` | string[] | `[".py"]` | File extensions to discover |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `src_extensions` | string[] | `[".py"]` | File extensions to discover |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

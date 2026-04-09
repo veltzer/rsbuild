@@ -31,7 +31,7 @@ rustc = "rustc"                           # Rust compiler (default: "rustc")
 flags = []                                # Additional compiler flags
 output_suffix = ".elf"                    # Output file suffix (default: ".elf")
 output_dir = "out/rust_single_file"       # Output directory
-extra_inputs = []                         # Additional files that trigger rebuilds
+dep_inputs = []                         # Additional files that trigger rebuilds
 ```
 
 | Key | Type | Default | Description |
@@ -40,7 +40,7 @@ extra_inputs = []                         # Additional files that trigger rebuil
 | `flags` | string[] | `[]` | Additional compiler flags |
 | `output_suffix` | string | `".elf"` | Suffix for output executables |
 | `output_dir` | string | `"out/rust_single_file"` | Output directory |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

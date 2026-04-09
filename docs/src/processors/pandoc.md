@@ -23,7 +23,7 @@ from = "markdown"                      # Source format
 formats = ["pdf"]                      # Output formats (pdf, docx, html, etc.)
 args = []                              # Additional arguments to pass to pandoc
 output_dir = "out/pandoc"              # Output directory
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
@@ -33,7 +33,7 @@ extra_inputs = []                      # Additional files that trigger rebuilds 
 | `formats` | string[] | `["pdf"]` | Output formats to generate |
 | `args` | string[] | `[]` | Extra arguments passed to pandoc |
 | `output_dir` | string | `"out/pandoc"` | Base output directory |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

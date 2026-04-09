@@ -14,7 +14,7 @@ fn drawio_discovery() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.drawio]\nscan_dirs = [\".\"]\n",
+        "[processor.drawio]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -49,7 +49,7 @@ fn drawio_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.drawio]\nscan_dirs = [\".\"]\n",
+        "[processor.drawio]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 

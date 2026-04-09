@@ -24,7 +24,7 @@ generates HTML files.
 chromium_bin = "google-chrome"            # The Chromium/Chrome executable to run
 args = []                                 # Additional arguments to pass to Chromium
 output_dir = "out/chromium"               # Output directory for PDFs
-extra_inputs = []                         # Additional files that trigger rebuilds when changed
+dep_inputs = []                         # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
@@ -32,7 +32,7 @@ extra_inputs = []                         # Additional files that trigger rebuil
 | `chromium_bin` | string | `"google-chrome"` | The Chromium or Google Chrome executable |
 | `args` | string[] | `[]` | Extra arguments passed to Chromium |
 | `output_dir` | string | `"out/chromium"` | Base output directory for PDF files |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

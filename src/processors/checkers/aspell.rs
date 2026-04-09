@@ -108,15 +108,15 @@ impl ProductDiscovery for AspellProcessor {
             return Ok(());
         }
 
-        let mut extra_inputs = self.config.extra_inputs.clone();
-        for ai in &self.config.auto_inputs {
-            extra_inputs.extend(config_file_inputs(ai));
+        let mut dep_inputs = self.config.dep_inputs.clone();
+        for ai in &self.config.dep_auto {
+            dep_inputs.extend(config_file_inputs(ai));
         }
         crate::processors::discover_checker_products(
             graph,
             &self.config.scan,
             file_index,
-            &extra_inputs,
+            &dep_inputs,
             &self.config,
             instance_name,
         )

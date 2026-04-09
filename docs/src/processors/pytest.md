@@ -18,16 +18,16 @@ Each test file is checked individually — a failing test causes the build to fa
 
 ```toml
 [processor.pytest]
-extensions = [".py"]                      # File extensions to process (default: [".py"])
-scan_dirs = ["tests"]                     # Directories to scan (default: ["tests"])
-extra_inputs = []                         # Additional files that trigger rebuilds
+src_extensions = [".py"]                      # File extensions to process (default: [".py"])
+src_dirs = ["tests"]                     # Directories to scan (default: ["tests"])
+dep_inputs = []                         # Additional files that trigger rebuilds
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `extensions` | string[] | `[".py"]` | File extensions to discover |
-| `scan_dirs` | string[] | `["tests"]` | Directories to scan for test files |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `src_extensions` | string[] | `[".py"]` | File extensions to discover |
+| `src_dirs` | string[] | `["tests"]` | Directories to scan for test files |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

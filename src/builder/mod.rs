@@ -242,7 +242,7 @@ impl Builder {
 
             // Keep only output-affecting fields for change detection (unless show_all).
             // Each processor declares which config fields affect its output;
-            // changes to other fields (scan_dirs, batch, max_jobs, etc.)
+            // changes to other fields (src_dirs, batch, max_jobs, etc.)
             // should not trigger config change detection by default.
             let config_json = if show_all {
                 config_json
@@ -595,7 +595,7 @@ impl Builder {
         }
 
         // Add scan directories from all processor configs
-        for dir in self.config.processor.scan_dirs() {
+        for dir in self.config.processor.src_dirs() {
             let full = PathBuf::from(&dir);
             if full.exists() {
                 paths.push(full);
@@ -603,7 +603,7 @@ impl Builder {
         }
 
         // Processors with empty scan_dir scan the project root — watch common
-        // top-level files/dirs that wouldn't be covered by scan_dirs above.
+        // top-level files/dirs that wouldn't be covered by src_dirs above.
         for name in &["pyproject.toml", "config"] {
             let p = PathBuf::from(name);
             if p.exists() {

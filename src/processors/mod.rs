@@ -607,7 +607,7 @@ pub(crate) struct SiblingFilter<'a> {
 pub(crate) struct DirectoryProductOpts<'a, H: serde::Serialize> {
     pub scan: &'a crate::config::ScanConfig,
     pub file_index: &'a FileIndex,
-    pub extra_inputs: &'a [String],
+    pub dep_inputs: &'a [String],
     pub cfg_hash: &'a H,
     pub siblings: &'a SiblingFilter<'a>,
     pub processor_name: &'a str,
@@ -627,14 +627,14 @@ pub(crate) fn discover_directory_products(
     graph: &mut BuildGraph,
     opts: DirectoryProductOpts<'_, impl serde::Serialize>,
 ) -> Result<()> {
-    let DirectoryProductOpts { scan, file_index, extra_inputs, cfg_hash, siblings, processor_name, output_dir_name } = opts;
+    let DirectoryProductOpts { scan, file_index, dep_inputs, cfg_hash, siblings, processor_name, output_dir_name } = opts;
     let files = file_index.scan(scan, true);
     if files.is_empty() {
         return Ok(());
     }
 
     let hash = Some(output_config_hash(cfg_hash, &[]));
-    let extra = resolve_extra_inputs(extra_inputs)?;
+    let extra = resolve_extra_inputs(dep_inputs)?;
 
     for anchor in files {
         let anchor_dir = anchor.parent().map(|p| p.to_path_buf()).unwrap_or_default();
@@ -680,7 +680,7 @@ pub(crate) fn discover_checker_products(
     graph: &mut BuildGraph,
     scan: &crate::config::ScanConfig,
     file_index: &FileIndex,
-    extra_inputs: &[String],
+    dep_inputs: &[String],
     cfg_hash: &impl serde::Serialize,
     processor_name: &str,
 ) -> Result<()> {
@@ -689,7 +689,7 @@ pub(crate) fn discover_checker_products(
         return Ok(());
     }
     let hash = Some(output_config_hash(cfg_hash, &[]));
-    let extra = resolve_extra_inputs(extra_inputs)?;
+    let extra = resolve_extra_inputs(dep_inputs)?;
     for file in files {
         let mut inputs = Vec::with_capacity(1 + extra.len());
         inputs.push(file);

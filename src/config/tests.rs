@@ -175,9 +175,9 @@ fn substitute_variables_string() {
 
 #[test]
 fn substitute_variables_array() {
-    let content = "[vars]\nexcludes = [\"/a/\", \"/b/\"]\n\n[processor]\nexclude_dirs = \"${excludes}\"\n";
+    let content = "[vars]\nexcludes = [\"/a/\", \"/b/\"]\n\n[processor]\nsrc_exclude_dirs = \"${excludes}\"\n";
     let result = substitute_variables(content).expect("variable substitution failed");
-    assert!(result.contains("exclude_dirs = [\"/a/\", \"/b/\"]"));
+    assert!(result.contains("src_exclude_dirs = [\"/a/\", \"/b/\"]"));
     assert!(!result.contains("${excludes}"));
 }
 

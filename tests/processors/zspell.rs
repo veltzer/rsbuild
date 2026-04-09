@@ -14,7 +14,7 @@ fn zspell_correct_spelling() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.zspell]\nscan_dirs = [\".\"]\n"
+        "[processor.zspell]\nsrc_dirs = [\".\"]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build", "-v"], &[("NO_COLOR", "1")]);
@@ -42,7 +42,7 @@ fn zspell_misspelled_word() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.zspell]\nscan_dirs = [\".\"]\n"
+        "[processor.zspell]\nsrc_dirs = [\".\"]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
@@ -75,7 +75,7 @@ fn zspell_custom_words_file() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.zspell]\nscan_dirs = [\".\"]\n"
+        "[processor.zspell]\nsrc_dirs = [\".\"]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
@@ -97,7 +97,7 @@ fn zspell_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.zspell]\nscan_dirs = [\".\"]\n"
+        "[processor.zspell]\nsrc_dirs = [\".\"]\n"
     ).unwrap();
 
     // First build
@@ -127,7 +127,7 @@ fn zspell_clean() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.zspell]\nscan_dirs = [\".\"]\n"
+        "[processor.zspell]\nsrc_dirs = [\".\"]\n"
     ).unwrap();
 
     // Build
@@ -159,7 +159,7 @@ fn zspell_stops_after_first_error() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.zspell]\nscan_dirs = [\".\"]\n"
+        "[processor.zspell]\nsrc_dirs = [\".\"]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
@@ -191,7 +191,7 @@ fn zspell_ignores_code_blocks() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.zspell]\nscan_dirs = [\".\"]\n"
+        "[processor.zspell]\nsrc_dirs = [\".\"]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
@@ -214,7 +214,7 @@ fn zspell_auto_add_words() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.zspell]\nauto_add_words = true\nscan_dirs = [\".\"]\n"
+        "[processor.zspell]\nauto_add_words = true\nsrc_dirs = [\".\"]\n"
     ).unwrap();
 
     // Build should succeed and add words to .zspell-words

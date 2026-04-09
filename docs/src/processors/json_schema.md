@@ -28,13 +28,13 @@ This is a pure-Rust checker — no external tool is required.
 ```toml
 [processor.json_schema]
 args = []                                    # Reserved for future use
-extra_inputs = []                            # Additional files that trigger rebuilds when changed
+dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `args` | string[] | `[]` | Reserved for future use |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

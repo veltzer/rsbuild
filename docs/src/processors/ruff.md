@@ -24,14 +24,14 @@ single ruff invocation for better performance.
 [processor.ruff]
 linter = "ruff"                            # The ruff command to run
 args = []                                  # Additional arguments to pass to ruff
-extra_inputs = []                          # Additional files that trigger rebuilds (e.g. ["pyproject.toml"])
+dep_inputs = []                          # Additional files that trigger rebuilds (e.g. ["pyproject.toml"])
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"ruff"` | The ruff executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to ruff |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

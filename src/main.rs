@@ -520,7 +520,7 @@ fn init_project() -> Result<()> {
 # [processor.tera]
 # strict = true
 # scan_dir = "tera.templates"
-# extensions = [".tera"]
+# src_extensions = [".tera"]
 
 # [processor.ruff]
 # linter = "ruff"
@@ -533,7 +533,7 @@ fn init_project() -> Result<()> {
 # cc = "gcc"
 # cxx = "g++"
 # scan_dir = "src"
-# extensions = [".c", ".cc"]
+# src_extensions = [".c", ".cc"]
 
 # [processor.cppcheck]
 # args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]

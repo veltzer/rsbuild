@@ -22,13 +22,13 @@ This processor supports batch mode.
 ```toml
 [processor.hadolint]
 args = []
-extra_inputs = []
+dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `args` | string[] | `[]` | Extra arguments passed to hadolint |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

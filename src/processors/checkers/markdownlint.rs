@@ -34,11 +34,11 @@ impl ProductDiscovery for MarkdownlintProcessor {
             return Ok(());
         }
         let hash = Some(output_config_hash(&self.config, &[]));
-        let mut extra_inputs = self.config.extra_inputs.clone();
-        for ai in &self.config.auto_inputs {
-            extra_inputs.extend(config_file_inputs(ai));
+        let mut dep_inputs = self.config.dep_inputs.clone();
+        for ai in &self.config.dep_auto {
+            dep_inputs.extend(config_file_inputs(ai));
         }
-        let extra = resolve_extra_inputs(&extra_inputs)?;
+        let extra = resolve_extra_inputs(&dep_inputs)?;
 
         // Only depend on the npm stamp when using a local repo install
         let npm_stamp = if self.config.local_repo {

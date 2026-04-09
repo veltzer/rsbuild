@@ -102,7 +102,7 @@ This file is removed after building (whether the build succeeds or fails).
 ```toml
 [processor.linux_module]
 enabled = true           # Enable/disable (default: true)
-extra_inputs = []        # Extra files that trigger rebuilds
+dep_inputs = []        # Extra files that trigger rebuilds
 ```
 
 ### Configuration Reference
@@ -110,10 +110,10 @@ extra_inputs = []        # Extra files that trigger rebuilds
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `enabled` | bool | `true` | Enable/disable the processor |
-| `extra_inputs` | string[] | `[]` | Extra files that trigger rebuilds when changed |
-| `scan_dirs` | string[] | `[""]` | Directory to scan for linux-module.yaml files |
-| `extensions` | string[] | `["linux-module.yaml"]` | File patterns to scan for |
-| `exclude_dirs` | string[] | common excludes | Directories to skip during scanning |
+| `dep_inputs` | string[] | `[]` | Extra files that trigger rebuilds when changed |
+| `src_dirs` | string[] | `[""]` | Directory to scan for linux-module.yaml files |
+| `src_extensions` | string[] | `["linux-module.yaml"]` | File patterns to scan for |
+| `src_exclude_dirs` | string[] | common excludes | Directories to skip during scanning |
 
 ## Batch support
 

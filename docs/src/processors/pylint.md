@@ -26,13 +26,13 @@ extra input so that configuration changes trigger rebuilds.
 ```toml
 [processor.pylint]
 args = []                                  # Additional arguments to pass to pylint
-extra_inputs = []                          # Additional files that trigger rebuilds (e.g. ["pyproject.toml"])
+dep_inputs = []                          # Additional files that trigger rebuilds (e.g. ["pyproject.toml"])
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `args` | string[] | `[]` | Extra arguments passed to pylint |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

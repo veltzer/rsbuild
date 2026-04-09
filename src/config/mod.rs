@@ -22,7 +22,7 @@ const CONFIG_FILE: &str = "rsconstruct.toml";
 /// Fields contributed by ScanConfig via `#[serde(flatten)]`.
 /// These are automatically appended to every processor's known fields during validation.
 pub(crate) const SCAN_CONFIG_FIELDS: &[&str] = &[
-    "scan_dirs", "extensions", "exclude_dirs", "exclude_files", "exclude_paths", "match_paths",
+    "src_dirs", "src_extensions", "src_exclude_dirs", "src_exclude_files", "src_exclude_paths", "src_files",
 ];
 
 pub(crate) trait KnownFields {
@@ -31,7 +31,7 @@ pub(crate) trait KnownFields {
 
     /// Return only the fields that affect build output.
     /// Changes to these fields should trigger config change detection.
-    /// Fields not listed here (e.g., scan_dirs, exclude_dirs, batch, max_jobs)
+    /// Fields not listed here (e.g., src_dirs, src_exclude_dirs, batch, max_jobs)
     /// are discovery or execution parameters that don't affect what the tool produces.
     fn output_fields() -> &'static [&'static str];
 
@@ -44,15 +44,15 @@ pub(crate) trait KnownFields {
 }
 
 
-/// Validate extra_inputs paths exist and return them as PathBufs.
+/// Validate dep_inputs paths exist and return them as PathBufs.
 /// Paths are relative to project root (which is cwd).
-pub(crate) fn resolve_extra_inputs(extra_inputs: &[String]) -> Result<Vec<PathBuf>> {
+pub(crate) fn resolve_extra_inputs(dep_inputs: &[String]) -> Result<Vec<PathBuf>> {
     let mut resolved = Vec::new();
-    for p in extra_inputs {
+    for p in dep_inputs {
         if p.contains('*') || p.contains('?') || p.contains('[') {
             // Glob pattern: expand to matching files
             for entry in glob::glob(p)
-                .with_context(|| format!("Invalid glob pattern in extra_inputs: {}", p))?
+                .with_context(|| format!("Invalid glob pattern in dep_inputs: {}", p))?
             {
                 let path = entry.with_context(|| format!("Failed to read glob entry for: {}", p))?;
                 if path.is_file() {
@@ -62,7 +62,7 @@ pub(crate) fn resolve_extra_inputs(extra_inputs: &[String]) -> Result<Vec<PathBu
         } else {
             let path = PathBuf::from(p);
             if !path.exists() {
-                anyhow::bail!("extra_inputs file not found: {}", p);
+                anyhow::bail!("dep_inputs file not found: {}", p);
             }
             resolved.push(path);
         }
@@ -73,8 +73,8 @@ pub(crate) fn resolve_extra_inputs(extra_inputs: &[String]) -> Result<Vec<PathBu
 /// Fields that never affect product output and are excluded from the output config hash.
 /// These control file discovery, caching strategy, and execution batching.
 const NON_OUTPUT_FIELDS: &[&str] = &[
-    "scan_dirs", "extensions", "exclude_dirs", "exclude_files", "exclude_paths",
-    "extra_inputs", "auto_inputs", "batch",
+    "src_dirs", "src_extensions", "src_exclude_dirs", "src_exclude_files", "src_exclude_paths",
+    "dep_inputs", "dep_auto", "batch",
 ];
 
 /// Compute a config hash including only fields that affect the product output.
@@ -108,86 +108,86 @@ pub(crate) fn output_config_hash(value: &impl Serialize, extra_exclude: &[&str])
 pub(crate) struct ScanConfig {
     /// Directories to scan for source files ("" means project root)
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub scan_dirs: Option<Vec<String>>,
+    pub src_dirs: Option<Vec<String>>,
 
     /// File extensions to match
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub extensions: Option<Vec<String>>,
+    pub src_extensions: Option<Vec<String>>,
 
     /// Directory path segments to exclude from scanning
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub exclude_dirs: Option<Vec<String>>,
+    pub src_exclude_dirs: Option<Vec<String>>,
 
     /// File names to exclude from scanning
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub exclude_files: Option<Vec<String>>,
+    pub src_exclude_files: Option<Vec<String>>,
 
     /// Paths (relative to project root) to exclude from scanning
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub exclude_paths: Option<Vec<String>>,
+    pub src_exclude_paths: Option<Vec<String>>,
 
     /// Paths (relative to project root) to include — when set, only these paths are matched
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub match_paths: Option<Vec<String>>,
+    pub src_files: Option<Vec<String>>,
 }
 
 impl ScanConfig {
     /// Fill in None fields with the given defaults (mutates in place).
-    /// A `scan_dir` of `""` means "no default" — `scan_dirs` will be set to `[]`
+    /// A `scan_dir` of `""` means "no default" — `src_dirs` will be set to `[]`
     /// and the user must provide it in their config.
-    pub(crate) fn resolve(&mut self, scan_dir: &str, extensions: &[&str], exclude_dirs: &[&str]) {
-        if self.scan_dirs.is_none() {
+    pub(crate) fn resolve(&mut self, scan_dir: &str, src_extensions: &[&str], src_exclude_dirs: &[&str]) {
+        if self.src_dirs.is_none() {
             if scan_dir.is_empty() {
-                self.scan_dirs = Some(Vec::new());
+                self.src_dirs = Some(Vec::new());
             } else {
-                self.scan_dirs = Some(vec![scan_dir.to_string()]);
+                self.src_dirs = Some(vec![scan_dir.to_string()]);
             }
         }
-        if self.extensions.is_none() {
-            self.extensions = Some(extensions.iter().map(|s| s.to_string()).collect());
+        if self.src_extensions.is_none() {
+            self.src_extensions = Some(src_extensions.iter().map(|s| s.to_string()).collect());
         }
-        if self.exclude_dirs.is_none() {
-            self.exclude_dirs = Some(exclude_dirs.iter().map(|s| s.to_string()).collect());
+        if self.src_exclude_dirs.is_none() {
+            self.src_exclude_dirs = Some(src_exclude_dirs.iter().map(|s| s.to_string()).collect());
         }
-        if self.exclude_files.is_none() {
-            self.exclude_files = Some(Vec::new());
+        if self.src_exclude_files.is_none() {
+            self.src_exclude_files = Some(Vec::new());
         }
-        if self.exclude_paths.is_none() {
-            self.exclude_paths = Some(Vec::new());
+        if self.src_exclude_paths.is_none() {
+            self.src_exclude_paths = Some(Vec::new());
         }
-        if self.match_paths.is_none() {
-            self.match_paths = Some(Vec::new());
+        if self.src_files.is_none() {
+            self.src_files = Some(Vec::new());
         }
     }
 
     /// Get the resolved scan directories. Panics if called before resolve().
-    pub(crate) fn scan_dirs(&self) -> &[String] {
-        self.scan_dirs.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
+    pub(crate) fn src_dirs(&self) -> &[String] {
+        self.src_dirs.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
     }
 
     /// Get the resolved extensions. Panics if called before resolve().
-    pub(crate) fn extensions(&self) -> &[String] {
-        self.extensions.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
+    pub(crate) fn src_extensions(&self) -> &[String] {
+        self.src_extensions.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
     }
 
     /// Get the resolved exclude dirs. Panics if called before resolve().
-    pub(crate) fn exclude_dirs(&self) -> &[String] {
-        self.exclude_dirs.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
+    pub(crate) fn src_exclude_dirs(&self) -> &[String] {
+        self.src_exclude_dirs.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
     }
 
     /// Get the resolved exclude files. Panics if called before resolve().
-    pub(crate) fn exclude_files(&self) -> &[String] {
-        self.exclude_files.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
+    pub(crate) fn src_exclude_files(&self) -> &[String] {
+        self.src_exclude_files.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
     }
 
     /// Get the resolved exclude paths. Panics if called before resolve().
-    pub(crate) fn exclude_paths(&self) -> &[String] {
-        self.exclude_paths.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
+    pub(crate) fn src_exclude_paths(&self) -> &[String] {
+        self.src_exclude_paths.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
     }
 
     /// Get the resolved include paths. Panics if called before resolve().
-    pub(crate) fn match_paths(&self) -> &[String] {
-        self.match_paths.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
+    pub(crate) fn src_files(&self) -> &[String] {
+        self.src_files.as_deref().expect(errors::SCAN_CONFIG_NOT_RESOLVED)
     }
 }
 
@@ -436,10 +436,10 @@ macro_rules! gen_processor_config {
 
         impl ProcessorConfig {
             /// Collect unique scan directories from all declared instances.
-            pub(crate) fn scan_dirs(&self) -> Vec<String> {
+            pub(crate) fn src_dirs(&self) -> Vec<String> {
                 let mut dirs: Vec<String> = self.instances.iter()
                     .flat_map(|inst| {
-                        inst.config_toml.get("scan_dirs")
+                        inst.config_toml.get("src_dirs")
                             .and_then(|v| v.as_array())
                             .into_iter()
                             .flat_map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())))
@@ -813,20 +813,20 @@ impl FieldType {
 }
 
 /// Return the expected TOML type for a processor config field.
-/// Fields common to all processors (ScanConfig fields, enabled, args, extra_inputs)
+/// Fields common to all processors (ScanConfig fields, enabled, args, dep_inputs)
 /// are handled generically. Processor-specific fields are looked up by processor name.
 fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
     // ScanConfig fields — shared by all processors
     match field {
-        "scan_dirs" => return Some(FieldType::StringArray),
-        "extensions" => return Some(FieldType::StringArray),
-        "exclude_dirs" => return Some(FieldType::StringArray),
-        "exclude_files" => return Some(FieldType::StringArray),
-        "exclude_paths" => return Some(FieldType::StringArray),
+        "src_dirs" => return Some(FieldType::StringArray),
+        "src_extensions" => return Some(FieldType::StringArray),
+        "src_exclude_dirs" => return Some(FieldType::StringArray),
+        "src_exclude_files" => return Some(FieldType::StringArray),
+        "src_exclude_paths" => return Some(FieldType::StringArray),
         // Common processor fields
         "args" => return Some(FieldType::StringArray),
-        "extra_inputs" => return Some(FieldType::StringArray),
-        "auto_inputs" => return Some(FieldType::StringArray),
+        "dep_inputs" => return Some(FieldType::StringArray),
+        "dep_auto" => return Some(FieldType::StringArray),
         _ => {}
     }
 
@@ -979,21 +979,21 @@ fn validate_single_processor(
         }
     }
 
-    // Require scan_dirs for processors whose default would scan the project root.
-    // This prevents accidentally scanning everything when the user forgets to set scan_dirs.
-    // Exempt processors that don't use scan_dirs for file discovery,
-    // and processors that specify match_paths (files are explicitly listed).
+    // Require src_dirs for processors whose default would scan the project root.
+    // This prevents accidentally scanning everything when the user forgets to set src_dirs.
+    // Exempt processors that don't use src_dirs for file discovery,
+    // and processors that specify src_files (files are explicitly listed).
     const SCAN_DIRS_EXEMPT: &[&str] = &["explicit", "pdfunite", "ipdfunite"];
-    let has_match_paths = table.get("match_paths")
+    let has_match_paths = table.get("src_files")
         .and_then(|v| v.as_array())
         .is_some_and(|arr| !arr.is_empty());
     if let Some("") = ProcessorConfig::default_scan_dir_for(type_name)
     && !SCAN_DIRS_EXEMPT.contains(&type_name)
     && !has_match_paths {
-        match table.get("scan_dirs") {
+        match table.get("src_dirs") {
             None => {
                 errors.push(format!(
-                    "[{}]: 'scan_dirs' must be specified (this processor defaults to scanning the project root)",
+                    "[{}]: 'src_dirs' must be specified (this processor defaults to scanning the project root)",
                     section_label,
                 ));
             }
@@ -1002,7 +1002,7 @@ fn validate_single_processor(
                     && arr[0].as_str().is_some_and(|s| s.is_empty()) =>
             {
                 errors.push(format!(
-                    "[{}]: 'scan_dirs' must not contain empty strings; specify actual directories to scan",
+                    "[{}]: 'src_dirs' must not contain empty strings; specify actual directories to scan",
                     section_label,
                 ));
             }
@@ -1104,49 +1104,49 @@ impl Config {
 pub(crate) fn scan_config_from_toml(
     value: &toml::Value,
     default_scan_dir: &str,
-    default_extensions: &[&str],
+    default_src_extensions: &[&str],
     default_exclude_dirs: &[&str],
 ) -> ScanConfig {
     let table = value.as_table();
 
-    let scan_dirs = table
-        .and_then(|t| t.get("scan_dirs"))
+    let src_dirs = table
+        .and_then(|t| t.get("src_dirs"))
         .and_then(|v| v.as_array())
         .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
 
-    let extensions = table
-        .and_then(|t| t.get("extensions"))
+    let src_extensions = table
+        .and_then(|t| t.get("src_extensions"))
         .and_then(|v| v.as_array())
         .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
 
-    let exclude_dirs = table
-        .and_then(|t| t.get("exclude_dirs"))
+    let src_exclude_dirs = table
+        .and_then(|t| t.get("src_exclude_dirs"))
         .and_then(|v| v.as_array())
         .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
 
-    let exclude_files = table
-        .and_then(|t| t.get("exclude_files"))
+    let src_exclude_files = table
+        .and_then(|t| t.get("src_exclude_files"))
         .and_then(|v| v.as_array())
         .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
 
-    let exclude_paths = table
-        .and_then(|t| t.get("exclude_paths"))
+    let src_exclude_paths = table
+        .and_then(|t| t.get("src_exclude_paths"))
         .and_then(|v| v.as_array())
         .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
 
-    let match_paths = table
-        .and_then(|t| t.get("match_paths"))
+    let src_files = table
+        .and_then(|t| t.get("src_files"))
         .and_then(|v| v.as_array())
         .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
 
     let mut scan = ScanConfig {
-        scan_dirs,
-        extensions,
-        exclude_dirs,
-        exclude_files,
-        exclude_paths,
-        match_paths,
+        src_dirs,
+        src_extensions,
+        src_exclude_dirs,
+        src_exclude_files,
+        src_exclude_paths,
+        src_files,
     };
-    scan.resolve(default_scan_dir, default_extensions, default_exclude_dirs);
+    scan.resolve(default_scan_dir, default_src_extensions, default_exclude_dirs);
     scan
 }

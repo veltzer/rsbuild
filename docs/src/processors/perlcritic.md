@@ -25,13 +25,13 @@ that configuration changes trigger rebuilds.
 ```toml
 [processor.perlcritic]
 args = []
-extra_inputs = []
+dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `args` | string[] | `[]` | Extra arguments passed to perlcritic |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

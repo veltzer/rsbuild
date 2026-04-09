@@ -17,14 +17,14 @@ Discovers YAML files in the configured directories and converts each to a pretty
 
 ```toml
 [processor.yaml2json]
-scan_dirs = ["yaml"]
+src_dirs = ["yaml"]
 output_dir = "out/yaml2json"    # Output directory (default)
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `output_dir` | string | `"out/yaml2json"` | Output directory for JSON files |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch Support
 

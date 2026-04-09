@@ -65,12 +65,12 @@ Templates in subdirectories produce output at project root (e.g., `tera.template
 
 Custom Lua clean functions report removal count via `existed_before.saturating_sub(exist_after)`. If the Lua function doesn't remove files, that's the plugin's responsibility. The count accurately reflects what was actually removed. Not a bug.
 
-## file_index exclude_dirs substring matching
+## file_index src_exclude_dirs substring matching
 
 **File:** `src/file_index.rs` (lines 76-80)
 **Flagged in:** rounds 9, 10
 
-`exclude_dirs` uses `path_str.contains(dir)` for filtering. The documented convention uses slash-delimited patterns like `"/kernel/"`, which prevents false positives on path substrings. This is the configured behavior.
+`src_exclude_dirs` uses `path_str.contains(dir)` for filtering. The documented convention uses slash-delimited patterns like `"/kernel/"`, which prevents false positives on path substrings. This is the configured behavior.
 
 ## Object store trim path reconstruction
 

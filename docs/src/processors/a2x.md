@@ -22,7 +22,7 @@ a2x = "a2x"                           # The a2x command to run
 format = "pdf"                         # Output format (pdf, xhtml, dvi, ps, epub, mobi)
 args = []                              # Additional arguments to pass to a2x
 output_dir = "out/a2x"                # Output directory
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
@@ -31,7 +31,7 @@ extra_inputs = []                      # Additional files that trigger rebuilds 
 | `format` | string | `"pdf"` | Output format |
 | `args` | string[] | `[]` | Extra arguments passed to a2x |
 | `output_dir` | string | `"out/a2x"` | Output directory |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

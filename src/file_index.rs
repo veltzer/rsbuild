@@ -50,18 +50,18 @@ impl FileIndex {
     ///
     /// - `root`: only include files under this directory (relative path, e.g., "src" or "")
     /// - `extensions`: file extensions to match (e.g., `[".py", ".pyi"]`)
-    /// - `exclude_dirs`: directory path segments to skip (e.g., `["/.git/", "/out/"]`)
-    /// - `exclude_files`: file names to skip (e.g., `["setup.py"]`)
-    /// - `exclude_paths`: paths relative to project root to skip (e.g., `["Makefile"]`)
-    /// - `match_paths`: if non-empty, only these paths are matched (allowlist)
+    /// - `src_exclude_dirs`: directory path segments to skip (e.g., `["/.git/", "/out/"]`)
+    /// - `src_exclude_files`: file names to skip (e.g., `["setup.py"]`)
+    /// - `src_exclude_paths`: paths relative to project root to skip (e.g., `["Makefile"]`)
+    /// - `src_files`: if non-empty, only these paths are matched (allowlist)
     pub fn query(
         &self,
         root: &Path,
         extensions: &[&str],
-        exclude_dirs: &[&str],
-        exclude_files: &[&str],
-        exclude_paths: &[&str],
-        match_paths: &[&str],
+        src_exclude_dirs: &[&str],
+        src_exclude_files: &[&str],
+        src_exclude_paths: &[&str],
+        src_files: &[&str],
     ) -> Vec<PathBuf> {
         self.files
             .iter()
@@ -74,17 +74,17 @@ impl FileIndex {
                         return false;
                     }
 
-                // If match_paths is set, only match those exact paths
+                // If src_files is set, only match those exact paths
                 // (skip extension and exclude checks — the user explicitly listed files)
-                if !match_paths.is_empty() {
+                if !src_files.is_empty() {
                     let path_str = path.to_string_lossy();
-                    return match_paths.iter().any(|p| *p == path_str);
+                    return src_files.iter().any(|p| *p == path_str);
                 }
 
                 // Check exclude dirs
-                if !exclude_dirs.is_empty() {
+                if !src_exclude_dirs.is_empty() {
                     let path_str = path.to_string_lossy();
-                    if exclude_dirs.iter().any(|dir| path_str.contains(dir)) {
+                    if src_exclude_dirs.iter().any(|dir| path_str.contains(dir)) {
                         return false;
                     }
                 }
@@ -100,14 +100,14 @@ impl FileIndex {
                 }
 
                 // Check exclude files
-                if !exclude_files.is_empty() && exclude_files.contains(&name) {
+                if !src_exclude_files.is_empty() && src_exclude_files.contains(&name) {
                     return false;
                 }
 
                 // Check exclude paths (paths are already relative)
-                if !exclude_paths.is_empty() {
+                if !src_exclude_paths.is_empty() {
                     let path_str = path.to_string_lossy();
-                    if exclude_paths.iter().any(|p| *p == path_str) {
+                    if src_exclude_paths.iter().any(|p| *p == path_str) {
                         return false;
                     }
                 }
@@ -128,19 +128,19 @@ impl FileIndex {
         scan: &ScanConfig,
         recursive: bool,
     ) -> Vec<PathBuf> {
-        let ext_refs: Vec<&str> = scan.extensions().iter().map(|s| s.as_str()).collect();
-        let exclude_dir_refs: Vec<&str> = scan.exclude_dirs().iter().map(|s| s.as_str()).collect();
-        let exclude_file_refs: Vec<&str> = scan.exclude_files().iter().map(|s| s.as_str()).collect();
-        let exclude_path_refs: Vec<&str> = scan.exclude_paths().iter().map(|s| s.as_str()).collect();
-        let include_path_refs: Vec<&str> = scan.match_paths().iter().map(|s| s.as_str()).collect();
+        let ext_refs: Vec<&str> = scan.src_extensions().iter().map(|s| s.as_str()).collect();
+        let exclude_dir_refs: Vec<&str> = scan.src_exclude_dirs().iter().map(|s| s.as_str()).collect();
+        let exclude_file_refs: Vec<&str> = scan.src_exclude_files().iter().map(|s| s.as_str()).collect();
+        let exclude_path_refs: Vec<&str> = scan.src_exclude_paths().iter().map(|s| s.as_str()).collect();
+        let include_path_refs: Vec<&str> = scan.src_files().iter().map(|s| s.as_str()).collect();
 
         let mut results = Vec::new();
-        // When match_paths is set but scan_dirs is empty, scan from project root
-        let scan_dirs = scan.scan_dirs();
-        let effective_dirs: Vec<&str> = if scan_dirs.is_empty() && !include_path_refs.is_empty() {
+        // When src_files is set but src_dirs is empty, scan from project root
+        let src_dirs = scan.src_dirs();
+        let effective_dirs: Vec<&str> = if src_dirs.is_empty() && !include_path_refs.is_empty() {
             vec![""]
         } else {
-            scan_dirs.iter().map(|s| s.as_str()).collect()
+            src_dirs.iter().map(|s| s.as_str()).collect()
         };
         for dir in &effective_dirs {
             // Normalize "." to "" so depth calculations work correctly

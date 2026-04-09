@@ -44,14 +44,14 @@ directory triggers a needless rebuild.
 
 ### 2. User-declared extra inputs
 
-The user lists specific files or globs in `extra_inputs`. Only those files
+The user lists specific files or globs in `dep_inputs`. Only those files
 (plus the Makefile itself) are tracked.
 
 **Pros:** precise, no unnecessary rebuilds.
 **Cons:** requires the user to manually maintain the list. Easy to forget a
 file and get stale builds.
 
-This is available today via the `extra_inputs` config key, but on its own
+This is available today via the `dep_inputs` config key, but on its own
 it would miss source files that the Makefile compiles.
 
 ### 3. Parse `make --dry-run --print-data-base`
@@ -80,9 +80,9 @@ which file changed.
 make = "make"        # Make binary to use
 args = []            # Extra arguments passed to make
 target = ""          # Make target (empty = default target)
-scan_dirs = [""]        # Directory to scan ("" = project root)
-extensions = ["Makefile"]
-extra_inputs = []    # Additional files that trigger rebuilds when changed
+src_dirs = [""]        # Directory to scan ("" = project root)
+src_extensions = ["Makefile"]
+dep_inputs = []    # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
@@ -90,10 +90,10 @@ extra_inputs = []    # Additional files that trigger rebuilds when changed
 | `make` | string | `"make"` | Path or name of the make binary |
 | `args` | string[] | `[]` | Extra arguments passed to every make invocation |
 | `target` | string | `""` | Make target to build (empty = default target) |
-| `scan_dirs` | string[] | `[""]` | Directory to scan for Makefiles |
-| `extensions` | string[] | `["Makefile"]` | File names to match |
-| `exclude_paths` | string[] | `[]` | Paths (relative to project root) to exclude |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds (in addition to directory contents) |
+| `src_dirs` | string[] | `[""]` | Directory to scan for Makefiles |
+| `src_extensions` | string[] | `["Makefile"]` | File names to match |
+| `src_exclude_paths` | string[] | `[]` | Paths (relative to project root) to exclude |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds (in addition to directory contents) |
 
 ## Batch support
 

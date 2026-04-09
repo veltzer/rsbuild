@@ -205,7 +205,7 @@ Unused tags in tags (not used by any file):
 
 ## Source Files
 
-- Input: `**/*.md` (configurable via `scan_dirs` / `extensions`)
+- Input: `**/*.md` (configurable via `src_dirs` / `src_extensions`)
 - Output: `out/tags/tags.db`
 
 ## Configuration
@@ -222,7 +222,7 @@ required_field_groups = [                                         # At least one
 required_values = ["level", "category"]                           # Scalar fields validated against tags
 unique_fields = ["title"]                                         # Fields that must be unique across files
 sorted_tags = true                                                # Require list items in sorted order
-extra_inputs = []                                                 # Additional files that trigger rebuilds
+dep_inputs = []                                                 # Additional files that trigger rebuilds
 
 [processor.tags.field_types]
 tags = "list"                                                     # Must be a YAML list
@@ -240,7 +240,7 @@ duration_hours = "number"                                         # Must be nume
 | `unique_fields` | string[] | `[]` | Fields whose values must be unique across all files |
 | `field_types` | map | `{}` | Expected types per field: `"list"`, `"scalar"`, or `"number"` |
 | `sorted_tags` | bool | `false` | Require list items in sorted order within each file |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

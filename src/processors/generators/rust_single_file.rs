@@ -24,9 +24,9 @@ impl RustSingleFileProcessor {
     }
 
     fn get_output_path(&self, source: &Path) -> PathBuf {
-        let scan_dirs = self.config.scan.scan_dirs();
+        let src_dirs = self.config.scan.src_dirs();
         let full_parent = source.parent().unwrap_or(Path::new(""));
-        let parent = scan_dirs.iter()
+        let parent = src_dirs.iter()
             .filter(|d| !d.is_empty())
             .find_map(|d| full_parent.strip_prefix(d).ok())
             .unwrap_or(full_parent);
@@ -50,7 +50,7 @@ impl ProductDiscovery for RustSingleFileProcessor {
         }
 
         let hash = Some(output_config_hash(&self.config, &[]));
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
 
         for source in &files {
             let output = self.get_output_path(source);

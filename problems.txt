@@ -3,8 +3,3 @@ python files dependency analysis:
   for dependency on other files with open(filename) or other functions.
   for import of external dependencies and generate external depenencies.
 
-change the paramter "linter" to "command" in the "script" processor.
-
-When we get a "script" or "generator" we must depend also on the checksum of the "command" (the script)
-if that checksum changes, the output should be assumed to change.
-

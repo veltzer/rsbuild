@@ -28,14 +28,14 @@ Auto-detected when a `terms/` directory exists and `.md` files are present.
 [processor.terms]
 terms_dir = "terms"       # Directory containing term list .txt files
 batch = true              # Enable batch execution
-extra_inputs = []         # Additional files that trigger rebuilds when changed
+dep_inputs = []         # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `terms_dir` | string | `"terms"` | Directory containing `.txt` term list files |
 | `batch` | bool | `true` | Enable batch execution |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

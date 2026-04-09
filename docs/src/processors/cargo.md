@@ -25,8 +25,8 @@ When any tracked file changes, rsconstruct will re-run cargo.
 ### Workspaces
 
 For Cargo workspaces, each `Cargo.toml` (root and members) is discovered as a
-separate product. To build only the workspace root, use `exclude_paths` to skip
-member directories, or configure `scan_dirs` to limit discovery.
+separate product. To build only the workspace root, use `src_exclude_paths` to skip
+member directories, or configure `src_dirs` to limit discovery.
 
 ## Source Files
 
@@ -41,9 +41,9 @@ cargo = "cargo"          # Cargo binary to use
 command = "build"        # Cargo command (build, check, test, clippy, etc.)
 args = []                # Extra arguments passed to cargo
 profiles = ["dev", "release"]  # Cargo profiles to build
-scan_dirs = [""]            # Directory to scan ("" = project root)
-extensions = ["Cargo.toml"]
-extra_inputs = []        # Additional files that trigger rebuilds
+src_dirs = [""]            # Directory to scan ("" = project root)
+src_extensions = ["Cargo.toml"]
+dep_inputs = []        # Additional files that trigger rebuilds
 cache_output_dir = true  # Cache the target/ directory for fast restore after clean
 ```
 
@@ -53,11 +53,11 @@ cache_output_dir = true  # Cache the target/ directory for fast restore after cl
 | `command` | string | `"build"` | Cargo subcommand to run |
 | `args` | string[] | `[]` | Extra arguments passed to cargo |
 | `profiles` | string[] | `["dev", "release"]` | Cargo profiles to build (creates one product per profile) |
-| `scan_dirs` | string[] | `[""]` | Directory to scan for Cargo.toml files |
-| `extensions` | string[] | `["Cargo.toml"]` | File names to match |
-| `exclude_dirs` | string[] | `["/.git/", "/target/", ...]` | Directory patterns to exclude |
-| `exclude_paths` | string[] | `[]` | Paths (relative to project root) to exclude |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `src_dirs` | string[] | `[""]` | Directory to scan for Cargo.toml files |
+| `src_extensions` | string[] | `["Cargo.toml"]` | File names to match |
+| `src_exclude_dirs` | string[] | `["/.git/", "/target/", ...]` | Directory patterns to exclude |
+| `src_exclude_paths` | string[] | `[]` | Paths (relative to project root) to exclude |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 | `cache_output_dir` | boolean | `true` | Cache the `target/` directory so `rsconstruct clean && rsconstruct build` restores from cache. Consider disabling for large projects. |
 
 ## Batch support
@@ -105,7 +105,7 @@ args = ["--", "-D", "warnings"]
 
 ```toml
 [processor.cargo]
-exclude_paths = ["crates/"]
+src_exclude_paths = ["crates/"]
 ```
 
 ## Notes

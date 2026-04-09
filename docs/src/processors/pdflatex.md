@@ -24,7 +24,7 @@ runs = 2                               # Number of compilation passes
 qpdf = true                           # Use qpdf to linearize output PDF
 args = []                              # Additional arguments to pass to pdflatex
 output_dir = "out/pdflatex"            # Output directory
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
@@ -34,7 +34,7 @@ extra_inputs = []                      # Additional files that trigger rebuilds 
 | `qpdf` | bool | `true` | Use qpdf to linearize the output PDF |
 | `args` | string[] | `[]` | Extra arguments passed to pdflatex |
 | `output_dir` | string | `"out/pdflatex"` | Output directory for PDF files |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

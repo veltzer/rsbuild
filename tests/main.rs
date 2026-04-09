@@ -44,6 +44,7 @@ mod processors {
     pub mod doctest;
     pub mod drawio;
     pub mod gem;
+    pub mod generator;
     pub mod jinja2;
     pub mod jq;
     pub mod json_schema;

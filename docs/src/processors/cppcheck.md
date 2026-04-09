@@ -28,13 +28,13 @@ never linked together. Cppcheck has no flag to disable this cross-file analysis
 ```toml
 [processor.cppcheck]
 args = ["--error-exitcode=1", "--enable=warning,style,performance,portability"]
-extra_inputs = [".cppcheck-suppressions"]   # Additional files that trigger rebuilds when changed
+dep_inputs = [".cppcheck-suppressions"]   # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `args` | string[] | `["--error-exitcode=1", "--enable=warning,style,performance,portability"]` | Arguments passed to cppcheck |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 To use a suppressions file, add `"--suppressions-list=.cppcheck-suppressions"` to `args`.
 

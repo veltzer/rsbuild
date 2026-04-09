@@ -24,7 +24,7 @@ gem_home = "gems"                      # GEM_HOME directory
 mdl_bin = "gems/bin/mdl"              # Path to the mdl binary
 args = []                              # Additional arguments to pass to mdl
 gem_stamp = "out/gem/root.stamp"       # Stamp file from gem processor (dependency)
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
@@ -33,7 +33,7 @@ extra_inputs = []                      # Additional files that trigger rebuilds 
 | `mdl_bin` | string | `"gems/bin/mdl"` | Path to the mdl executable |
 | `args` | string[] | `[]` | Extra arguments passed to mdl |
 | `gem_stamp` | string | `"out/gem/root.stamp"` | Stamp file from gem processor (ensures gems are installed first) |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

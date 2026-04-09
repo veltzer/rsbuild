@@ -22,21 +22,21 @@ variables are passed to the template context.
 
 ## Source Files
 
-- Input: `templates.jinja2/**/*{extensions}`
+- Input: `templates.jinja2/**/*{src_extensions}`
 - Output: project root, mirroring the template path (minus `templates.jinja2/` prefix) with the extension removed
 
 ## Configuration
 
 ```toml
 [processor.jinja2]
-extensions = [".j2"]                      # File extensions to process (default: [".j2"])
-extra_inputs = ["config/settings.py"]     # Additional files that trigger rebuilds when changed
+src_extensions = [".j2"]                      # File extensions to process (default: [".j2"])
+dep_inputs = ["config/settings.py"]     # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `extensions` | string[] | `[".j2"]` | File extensions to discover |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `src_extensions` | string[] | `[".j2"]` | File extensions to discover |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

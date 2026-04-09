@@ -21,21 +21,21 @@ templates can include or inherit from other templates using relative paths.
 
 ## Source Files
 
-- Input: `templates.mako/**/*{extensions}`
+- Input: `templates.mako/**/*{src_extensions}`
 - Output: project root, mirroring the template path (minus `templates.mako/` prefix) with the extension removed
 
 ## Configuration
 
 ```toml
 [processor.mako]
-extensions = [".mako"]                    # File extensions to process (default: [".mako"])
-extra_inputs = ["config/settings.py"]     # Additional files that trigger rebuilds when changed
+src_extensions = [".mako"]                    # File extensions to process (default: [".mako"])
+dep_inputs = ["config/settings.py"]     # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `extensions` | string[] | `[".mako"]` | File extensions to discover |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `src_extensions` | string[] | `[".mako"]` | File extensions to discover |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

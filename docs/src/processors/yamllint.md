@@ -24,14 +24,14 @@ single yamllint invocation for better performance.
 [processor.yamllint]
 linter = "yamllint"                          # The yamllint command to run
 args = []                                    # Additional arguments to pass to yamllint
-extra_inputs = []                            # Additional files that trigger rebuilds when changed
+dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"yamllint"` | The yamllint executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to yamllint |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

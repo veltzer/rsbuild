@@ -100,14 +100,14 @@ macro_rules! impl_checker {
     };
 
     // --- discover ---
-    // Shared body: build extra_inputs and call discover_checker_products
+    // Shared body: build dep_inputs and call discover_checker_products
     (@discover_body $self:ident, $graph:ident, $fi:ident, $cfg:ident, $name:expr) => {{
-        let mut extra_inputs = $self.$cfg.extra_inputs.clone();
-        for ai in &$self.$cfg.auto_inputs {
-            extra_inputs.extend($crate::processors::config_file_inputs(ai));
+        let mut dep_inputs = $self.$cfg.dep_inputs.clone();
+        for ai in &$self.$cfg.dep_auto {
+            dep_inputs.extend($crate::processors::config_file_inputs(ai));
         }
         $crate::processors::discover_checker_products(
-            $graph, &$self.$cfg.scan, $fi, &extra_inputs, &$self.$cfg, $name,
+            $graph, &$self.$cfg.scan, $fi, &dep_inputs, &$self.$cfg, $name,
         )
     }};
     // With scan_root guard (built-in)

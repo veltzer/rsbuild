@@ -50,7 +50,7 @@ impl ProductDiscovery for GemProcessor {
         };
 
         let hash = Some(output_config_hash(&self.config, &[]));
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
 
         let siblings = SiblingFilter {
             extensions: &[".gemspec"],

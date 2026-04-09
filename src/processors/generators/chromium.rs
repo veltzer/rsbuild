@@ -36,7 +36,7 @@ impl ProductDiscovery for ChromiumProcessor {
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let params = DiscoverParams {
             scan: &self.config.scan,
-            extra_inputs: &self.config.extra_inputs,
+            dep_inputs: &self.config.dep_inputs,
             config: &self.config,
             output_dir: &self.config.output_dir,
             processor_name: instance_name,

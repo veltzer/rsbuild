@@ -73,7 +73,7 @@ my_excludes = ["/kernel/", "/vendor/"]
 [processor.tera]
 
 [processor.cppcheck]
-exclude_dirs = "${my_excludes}"
+src_exclude_dirs = "${my_excludes}"
 "#
     ).unwrap();
 
@@ -99,7 +99,7 @@ fn config_vars_substitution_string() {
 my_dir = "custom_templates"
 
 [processor.tera]
-scan_dirs = ["${my_dir}"]
+src_dirs = ["${my_dir}"]
 "#
     ).unwrap();
 
@@ -125,11 +125,11 @@ shared_excludes = ["/out/", "/build/"]
 [processor.tera]
 
 [processor.cppcheck]
-exclude_dirs = "${shared_excludes}"
+src_exclude_dirs = "${shared_excludes}"
 
 [processor.shellcheck]
-exclude_dirs = "${shared_excludes}"
-scan_dirs = ["."]
+src_exclude_dirs = "${shared_excludes}"
+src_dirs = ["."]
 "#
     ).unwrap();
 
@@ -154,7 +154,7 @@ fn config_vars_undefined_variable_error() {
 [processor.tera]
 
 [processor.cppcheck]
-exclude_dirs = "${undefined_var}"
+src_exclude_dirs = "${undefined_var}"
 "#
     ).unwrap();
 
@@ -175,7 +175,7 @@ fn config_vars_no_vars_section() {
         project_path.join("rsconstruct.toml"),
         r#"
 [processor.tera]
-scan_dirs = ["templates"]
+src_dirs = ["templates"]
 "#
     ).unwrap();
 
@@ -224,7 +224,7 @@ fn config_validate_no_matching_files_warning() {
     // Enable yamllint processor but don't create any .yml files
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.yamllint]\nscan_dirs = [\".\"]\n"
+        "[processor.yamllint]\nsrc_dirs = [\".\"]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["config", "validate"], &[("NO_COLOR", "1")]);
@@ -243,7 +243,7 @@ fn config_validate_json() {
     // Enable yamllint processor but don't create any .yml files (to get a warning)
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.yamllint]\nscan_dirs = [\".\"]\n"
+        "[processor.yamllint]\nsrc_dirs = [\".\"]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["--json", "config", "validate"], &[("NO_COLOR", "1")]);
@@ -346,7 +346,7 @@ fn config_validate_explicit_missing_outputs() {
     // Configure explicit processor without the required 'outputs' field
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.explicit]\ncommand = \"my_script\"\nscan_dirs = [\".\"]\n",
+        "[processor.explicit]\ncommand = \"my_script\"\nsrc_dirs = [\".\"]\n",
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["config", "validate"], &[("NO_COLOR", "1")]);
@@ -364,7 +364,7 @@ fn config_validate_explicit_empty_outputs() {
     // Configure explicit processor with explicitly empty 'outputs'
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.explicit]\ncommand = \"my_script\"\noutputs = []\nscan_dirs = [\".\"]\n",
+        "[processor.explicit]\ncommand = \"my_script\"\noutputs = []\nsrc_dirs = [\".\"]\n",
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["config", "validate"], &[("NO_COLOR", "1")]);
@@ -381,7 +381,7 @@ fn config_validate_explicit_with_outputs_ok() {
     // Configure explicit processor with required 'outputs' field present
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.explicit]\ncommand = \"my_script\"\noutputs = [\"out/result.txt\"]\nscan_dirs = [\".\"]\n",
+        "[processor.explicit]\ncommand = \"my_script\"\noutputs = [\"out/result.txt\"]\nsrc_dirs = [\".\"]\n",
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["config", "validate"], &[("NO_COLOR", "1")]);

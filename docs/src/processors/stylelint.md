@@ -27,14 +27,14 @@ rebuilds.
 [processor.stylelint]
 linter = "stylelint"
 args = []
-extra_inputs = []
+dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"stylelint"` | The stylelint executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to stylelint |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

@@ -48,7 +48,7 @@ impl ProductDiscovery for NpmProcessor {
         };
 
         let hash = Some(output_config_hash(&self.config, &[]));
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
 
         let siblings = SiblingFilter {
             extensions: &[".json", ".js", ".ts"],

@@ -26,14 +26,14 @@ that configuration changes trigger rebuilds.
 [processor.htmlhint]
 linter = "htmlhint"
 args = []
-extra_inputs = []
+dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"htmlhint"` | The htmlhint executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to htmlhint |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

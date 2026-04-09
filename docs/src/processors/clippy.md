@@ -34,9 +34,9 @@ When any tracked file changes, rsconstruct will re-run clippy.
 cargo = "cargo"          # Cargo binary to use
 command = "clippy"       # Cargo command (usually "clippy")
 args = []                # Extra arguments passed to cargo clippy
-scan_dirs = [""]            # Directory to scan ("" = project root)
-extensions = ["Cargo.toml"]
-extra_inputs = []        # Additional files that trigger rebuilds
+src_dirs = [""]            # Directory to scan ("" = project root)
+src_extensions = ["Cargo.toml"]
+dep_inputs = []        # Additional files that trigger rebuilds
 ```
 
 | Key | Type | Default | Description |
@@ -44,11 +44,11 @@ extra_inputs = []        # Additional files that trigger rebuilds
 | `cargo` | string | `"cargo"` | Path or name of the cargo binary |
 | `command` | string | `"clippy"` | Cargo subcommand to run |
 | `args` | string[] | `[]` | Extra arguments passed to cargo clippy |
-| `scan_dirs` | string[] | `[""]` | Directory to scan for Cargo.toml files |
-| `extensions` | string[] | `["Cargo.toml"]` | File names to match |
-| `exclude_dirs` | string[] | `["/.git/", "/target/", ...]` | Directory patterns to exclude |
-| `exclude_paths` | string[] | `[]` | Paths (relative to project root) to exclude |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `src_dirs` | string[] | `[""]` | Directory to scan for Cargo.toml files |
+| `src_extensions` | string[] | `["Cargo.toml"]` | File names to match |
+| `src_exclude_dirs` | string[] | `["/.git/", "/target/", ...]` | Directory patterns to exclude |
+| `src_exclude_paths` | string[] | `[]` | Paths (relative to project root) to exclude |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

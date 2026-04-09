@@ -174,7 +174,7 @@ impl ProductDiscovery for IpdfuniteProcessor {
         }
 
         let hash = Some(output_config_hash(&self.config, &[]));
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
         let ext = self.config.source_ext.strip_prefix('.').unwrap_or(&self.config.source_ext);
 
         let dirs = find_dirs_with_ext(base, ext);

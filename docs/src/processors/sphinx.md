@@ -22,7 +22,7 @@ A non-zero exit code fails the product.
 sphinx_build = "sphinx-build"          # The sphinx-build command to run
 output_dir = "_build"                  # Output directory for generated docs
 args = []                              # Additional arguments to pass to sphinx-build
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 cache_output_dir = true                # Cache the output directory for fast restore after clean
 ```
 
@@ -31,7 +31,7 @@ cache_output_dir = true                # Cache the output directory for fast res
 | `sphinx_build` | string | `"sphinx-build"` | The sphinx-build executable to run |
 | `output_dir` | string | `"_build"` | Output directory for generated documentation |
 | `args` | string[] | `[]` | Extra arguments passed to sphinx-build |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 | `cache_output_dir` | boolean | `true` | Cache the `_build/` directory so `rsconstruct clean && rsconstruct build` restores from cache |
 
 ## Batch support

@@ -72,7 +72,7 @@ impl ProductDiscovery for PipProcessor {
         }
 
         let hash = Some(output_config_hash(&self.config, &[]));
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
 
         for anchor in files {
             let mut inputs: Vec<PathBuf> = Vec::with_capacity(1 + extra.len());

@@ -19,14 +19,14 @@ Fails if any file is missing `$schema`, fails schema validation, or has keys in 
 
 ```toml
 [processor.iyamlschema]
-scan_dirs = ["yaml"]
+src_dirs = ["yaml"]
 check_ordering = true    # Check propertyOrdering (default: true)
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `check_ordering` | boolean | `true` | Whether to check property ordering against `propertyOrdering` in the schema |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Schema Requirements
 

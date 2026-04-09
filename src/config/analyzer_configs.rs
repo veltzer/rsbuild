@@ -22,7 +22,7 @@ pub struct CppAnalyzerConfig {
     pub include_path_commands: Vec<String>,
     /// Directory path segments to exclude from analysis (e.g., ["/kernel/", "/vendor/"])
     #[serde(default)]
-    pub exclude_dirs: Vec<String>,
+    pub src_exclude_dirs: Vec<String>,
     /// C compiler (for -MM scanning with compiler method)
     #[serde(default = "default_cc_compiler")]
     pub cc: String,
@@ -44,7 +44,7 @@ impl Default for CppAnalyzerConfig {
             include_paths: Vec::new(),
             pkg_config: Vec::new(),
             include_path_commands: Vec::new(),
-            exclude_dirs: Vec::new(),
+            src_exclude_dirs: Vec::new(),
             cc: default_cc_compiler(),
             cxx: default_cxx_compiler(),
             cflags: Vec::new(),

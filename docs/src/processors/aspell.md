@@ -21,7 +21,7 @@ configured aspell configuration file. A non-zero exit code fails the product.
 aspell = "aspell"                      # The aspell command to run
 conf = ".aspell.conf"                  # Aspell configuration file
 args = []                              # Additional arguments to pass to aspell
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
@@ -29,7 +29,7 @@ extra_inputs = []                      # Additional files that trigger rebuilds 
 | `aspell` | string | `"aspell"` | The aspell executable to run |
 | `conf` | string | `".aspell.conf"` | Aspell configuration file |
 | `args` | string[] | `[]` | Extra arguments passed to aspell |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

@@ -29,7 +29,7 @@ Items from `suggestions.md` that have been implemented.
 
 ## Completed New Processors
 
-- **mypy** — Python type checking using `mypy`. Batch-capable. Config: `checker`, `args`, `extra_inputs`, `scan`.
+- **mypy** — Python type checking using `mypy`. Batch-capable. Config: `checker`, `args`, `dep_inputs`, `scan`.
 - **yamllint** — Lint YAML files using `yamllint`. `src/processors/checkers/yamllint.rs`.
 - **jsonlint** — Validate JSON files for syntax errors. `src/processors/checkers/jsonlint.rs`.
 - **taplo (toml-lint)** — Validate TOML files using `taplo`. `src/processors/checkers/taplo.rs`.

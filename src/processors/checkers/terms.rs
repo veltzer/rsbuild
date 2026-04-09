@@ -76,19 +76,19 @@ impl crate::processors::ProductDiscovery for TermsProcessor {
             return Ok(());
         }
         // Collect all .txt files from terms_dir as extra inputs
-        let mut extra_inputs = self.config.extra_inputs.clone();
+        let mut dep_inputs = self.config.dep_inputs.clone();
         for entry in fs::read_dir(&self.config.terms_dir)? {
             let entry = entry?;
             let path = entry.path();
             if path.extension().is_some_and(|e| e == "txt") {
-                extra_inputs.push(path.to_string_lossy().into_owned());
+                dep_inputs.push(path.to_string_lossy().into_owned());
             }
         }
-        for ai in &self.config.auto_inputs {
-            extra_inputs.extend(crate::processors::config_file_inputs(ai));
+        for ai in &self.config.dep_auto {
+            dep_inputs.extend(crate::processors::config_file_inputs(ai));
         }
         discover_checker_products(
-            graph, &self.config.scan, file_index, &extra_inputs, &self.config,
+            graph, &self.config.scan, file_index, &dep_inputs, &self.config,
             instance_name,
         )
     }

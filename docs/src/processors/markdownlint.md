@@ -23,7 +23,7 @@ Depends on the npm processor — uses the `markdownlint` binary installed by npm
 markdownlint_bin = "node_modules/.bin/markdownlint"  # Path to the markdownlint binary
 args = []                              # Additional arguments to pass to markdownlint
 npm_stamp = "out/npm/root.stamp"       # Stamp file from npm processor (dependency)
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
@@ -31,7 +31,7 @@ extra_inputs = []                      # Additional files that trigger rebuilds 
 | `markdownlint_bin` | string | `"node_modules/.bin/markdownlint"` | Path to the markdownlint executable |
 | `args` | string[] | `[]` | Extra arguments passed to markdownlint |
 | `npm_stamp` | string | `"out/npm/root.stamp"` | Stamp file from npm processor (ensures npm packages are installed first) |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

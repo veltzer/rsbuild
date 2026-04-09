@@ -20,13 +20,13 @@ directories). For each one, runs `jekyll build` in that directory.
 ```toml
 [processor.jekyll]
 args = []
-extra_inputs = []
+dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `args` | string[] | `[]` | Extra arguments passed to jekyll build |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

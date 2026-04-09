@@ -14,7 +14,7 @@ fn pdflatex_valid_file() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.pdflatex]\nqpdf = false\nscan_dirs = [\".\"]\n",
+        "[processor.pdflatex]\nqpdf = false\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -47,7 +47,7 @@ fn pdflatex_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.pdflatex]\nscan_dirs = [\".\"]\n",
+        "[processor.pdflatex]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 

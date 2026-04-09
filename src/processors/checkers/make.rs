@@ -49,7 +49,7 @@ impl ProductDiscovery for MakeProcessor {
         discover_directory_products(graph, DirectoryProductOpts {
             scan: &self.config.scan,
             file_index,
-            extra_inputs: &self.config.extra_inputs,
+            dep_inputs: &self.config.dep_inputs,
             cfg_hash: &self.config,
             siblings: &SiblingFilter {
                 extensions: &[""],

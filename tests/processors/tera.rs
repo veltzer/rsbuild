@@ -154,7 +154,7 @@ fn multiple_templates() {
 }
 
 #[test]
-fn extra_inputs_triggers_rebuild() {
+fn dep_inputs_triggers_rebuild() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -170,10 +170,10 @@ fn extra_inputs_triggers_rebuild() {
         "{% set c = load_python(path='config/settings.py') %}Name: {{ c.name }}"
     ).unwrap();
 
-    // Configure tera processor with extra_inputs pointing to the config file
+    // Configure tera processor with dep_inputs pointing to the config file
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.tera]\nextra_inputs = [\"config/settings.py\"]\n"
+        "[processor.tera]\ndep_inputs = [\"config/settings.py\"]\n"
     ).unwrap();
 
     // First build
@@ -217,7 +217,7 @@ fn extra_inputs_triggers_rebuild() {
 }
 
 #[test]
-fn extra_inputs_nonexistent_file_fails() {
+fn dep_inputs_nonexistent_file_fails() {
     let temp_dir = setup_test_project();
     let project_path = temp_dir.path();
 
@@ -235,7 +235,7 @@ fn extra_inputs_nonexistent_file_fails() {
     // Configure with a nonexistent extra_input — should cause an error
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.tera]\nextra_inputs = [\"nonexistent_file.txt\"]\n"
+        "[processor.tera]\ndep_inputs = [\"nonexistent_file.txt\"]\n"
     ).unwrap();
 
     let output = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
@@ -245,8 +245,8 @@ fn extra_inputs_nonexistent_file_fails() {
         String::from_utf8_lossy(&output.stderr));
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("extra_inputs file not found") || stderr.contains("nonexistent_file.txt"),
-        "Error should mention missing extra_inputs file: {}", stderr);
+    assert!(stderr.contains("dep_inputs file not found") || stderr.contains("nonexistent_file.txt"),
+        "Error should mention missing dep_inputs file: {}", stderr);
 }
 
 #[test]

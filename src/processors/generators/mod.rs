@@ -81,8 +81,8 @@ impl TemplateItem {
 /// extension to produce the output path. Shared by tera and mako processors.
 pub(super) fn find_templates(scan: &ScanConfig, file_index: &FileIndex) -> Result<Vec<TemplateItem>> {
     let paths = file_index.scan(scan, true);
-    let extensions = scan.extensions();
-    let scan_dirs = scan.scan_dirs();
+    let extensions = scan.src_extensions();
+    let src_dirs = scan.src_dirs();
 
     let mut items = Vec::new();
     for path in paths {
@@ -92,7 +92,7 @@ pub(super) fn find_templates(scan: &ScanConfig, file_index: &FileIndex) -> Resul
                 let output_name = &filename[..filename.len() - ext.len()];
                 if !output_name.is_empty() {
                     // Strip the matching scan_dir prefix to get the output path
-                    let output_path = scan_dirs.iter()
+                    let output_path = src_dirs.iter()
                         .filter(|d| !d.is_empty())
                         .find_map(|d| path.strip_prefix(d).ok().map(|r| r.with_file_name(output_name)))
                         .unwrap_or_else(|| PathBuf::from(output_name));
@@ -109,7 +109,7 @@ pub(super) fn find_templates(scan: &ScanConfig, file_index: &FileIndex) -> Resul
 /// Parameters shared by multi-format and single-format discover helpers.
 pub(super) struct DiscoverParams<'a, C: Serialize> {
     pub scan: &'a ScanConfig,
-    pub extra_inputs: &'a [String],
+    pub dep_inputs: &'a [String],
     pub config: &'a C,
     pub output_dir: &'a str,
     pub processor_name: &'a str,
@@ -155,12 +155,12 @@ fn collect_dirs_with_ext(dir: &Path, ext: &str, result: &mut Vec<PathBuf>) {
 
 /// Compute the output path for a source file.
 ///
-/// Strips the matching `scan_dirs` prefix from the source path, replaces the extension,
+/// Strips the matching `src_dirs` prefix from the source path, replaces the extension,
 /// and joins the result under `output_dir`. This is the single place where
 /// source-to-output path mapping is defined.
-pub(super) fn output_path(source: &Path, scan_dirs: &[String], output_dir: &str, extension: &str) -> PathBuf {
+pub(super) fn output_path(source: &Path, src_dirs: &[String], output_dir: &str, extension: &str) -> PathBuf {
     let full_parent = source.parent().unwrap_or(Path::new(""));
-    let parent = scan_dirs.iter()
+    let parent = src_dirs.iter()
         .filter(|d| !d.is_empty())
         .find_map(|d| full_parent.strip_prefix(d).ok())
         .unwrap_or(full_parent);
@@ -182,12 +182,12 @@ pub(super) fn discover_multi_format(
     };
 
     let hash = Some(output_config_hash(params.config, &["formats", "output_dir"]));
-    let extra = resolve_extra_inputs(params.extra_inputs)?;
-    let scan_dirs = params.scan.scan_dirs();
+    let extra = resolve_extra_inputs(params.dep_inputs)?;
+    let src_dirs = params.scan.src_dirs();
 
     for source in &files {
         for format in formats {
-            let output = output_path(source, scan_dirs, params.output_dir, format);
+            let output = output_path(source, src_dirs, params.output_dir, format);
 
             let mut inputs = Vec::with_capacity(1 + extra.len());
             inputs.push(source.clone());

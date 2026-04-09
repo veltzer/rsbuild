@@ -4,13 +4,13 @@
 /// (name constants, config struct fields, default lists, builder registration, etc.)
 /// is auto-generated from this table by consumer macros.
 ///
-/// Each entry: `CONST_NAME, field_name, ConfigType, ProcessorType, (scan_dir, extensions, exclude_dirs);`
+/// Each entry: `CONST_NAME, field_name, ConfigType, ProcessorType, (scan_dir, src_extensions, src_exclude_dirs);`
 ///
 /// - `CONST_NAME`: used for `processors::names::CONST_NAME` constant (value = stringify!(field_name))
 /// - `field_name`: the field name in `ProcessorConfig` and the TOML section name `[processor.field_name]`
 /// - `ConfigType`: the config struct (must impl Default, Serialize, Deserialize, Clone, KnownFields)
 /// - `ProcessorType`: the processor struct (must impl ProductDiscovery, have `fn new(config) -> Self`)
-/// - `(scan_dir, extensions, exclude_dirs)`: arguments to `ScanConfig::resolve()` for defaults
+/// - `(scan_dir, src_extensions, src_exclude_dirs)`: arguments to `ScanConfig::resolve()` for defaults
 macro_rules! for_each_processor {
     ($callback:ident) => {
         $callback! {

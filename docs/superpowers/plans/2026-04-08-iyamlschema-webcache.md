@@ -723,8 +723,8 @@ git commit -m "test: add iyamlschema integration tests"
 Replace:
 ```toml
 [processor.script.validate_yaml]
-scan_dirs = ["yaml"]
-extensions = [".yaml"]
+src_dirs = ["yaml"]
+src_extensions = [".yaml"]
 linter = "scripts/validate_yaml.py"
 batch = true
 ```
@@ -732,7 +732,7 @@ batch = true
 With:
 ```toml
 [processor.iyamlschema]
-scan_dirs = ["yaml"]
+src_dirs = ["yaml"]
 ```
 
 - [ ] **Step 2: Verify it discovers files**

@@ -114,35 +114,35 @@ shells = ["bash"]
 
 ## Extra inputs
 
-By default, each processor only tracks its primary source files as inputs. If a product depends on additional files that aren't automatically discovered (e.g., a config file read by a linter, a suppressions file used by a static analyzer, or a Python settings file loaded by a template), you can declare them with `extra_inputs`.
+By default, each processor only tracks its primary source files as inputs. If a product depends on additional files that aren't automatically discovered (e.g., a config file read by a linter, a suppressions file used by a static analyzer, or a Python settings file loaded by a template), you can declare them with `dep_inputs`.
 
-When any file listed in `extra_inputs` changes, all products from that processor are rebuilt.
+When any file listed in `dep_inputs` changes, all products from that processor are rebuilt.
 
 ```toml
 [processor.template]
-extra_inputs = ["config/settings.py", "config/database.py"]
+dep_inputs = ["config/settings.py", "config/database.py"]
 
 [processor.ruff]
-extra_inputs = ["pyproject.toml"]
+dep_inputs = ["pyproject.toml"]
 
 [processor.pylint]
-extra_inputs = ["pyproject.toml"]
+dep_inputs = ["pyproject.toml"]
 
 [processor.cppcheck]
-extra_inputs = [".cppcheck-suppressions"]
+dep_inputs = [".cppcheck-suppressions"]
 
 [processor.cc_single_file]
-extra_inputs = ["Makefile.inc"]
+dep_inputs = ["Makefile.inc"]
 
 [processor.zspell]
-extra_inputs = ["custom-dictionary.txt"]
+dep_inputs = ["custom-dictionary.txt"]
 ```
 
 Paths are relative to the project root. Missing files cause a build error, so all listed files must exist.
 
-The `extra_inputs` paths are included in the processor's config hash, so adding or removing entries triggers a rebuild even if the files themselves haven't changed. The file contents are also checksummed as part of the product's input set, so any content change is detected by the incremental build system.
+The `dep_inputs` paths are included in the processor's config hash, so adding or removing entries triggers a rebuild even if the files themselves haven't changed. The file contents are also checksummed as part of the product's input set, so any content change is detected by the incremental build system.
 
-All processors support `extra_inputs`.
+All processors support `dep_inputs`.
 
 ## Graceful interrupt
 

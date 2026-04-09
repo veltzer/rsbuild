@@ -132,7 +132,7 @@ cxxflags = []             # Additional global C++ flags
 ldflags = []              # Additional global linker flags
 include_dirs = []         # Additional global -I paths
 single_invocation = false # Use single-invocation mode (default: false)
-extra_inputs = []         # Extra files that trigger rebuilds
+dep_inputs = []         # Extra files that trigger rebuilds
 cache_output_dir = true   # Cache entire output directory (default: true)
 ```
 
@@ -151,10 +151,10 @@ compiler and flags.
 | `ldflags` | string[] | `[]` | Global linker flags |
 | `include_dirs` | string[] | `[]` | Global include directories |
 | `single_invocation` | bool | `false` | Build programs in single compiler invocation |
-| `extra_inputs` | string[] | `[]` | Extra files that trigger rebuilds when changed |
+| `dep_inputs` | string[] | `[]` | Extra files that trigger rebuilds when changed |
 | `cache_output_dir` | bool | `true` | Cache the entire output directory |
-| `scan_dirs` | string[] | `[""]` | Directory to scan for cc.yaml files |
-| `extensions` | string[] | `["cc.yaml"]` | File patterns to scan for |
+| `src_dirs` | string[] | `[""]` | Directory to scan for cc.yaml files |
+| `src_extensions` | string[] | `["cc.yaml"]` | File patterns to scan for |
 
 ## Batch support
 

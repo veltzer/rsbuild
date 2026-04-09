@@ -9,7 +9,7 @@ fn pdfunite_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.pdfunite]\nscan_dirs = [\".\"]\n",
+        "[processor.pdfunite]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -37,7 +37,7 @@ fn pdfunite_discovers_courses() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.pdfunite]\nscan_dirs = [\".\"]\n",
+        "[processor.pdfunite]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 

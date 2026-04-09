@@ -29,7 +29,7 @@ source_ext = ".md"                     # Extension of source files in subdirecto
 source_output_dir = "out/marp/pdf"     # Where the upstream processor puts PDFs
 args = []                              # Additional arguments to pass to pdfunite
 output_dir = "out/courses"             # Output directory for merged PDFs
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
@@ -40,7 +40,7 @@ extra_inputs = []                      # Additional files that trigger rebuilds 
 | `source_output_dir` | string | `"out/marp/pdf"` | Directory where the upstream processor outputs PDFs |
 | `args` | string[] | `[]` | Extra arguments passed to pdfunite |
 | `output_dir` | string | `"out/courses"` | Output directory for merged PDFs |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

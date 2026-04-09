@@ -14,7 +14,7 @@ fn a2x_valid_file() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.a2x]\nscan_dirs = [\".\"]\n",
+        "[processor.a2x]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -48,7 +48,7 @@ fn a2x_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.a2x]\nscan_dirs = [\".\"]\n",
+        "[processor.a2x]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 

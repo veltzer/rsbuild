@@ -366,7 +366,7 @@ fn deterministic_build_order() {
 }
 
 /// Test that classify_products propagates dependency changes transitively.
-/// Setup: tera generates step1.txt, a second tera template depends on step1.txt via extra_inputs.
+/// Setup: tera generates step1.txt, a second tera template depends on step1.txt via dep_inputs.
 /// When the first tera template changes, both products should be classified as needing
 /// rebuild — not just the first product.
 #[test]
@@ -391,10 +391,10 @@ fn classify_propagates_through_dependencies() {
         String::from_utf8_lossy(&output1.stderr));
     assert!(project_path.join("step1.txt").exists(), "Tera should generate step1.txt");
 
-    // Phase 2: add a second template with extra_inputs pointing to the first tera output
+    // Phase 2: add a second template with dep_inputs pointing to the first tera output
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.tera]\nextra_inputs = [\"step1.txt\"]\n"
+        "[processor.tera]\ndep_inputs = [\"step1.txt\"]\n"
     ).unwrap();
     fs::write(
         project_path.join("tera.templates/step2.txt.tera"),
@@ -452,8 +452,8 @@ fn checker_and_generator_both_rebuild_on_shared_input_change() {
             "[processor.tera]\n",
             "\n",
             "[processor.script]\n",
-            "scan_dirs = [\"tera.templates\"]\n",
-            "extensions = [\".tera\"]\n",
+            "src_dirs = [\"tera.templates\"]\n",
+            "src_extensions = [\".tera\"]\n",
             "command = \"true\"\n",
         ),
     ).unwrap();
@@ -523,8 +523,8 @@ fn cross_processor_discovery() {
 [processor.tera]
 
 [processor.ascii]
-scan_dirs = ["."]
-extensions = [".txt"]
+src_dirs = ["."]
+src_extensions = [".txt"]
 "#,
     ).unwrap();
 
@@ -595,7 +595,7 @@ command = "scripts/build_report.py"
 inputs = ["config.txt"]
 input_globs = ["data/*.csv"]
 outputs = ["out/report.html"]
-scan_dirs = ["."]
+src_dirs = ["."]
 "#,
     ).unwrap();
 
@@ -663,8 +663,8 @@ fn cross_processor_nonexistent_output_dir() {
 [processor.tera]
 
 [processor.ascii]
-scan_dirs = ["out/generated"]
-extensions = [".txt"]
+src_dirs = ["out/generated"]
+src_extensions = [".txt"]
 "#,
     ).unwrap();
 
@@ -763,8 +763,8 @@ sleep 0.3
         r#"[processor.script]
 command = "bash"
 args = ["{script}"]
-extensions = [".txt"]
-scan_dirs = ["inputs"]
+src_extensions = [".txt"]
+src_dirs = ["inputs"]
 max_jobs = 2
 batch = false
 "#,
@@ -856,8 +856,8 @@ sleep 0.3
         r#"[processor.script]
 command = "bash"
 args = ["{script}"]
-extensions = [".txt"]
-scan_dirs = ["inputs"]
+src_extensions = [".txt"]
+src_dirs = ["inputs"]
 batch = false
 "#,
         script = script_path.display(),
@@ -929,8 +929,8 @@ cp "$input" "$output"
     fs::write(project_path.join("rsconstruct.toml"), format!(
         r#"[processor.generator]
 command = "{script}"
-extensions = [".txt"]
-scan_dirs = ["src"]
+src_extensions = [".txt"]
+src_dirs = ["src"]
 output_extension = "out"
 batch = false
 "#,

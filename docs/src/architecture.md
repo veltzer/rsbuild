@@ -140,7 +140,7 @@ RSConstruct walks the project tree once at startup and builds a `FileIndex` — 
 - `.gitignore` — standard git ignore rules, including nested `.gitignore` files and negation patterns
 - `.rsconstructignore` — project-specific ignore patterns using the same glob syntax as `.gitignore`
 
-Processors never walk the filesystem themselves. Instead, `auto_detect` and `discover` receive a `&FileIndex` and query it with their scan configuration (extensions, exclude directories, exclude files). This replaces the previous design where each processor performed its own recursive walk.
+Processors never walk the filesystem themselves. Instead, `auto_detect` and `discover` receive a `&FileIndex` and query it with their scan configuration (src_extensions, exclude directories, exclude files). This replaces the previous design where each processor performed its own recursive walk.
 
 ## Build pipeline
 

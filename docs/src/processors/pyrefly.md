@@ -24,14 +24,14 @@ single pyrefly invocation for better performance.
 [processor.pyrefly]
 linter = "pyrefly"                          # The pyrefly command to run
 args = []                                    # Additional arguments to pass to pyrefly
-extra_inputs = []                            # Additional files that trigger rebuilds when changed
+dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"pyrefly"` | The pyrefly executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to pyrefly |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

@@ -41,8 +41,8 @@ end
 
 ```toml
 [processor.eslint]
-scan_dirs = ["src"]
-extensions = [".js", ".ts"]
+src_dirs = ["src"]
+src_extensions = [".js", ".ts"]
 ```
 
 **3. Run it:**
@@ -184,11 +184,11 @@ These fields control which files are passed to `discover()`:
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `scan_dirs` | string[] | `[""]` | Directory to scan (`""` = project root) |
-| `extensions` | string[] | `[]` | File extensions to match |
-| `exclude_dirs` | string[] | `[]` | Directory path segments to skip |
-| `exclude_files` | string[] | `[]` | File names to skip |
-| `exclude_paths` | string[] | `[]` | Paths relative to project root to skip |
+| `src_dirs` | string[] | `[""]` | Directory to scan (`""` = project root) |
+| `src_extensions` | string[] | `[]` | File extensions to match |
+| `src_exclude_dirs` | string[] | `[]` | Directory path segments to skip |
+| `src_exclude_files` | string[] | `[]` | File names to skip |
+| `src_exclude_paths` | string[] | `[]` | Paths relative to project root to skip |
 
 ### Custom Configuration
 
@@ -196,8 +196,8 @@ Any additional keys in the `[processor.NAME]` section are passed through to the 
 
 ```toml
 [processor.eslint]
-scan_dirs = ["src"]
-extensions = [".js", ".ts"]
+src_dirs = ["src"]
+src_extensions = [".js", ".ts"]
 max_warnings = 0          # custom key, accessible as config.max_warnings in Lua
 fix = false               # custom key, accessible as config.fix in Lua
 ```
@@ -287,7 +287,7 @@ end
 
 ```toml
 [processor.yamllint]
-extensions = [".yml", ".yaml"]
+src_extensions = [".yml", ".yaml"]
 ```
 
 ### Stub-Based Linter (Legacy)
@@ -326,7 +326,7 @@ end
 
 ```toml
 [processor.yamllint]
-extensions = [".yml", ".yaml"]
+src_extensions = [".yml", ".yaml"]
 ```
 
 ### File Transformer (Generator)
@@ -365,6 +365,6 @@ end
 
 ```toml
 [processor.sass]
-scan_dirs = ["src"]
-extensions = [".scss"]
+src_dirs = ["src"]
+src_extensions = [".scss"]
 ```

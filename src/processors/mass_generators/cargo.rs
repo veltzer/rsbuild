@@ -53,7 +53,7 @@ impl ProductDiscovery for CargoProcessor {
             excludes: &["/.git/", "/target/", "/.rsconstruct/"],
         };
         let hash = Some(output_config_hash(&self.config, &[]));
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
 
         for anchor in files {
             let anchor_dir = anchor.parent().map(|p| p.to_path_buf()).unwrap_or_default();

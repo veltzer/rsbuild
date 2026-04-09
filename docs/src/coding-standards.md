@@ -29,7 +29,7 @@ consistently:
 | Entry in `default_processors()` | `names::UPPER.into()` | `names::CLANG_TIDY.into()` |
 | Entry in `validate_processor_fields()` | `processor_names::UPPER => {PascalCase}Config::known_fields()` | `processor_names::CLANG_TIDY => ClangTidyConfig::known_fields()` |
 | Entry in `expected_field_type()` | `("{name}", "field") => Some(FieldType::...)` | `("clang_tidy", "compiler_args") => ...` |
-| Entry in `scan_dirs()` | `&self.{name}.scan` | `&self.clang_tidy.scan` |
+| Entry in `src_dirs()` | `&self.{name}.scan` | `&self.clang_tidy.scan` |
 | Entry in `resolve_scan_defaults()` | `self.{name}.scan.resolve(...)` | `self.clang_tidy.scan.resolve(...)` |
 | Registration in `create_builtin_processors()` | `Builder::register(..., proc_names::UPPER, {PascalCase}Processor::new(cfg.{name}.clone()))` | `Builder::register(..., proc_names::CLANG_TIDY, ClangTidyProcessor::new(cfg.clang_tidy.clone()))` |
 | Re-export in `processors/mod.rs` | `pub use checkers::{PascalCase}Processor` | `pub use checkers::ClangTidyProcessor` |

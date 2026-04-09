@@ -14,7 +14,7 @@ fn luacheck_valid_file() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.luacheck]\nscan_dirs = [\".\"]\n",
+        "[processor.luacheck]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -52,7 +52,7 @@ fn luacheck_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.luacheck]\nscan_dirs = [\".\"]\n",
+        "[processor.luacheck]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -84,7 +84,7 @@ fn luacheck_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.luacheck]\nscan_dirs = [\".\"]\n",
+        "[processor.luacheck]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 

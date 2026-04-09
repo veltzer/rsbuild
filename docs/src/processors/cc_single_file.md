@@ -207,9 +207,9 @@ cflags = []               # C compiler flags
 cxxflags = []             # C++ compiler flags
 ldflags = []              # Linker flags
 include_paths = []        # Additional -I paths (relative to project root)
-scan_dirs = ["src"]          # Source directory (default: "src")
+src_dirs = ["src"]          # Source directory (default: "src")
 output_suffix = ".elf"    # Suffix for output executables (default: ".elf")
-extra_inputs = []         # Additional files that trigger rebuilds when changed
+dep_inputs = []         # Additional files that trigger rebuilds when changed
 include_scanner = "native" # Method for scanning header dependencies (default: "native")
 ```
 
@@ -219,7 +219,7 @@ To compile with multiple compilers (e.g., both GCC and Clang), use the `compiler
 
 ```toml
 [processor.cc_single_file]
-scan_dirs = ["src"]
+src_dirs = ["src"]
 include_paths = ["include"]  # Shared across all compilers
 
 [[processor.cc_single_file.compilers]]
@@ -263,9 +263,9 @@ Each source file is compiled once per compiler profile, allowing you to:
 | `cxxflags` | string[] | `[]` | Flags passed to the C++ compiler |
 | `ldflags` | string[] | `[]` | Flags passed to the linker |
 | `include_paths` | string[] | `[]` | Additional `-I` include paths (shared) |
-| `scan_dirs` | string[] | `["src"]` | Directory to scan for source files |
+| `src_dirs` | string[] | `["src"]` | Directory to scan for source files |
 | `output_suffix` | string | `".elf"` | Suffix appended to output executables |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 | `include_scanner` | string | `"native"` | Method for scanning header dependencies |
 | `compilers` | array | `[]` | Multiple compiler profiles (overrides single-compiler fields) |
 

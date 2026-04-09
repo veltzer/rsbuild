@@ -20,7 +20,7 @@ single invocation for better performance.
 
 ## Source Files
 
-- Input: configured via `extensions` and `scan_dirs`
+- Input: configured via `src_extensions` and `src_dirs`
 - Output: none (checker)
 
 ## Configuration
@@ -30,8 +30,8 @@ single invocation for better performance.
 enabled = true
 command = "python"
 args = ["scripts/md_lint.py", "-q"]
-extensions = [".md"]
-scan_dirs = ["marp"]
+src_extensions = [".md"]
+src_dirs = ["marp"]
 ```
 
 | Key | Type | Default | Description |
@@ -39,10 +39,10 @@ scan_dirs = ["marp"]
 | `enabled` | bool | `false` | Must be set to `true` to activate |
 | `command` | string | (required) | The command to run |
 | `args` | string[] | `[]` | Extra arguments passed before file paths |
-| `extensions` | string[] | `[]` | File extensions to scan for |
-| `scan_dirs` | string[] | `[""]` | Directory to scan (empty = project root) |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
-| `auto_inputs` | string[] | `[]` | Auto-detected input files |
+| `src_extensions` | string[] | `[]` | File extensions to scan for |
+| `src_dirs` | string[] | `[""]` | Directory to scan (empty = project root) |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_auto` | string[] | `[]` | Auto-detected input files |
 
 ## Batch support
 

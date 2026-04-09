@@ -30,11 +30,11 @@ fn script_multi_instance_both_discover_files() {
         concat!(
             "[processor.script.lint_a]\n",
             "linter = \"true\"\n",
-            "extensions = [\".txt\"]\n",
+            "src_extensions = [\".txt\"]\n",
             "\n",
             "[processor.script.lint_b]\n",
             "linter = \"true\"\n",
-            "extensions = [\".txt\"]\n",
+            "src_extensions = [\".txt\"]\n",
         ),
     )
     .unwrap();

@@ -14,7 +14,7 @@ fn markdown_valid_file() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.markdown2html]\nscan_dirs = [\".\"]\n",
+        "[processor.markdown2html]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -52,7 +52,7 @@ fn markdown_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.markdown2html]\nscan_dirs = [\".\"]\n",
+        "[processor.markdown2html]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -84,7 +84,7 @@ fn markdown_no_project_discovered() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.markdown2html]\nscan_dirs = [\"markdown_docs\"]\n",
+        "[processor.markdown2html]\nsrc_dirs = [\"markdown_docs\"]\n",
     )
     .unwrap();
 

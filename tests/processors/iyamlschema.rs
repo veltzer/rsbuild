@@ -44,7 +44,7 @@ fn iyamlschema_valid_file() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.iyamlschema]\nscan_dirs = [\".\"]\n",
+        "[processor.iyamlschema]\nsrc_dirs = [\".\"]\n",
     ).unwrap();
 
     fs::write(
@@ -70,7 +70,7 @@ fn iyamlschema_invalid_data_fails() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.iyamlschema]\nscan_dirs = [\".\"]\n",
+        "[processor.iyamlschema]\nsrc_dirs = [\".\"]\n",
     ).unwrap();
 
     // "age" should be integer, not string
@@ -104,7 +104,7 @@ fn iyamlschema_wrong_ordering_fails() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.iyamlschema]\nscan_dirs = [\".\"]\n",
+        "[processor.iyamlschema]\nsrc_dirs = [\".\"]\n",
     ).unwrap();
 
     // YAML key order is ["name", "age"] but schema expects ["age", "name"]
@@ -126,7 +126,7 @@ fn iyamlschema_no_schema_field_fails() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.iyamlschema]\nscan_dirs = [\".\"]\n",
+        "[processor.iyamlschema]\nsrc_dirs = [\".\"]\n",
     ).unwrap();
 
     fs::write(
@@ -147,7 +147,7 @@ fn iyamlschema_incremental_skip() {
 
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.iyamlschema]\nscan_dirs = [\".\"]\n",
+        "[processor.iyamlschema]\nsrc_dirs = [\".\"]\n",
     ).unwrap();
 
     fs::write(

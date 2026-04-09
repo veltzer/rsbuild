@@ -21,7 +21,7 @@ state so dependencies are only reinstalled when `requirements.txt` changes.
 [processor.pip]
 pip = "pip"                            # The pip command to run
 args = []                              # Additional arguments to pass to pip
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 cache_output_dir = true                # Cache the stamp directory for fast restore after clean
 ```
 
@@ -29,7 +29,7 @@ cache_output_dir = true                # Cache the stamp directory for fast rest
 |-----|------|---------|-------------|
 | `pip` | string | `"pip"` | The pip executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to pip |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 | `cache_output_dir` | boolean | `true` | Cache the `out/pip/` directory so `rsconstruct clean && rsconstruct build` restores from cache |
 
 ## Batch support

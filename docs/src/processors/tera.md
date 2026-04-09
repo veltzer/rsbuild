@@ -43,21 +43,21 @@ version = "{{ config.version }}"
 
 ## Source Files
 
-- Input: `tera.templates/**/*{extensions}`
+- Input: `tera.templates/**/*{src_extensions}`
 - Output: project root, mirroring the template path with the extension removed
 
 ## Configuration
 
 ```toml
 [processor.tera]
-extensions = [".tera"]                     # File extensions to process (default: [".tera"])
-extra_inputs = ["config/settings.py"]      # Additional files that trigger rebuilds when changed
+src_extensions = [".tera"]                     # File extensions to process (default: [".tera"])
+dep_inputs = ["config/settings.py"]      # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `extensions` | string[] | `[".tera"]` | File extensions to discover |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `src_extensions` | string[] | `[".tera"]` | File extensions to discover |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

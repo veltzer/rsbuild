@@ -27,14 +27,14 @@ automatically added as an extra input so that configuration changes trigger rebu
 [processor.eslint]
 linter = "eslint"
 args = []
-extra_inputs = []
+dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"eslint"` | The eslint executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to eslint |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

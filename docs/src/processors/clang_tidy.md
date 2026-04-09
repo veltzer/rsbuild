@@ -24,14 +24,14 @@ separately to avoid cross-file analysis issues with unrelated files.
 [processor.clang_tidy]
 args = ["-checks=*"]                        # Arguments passed to clang-tidy
 compiler_args = ["-std=c++17"]              # Arguments passed after -- to the compiler
-extra_inputs = [".clang-tidy"]              # Additional files that trigger rebuilds when changed
+dep_inputs = [".clang-tidy"]              # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `args` | string[] | `[]` | Arguments passed to clang-tidy |
 | `compiler_args` | string[] | `[]` | Compiler arguments passed after `--` separator |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 
@@ -50,9 +50,9 @@ compiler_args = ["-std=c++17", "-I/usr/include/mylib", "-DDEBUG"]
 ## Using .clang-tidy File
 
 Clang-tidy automatically reads configuration from a `.clang-tidy` file in the
-project root. Add it to `extra_inputs` so changes trigger rebuilds:
+project root. Add it to `dep_inputs` so changes trigger rebuilds:
 
 ```toml
 [processor.clang_tidy]
-extra_inputs = [".clang-tidy"]
+dep_inputs = [".clang-tidy"]
 ```

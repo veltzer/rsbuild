@@ -24,14 +24,14 @@ single shellcheck invocation for better performance.
 [processor.shellcheck]
 linter = "shellcheck"                       # The shellcheck command to run
 args = []                                    # Additional arguments to pass to shellcheck
-extra_inputs = []                            # Additional files that trigger rebuilds when changed
+dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"shellcheck"` | The shellcheck executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to shellcheck |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

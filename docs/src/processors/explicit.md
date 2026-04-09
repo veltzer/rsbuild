@@ -126,5 +126,5 @@ build — everything is handled in a single build invocation.
 |---|---|---|---|
 | Products | one per input file | one per input file | one total |
 | Outputs | none (pass/fail) | one per input | explicitly listed |
-| Discovery | scan dirs + extensions | scan dirs + extensions | declared inputs/globs |
+| Discovery | src_dirs + src_extensions | src_dirs + src_extensions | declared inputs/globs |
 | Use case | lint/validate files | transform files 1:1 | aggregate many → few |

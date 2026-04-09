@@ -24,14 +24,14 @@ single taplo invocation for better performance.
 [processor.taplo]
 linter = "taplo"                             # The taplo command to run
 args = []                                    # Additional arguments to pass to taplo
-extra_inputs = []                            # Additional files that trigger rebuilds when changed
+dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"taplo"` | The taplo executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to taplo |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

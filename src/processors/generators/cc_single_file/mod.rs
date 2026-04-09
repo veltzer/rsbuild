@@ -35,7 +35,7 @@ impl CcSingleFileProcessor {
 
     /// Get the first source directory from scan config (relative path)
     fn source_dir(&self) -> PathBuf {
-        PathBuf::from(self.config.scan.scan_dirs().first().map(|s| s.as_str()).unwrap_or(""))
+        PathBuf::from(self.config.scan.src_dirs().first().map(|s| s.as_str()).unwrap_or(""))
     }
 
     /// Check if cc processing should be enabled
@@ -155,7 +155,7 @@ impl CcSingleFileProcessor {
         }
 
         let cfg_hash = if for_clean { None } else { Some(output_config_hash(&self.config, &[])) };
-        let extra = if for_clean { Vec::new() } else { resolve_extra_inputs(&self.config.extra_inputs)? };
+        let extra = if for_clean { Vec::new() } else { resolve_extra_inputs(&self.config.dep_inputs)? };
 
         for profile in &self.profiles {
             let variant = if profile.name.is_empty() { None } else { Some(profile.name.as_str()) };

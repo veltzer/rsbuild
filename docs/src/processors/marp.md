@@ -26,7 +26,7 @@ marp_bin = "marp"                      # The marp command to run
 formats = ["pdf"]                      # Output formats (pdf, pptx, html)
 args = ["--html", "--allow-local-files"]  # Additional arguments to pass to marp
 output_dir = "out/marp"                # Output directory
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 max_jobs = 2                           # Limit concurrent marp instances (each spawns Chromium)
 ```
 
@@ -36,7 +36,7 @@ max_jobs = 2                           # Limit concurrent marp instances (each s
 | `formats` | string[] | `["pdf"]` | Output formats to generate (`pdf`, `pptx`, `html`) |
 | `args` | string[] | `["--html", "--allow-local-files"]` | Extra arguments passed to marp |
 | `output_dir` | string | `"out/marp"` | Base output directory |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 | `max_jobs` | integer | none | Max concurrent marp processes. See [Concurrency limiting](#concurrency-limiting). |
 
 ## Concurrency Limiting

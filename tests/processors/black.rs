@@ -6,7 +6,7 @@ fn setup_black_project() -> TempDir {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     fs::write(
         temp_dir.path().join("rsconstruct.toml"),
-        "[processor.black]\nscan_dirs = [\".\"]\n",
+        "[processor.black]\nsrc_dirs = [\".\"]\n",
     )
     .expect("Failed to write rsconstruct.toml");
     temp_dir

@@ -19,7 +19,7 @@ Auto-detected when the configured scan directories contain matching files.
 
 ## Source Files
 
-- Input: files matching `extensions` in `scan_dirs`
+- Input: files matching `src_extensions` in `src_dirs`
 - Output: `{output_dir}/{relative_path}.{output_extension}`
 
 ## Configuration
@@ -29,11 +29,11 @@ Auto-detected when the configured scan directories contain matching files.
 command = "scripts/convert.py"
 output_dir = "out/converted"
 output_extension = "html"
-scan_dirs = ["syllabi"]
-extensions = [".md"]
+src_dirs = ["syllabi"]
+src_extensions = [".md"]
 batch = true
 args = []
-extra_inputs = []
+dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
@@ -43,7 +43,7 @@ extra_inputs = []
 | `output_extension` | string | `"out"` | Extension for output files |
 | `batch` | bool | `true` | Pass all pairs in one invocation |
 | `args` | string[] | `[]` | Extra arguments prepended before file pairs |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

@@ -22,7 +22,7 @@ mmdc_bin = "mmdc"                      # The mmdc command to run
 formats = ["png"]                      # Output formats (png, svg, pdf)
 args = []                              # Additional arguments to pass to mmdc
 output_dir = "out/mermaid"             # Output directory
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
@@ -31,7 +31,7 @@ extra_inputs = []                      # Additional files that trigger rebuilds 
 | `formats` | string[] | `["png"]` | Output formats to generate (`png`, `svg`, `pdf`) |
 | `args` | string[] | `[]` | Extra arguments passed to mmdc |
 | `output_dir` | string | `"out/mermaid"` | Base output directory |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

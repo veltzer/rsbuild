@@ -10,22 +10,22 @@ Python files matching configured extensions are checked via `black --check`. The
 
 ## Source Files
 
-- Input: `**/*{extensions}` (default: `*.py`)
+- Input: `**/*{src_extensions}` (default: `*.py`)
 
 ## Configuration
 
 ```toml
 [processor.black]
-extensions = [".py"]                      # File extensions to check (default: [".py"])
-extra_inputs = []                         # Additional files that trigger rechecks when changed
+src_extensions = [".py"]                      # File extensions to check (default: [".py"])
+dep_inputs = []                         # Additional files that trigger rechecks when changed
 args = []                                 # Extra arguments passed to black
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `extensions` | string[] | `[".py"]` | File extensions to discover |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rechecks |
-| `auto_inputs` | string[] | `["pyproject.toml"]` | Config files that auto-trigger rechecks |
+| `src_extensions` | string[] | `[".py"]` | File extensions to discover |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rechecks |
+| `dep_auto` | string[] | `["pyproject.toml"]` | Config files that auto-trigger rechecks |
 | `args` | string[] | `[]` | Additional arguments passed to `black` |
 
 ## Batch support

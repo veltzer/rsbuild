@@ -66,7 +66,7 @@ impl ProductDiscovery for MakoProcessor {
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let items = super::find_templates(&self.config.scan, file_index)?;
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
 
         for item in items {
             let mut inputs = Vec::with_capacity(1 + extra.len());

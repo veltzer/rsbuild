@@ -22,7 +22,7 @@ directory, and creates a stamp file on success. Sibling `.json`, `.js`, and
 npm = "npm"                            # The npm command to run
 command = "install"                    # The npm subcommand to execute
 args = []                              # Additional arguments to pass to npm
-extra_inputs = []                      # Additional files that trigger rebuilds when changed
+dep_inputs = []                      # Additional files that trigger rebuilds when changed
 cache_output_dir = true                # Cache the node_modules directory for fast restore after clean
 ```
 
@@ -31,7 +31,7 @@ cache_output_dir = true                # Cache the node_modules directory for fa
 | `npm` | string | `"npm"` | The npm executable to run |
 | `command` | string | `"install"` | The npm subcommand to execute |
 | `args` | string[] | `[]` | Extra arguments passed to npm |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 | `cache_output_dir` | boolean | `true` | Cache the `node_modules/` directory so `rsconstruct clean && rsconstruct build` restores from cache |
 
 ## Batch support

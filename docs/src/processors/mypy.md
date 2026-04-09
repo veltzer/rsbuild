@@ -27,14 +27,14 @@ extra input so that configuration changes trigger rebuilds.
 [processor.mypy]
 linter = "mypy"                             # The mypy command to run
 args = []                                    # Additional arguments to pass to mypy
-extra_inputs = []                            # Additional files that trigger rebuilds (e.g. ["pyproject.toml"])
+dep_inputs = []                            # Additional files that trigger rebuilds (e.g. ["pyproject.toml"])
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"mypy"` | The mypy executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to mypy |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

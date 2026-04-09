@@ -25,14 +25,14 @@ jq invocation.
 [processor.jq]
 linter = "jq"                               # The jq command to run
 args = []                                    # Additional arguments to pass to jq (after "empty")
-extra_inputs = []                            # Additional files that trigger rebuilds when changed
+dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"jq"` | The jq executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to jq (after the `empty` filter) |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

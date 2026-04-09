@@ -56,7 +56,7 @@ impl ProductDiscovery for TagsProcessor {
             return Ok(());
         }
 
-        let extra = resolve_extra_inputs(&self.config.extra_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
         let mut inputs = Vec::with_capacity(files.len() + extra.len() + 1);
         inputs.extend(files);
         inputs.extend_from_slice(&extra);

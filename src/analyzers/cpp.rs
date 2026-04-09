@@ -252,13 +252,13 @@ impl CppDepAnalyzer {
         canonical.starts_with(self.canonical_root())
     }
 
-    /// Check if a path should be excluded based on exclude_dirs config.
+    /// Check if a path should be excluded based on src_exclude_dirs config.
     fn is_excluded(&self, path: &Path) -> bool {
-        if self.config.exclude_dirs.is_empty() {
+        if self.config.src_exclude_dirs.is_empty() {
             return false;
         }
         let path_str = path.to_string_lossy();
-        self.config.exclude_dirs.iter().any(|dir| path_str.contains(dir))
+        self.config.src_exclude_dirs.iter().any(|dir| path_str.contains(dir))
     }
 
     /// Native regex-based include scanner.

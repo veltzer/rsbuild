@@ -1,6 +1,8 @@
 use std::fs;
 use tempfile::TempDir;
 use crate::common::run_rsconstruct_with_env;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 #[test]
 fn script_valid_file() {
@@ -13,8 +15,8 @@ fn script_valid_file() {
         concat!(
             "[processor.script]\n",
             "command = \"true\"\n",
-            "extensions = [\".txt\"]\n",
-            "scan_dirs = [\".\"]\n",
+            "src_extensions = [\".txt\"]\n",
+            "src_dirs = [\".\"]\n",
         ),
     )
     .unwrap();
@@ -51,8 +53,8 @@ fn script_incremental_skip() {
         concat!(
             "[processor.script]\n",
             "command = \"true\"\n",
-            "extensions = [\".txt\"]\n",
-            "scan_dirs = [\".\"]\n",
+            "src_extensions = [\".txt\"]\n",
+            "src_dirs = [\".\"]\n",
         ),
     )
     .unwrap();
@@ -88,8 +90,8 @@ fn script_misspelled_linter_fails_immediately() {
         concat!(
             "[processor.script]\n",
             "command = \"no_such_command_xyzzy\"\n",
-            "extensions = [\".txt\"]\n",
-            "scan_dirs = [\".\"]\n",
+            "src_extensions = [\".txt\"]\n",
+            "src_dirs = [\".\"]\n",
         ),
     )
     .unwrap();
@@ -127,13 +129,13 @@ fn script_multi_instance_both_discover_files() {
         concat!(
             "[processor.script.lint_a]\n",
             "command = \"true\"\n",
-            "extensions = [\".txt\"]\n",
-            "scan_dirs = [\".\"]\n",
+            "src_extensions = [\".txt\"]\n",
+            "src_dirs = [\".\"]\n",
             "\n",
             "[processor.script.lint_b]\n",
             "command = \"true\"\n",
-            "extensions = [\".txt\"]\n",
-            "scan_dirs = [\".\"]\n",
+            "src_extensions = [\".txt\"]\n",
+            "src_dirs = [\".\"]\n",
         ),
     )
     .unwrap();
@@ -168,7 +170,7 @@ fn script_no_project_discovered() {
     // Without configuring extensions or checker, script should discover nothing
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.script]\nscan_dirs = [\".\"]\n",
+        "[processor.script]\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 
@@ -180,5 +182,51 @@ fn script_no_project_discovered() {
         stdout.contains("0 products"),
         "Should discover 0 products: {}",
         stdout
+    );
+}
+
+#[test]
+#[cfg(unix)]
+fn script_rebuilds_when_command_file_changes() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    let script_path = project_path.join("check.sh");
+    fs::write(&script_path, "#!/bin/bash\nexit 0\n").unwrap();
+    fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755)).unwrap();
+
+    fs::write(
+        project_path.join("rsconstruct.toml"),
+        format!(
+            "[processor.script]\ncommand = \"{script}\"\nsrc_extensions = [\".txt\"]\nsrc_dirs = [\".\"]\n",
+            script = script_path.display(),
+        ),
+    ).unwrap();
+    fs::write(project_path.join("test.txt"), "hello\n").unwrap();
+
+    // First build
+    let out1 = run_rsconstruct_with_env(project_path, &["build"], &[("NO_COLOR", "1")]);
+    assert!(out1.status.success(), "First build should succeed");
+
+    // Second build: unchanged — should skip
+    let out2 = run_rsconstruct_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(out2.status.success());
+    assert!(
+        String::from_utf8_lossy(&out2.stdout).contains("Skipping"),
+        "Second build should skip: {}",
+        String::from_utf8_lossy(&out2.stdout),
+    );
+
+    // Modify the command script
+    fs::write(&script_path, "#!/bin/bash\nexit 0\n# changed\n").unwrap();
+
+    // Third build: command changed — must rebuild
+    let out3 = run_rsconstruct_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(out3.status.success());
+    let stdout3 = String::from_utf8_lossy(&out3.stdout);
+    assert!(
+        stdout3.contains("Processing:"),
+        "Third build must rebuild after command file change: {}",
+        stdout3,
     );
 }

@@ -23,14 +23,14 @@ This processor does not support batch mode — each file is checked individually
 [processor.jsonlint]
 linter = "jsonlint"                          # The jsonlint command to run
 args = []                                    # Additional arguments to pass to jsonlint
-extra_inputs = []                            # Additional files that trigger rebuilds when changed
+dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"jsonlint"` | The jsonlint executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to jsonlint |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

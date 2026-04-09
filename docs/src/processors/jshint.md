@@ -26,14 +26,14 @@ that configuration changes trigger rebuilds.
 [processor.jshint]
 linter = "jshint"
 args = []
-extra_inputs = []
+dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `linter` | string | `"jshint"` | The jshint executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to jshint |
-| `extra_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
+| `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 
 ## Batch support
 

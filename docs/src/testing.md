@@ -177,6 +177,6 @@ mod processors {
 | Tools | `tools.rs` | List tools, list all, check availability |
 | Watch | `watch.rs` | Initial build, rebuild on change |
 | Ignore | `rsconstructignore.rs` | Exact match, globs, leading slash, trailing slash, comments, cross-processor |
-| Template | `processors/template.rs` | Rendering, incremental, extra_inputs |
+| Template | `processors/template.rs` | Rendering, incremental, dep_inputs |
 | CC | `processors/cc_single_file.rs` | Compilation, headers, per-file flags, mixed C/C++, config change detection |
 | Zspell | `processors/zspell.rs` | Correct/misspelled words, code block filtering, custom words, incremental |

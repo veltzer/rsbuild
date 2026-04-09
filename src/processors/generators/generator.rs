@@ -80,16 +80,19 @@ impl ProductDiscovery for GeneratorProcessor {
         }
 
         let hash = Some(output_config_hash(&self.config, &[]));
-        let mut extra_inputs = self.config.extra_inputs.clone();
-        for ai in &self.config.auto_inputs {
-            extra_inputs.extend(config_file_inputs(ai));
+        let mut dep_inputs = self.config.dep_inputs.clone();
+        for ai in &self.config.dep_auto {
+            dep_inputs.extend(config_file_inputs(ai));
         }
-        let extra = resolve_extra_inputs(&extra_inputs)?;
-        let scan_dirs = self.config.scan.scan_dirs();
+        // If the command is a local file, depend on its contents
+        let command = self.config.command.as_deref().unwrap();
+        dep_inputs.extend(config_file_inputs(command));
+        let extra = resolve_extra_inputs(&dep_inputs)?;
+        let src_dirs = self.config.scan.src_dirs();
 
         for source in &files {
             let output = super::output_path(
-                source, scan_dirs, &self.config.output_dir, &self.config.output_extension,
+                source, src_dirs, &self.config.output_dir, &self.config.output_extension,
             );
             let mut inputs = Vec::with_capacity(1 + extra.len());
             inputs.push(source.clone());

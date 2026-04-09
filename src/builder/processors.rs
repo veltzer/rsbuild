@@ -158,6 +158,27 @@ impl Builder {
                 let table = builder.build().with(Style::modern()).to_string();
                 println!("{table}");
             }
+            ProcessorAction::Used => {
+                let mut builder = TableBuilder::new();
+                builder.push_record(["Name", "Type", "Detected", "Description"]);
+                for name in &proc_names {
+                    let proc = &processors[name.as_str()];
+                    let detected = proc.auto_detect(&self.file_index);
+                    let detected_str = if detected {
+                        color::green("yes").to_string()
+                    } else {
+                        color::dim("no").to_string()
+                    };
+                    builder.push_record([
+                        name.to_string(),
+                        proc.processor_type().as_str().to_string(),
+                        detected_str,
+                        proc.description().to_string(),
+                    ]);
+                }
+                let table = builder.build().with(tabled::settings::Style::modern()).to_string();
+                println!("{table}");
+            }
             ProcessorAction::Config { ref name, diff } => {
                 let names: Vec<&str> = if let Some(n) = name {
                     if !processors.contains_key(n.as_str()) {

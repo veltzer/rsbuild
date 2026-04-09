@@ -408,6 +408,8 @@ pub enum ProcessorAction {
         #[arg(short, long)]
         all: bool,
     },
+    /// Show which processors are enabled and detected in the current project
+    Used,
     /// Show source and target files for each processor
     Files {
         /// Processor name (omit to show all enabled processors)
@@ -485,6 +487,8 @@ pub enum ToolsAction {
 pub enum DepsAction {
     /// List all available dependency analyzers
     List,
+    /// Show which dependency analyzers are enabled and detected in the current project
+    Used,
     /// Run dependency analysis without building (scan headers, imports, etc.)
     Build,
     /// Show analyzer configuration

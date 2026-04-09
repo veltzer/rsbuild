@@ -255,8 +255,12 @@ fn run() -> Result<()> {
             builder.config(action)?;
         }
         Commands::Deps { action } => {
-            let builder = Builder::new()?;
-            builder.deps(action)?;
+            if matches!(action, cli::DepsAction::List) {
+                builder::deps::list_analyzers();
+            } else {
+                let builder = Builder::new()?;
+                builder.deps(action)?;
+            }
         }
         Commands::Doctor => {
             let builder = Builder::new()?;

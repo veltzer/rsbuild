@@ -7,6 +7,24 @@ use crate::color;
 use crate::deps_cache::DepsCache;
 use super::{Builder, sorted_keys};
 
+/// List all available dependency analyzers (works without rsconstruct.toml).
+pub fn list_analyzers() {
+    use crate::analyzers::{CppDepAnalyzer, MarkdownDepAnalyzer, PythonDepAnalyzer, TeraDepAnalyzer, DepAnalyzer};
+    let analyzers: Vec<(&str, Box<dyn DepAnalyzer>)> = vec![
+        ("cpp", Box::new(CppDepAnalyzer::new(Default::default(), false))),
+        ("markdown", Box::new(MarkdownDepAnalyzer::new())),
+        ("python", Box::new(PythonDepAnalyzer::new())),
+        ("tera", Box::new(TeraDepAnalyzer::new())),
+    ];
+    let mut builder = TableBuilder::new();
+    builder.push_record(["Name", "Description"]);
+    for (name, analyzer) in &analyzers {
+        builder.push_record([name.to_string(), analyzer.description().to_string()]);
+    }
+    let table = builder.build().with(Style::modern()).to_string();
+    println!("{table}");
+}
+
 /// Print per-analyzer dependency stats with a total line.
 fn print_deps_stats(stats: &std::collections::HashMap<String, (usize, usize)>) {
     let mut total_files = 0;
@@ -30,8 +48,8 @@ impl Builder {
         use crate::cli::DepsAction;
 
         match action {
-            DepsAction::List => {
-                // List all available dependency analyzers
+            DepsAction::List => unreachable!("handled in main.rs"),
+            DepsAction::Used => {
                 let analyzers = self.create_analyzers(false);
                 let mut builder = TableBuilder::new();
                 builder.push_record(["Name", "Status", "Description"]);

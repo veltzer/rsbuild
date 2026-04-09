@@ -454,7 +454,7 @@ fn checker_and_generator_both_rebuild_on_shared_input_change() {
             "[processor.script]\n",
             "scan_dirs = [\"tera.templates\"]\n",
             "extensions = [\".tera\"]\n",
-            "linter = \"true\"\n",
+            "command = \"true\"\n",
         ),
     ).unwrap();
 
@@ -761,7 +761,7 @@ sleep 0.3
     // Create rsconstruct.toml with script processor, max_jobs=2, batch disabled
     let config = format!(
         r#"[processor.script]
-linter = "bash"
+command = "bash"
 args = ["{script}"]
 extensions = [".txt"]
 scan_dirs = ["inputs"]
@@ -854,7 +854,7 @@ sleep 0.3
     // No max_jobs, batch disabled — should use full parallelism
     let config = format!(
         r#"[processor.script]
-linter = "bash"
+command = "bash"
 args = ["{script}"]
 extensions = [".txt"]
 scan_dirs = ["inputs"]

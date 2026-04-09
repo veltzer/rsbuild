@@ -13,7 +13,7 @@ directory, then runs the configured linter command on each file (or batch of
 files). A non-zero exit code from the script fails the product.
 
 This processor is **disabled by default** — you must set `enabled = true` and
-provide a `linter` command in your `rsconstruct.toml`.
+provide a `command` in your `rsconstruct.toml`.
 
 This processor supports batch mode, allowing multiple files to be checked in a
 single invocation for better performance.
@@ -21,14 +21,14 @@ single invocation for better performance.
 ## Source Files
 
 - Input: configured via `extensions` and `scan_dirs`
-- Output: none (linter)
+- Output: none (checker)
 
 ## Configuration
 
 ```toml
 [processor.script]
 enabled = true
-linter = "python"
+command = "python"
 args = ["scripts/md_lint.py", "-q"]
 extensions = [".md"]
 scan_dirs = ["marp"]
@@ -37,7 +37,7 @@ scan_dirs = ["marp"]
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `enabled` | bool | `false` | Must be set to `true` to activate |
-| `linter` | string | `""` | The command to run (required) |
+| `command` | string | (required) | The command to run |
 | `args` | string[] | `[]` | Extra arguments passed before file paths |
 | `extensions` | string[] | `[]` | File extensions to scan for |
 | `scan_dirs` | string[] | `[""]` | Directory to scan (empty = project root) |

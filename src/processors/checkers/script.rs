@@ -15,7 +15,7 @@ impl ScriptProcessor {
     }
 
     fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan) && self.config.linter.is_some()
+        scan_root_valid(&self.config.scan) && self.config.command.is_some()
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
@@ -23,8 +23,8 @@ impl ScriptProcessor {
     }
 
     fn check_files(&self, files: &[&Path]) -> Result<()> {
-        let linter = self.config.linter.as_deref().unwrap();
-        run_checker(linter, None, &self.config.args, files)
+        let command = self.config.command.as_deref().unwrap();
+        run_checker(command, None, &self.config.args, files)
     }
 }
 
@@ -34,7 +34,7 @@ impl_checker!(ScriptProcessor,
     name: crate::processors::names::SCRIPT,
     execute: execute_product,
     guard: should_process,
-    tool_field_option: linter,
+    tool_field_option: command,
     config_json: true,
     batch: check_files,
 );

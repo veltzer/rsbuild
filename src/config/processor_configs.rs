@@ -1239,7 +1239,7 @@ checker_config!(LuacheckConfig, extensions: [".lua"], linter: "luacheck", auto_i
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ScriptConfig {
-    pub linter: Option<String>,
+    pub command: Option<String>,
     #[serde(default)]
     pub args: Vec<String>,
     #[serde(default)]
@@ -1257,7 +1257,7 @@ pub struct ScriptConfig {
 impl Default for ScriptConfig {
     fn default() -> Self {
         Self {
-            linter: None,
+            command: None,
             args: Vec::new(),
             extra_inputs: Vec::new(),
             auto_inputs: Vec::new(),
@@ -1278,11 +1278,11 @@ impl Default for ScriptConfig {
 impl KnownFields for ScriptConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "linter", "args", "extra_inputs", "auto_inputs", "batch", "max_jobs",
+            "command", "args", "extra_inputs", "auto_inputs", "batch", "max_jobs",
         ]
     }
     fn output_fields() -> &'static [&'static str] {
-        &["linter", "args"]
+        &["command", "args"]
     }
 }
 

@@ -12,7 +12,7 @@ fn script_valid_file() {
         project_path.join("rsconstruct.toml"),
         concat!(
             "[processor.script]\n",
-            "linter = \"true\"\n",
+            "command = \"true\"\n",
             "extensions = [\".txt\"]\n",
             "scan_dirs = [\".\"]\n",
         ),
@@ -50,7 +50,7 @@ fn script_incremental_skip() {
         project_path.join("rsconstruct.toml"),
         concat!(
             "[processor.script]\n",
-            "linter = \"true\"\n",
+            "command = \"true\"\n",
             "extensions = [\".txt\"]\n",
             "scan_dirs = [\".\"]\n",
         ),
@@ -87,7 +87,7 @@ fn script_misspelled_linter_fails_immediately() {
         project_path.join("rsconstruct.toml"),
         concat!(
             "[processor.script]\n",
-            "linter = \"no_such_linter_xyzzy\"\n",
+            "command = \"no_such_command_xyzzy\"\n",
             "extensions = [\".txt\"]\n",
             "scan_dirs = [\".\"]\n",
         ),
@@ -126,12 +126,12 @@ fn script_multi_instance_both_discover_files() {
         project_path.join("rsconstruct.toml"),
         concat!(
             "[processor.script.lint_a]\n",
-            "linter = \"true\"\n",
+            "command = \"true\"\n",
             "extensions = [\".txt\"]\n",
             "scan_dirs = [\".\"]\n",
             "\n",
             "[processor.script.lint_b]\n",
-            "linter = \"true\"\n",
+            "command = \"true\"\n",
             "extensions = [\".txt\"]\n",
             "scan_dirs = [\".\"]\n",
         ),

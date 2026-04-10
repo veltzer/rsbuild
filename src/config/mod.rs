@@ -94,7 +94,7 @@ pub(crate) const SCAN_FIELD_DESCRIPTIONS: &[(&str, &str)] = &[
     ("src_exclude_dirs",    "Directory path segments to skip during scanning"),
     ("src_exclude_files",   "File names to exclude from scanning"),
     ("src_exclude_paths",   "Relative paths to exclude from scanning"),
-    ("src_files",           "Explicit file list — bypasses scan_dirs and extensions entirely"),
+    ("src_files",           "Additional files to include alongside normal scanning"),
 ];
 
 /// Descriptions for execution/dependency fields shared by most processors.
@@ -161,7 +161,7 @@ pub(crate) struct ScanConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub src_exclude_paths: Option<Vec<String>>,
 
-    /// Paths (relative to project root) to include — when set, only these paths are matched
+    /// Additional files (relative to project root) to include alongside normal scanning
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub src_files: Option<Vec<String>>,
 }

@@ -66,6 +66,15 @@ impl FileIndex {
         self.files
             .iter()
             .filter(|path| {
+                // src_files: additional explicit files included alongside normal scanning
+                // Checked first — these bypass root and extension checks
+                if !src_files.is_empty() {
+                    let path_str = path.to_string_lossy();
+                    if src_files.iter().any(|p| *p == path_str) {
+                        return true;
+                    }
+                }
+
                 // Must be under root (root is relative, e.g., "src" or "")
                 // Empty root or "." means match all
                 let root_str = root.to_string_lossy();
@@ -73,13 +82,6 @@ impl FileIndex {
                     && !path.starts_with(root) {
                         return false;
                     }
-
-                // If src_files is set, only match those exact paths
-                // (skip extension and exclude checks — the user explicitly listed files)
-                if !src_files.is_empty() {
-                    let path_str = path.to_string_lossy();
-                    return src_files.iter().any(|p| *p == path_str);
-                }
 
                 // Check exclude dirs
                 if !src_exclude_dirs.is_empty() {
@@ -135,8 +137,9 @@ impl FileIndex {
         let include_path_refs: Vec<&str> = scan.src_files().iter().map(|s| s.as_str()).collect();
 
         let mut results = Vec::new();
-        // When src_files is set but src_dirs is empty, scan from project root
         let src_dirs = scan.src_dirs();
+        // When src_dirs is empty but src_files is set, scan from project root
+        // so that query() can match the explicit file paths
         let effective_dirs: Vec<&str> = if src_dirs.is_empty() && !include_path_refs.is_empty() {
             vec![""]
         } else {

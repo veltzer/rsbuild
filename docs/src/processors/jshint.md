@@ -24,14 +24,14 @@ that configuration changes trigger rebuilds.
 
 ```toml
 [processor.jshint]
-linter = "jshint"
+command = "jshint"
 args = []
 dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `linter` | string | `"jshint"` | The jshint executable to run |
+| `command` | string | `"jshint"` | The jshint executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to jshint |
 | `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 

@@ -22,14 +22,14 @@ single pyrefly invocation for better performance.
 
 ```toml
 [processor.pyrefly]
-linter = "pyrefly"                          # The pyrefly command to run
+command = "pyrefly"                          # The pyrefly command to run
 args = []                                    # Additional arguments to pass to pyrefly
 dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `linter` | string | `"pyrefly"` | The pyrefly executable to run |
+| `command` | string | `"pyrefly"` | The pyrefly executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to pyrefly |
 | `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 

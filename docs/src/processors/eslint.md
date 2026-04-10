@@ -25,14 +25,14 @@ automatically added as an extra input so that configuration changes trigger rebu
 
 ```toml
 [processor.eslint]
-linter = "eslint"
+command = "eslint"
 args = []
 dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `linter` | string | `"eslint"` | The eslint executable to run |
+| `command` | string | `"eslint"` | The eslint executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to eslint |
 | `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 

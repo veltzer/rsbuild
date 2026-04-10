@@ -22,14 +22,14 @@ single taplo invocation for better performance.
 
 ```toml
 [processor.taplo]
-linter = "taplo"                             # The taplo command to run
+command = "taplo"                             # The taplo command to run
 args = []                                    # Additional arguments to pass to taplo
 dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `linter` | string | `"taplo"` | The taplo executable to run |
+| `command` | string | `"taplo"` | The taplo executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to taplo |
 | `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 

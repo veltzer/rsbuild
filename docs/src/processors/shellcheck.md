@@ -22,14 +22,14 @@ single shellcheck invocation for better performance.
 
 ```toml
 [processor.shellcheck]
-linter = "shellcheck"                       # The shellcheck command to run
+command = "shellcheck"                       # The shellcheck command to run
 args = []                                    # Additional arguments to pass to shellcheck
 dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `linter` | string | `"shellcheck"` | The shellcheck executable to run |
+| `command` | string | `"shellcheck"` | The shellcheck executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to shellcheck |
 | `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 

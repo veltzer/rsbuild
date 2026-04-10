@@ -22,14 +22,14 @@ single luacheck invocation for better performance.
 
 ```toml
 [processor.luacheck]
-linter = "luacheck"                         # The luacheck command to run
+command = "luacheck"                         # The luacheck command to run
 args = []                                    # Additional arguments to pass to luacheck
 dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `linter` | string | `"luacheck"` | The luacheck executable to run |
+| `command` | string | `"luacheck"` | The luacheck executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to luacheck |
 | `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 

@@ -523,7 +523,7 @@ fn init_project() -> Result<()> {
 # src_extensions = [".tera"]
 
 # [processor.ruff]
-# linter = "ruff"
+# command = "ruff"
 # args = []
 
 # [processor.pylint]

@@ -20,7 +20,7 @@ impl LuacheckProcessor {
 
     /// Run luacheck on one or more files
     fn check_files(&self, files: &[&Path]) -> Result<()> {
-        run_checker(&self.config.linter, None, &self.config.args, files)
+        run_checker(&self.config.command, None, &self.config.args, files)
     }
 }
 
@@ -30,7 +30,7 @@ impl_checker!(LuacheckProcessor,
     name: crate::processors::names::LUACHECK,
     execute: execute_product,
     guard: scan_root,
-    tool_field: linter,
+    tool_field: command,
     config_json: true,
     batch: check_files,
 );

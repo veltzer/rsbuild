@@ -25,14 +25,14 @@ rebuilds.
 
 ```toml
 [processor.stylelint]
-linter = "stylelint"
+command = "stylelint"
 args = []
 dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `linter` | string | `"stylelint"` | The stylelint executable to run |
+| `command` | string | `"stylelint"` | The stylelint executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to stylelint |
 | `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 

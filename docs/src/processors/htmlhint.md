@@ -24,14 +24,14 @@ that configuration changes trigger rebuilds.
 
 ```toml
 [processor.htmlhint]
-linter = "htmlhint"
+command = "htmlhint"
 args = []
 dep_inputs = []
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `linter` | string | `"htmlhint"` | The htmlhint executable to run |
+| `command` | string | `"htmlhint"` | The htmlhint executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to htmlhint |
 | `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 

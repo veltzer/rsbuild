@@ -21,14 +21,14 @@ This processor does not support batch mode — each file is checked individually
 
 ```toml
 [processor.jsonlint]
-linter = "jsonlint"                          # The jsonlint command to run
+command = "jsonlint"                          # The jsonlint command to run
 args = []                                    # Additional arguments to pass to jsonlint
 dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `linter` | string | `"jsonlint"` | The jsonlint executable to run |
+| `command` | string | `"jsonlint"` | The jsonlint executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to jsonlint |
 | `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 

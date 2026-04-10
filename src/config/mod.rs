@@ -867,7 +867,7 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         // tera
         // tera has no processor-specific fields
         // ruff
-        ("ruff", "linter") => Some(FieldType::String),
+        ("ruff", "command") => Some(FieldType::String),
         // cc_single_file
         ("cc_single_file", "cc" | "cxx" | "output_suffix") => Some(FieldType::String),
         ("cc_single_file", "cflags" | "cxxflags" | "ldflags" | "include_paths") => Some(FieldType::StringArray),

@@ -11,9 +11,9 @@ use super::{default_true, default_cc_compiler, default_cxx_compiler, default_out
 /// Variants:
 /// - `checker_config!(Name, src_extensions: [".py"])` — basic checker
 /// - `checker_config!(Name, scan_dir: "src", src_extensions: [".c"])` — with scan dir
-/// - `checker_config!(Name, src_extensions: [".py"], linter: "ruff")` — with configurable tool name
+/// - `checker_config!(Name, src_extensions: [".py"], command: "ruff")` — with configurable tool name
 /// - `checker_config!(Name, src_extensions: [".py"], dep_auto: [".pylintrc"])` — with auto inputs
-/// - `checker_config!(Name, src_extensions: [".py"], linter: "ruff", dep_auto: [".ruff.toml"])` — both
+/// - `checker_config!(Name, src_extensions: [".py"], command: "ruff", dep_auto: [".ruff.toml"])` — both
 macro_rules! checker_config {
     // --- Public entry points ---
 
@@ -30,12 +30,12 @@ macro_rules! checker_config {
         checker_config!(@no_linter $name, default_scan!(src_extensions: [$($ext),+]), [$($ai),+]);
     };
     // With linter only
-    ($name:ident, src_extensions: [$($ext:expr),+ $(,)?], linter: $linter:expr) => {
-        checker_config!(@with_linter $name, default_scan!(src_extensions: [$($ext),+]), $linter, []);
+    ($name:ident, src_extensions: [$($ext:expr),+ $(,)?], command: $command:expr) => {
+        checker_config!(@with_command $name, default_scan!(src_extensions: [$($ext),+]), $command, []);
     };
     // With linter + dep_auto
-    ($name:ident, src_extensions: [$($ext:expr),+ $(,)?], linter: $linter:expr, dep_auto: [$($ai:expr),+ $(,)?]) => {
-        checker_config!(@with_linter $name, default_scan!(src_extensions: [$($ext),+]), $linter, [$($ai),+]);
+    ($name:ident, src_extensions: [$($ext:expr),+ $(,)?], command: $command:expr, dep_auto: [$($ai:expr),+ $(,)?]) => {
+        checker_config!(@with_command $name, default_scan!(src_extensions: [$($ext),+]), $command, [$($ai),+]);
     };
 
     // --- Internal: without linter field ---
@@ -84,19 +84,19 @@ macro_rules! checker_config {
         }
     };
 
-    // --- Internal: with linter field ---
-    (@with_linter $name:ident, $scan:expr, $linter:expr, [$($ai:expr),*]) => {
+    // --- Internal: with command field ---
+    (@with_command $name:ident, $scan:expr, $command:expr, [$($ai:expr),*]) => {
         paste::paste! {
-            fn [<default_ $name:lower _linter>]() -> String {
-                $linter.into()
+            fn [<default_ $name:lower _command>]() -> String {
+                $command.into()
             }
         }
 
         paste::paste! {
             #[derive(Debug, Deserialize, Serialize, Clone)]
             pub struct $name {
-                #[serde(default = "" [<default_ $name:lower _linter>] "")]
-                pub linter: String,
+                #[serde(default = "" [<default_ $name:lower _command>] "")]
+                pub command: String,
                 #[serde(default)]
                 pub args: Vec<String>,
                 #[serde(default)]
@@ -115,7 +115,7 @@ macro_rules! checker_config {
         impl Default for $name {
             fn default() -> Self {
                 Self {
-                    linter: $linter.into(),
+                    command: $command.into(),
                     args: Vec::new(),
                     dep_inputs: Vec::new(),
                     dep_auto: vec![$($ai.into()),*],
@@ -128,14 +128,14 @@ macro_rules! checker_config {
 
         impl KnownFields for $name {
             fn known_fields() -> &'static [&'static str] {
-                &["linter", "args", "dep_inputs", "dep_auto", "batch", "max_jobs"]
+                &["command", "args", "dep_inputs", "dep_auto", "batch", "max_jobs"]
             }
             fn output_fields() -> &'static [&'static str] {
-                &["linter", "args"]
+                &["command", "args"]
             }
             fn field_descriptions() -> &'static [(&'static str, &'static str)] {
                 &[
-                    ("linter", concat!("Path to the ", $linter, " executable")),
+                    ("command", concat!("Path to the ", $command, " executable")),
                     ("args", "Extra arguments passed to the tool before the file path(s)"),
                 ]
             }
@@ -507,7 +507,7 @@ impl KnownFields for Jinja2Config {
     }
 }
 
-checker_config!(RuffConfig, src_extensions: [".py"], linter: "ruff", dep_auto: ["ruff.toml", ".ruff.toml", "pyproject.toml"]);
+checker_config!(RuffConfig, src_extensions: [".py"], command: "ruff", dep_auto: ["ruff.toml", ".ruff.toml", "pyproject.toml"]);
 
 checker_config!(PylintConfig, src_extensions: [".py"], dep_auto: [".pylintrc"]);
 
@@ -1238,19 +1238,19 @@ impl KnownFields for MakeConfig {
     }
 }
 
-checker_config!(MypyConfig, src_extensions: [".py"], linter: "mypy", dep_auto: ["mypy.ini"]);
+checker_config!(MypyConfig, src_extensions: [".py"], command: "mypy", dep_auto: ["mypy.ini"]);
 
-checker_config!(PyreflyConfig, src_extensions: [".py"], linter: "pyrefly", dep_auto: ["pyproject.toml"]);
+checker_config!(PyreflyConfig, src_extensions: [".py"], command: "pyrefly", dep_auto: ["pyproject.toml"]);
 
-checker_config!(RumdlConfig, src_extensions: [".md"], linter: "rumdl", dep_auto: [".rumdl.toml"]);
+checker_config!(RumdlConfig, src_extensions: [".md"], command: "rumdl", dep_auto: [".rumdl.toml"]);
 
-checker_config!(YamllintConfig, src_extensions: [".yml", ".yaml"], linter: "yamllint", dep_auto: [".yamllint", ".yamllint.yml", ".yamllint.yaml"]);
+checker_config!(YamllintConfig, src_extensions: [".yml", ".yaml"], command: "yamllint", dep_auto: [".yamllint", ".yamllint.yml", ".yamllint.yaml"]);
 
-checker_config!(JqConfig, src_extensions: [".json"], linter: "jq");
+checker_config!(JqConfig, src_extensions: [".json"], command: "jq");
 
-checker_config!(JsonlintConfig, src_extensions: [".json"], linter: "jsonlint");
+checker_config!(JsonlintConfig, src_extensions: [".json"], command: "jsonlint");
 
-checker_config!(TaploConfig, src_extensions: [".toml"], linter: "taplo", dep_auto: ["taplo.toml", ".taplo.toml"]);
+checker_config!(TaploConfig, src_extensions: [".toml"], command: "taplo", dep_auto: ["taplo.toml", ".taplo.toml"]);
 
 checker_config!(JsonSchemaConfig, src_extensions: [".json"]);
 
@@ -1355,9 +1355,9 @@ impl KnownFields for TagsConfig {
     }
 }
 
-checker_config!(ShellcheckConfig, src_extensions: [".sh", ".bash"], linter: "shellcheck", dep_auto: [".shellcheckrc"]);
+checker_config!(ShellcheckConfig, src_extensions: [".sh", ".bash"], command: "shellcheck", dep_auto: [".shellcheckrc"]);
 
-checker_config!(LuacheckConfig, src_extensions: [".lua"], linter: "luacheck", dep_auto: [".luacheckrc"]);
+checker_config!(LuacheckConfig, src_extensions: [".lua"], command: "luacheck", dep_auto: [".luacheckrc"]);
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ScriptConfig {
@@ -2840,17 +2840,17 @@ impl KnownFields for ObjdumpConfig {
     }
 }
 
-checker_config!(EslintConfig, src_extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"], linter: "eslint", dep_auto: [".eslintrc", ".eslintrc.json", ".eslintrc.js", ".eslintrc.yml", ".eslintrc.yaml", ".eslintrc.cjs", "eslint.config.js", "eslint.config.mjs", "eslint.config.cjs"]);
+checker_config!(EslintConfig, src_extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"], command: "eslint", dep_auto: [".eslintrc", ".eslintrc.json", ".eslintrc.js", ".eslintrc.yml", ".eslintrc.yaml", ".eslintrc.cjs", "eslint.config.js", "eslint.config.mjs", "eslint.config.cjs"]);
 
-checker_config!(JshintConfig, src_extensions: [".js", ".jsx", ".mjs", ".cjs"], linter: "jshint", dep_auto: [".jshintrc"]);
+checker_config!(JshintConfig, src_extensions: [".js", ".jsx", ".mjs", ".cjs"], command: "jshint", dep_auto: [".jshintrc"]);
 
-checker_config!(HtmlhintConfig, src_extensions: [".html", ".htm"], linter: "htmlhint", dep_auto: [".htmlhintrc"]);
+checker_config!(HtmlhintConfig, src_extensions: [".html", ".htm"], command: "htmlhint", dep_auto: [".htmlhintrc"]);
 
 // --- tidy (HTML validator) ---
 checker_config!(TidyConfig, src_extensions: [".html", ".htm"]);
 
 // --- stylelint (CSS linter) ---
-checker_config!(StylelintConfig, src_extensions: [".css", ".scss", ".sass", ".less"], linter: "stylelint", dep_auto: [".stylelintrc", ".stylelintrc.json", ".stylelintrc.yml", ".stylelintrc.yaml", ".stylelintrc.js", ".stylelintrc.cjs", "stylelint.config.js", "stylelint.config.cjs"]);
+checker_config!(StylelintConfig, src_extensions: [".css", ".scss", ".sass", ".less"], command: "stylelint", dep_auto: [".stylelintrc", ".stylelintrc.json", ".stylelintrc.yml", ".stylelintrc.yaml", ".stylelintrc.js", ".stylelintrc.cjs", "stylelint.config.js", "stylelint.config.cjs"]);
 
 // --- jslint (JavaScript linter) ---
 checker_config!(JslintConfig, src_extensions: [".js"]);

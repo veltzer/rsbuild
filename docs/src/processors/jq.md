@@ -23,14 +23,14 @@ jq invocation.
 
 ```toml
 [processor.jq]
-linter = "jq"                               # The jq command to run
+command = "jq"                               # The jq command to run
 args = []                                    # Additional arguments to pass to jq (after "empty")
 dep_inputs = []                            # Additional files that trigger rebuilds when changed
 ```
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `linter` | string | `"jq"` | The jq executable to run |
+| `command` | string | `"jq"` | The jq executable to run |
 | `args` | string[] | `[]` | Extra arguments passed to jq (after the `empty` filter) |
 | `dep_inputs` | string[] | `[]` | Extra files whose changes trigger rebuilds |
 

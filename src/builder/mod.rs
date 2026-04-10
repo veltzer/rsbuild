@@ -119,14 +119,16 @@ macro_rules! gen_processor_dispatch {
         pub(crate) fn create_all_default_processors() -> ProcessorMap {
             let mut processors: ProcessorMap = HashMap::new();
             let empty_toml = toml::Value::Table(toml::map::Map::new());
+            // Registry-based processors
             $(
-                // Simple checkers handled by data-driven path
-                if let Ok(Some(proc)) = try_create_simple_checker(stringify!($field), &empty_toml) {
-                    processors.insert(proc_names::$const_name.to_string(), proc);
-                } else {
-                    gen_processor_dispatch!(@register_default processors, $const_name, $field, $config_type, $proc_type);
-                }
+                gen_processor_dispatch!(@register_default processors, $const_name, $field, $config_type, $proc_type);
             )*
+            // Simple checkers (data-driven, not in registry)
+            for name in simple_checker_type_names() {
+                if let Ok(Some(proc)) = try_create_simple_checker(name, &empty_toml) {
+                    processors.insert(name.to_string(), proc);
+                }
+            }
             processors
         }
     };

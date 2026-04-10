@@ -14,13 +14,6 @@ macro_rules! for_each_processor {
     ($callback:ident) => {
         $callback! {
             TERA,           tera,           TeraConfig,            TeraProcessor;
-            RUFF,           ruff,           RuffConfig,            RuffProcessor;
-            PYLINT,         pylint,         PylintConfig,          PylintProcessor;
-            MYPY,           mypy,           MypyConfig,            MypyProcessor;
-            PYREFLY,        pyrefly,        PyreflyConfig,         PyreflyProcessor;
-            BLACK,          black,          BlackConfig,           BlackProcessor;
-            DOCTEST,        doctest,        DoctestConfig,         DoctestProcessor;
-            PYTEST,         pytest,         PytestConfig,          PytestProcessor;
             CC_SINGLE_FILE, cc_single_file, CcSingleFileConfig,    CcSingleFileProcessor;
             CC,             cc,             CcConfig,              CcProcessor;
             CPPCHECK,       cppcheck,       CppcheckConfig,        CppcheckProcessor;
@@ -31,11 +24,6 @@ macro_rules! for_each_processor {
             MAKE,           make,           MakeConfig,            MakeProcessor;
             CARGO,          cargo,          CargoConfig,           CargoProcessor;
             CLIPPY,         clippy,         ClippyConfig,          ClippyProcessor;
-            RUMDL,          rumdl,          RumdlConfig,           RumdlProcessor;
-            YAMLLINT,       yamllint,       YamllintConfig,        YamllintProcessor;
-            JQ,             jq,             JqConfig,              JqProcessor;
-            JSONLINT,       jsonlint,       JsonlintConfig,        JsonlintProcessor;
-            TAPLO,          taplo,          TaploConfig,           TaploProcessor;
             JSON_SCHEMA,    json_schema,    JsonSchemaConfig,      JsonSchemaProcessor;
             TAGS,           tags,           TagsConfig,            TagsProcessor;
             PIP,            pip,            PipConfig,             PipProcessor;
@@ -69,22 +57,6 @@ macro_rules! for_each_processor {
             CPPLINT,        cpplint,        CpplintConfig,         CpplintProcessor;
             CHECKPATCH,     checkpatch,     CheckpatchConfig,      CheckpatchProcessor;
             OBJDUMP,        objdump,        ObjdumpConfig,         ObjdumpProcessor;
-            ESLINT,         eslint,         EslintConfig,          EslintProcessor;
-            JSHINT,         jshint,         JshintConfig,          JshintProcessor;
-            HTMLHINT,       htmlhint,       HtmlhintConfig,        HtmlhintProcessor;
-            TIDY,           tidy,           TidyConfig,            TidyProcessor;
-            STYLELINT,      stylelint,      StylelintConfig,       StylelintProcessor;
-            JSLINT,         jslint,         JslintConfig,          JslintProcessor;
-            STANDARD,       standard,       StandardConfig,        StandardProcessor;
-            HTMLLINT,       htmllint,       HtmllintConfig,        HtmllintProcessor;
-            PHP_LINT,       php_lint,       PhpLintConfig,         PhpLintProcessor;
-            PERLCRITIC,     perlcritic,     PerlcriticConfig,      PerlcriticProcessor;
-            XMLLINT,        xmllint,        XmllintConfig,         XmllintProcessor;
-            SVGLINT,        svglint,        SvglintConfig,         SvglintProcessor;
-            CHECKSTYLE,     checkstyle,     CheckstyleConfig,      CheckstyleProcessor;
-            YQ,             yq,             YqConfig,              YqProcessor;
-            CMAKE,          cmake,          CmakeConfig,           CmakeProcessor;
-            HADOLINT,       hadolint,       HadolintConfig,        HadolintProcessor;
             JEKYLL,         jekyll,         JekyllConfig,          JekyllProcessor;
             SASS,           sass,           SassConfig,            SassProcessor;
             IJQ,            ijq,            IjqConfig,             IjqProcessor;
@@ -96,7 +68,6 @@ macro_rules! for_each_processor {
             ISASS,          isass,          IsassConfig,           IsassProcessor;
             YAML2JSON,      yaml2json,      Yaml2jsonConfig,       Yaml2jsonProcessor;
             RUST_SINGLE_FILE, rust_single_file, RustSingleFileConfig, RustSingleFileProcessor;
-            SLIDEV,         slidev,         SlidevConfig,          SlidevProcessor;
             ENCODING,       encoding,       EncodingConfig,        EncodingProcessor;
             DUPLICATE_FILES, duplicate_files, DuplicateFilesConfig, DuplicateFilesProcessor;
             MARP_IMAGES,    marp_images,    MarpImagesConfig,      MarpImagesProcessor;

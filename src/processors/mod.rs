@@ -30,13 +30,6 @@ use crate::graph::{BuildGraph, Product};
 /// Processor name constants — auto-generated from the central registry in `src/registry.rs`.
 pub mod names {
     pub const TERA: &str = "tera";
-    pub const RUFF: &str = "ruff";
-    pub const PYLINT: &str = "pylint";
-    pub const MYPY: &str = "mypy";
-    pub const PYREFLY: &str = "pyrefly";
-    pub const BLACK: &str = "black";
-    pub const DOCTEST: &str = "doctest";
-    pub const PYTEST: &str = "pytest";
     pub const CC_SINGLE_FILE: &str = "cc_single_file";
     pub const CC: &str = "cc";
     pub const CPPCHECK: &str = "cppcheck";
@@ -47,11 +40,6 @@ pub mod names {
     pub const MAKE: &str = "make";
     pub const CARGO: &str = "cargo";
     pub const CLIPPY: &str = "clippy";
-    pub const RUMDL: &str = "rumdl";
-    pub const YAMLLINT: &str = "yamllint";
-    pub const JQ: &str = "jq";
-    pub const JSONLINT: &str = "jsonlint";
-    pub const TAPLO: &str = "taplo";
     pub const JSON_SCHEMA: &str = "json_schema";
     pub const TAGS: &str = "tags";
     pub const PIP: &str = "pip";
@@ -85,22 +73,6 @@ pub mod names {
     pub const CPPLINT: &str = "cpplint";
     pub const CHECKPATCH: &str = "checkpatch";
     pub const OBJDUMP: &str = "objdump";
-    pub const ESLINT: &str = "eslint";
-    pub const JSHINT: &str = "jshint";
-    pub const HTMLHINT: &str = "htmlhint";
-    pub const TIDY: &str = "tidy";
-    pub const STYLELINT: &str = "stylelint";
-    pub const JSLINT: &str = "jslint";
-    pub const STANDARD: &str = "standard";
-    pub const HTMLLINT: &str = "htmllint";
-    pub const PHP_LINT: &str = "php_lint";
-    pub const PERLCRITIC: &str = "perlcritic";
-    pub const XMLLINT: &str = "xmllint";
-    pub const SVGLINT: &str = "svglint";
-    pub const CHECKSTYLE: &str = "checkstyle";
-    pub const YQ: &str = "yq";
-    pub const CMAKE: &str = "cmake";
-    pub const HADOLINT: &str = "hadolint";
     pub const JEKYLL: &str = "jekyll";
     pub const SASS: &str = "sass";
     pub const IJQ: &str = "ijq";
@@ -112,7 +84,6 @@ pub mod names {
     pub const ISASS: &str = "isass";
     pub const YAML2JSON: &str = "yaml2json";
     pub const RUST_SINGLE_FILE: &str = "rust_single_file";
-    pub const SLIDEV: &str = "slidev";
     pub const ENCODING: &str = "encoding";
     pub const DUPLICATE_FILES: &str = "duplicate_files";
     pub const MARP_IMAGES: &str = "marp_images";
@@ -798,19 +769,19 @@ where
 
 // Re-export from subdirectories
 pub use checkers::{
-    SimpleChecker, AsciiProcessor, AspellProcessor, BlackProcessor,
+    SimpleChecker, AsciiProcessor, AspellProcessor,
     CheckpatchProcessor, ClippyProcessor, ClangTidyProcessor, CppcheckProcessor, CpplintProcessor,
-    CheckstyleProcessor, CmakeProcessor, DoctestProcessor, DuplicateFilesProcessor,
-    EncodingProcessor, EslintProcessor,
-    HadolintProcessor, HtmlhintProcessor, HtmllintProcessor,
+    DuplicateFilesProcessor,
+    EncodingProcessor,
+   
     IjqProcessor, IjsonlintProcessor, ItaploProcessor, IyamllintProcessor, IyamlschemaProcessor,
-    JshintProcessor, JslintProcessor, JqProcessor, JsonlintProcessor, JsonSchemaProcessor,
+    JsonSchemaProcessor,
     LicenseHeaderProcessor, LuacheckProcessor, MakeProcessor, MarpImagesProcessor,
-    MarkdownlintProcessor, MdlProcessor, MypyProcessor,
-    PerlcriticProcessor, PhpLintProcessor, PylintProcessor, PytestProcessor, PyreflyProcessor, RuffProcessor, RumdlProcessor,
-    ScriptProcessor, ShellcheckProcessor, SlidevProcessor, ZspellProcessor,
-    StandardProcessor, StylelintProcessor, SvglintProcessor,
-    TaploProcessor, TermsProcessor, TidyProcessor, XmllintProcessor, YamllintProcessor, YqProcessor,
+    MarkdownlintProcessor, MdlProcessor,
+   
+    ScriptProcessor, ShellcheckProcessor, ZspellProcessor,
+   
+    TermsProcessor,
 };
 pub use generators::{A2xProcessor, CcSingleFileProcessor, ChromiumProcessor, DrawioProcessor, ExplicitProcessor, GeneratorProcessor, Imarkdown2htmlProcessor, IpdfuniteProcessor, IsassProcessor, Jinja2Processor, LibreofficeProcessor, LinuxModuleProcessor, MakoProcessor, MarpProcessor, Markdown2htmlProcessor, MermaidProcessor, ObjdumpProcessor, PandocProcessor, PdflatexProcessor, PdfuniteProcessor, ProtobufProcessor, RustSingleFileProcessor, SassProcessor, TagsProcessor, TeraProcessor, Yaml2jsonProcessor};
 pub use mass_generators::{CargoProcessor, CcProcessor, GemProcessor, JekyllProcessor, MdbookProcessor, NpmProcessor, PipProcessor, SphinxProcessor};

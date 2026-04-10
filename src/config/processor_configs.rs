@@ -336,15 +336,12 @@ impl KnownFields for Jinja2Config {
     }
 }
 
-pub type RuffConfig = CheckerConfigWithCommand;
 
-pub type PylintConfig = CheckerConfigWithCommand;
 
-pub type PytestConfig = CheckerConfigWithCommand;
 
-pub type BlackConfig = CheckerConfigWithCommand;
 
-pub type DoctestConfig = CheckerConfigWithCommand;
+
+pub type MarpImagesConfig = CheckerConfig;
 
 fn default_cppcheck_args() -> Vec<String> {
     vec![
@@ -1067,19 +1064,12 @@ impl KnownFields for MakeConfig {
     }
 }
 
-pub type MypyConfig = CheckerConfigWithCommand;
 
-pub type PyreflyConfig = CheckerConfigWithCommand;
 
-pub type RumdlConfig = CheckerConfigWithCommand;
 
-pub type YamllintConfig = CheckerConfigWithCommand;
 
-pub type JqConfig = CheckerConfigWithCommand;
 
-pub type JsonlintConfig = CheckerConfigWithCommand;
 
-pub type TaploConfig = CheckerConfigWithCommand;
 
 pub type JsonSchemaConfig = CheckerConfig;
 
@@ -2618,56 +2608,39 @@ impl KnownFields for ObjdumpConfig {
     }
 }
 
-pub type EslintConfig = CheckerConfigWithCommand;
 
-pub type JshintConfig = CheckerConfigWithCommand;
 
-pub type HtmlhintConfig = CheckerConfigWithCommand;
 
 // --- tidy (HTML validator) ---
-pub type TidyConfig = CheckerConfigWithCommand;
 
 // --- stylelint (CSS linter) ---
-pub type StylelintConfig = CheckerConfigWithCommand;
 
 // --- jslint (JavaScript linter) ---
-pub type JslintConfig = CheckerConfigWithCommand;
 
 // --- standard (JavaScript style checker) ---
-pub type StandardConfig = CheckerConfigWithCommand;
 
 // --- htmllint (HTML linter) ---
-pub type HtmllintConfig = CheckerConfigWithCommand;
 
 // --- php_lint (PHP syntax checker) ---
-pub type PhpLintConfig = CheckerConfigWithCommand;
 
 // --- perlcritic (Perl code analyzer) ---
-pub type PerlcriticConfig = CheckerConfigWithCommand;
 
 // --- xmllint (XML validator) ---
-pub type XmllintConfig = CheckerConfigWithCommand;
 
 // --- svglint (SVG linter) ---
-pub type SvglintConfig = CheckerConfigWithCommand;
 
 // --- checkstyle (Java style checker) ---
-pub type CheckstyleConfig = CheckerConfigWithCommand;
 
 // --- yq (YAML processor/validator) ---
-pub type YqConfig = CheckerConfigWithCommand;
 
 // --- cmake (CMake build system) ---
-pub type CmakeConfig = CheckerConfigWithCommand;
 
 // --- docker (Docker image build) ---
-pub type HadolintConfig = CheckerConfigWithCommand;
 
 // --- jekyll (Static site generator) ---
 pub type JekyllConfig = CheckerConfig;
 
 // --- slidev (Slidev presentations) ---
-pub type SlidevConfig = CheckerConfigWithCommand;
 
 // --- encoding (UTF-8 validation) ---
 pub type EncodingConfig = CheckerConfig;
@@ -2676,7 +2649,6 @@ pub type EncodingConfig = CheckerConfig;
 pub type DuplicateFilesConfig = CheckerConfig;
 
 // --- marp_images (validate image references in Marp presentations) ---
-pub type MarpImagesConfig = CheckerConfig;
 
 // --- license_header (verify license headers in source files) ---
 #[derive(Debug, Deserialize, Serialize, Clone)]

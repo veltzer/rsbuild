@@ -335,9 +335,6 @@ impl ProductDiscovery for LuaProcessor {
         &self.scan_config
     }
 
-    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
-        None
-    }
 
     fn description(&self) -> &str {
         &self.description

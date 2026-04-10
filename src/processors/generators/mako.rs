@@ -58,9 +58,6 @@ impl ProductDiscovery for MakoProcessor {
         &self.config.scan
     }
 
-    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
-        None
-    }
 
     fn description(&self) -> &str {
         self.base.description()

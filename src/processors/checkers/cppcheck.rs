@@ -23,9 +23,6 @@ impl crate::processors::ProductDiscovery for CppcheckProcessor {
         &self.config.scan
     }
 
-    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
-        None
-    }
 
     fn description(&self) -> &str {
         "Run cppcheck static analysis on C/C++ source files"

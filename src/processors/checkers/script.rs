@@ -33,9 +33,6 @@ impl ProductDiscovery for ScriptProcessor {
         &self.config.scan
     }
 
-    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
-        None
-    }
 
     fn description(&self) -> &str {
         self.base.description()
@@ -45,9 +42,6 @@ impl ProductDiscovery for ScriptProcessor {
         self.base.processor_type()
     }
 
-    fn auto_detect(&self, file_index: &crate::file_index::FileIndex) -> bool {
-        crate::processors::ProcessorBase::auto_detect(&self.config.scan, file_index)
-    }
 
     fn config_json(&self) -> Option<String> {
         crate::processors::ProcessorBase::config_json(&self.config)

@@ -180,9 +180,6 @@ impl crate::processors::ProductDiscovery for IyamlschemaProcessor {
         &self.config.scan
     }
 
-    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
-        None
-    }
 
     fn description(&self) -> &str {
         "Validate YAML files against JSON schemas (in-process)"

@@ -139,53 +139,13 @@ pub fn processor_defconfig(name: &str) -> Result<()> {
 
 impl Builder {
     /// Handle `rsconstruct processor` subcommands
-    pub fn processor(&self, action: ProcessorAction, verbose: bool) -> Result<()> {
+    pub fn processor(&self, action: ProcessorAction, _verbose: bool) -> Result<()> {
         let processors = self.create_processors()?;
 
         let proc_names = sorted_keys(&processors);
 
         match action {
-            ProcessorAction::List { .. } => {
-                if crate::json_output::is_json_mode() {
-                    let entries: Vec<crate::json_output::ProcessorListEntry> = proc_names.iter()
-                        .map(|name| {
-                            let proc = &processors[name.as_str()];
-                            crate::json_output::ProcessorListEntry {
-                                name: name.to_string(),
-                                processor_type: proc.processor_type().as_str().to_string(),
-                                enabled: true,
-                                detected: true,
-                                batch: proc.supports_batch(),
-                                native: proc.is_native(),
-                                description: proc.description().to_string(),
-                            }
-                        })
-                        .collect();
-                    println!("{}", serde_json::to_string_pretty(&entries)?);
-                    return Ok(());
-                }
-
-                let mut builder = TableBuilder::new();
-                let header = if verbose {
-                    vec!["Name", "Type", "Native", "Batch", "Description"]
-                } else {
-                    vec!["Name", "Type", "Description"]
-                };
-                builder.push_record(header);
-                for name in &proc_names {
-                    let proc = &processors[name.as_str()];
-                    let type_str = proc.processor_type().as_str().to_string();
-                    if verbose {
-                        let native_tag = if proc.is_native() { "native" } else { "external" };
-                        let batch_tag = if proc.supports_batch() { "batch" } else { "single" };
-                        builder.push_record([name.to_string(), type_str, native_tag.to_string(), batch_tag.to_string(), proc.description().to_string()]);
-                    } else {
-                        builder.push_record([name.to_string(), type_str, proc.description().to_string()]);
-                    }
-                }
-                let table = builder.build().with(Style::modern()).to_string();
-                println!("{table}");
-            }
+            ProcessorAction::List => unreachable!("List is handled before Builder is constructed"),
             ProcessorAction::Used => {
                 let mut builder = TableBuilder::new();
                 builder.push_record(["Name", "Type", "Detected", "Description"]);

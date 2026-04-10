@@ -202,17 +202,17 @@ fn processors_list_json() {
         assert!(entry.get("description").is_some(), "Entry should have 'description' field");
     }
 
-    // tera should be enabled in setup_test_project
+    // list always shows all processors regardless of config
     let tera = entries.iter().find(|e| e["name"] == "tera").expect("Expected tera in list");
-    assert_eq!(tera["enabled"], true);
+    assert!(tera.get("name").is_some());
 }
 
 #[test]
 fn processors_list_all_json_without_config() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
 
-    let output = run_rsconstruct_with_env(temp_dir.path(), &["--json", "processors", "list", "--all"], &[("NO_COLOR", "1")]);
-    assert!(output.status.success(), "processors list --all --json failed: {}", String::from_utf8_lossy(&output.stderr));
+    let output = run_rsconstruct_with_env(temp_dir.path(), &["--json", "processors", "list"], &[("NO_COLOR", "1")]);
+    assert!(output.status.success(), "processors list --json failed: {}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let entries: Vec<serde_json::Value> = serde_json::from_str(&stdout)
@@ -227,7 +227,7 @@ fn processors_list_all_json_without_config() {
         assert!(entry.get("description").is_some(), "Entry should have 'description' field");
     }
 
-    let tera = entries.iter().find(|e| e["name"] == "tera").expect("Expected tera in list --all");
+    let tera = entries.iter().find(|e| e["name"] == "tera").expect("Expected tera in list");
     assert!(tera.get("name").is_some());
 }
 

@@ -402,12 +402,8 @@ pub enum ConfigAction {
 
 #[derive(Subcommand)]
 pub enum ProcessorAction {
-    /// List available processors with status and descriptions (no config needed with --all)
-    List {
-        /// Show all built-in processors, not just those enabled in the project
-        #[arg(short, long)]
-        all: bool,
-    },
+    /// List all built-in processors with type and description (no config needed)
+    List,
     /// Show which processors are enabled and detected (requires config)
     Used,
     /// Show source and target files for each processor (requires config)

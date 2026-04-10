@@ -432,8 +432,6 @@ pub(crate) fn check_command_output(output: &Output, context: impl std::fmt::Disp
     Ok(())
 }
 
-/// Compute the scan root directory from a ScanConfig.
-/// Returns empty path if scan_dir is empty, otherwise the scan_dir as a relative path.
 /// Check if all scan roots are valid (empty means current dir, otherwise must exist).
 /// Check if scan directories are valid. Always returns true because scan directories
 /// may not exist on disk yet but contain virtual files from the fixed-point discovery

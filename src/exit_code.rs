@@ -130,7 +130,7 @@ mod tests {
             "failed to parse config",
             "failed to substitute variables",
             "unknown field `blah`",
-            "Invalid config:\n[processor.pandoc]: field 'scan_dir' must be a string",
+            "Invalid config:\n[processor.pandoc]: field 'src_dirs' must be an array",
         ] {
             assert_eq!(classify_error(&anyhow::anyhow!("{}", msg)), RsconstructExitCode::ConfigError,
                 "expected ConfigError for: {}", msg);

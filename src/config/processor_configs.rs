@@ -1136,7 +1136,7 @@ impl KnownFields for CargoConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
             "cargo", "command", "args", "dep_inputs", "profiles",
-            "cache_output_dir", "batch", "max_jobs", "scan_dir", "src_extensions", "src_exclude_dirs", "src_exclude_files",
+            "cache_output_dir", "batch", "max_jobs", "src_extensions", "src_exclude_dirs", "src_exclude_files",
             "src_exclude_paths",
         ]
     }

@@ -599,7 +599,7 @@ impl Builder {
             }
         }
 
-        // Processors with empty scan_dir scan the project root — watch common
+        // Processors with empty default_src_dirs scan the project root — watch common
         // top-level files/dirs that wouldn't be covered by src_dirs above.
         for name in &["pyproject.toml", "config"] {
             let p = PathBuf::from(name);

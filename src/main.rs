@@ -514,7 +514,7 @@ fn init_project() -> Result<()> {
 
 # [processor.tera]
 # strict = true
-# scan_dir = "tera.templates"
+# src_dirs = ["tera.templates"]
 # src_extensions = [".tera"]
 
 # [processor.ruff]
@@ -527,7 +527,7 @@ fn init_project() -> Result<()> {
 # [processor.cc_single_file]
 # cc = "gcc"
 # cxx = "g++"
-# scan_dir = "src"
+# src_dirs = ["src"]
 # src_extensions = [".c", ".cc"]
 
 # [processor.cppcheck]

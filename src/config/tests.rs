@@ -166,9 +166,9 @@ fn extract_var_names_with_whitespace() {
 
 #[test]
 fn substitute_variables_string() {
-    let content = "[vars]\nmy_dir = \"templates\"\n\n[processor]\nscan_dir = \"${my_dir}\"\n";
+    let content = "[vars]\nmy_dir = \"templates\"\n\n[processor]\nsome_field = \"${my_dir}\"\n";
     let result = substitute_variables(content).expect("variable substitution failed");
-    assert!(result.contains("scan_dir = \"templates\""));
+    assert!(result.contains("some_field = \"templates\""));
     assert!(!result.contains("${my_dir}"));
     assert!(!result.contains("[vars]"));
 }
@@ -191,14 +191,14 @@ fn substitute_variables_multiple_uses() {
 
 #[test]
 fn substitute_variables_no_vars_section() {
-    let content = "[processor]\nscan_dir = \"src\"\n";
+    let content = "[processor]\nsome_field = \"src\"\n";
     let result = substitute_variables(content).expect("variable substitution failed");
     assert_eq!(result, content);
 }
 
 #[test]
 fn substitute_variables_undefined_error() {
-    let content = "[processor]\nscan_dir = \"${undefined}\"\n";
+    let content = "[processor]\nsome_field = \"${undefined}\"\n";
     let result = substitute_variables(content);
     assert!(result.is_err());
     let err = result.unwrap_err().to_string();

@@ -521,6 +521,8 @@ macro_rules! simple_checker {
     };
 }
 
+mod simple;
+
 mod aspell;
 mod ascii;
 mod black;
@@ -579,6 +581,7 @@ mod hadolint;
 mod slidev;
 pub(crate) mod terms;
 
+pub use simple::SimpleChecker;
 pub use aspell::AspellProcessor;
 pub use ascii::AsciiProcessor;
 pub use black::BlackProcessor;

@@ -71,6 +71,56 @@ pub(crate) struct ProcessorDefaults {
     pub args: &'static [&'static str],
 }
 
+/// Parameters for a simple checker processor — pure data, no macros.
+pub(crate) struct SimpleCheckerParams {
+    /// Human-readable description
+    pub description: &'static str,
+    /// Processor name (for product discovery)
+    pub name: &'static str,
+    /// Optional subcommand (e.g., "check" for ruff)
+    pub subcommand: Option<&'static str>,
+    /// Args prepended before config args (e.g., ["--check"] for black)
+    pub prepend_args: &'static [&'static str],
+    /// Additional tools required beyond the command (e.g., ["python3", "node"])
+    pub extra_tools: &'static [&'static str],
+}
+
+/// Return SimpleChecker parameters for a processor, or None if not a simple checker.
+pub(crate) fn simple_checker_params(type_name: &str) -> Option<SimpleCheckerParams> {
+    Some(match type_name {
+        "ruff" => SimpleCheckerParams { description: "Lint Python files with ruff", name: "ruff", subcommand: Some("check"), prepend_args: &[], extra_tools: &[] },
+        "pylint" => SimpleCheckerParams { description: "Lint Python files with pylint", name: "pylint", subcommand: None, prepend_args: &[], extra_tools: &["python3"] },
+        "pytest" => SimpleCheckerParams { description: "Run Python tests with pytest", name: "pytest", subcommand: None, prepend_args: &[], extra_tools: &["python3"] },
+        "black" => SimpleCheckerParams { description: "Check Python formatting with black", name: "black", subcommand: None, prepend_args: &["--check"], extra_tools: &["python3"] },
+        "doctest" => SimpleCheckerParams { description: "Run Python doctests", name: "doctest", subcommand: None, prepend_args: &["-m", "doctest"], extra_tools: &[] },
+        "mypy" => SimpleCheckerParams { description: "Type-check Python files with mypy", name: "mypy", subcommand: None, prepend_args: &[], extra_tools: &["python3"] },
+        "pyrefly" => SimpleCheckerParams { description: "Type-check Python files with pyrefly", name: "pyrefly", subcommand: Some("check"), prepend_args: &["--disable-project-excludes-heuristics"], extra_tools: &[] },
+        "rumdl" => SimpleCheckerParams { description: "Lint Markdown files using rumdl", name: "rumdl", subcommand: Some("check"), prepend_args: &[], extra_tools: &[] },
+        "yamllint" => SimpleCheckerParams { description: "Lint YAML files with yamllint", name: "yamllint", subcommand: None, prepend_args: &[], extra_tools: &["python3"] },
+        "jq" => SimpleCheckerParams { description: "Validate JSON files with jq", name: "jq", subcommand: None, prepend_args: &["empty"], extra_tools: &[] },
+        "jsonlint" => SimpleCheckerParams { description: "Lint JSON files with jsonlint", name: "jsonlint", subcommand: None, prepend_args: &[], extra_tools: &["python3"] },
+        "taplo" => SimpleCheckerParams { description: "Check TOML files with taplo", name: "taplo", subcommand: Some("check"), prepend_args: &[], extra_tools: &[] },
+        "eslint" => SimpleCheckerParams { description: "Lint JavaScript/TypeScript files with eslint", name: "eslint", subcommand: None, prepend_args: &[], extra_tools: &["node"] },
+        "jshint" => SimpleCheckerParams { description: "Lint JavaScript files with jshint", name: "jshint", subcommand: None, prepend_args: &[], extra_tools: &["node"] },
+        "htmlhint" => SimpleCheckerParams { description: "Lint HTML files with htmlhint", name: "htmlhint", subcommand: None, prepend_args: &[], extra_tools: &["node"] },
+        "stylelint" => SimpleCheckerParams { description: "Lint CSS/SCSS files with stylelint", name: "stylelint", subcommand: None, prepend_args: &[], extra_tools: &["node"] },
+        "checkstyle" => SimpleCheckerParams { description: "Check Java code style with checkstyle", name: "checkstyle", subcommand: None, prepend_args: &[], extra_tools: &[] },
+        "cmake" => SimpleCheckerParams { description: "Lint CMakeLists.txt files with cmake --lint", name: "cmake", subcommand: Some("--lint"), prepend_args: &[], extra_tools: &[] },
+        "hadolint" => SimpleCheckerParams { description: "Lint Dockerfiles with hadolint", name: "hadolint", subcommand: None, prepend_args: &[], extra_tools: &[] },
+        "htmllint" => SimpleCheckerParams { description: "Lint HTML files with htmllint", name: "htmllint", subcommand: None, prepend_args: &[], extra_tools: &["node"] },
+        "jslint" => SimpleCheckerParams { description: "Lint JavaScript files with jslint", name: "jslint", subcommand: None, prepend_args: &[], extra_tools: &["node"] },
+        "perlcritic" => SimpleCheckerParams { description: "Analyze Perl code with perlcritic", name: "perlcritic", subcommand: None, prepend_args: &[], extra_tools: &["perl"] },
+        "php_lint" => SimpleCheckerParams { description: "Check PHP syntax with php -l", name: "php_lint", subcommand: Some("-l"), prepend_args: &[], extra_tools: &[] },
+        "slidev" => SimpleCheckerParams { description: "Build Slidev presentations", name: "slidev", subcommand: Some("build"), prepend_args: &[], extra_tools: &["node"] },
+        "standard" => SimpleCheckerParams { description: "Check JavaScript style with standard", name: "standard", subcommand: None, prepend_args: &[], extra_tools: &["node"] },
+        "svglint" => SimpleCheckerParams { description: "Lint SVG files with svglint", name: "svglint", subcommand: None, prepend_args: &[], extra_tools: &[] },
+        "tidy" => SimpleCheckerParams { description: "Validate HTML files with tidy", name: "tidy", subcommand: Some("-errors"), prepend_args: &[], extra_tools: &[] },
+        "xmllint" => SimpleCheckerParams { description: "Validate XML files with xmllint", name: "xmllint", subcommand: Some("--noout"), prepend_args: &[], extra_tools: &[] },
+        "yq" => SimpleCheckerParams { description: "Validate YAML files with yq", name: "yq", subcommand: Some("."), prepend_args: &[], extra_tools: &[] },
+        _ => return None,
+    })
+}
+
 /// Validate dep_inputs paths exist and return them as PathBufs.
 /// Paths are relative to project root (which is cwd).
 pub(crate) fn resolve_extra_inputs(dep_inputs: &[String]) -> Result<Vec<PathBuf>> {
@@ -661,7 +711,23 @@ pub(crate) fn processor_defaults_for(type_name: &str) -> Option<ProcessorDefault
         "stylelint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "stylelint", dep_auto: &[".stylelintrc", ".stylelintrc.json", ".stylelintrc.yml", ".stylelintrc.yaml", ".stylelintrc.js", ".stylelintrc.cjs", "stylelint.config.js", "stylelint.config.cjs"] },
         "perlcritic" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "", dep_auto: &[".perlcriticrc"] },
         "svglint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "", dep_auto: &[".svglintrc.js"] },
-        "checkstyle" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "", dep_auto: &["checkstyle.xml"] },
+        "checkstyle" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "checkstyle", dep_auto: &["checkstyle.xml"] },
+        "black" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "black", dep_auto: &[] },
+        "cmake" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "cmake", dep_auto: &[] },
+        "doctest" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "python3", dep_auto: &[] },
+        "hadolint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "hadolint", dep_auto: &[] },
+        "htmllint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "htmllint", dep_auto: &[] },
+        "jslint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "jslint", dep_auto: &[] },
+        "perlcritic" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "perlcritic", dep_auto: &[] },
+        "php_lint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "php", dep_auto: &[] },
+        "pylint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "pylint", dep_auto: &[] },
+        "pytest" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "pytest", dep_auto: &[] },
+        "slidev" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "slidev", dep_auto: &[] },
+        "standard" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "standard", dep_auto: &[] },
+        "svglint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "svglint", dep_auto: &[] },
+        "tidy" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "tidy", dep_auto: &[] },
+        "xmllint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "xmllint", dep_auto: &[] },
+        "yq" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "yq", dep_auto: &[] },
         // Generators
         "marp" => ProcessorDefaults { output_dir: "out/marp", formats: &["pdf"], args: &["--html", "--allow-local-files"], command: "marp", dep_auto: &[] },
         "markdown2html" => ProcessorDefaults { output_dir: "out/markdown2html", formats: &[], args: &[], command: "markdown", dep_auto: &[] },

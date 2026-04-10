@@ -95,6 +95,10 @@ macro_rules! gen_processor_dispatch {
             type_name: &str,
             config_toml: &toml::Value,
         ) -> anyhow::Result<Option<Box<dyn ProductDiscovery>>> {
+            // Simple checkers are handled by data-driven SimpleChecker
+            if let Some(proc) = try_create_simple_checker(type_name, config_toml)? {
+                return Ok(Some(proc));
+            }
             match type_name {
                 $(
                     stringify!($field) => {
@@ -114,8 +118,14 @@ macro_rules! gen_processor_dispatch {
         /// Create all builtin processors with default configs (used by tools_no_config, list_processors_no_config).
         pub(crate) fn create_all_default_processors() -> ProcessorMap {
             let mut processors: ProcessorMap = HashMap::new();
+            let empty_toml = toml::Value::Table(toml::map::Map::new());
             $(
-                gen_processor_dispatch!(@register_default processors, $const_name, $field, $config_type, $proc_type);
+                // Simple checkers handled by data-driven path
+                if let Ok(Some(proc)) = try_create_simple_checker(stringify!($field), &empty_toml) {
+                    processors.insert(proc_names::$const_name.to_string(), proc);
+                } else {
+                    gen_processor_dispatch!(@register_default processors, $const_name, $field, $config_type, $proc_type);
+                }
             )*
             processors
         }
@@ -142,6 +152,25 @@ macro_rules! gen_processor_dispatch {
     };
 }
 for_each_processor!(gen_processor_dispatch);
+
+/// Try to create a simple checker processor from type name and config TOML.
+/// Returns None if this is not a simple checker type.
+fn try_create_simple_checker(
+    type_name: &str,
+    config_toml: &toml::Value,
+) -> anyhow::Result<Option<Box<dyn ProductDiscovery>>> {
+    let params = match simple_checker_params(type_name) {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+    let mut config_val = config_toml.clone();
+    apply_processor_defaults(type_name, &mut config_val);
+    let mut cfg: CheckerConfigWithCommand = toml::from_str(&toml::to_string(&config_val)?)?;
+    if let Some(defaults) = scan_defaults_for(type_name) {
+        cfg.scan.resolve_with(&defaults);
+    }
+    Ok(Some(Box::new(proc_mod::SimpleChecker::new(cfg, params))))
+}
 
 pub struct Builder {
     object_store: ObjectStore,

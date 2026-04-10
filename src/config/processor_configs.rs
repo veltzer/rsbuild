@@ -338,13 +338,13 @@ impl KnownFields for Jinja2Config {
 
 pub type RuffConfig = CheckerConfigWithCommand;
 
-pub type PylintConfig = CheckerConfig;
+pub type PylintConfig = CheckerConfigWithCommand;
 
-pub type PytestConfig = CheckerConfig;
+pub type PytestConfig = CheckerConfigWithCommand;
 
-pub type BlackConfig = CheckerConfig;
+pub type BlackConfig = CheckerConfigWithCommand;
 
-pub type DoctestConfig = CheckerConfig;
+pub type DoctestConfig = CheckerConfigWithCommand;
 
 fn default_cppcheck_args() -> Vec<String> {
     vec![
@@ -2625,49 +2625,49 @@ pub type JshintConfig = CheckerConfigWithCommand;
 pub type HtmlhintConfig = CheckerConfigWithCommand;
 
 // --- tidy (HTML validator) ---
-pub type TidyConfig = CheckerConfig;
+pub type TidyConfig = CheckerConfigWithCommand;
 
 // --- stylelint (CSS linter) ---
 pub type StylelintConfig = CheckerConfigWithCommand;
 
 // --- jslint (JavaScript linter) ---
-pub type JslintConfig = CheckerConfig;
+pub type JslintConfig = CheckerConfigWithCommand;
 
 // --- standard (JavaScript style checker) ---
-pub type StandardConfig = CheckerConfig;
+pub type StandardConfig = CheckerConfigWithCommand;
 
 // --- htmllint (HTML linter) ---
-pub type HtmllintConfig = CheckerConfig;
+pub type HtmllintConfig = CheckerConfigWithCommand;
 
 // --- php_lint (PHP syntax checker) ---
-pub type PhpLintConfig = CheckerConfig;
+pub type PhpLintConfig = CheckerConfigWithCommand;
 
 // --- perlcritic (Perl code analyzer) ---
-pub type PerlcriticConfig = CheckerConfig;
+pub type PerlcriticConfig = CheckerConfigWithCommand;
 
 // --- xmllint (XML validator) ---
-pub type XmllintConfig = CheckerConfig;
+pub type XmllintConfig = CheckerConfigWithCommand;
 
 // --- svglint (SVG linter) ---
-pub type SvglintConfig = CheckerConfig;
+pub type SvglintConfig = CheckerConfigWithCommand;
 
 // --- checkstyle (Java style checker) ---
-pub type CheckstyleConfig = CheckerConfig;
+pub type CheckstyleConfig = CheckerConfigWithCommand;
 
 // --- yq (YAML processor/validator) ---
-pub type YqConfig = CheckerConfig;
+pub type YqConfig = CheckerConfigWithCommand;
 
 // --- cmake (CMake build system) ---
-pub type CmakeConfig = CheckerConfig;
+pub type CmakeConfig = CheckerConfigWithCommand;
 
 // --- docker (Docker image build) ---
-pub type HadolintConfig = CheckerConfig;
+pub type HadolintConfig = CheckerConfigWithCommand;
 
 // --- jekyll (Static site generator) ---
 pub type JekyllConfig = CheckerConfig;
 
 // --- slidev (Slidev presentations) ---
-pub type SlidevConfig = CheckerConfig;
+pub type SlidevConfig = CheckerConfigWithCommand;
 
 // --- encoding (UTF-8 validation) ---
 pub type EncodingConfig = CheckerConfig;

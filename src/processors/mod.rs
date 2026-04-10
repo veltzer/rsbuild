@@ -161,14 +161,96 @@ use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 
 /// Processor name constants — auto-generated from the central registry in `src/registry.rs`.
-macro_rules! gen_processor_names {
-    ( $( $const_name:ident, $field:ident, $config_type:ty, $proc_type:ty; )* ) => {
-        pub mod names {
-            $( pub const $const_name: &str = stringify!($field); )*
-        }
-    };
+pub mod names {
+    pub const TERA: &str = "tera";
+    pub const RUFF: &str = "ruff";
+    pub const PYLINT: &str = "pylint";
+    pub const MYPY: &str = "mypy";
+    pub const PYREFLY: &str = "pyrefly";
+    pub const BLACK: &str = "black";
+    pub const DOCTEST: &str = "doctest";
+    pub const PYTEST: &str = "pytest";
+    pub const CC_SINGLE_FILE: &str = "cc_single_file";
+    pub const CC: &str = "cc";
+    pub const CPPCHECK: &str = "cppcheck";
+    pub const CLANG_TIDY: &str = "clang_tidy";
+    pub const ZSPELL: &str = "zspell";
+    pub const SHELLCHECK: &str = "shellcheck";
+    pub const LUACHECK: &str = "luacheck";
+    pub const MAKE: &str = "make";
+    pub const CARGO: &str = "cargo";
+    pub const CLIPPY: &str = "clippy";
+    pub const RUMDL: &str = "rumdl";
+    pub const YAMLLINT: &str = "yamllint";
+    pub const JQ: &str = "jq";
+    pub const JSONLINT: &str = "jsonlint";
+    pub const TAPLO: &str = "taplo";
+    pub const JSON_SCHEMA: &str = "json_schema";
+    pub const TAGS: &str = "tags";
+    pub const PIP: &str = "pip";
+    pub const SPHINX: &str = "sphinx";
+    pub const MDBOOK: &str = "mdbook";
+    pub const NPM: &str = "npm";
+    pub const GEM: &str = "gem";
+    pub const MDL: &str = "mdl";
+    pub const MARKDOWNLINT: &str = "markdownlint";
+    pub const ASPELL: &str = "aspell";
+    pub const MARP: &str = "marp";
+    pub const PANDOC: &str = "pandoc";
+    pub const MARKDOWN2HTML: &str = "markdown2html";
+    pub const PDFLATEX: &str = "pdflatex";
+    pub const A2X: &str = "a2x";
+    pub const ASCII: &str = "ascii";
+    pub const TERMS: &str = "terms";
+    pub const CHROMIUM: &str = "chromium";
+    pub const MAKO: &str = "mako";
+    pub const JINJA2: &str = "jinja2";
+    pub const MERMAID: &str = "mermaid";
+    pub const DRAWIO: &str = "drawio";
+    pub const LIBREOFFICE: &str = "libreoffice";
+    pub const PROTOBUF: &str = "protobuf";
+    pub const PDFUNITE: &str = "pdfunite";
+    pub const IPDFUNITE: &str = "ipdfunite";
+    pub const SCRIPT: &str = "script";
+    pub const GENERATOR: &str = "generator";
+    pub const EXPLICIT: &str = "explicit";
+    pub const LINUX_MODULE: &str = "linux_module";
+    pub const CPPLINT: &str = "cpplint";
+    pub const CHECKPATCH: &str = "checkpatch";
+    pub const OBJDUMP: &str = "objdump";
+    pub const ESLINT: &str = "eslint";
+    pub const JSHINT: &str = "jshint";
+    pub const HTMLHINT: &str = "htmlhint";
+    pub const TIDY: &str = "tidy";
+    pub const STYLELINT: &str = "stylelint";
+    pub const JSLINT: &str = "jslint";
+    pub const STANDARD: &str = "standard";
+    pub const HTMLLINT: &str = "htmllint";
+    pub const PHP_LINT: &str = "php_lint";
+    pub const PERLCRITIC: &str = "perlcritic";
+    pub const XMLLINT: &str = "xmllint";
+    pub const SVGLINT: &str = "svglint";
+    pub const CHECKSTYLE: &str = "checkstyle";
+    pub const YQ: &str = "yq";
+    pub const CMAKE: &str = "cmake";
+    pub const HADOLINT: &str = "hadolint";
+    pub const JEKYLL: &str = "jekyll";
+    pub const SASS: &str = "sass";
+    pub const IJQ: &str = "ijq";
+    pub const IJSONLINT: &str = "ijsonlint";
+    pub const IYAMLLINT: &str = "iyamllint";
+    pub const IYAMLSCHEMA: &str = "iyamlschema";
+    pub const ITAPLO: &str = "itaplo";
+    pub const IMARKDOWN2HTML: &str = "imarkdown2html";
+    pub const ISASS: &str = "isass";
+    pub const YAML2JSON: &str = "yaml2json";
+    pub const RUST_SINGLE_FILE: &str = "rust_single_file";
+    pub const SLIDEV: &str = "slidev";
+    pub const ENCODING: &str = "encoding";
+    pub const DUPLICATE_FILES: &str = "duplicate_files";
+    pub const MARP_IMAGES: &str = "marp_images";
+    pub const LICENSE_HEADER: &str = "license_header";
 }
-for_each_processor!(gen_processor_names);
 
 /// Global flag: set to true on Ctrl+C so subprocesses can be killed promptly.
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);

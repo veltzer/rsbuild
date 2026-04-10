@@ -815,12 +815,11 @@ fn inject_bash_processor_completions(script: &str) -> String {
         }
     }
 
-    // Inject dynamic processor names for --processors/-p flags in build/watch commands.
-    // This replaces `compgen -f` (file completion) with a call to `rsconstruct processors names`.
+    // Inject static processor names for --processors/-p flags in build/watch commands.
     let old_processors = "                --processors)\n                    COMPREPLY=($(compgen -f \"${cur}\"))";
-    let new_processors = "                --processors)\n                    COMPREPLY=($(compgen -W \"$(rsconstruct processors names 2>/dev/null)\" -- \"${cur}\"))";
+    let new_processors = format!("                --processors)\n                    COMPREPLY=($(compgen -W \"{names_str}\" -- \"${{cur}}\"))");
     let old_p = "                -p)\n                    COMPREPLY=($(compgen -f \"${cur}\"))";
-    let new_p = "                -p)\n                    COMPREPLY=($(compgen -W \"$(rsconstruct processors names 2>/dev/null)\" -- \"${cur}\"))";
+    let new_p = format!("                -p)\n                    COMPREPLY=($(compgen -W \"{names_str}\" -- \"${{cur}}\"))");
 
-    result.replace(old_processors, new_processors).replace(old_p, new_p)
+    result.replace(old_processors, &new_processors).replace(old_p, &new_p)
 }

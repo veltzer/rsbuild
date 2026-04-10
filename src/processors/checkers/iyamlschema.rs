@@ -176,6 +176,14 @@ fn check_property_ordering(
 }
 
 impl crate::processors::ProductDiscovery for IyamlschemaProcessor {
+    fn scan_config(&self) -> &crate::config::ScanConfig {
+        &self.config.scan
+    }
+
+    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
+        None
+    }
+
     fn description(&self) -> &str {
         "Validate YAML files against JSON schemas (in-process)"
     }

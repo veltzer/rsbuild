@@ -26,6 +26,14 @@ impl DrawioProcessor {
 }
 
 impl ProductDiscovery for DrawioProcessor {
+    fn scan_config(&self) -> &crate::config::ScanConfig {
+        &self.config.scan
+    }
+
+    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
+        Some(&self.config)
+    }
+
     fn description(&self) -> &str {
         self.base.description()
     }
@@ -42,9 +50,6 @@ impl ProductDiscovery for DrawioProcessor {
         crate::processors::ProcessorBase::config_json(&self.config)
     }
 
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
-    }
 
     fn clean(&self, product: &crate::graph::Product, verbose: bool) -> anyhow::Result<usize> {
         crate::processors::ProcessorBase::clean(product, &product.processor, verbose)

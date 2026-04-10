@@ -65,6 +65,14 @@ impl LicenseHeaderProcessor {
 }
 
 impl crate::processors::ProductDiscovery for LicenseHeaderProcessor {
+    fn scan_config(&self) -> &crate::config::ScanConfig {
+        &self.config.scan
+    }
+
+    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
+        None
+    }
+
     fn description(&self) -> &str {
         "Verify source files contain required license headers"
     }

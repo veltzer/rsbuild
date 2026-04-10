@@ -260,6 +260,14 @@ impl CcProcessor {
 }
 
 impl ProductDiscovery for CcProcessor {
+    fn scan_config(&self) -> &crate::config::ScanConfig {
+        &self.config.scan
+    }
+
+    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
+        None
+    }
+
     fn description(&self) -> &str {
         self.base.description()
     }

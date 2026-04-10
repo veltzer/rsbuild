@@ -55,6 +55,14 @@ impl TermsProcessor {
 }
 
 impl crate::processors::ProductDiscovery for TermsProcessor {
+    fn scan_config(&self) -> &crate::config::ScanConfig {
+        &self.config.scan
+    }
+
+    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
+        None
+    }
+
     fn description(&self) -> &str {
         "Check that technical terms are backtick-quoted in markdown files"
     }

@@ -24,6 +24,14 @@ impl CheckpatchProcessor {
 }
 
 impl crate::processors::ProductDiscovery for CheckpatchProcessor {
+    fn scan_config(&self) -> &crate::config::ScanConfig {
+        &self.config.scan
+    }
+
+    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
+        Some(&self.config)
+    }
+
     fn description(&self) -> &str {
         "Run kernel checkpatch.pl on C source files"
     }
@@ -56,11 +64,5 @@ impl crate::processors::ProductDiscovery for CheckpatchProcessor {
         self.execute_product(product)
     }
 
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
 
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
-    }
 }

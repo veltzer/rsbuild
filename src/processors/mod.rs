@@ -927,12 +927,23 @@ pub trait ProductDiscovery: Sync + Send {
         ProcessorType::Checker
     }
 
-    /// Discover all products this processor can produce
-    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()>;
+    /// Access the scan configuration. Required for auto_detect and discover defaults.
+    fn scan_config(&self) -> &crate::config::ScanConfig;
+
+    /// Access the standard config fields. Override to enable defaults for
+    /// config_json, max_jobs, supports_batch, and discover.
+    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
+        None
+    }
+
+    /// Discover all products this processor can produce.
+    /// Default: standard checker discover using dep_inputs/dep_auto from standard_config.
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
+        let cfg = self.standard_config().expect("discover() requires standard_config() or must be overridden");
+        checker_discover(graph, &cfg.scan, file_index, &cfg.dep_inputs, &cfg.dep_auto, cfg, instance_name)
+    }
 
     /// Discover products for clean operation (outputs only, skip expensive dependency scanning).
-    /// Default implementation calls `discover()`. Override this for processors where
-    /// dependency scanning is expensive (e.g., cc_single_file header scanning).
     fn discover_for_clean(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         self.discover(graph, file_index, instance_name)
     }
@@ -940,22 +951,16 @@ pub trait ProductDiscovery: Sync + Send {
     /// Execute a single product
     fn execute(&self, product: &Product) -> Result<()>;
 
-    /// Clean outputs for a product (called by `rsconstruct clean`).
-    /// When `verbose` is true, prints per-file removal messages.
-    /// Returns the number of files removed.
-    ///
-    /// - **Checkers**: Use the default (do nothing) - checkers have no output files.
-    ///   The cache entry remains intact, so the next build will skip the check.
-    ///
-    /// - **Generators**: Must override to delete output files. Use `clean_outputs()`
-    ///   helper. The cache entry remains intact, so the next build will restore
-    ///   outputs from cache instead of regenerating them.
+    /// Clean outputs for a product. Checkers: default does nothing. Generators: override.
     fn clean(&self, _product: &Product, _verbose: bool) -> Result<usize> {
         Ok(0)
     }
 
-    /// Auto-detect whether this processor is relevant for the current project
-    fn auto_detect(&self, file_index: &FileIndex) -> bool;
+    /// Auto-detect whether this processor is relevant for the current project.
+    /// Default: check if scan finds any files.
+    fn auto_detect(&self, file_index: &FileIndex) -> bool {
+        checker_auto_detect(self.scan_config(), file_index)
+    }
 
     /// Return the names of external tools required by this processor
     fn required_tools(&self) -> Vec<String> {
@@ -963,8 +968,6 @@ pub trait ProductDiscovery: Sync + Send {
     }
 
     /// Return tool version commands: Vec of (tool_name, args_to_get_version).
-    /// Default: each required tool with `["--version"]`.
-    /// Override for tools that use different flags (e.g. `-V`, `-version`, `version`).
     fn tool_version_commands(&self) -> Vec<(String, Vec<String>)> {
         self.required_tools()
             .into_iter()
@@ -972,38 +975,31 @@ pub trait ProductDiscovery: Sync + Send {
             .collect()
     }
 
-    /// Whether this processor is native (written in Rust, inside the rsconstruct binary)
-    /// as opposed to shelling out to external tools.
+    /// Whether this processor is native (pure Rust, no external tools).
     fn is_native(&self) -> bool {
         false
     }
 
-    /// Whether this processor supports batch execution of multiple products at once.
+    /// Whether this processor supports batch execution.
+    /// Default: reads from standard_config().batch if available.
     fn supports_batch(&self) -> bool {
-        false
+        self.standard_config().is_some_and(|c| c.batch)
     }
 
     /// Execute multiple products in one invocation.
-    /// Returns one Result per product, in the same order as the input.
-    /// Default: falls back to per-product execute().
     fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
         products.iter().map(|p| self.execute(p)).collect()
     }
 
-    /// Return the processor's configuration as a JSON string for config change detection.
-    /// Returns None if the processor doesn't track config (default).
-    /// Processors that want config change diffs should override this.
+    /// Return the processor's configuration as JSON for config change detection.
+    /// Default: serialize standard_config if available.
     fn config_json(&self) -> Option<String> {
-        None
+        self.standard_config().and_then(|c| serde_json::to_string(c).ok())
     }
 
-    /// Maximum number of concurrent jobs for this processor.
-    /// Returns None to use the global `-j` parallelism (default).
-    /// Returns Some(n) to limit this processor to at most n concurrent executions,
-    /// regardless of the global `-j` setting. Useful for processors that spawn
-    /// heavyweight subprocesses (e.g., marp spawns headless Chromium).
+    /// Maximum concurrent jobs. Default: reads from standard_config().max_jobs.
     fn max_jobs(&self) -> Option<usize> {
-        None
+        self.standard_config().and_then(|c| c.max_jobs)
     }
 }
 

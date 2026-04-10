@@ -25,6 +25,14 @@ impl ShellcheckProcessor {
 }
 
 impl crate::processors::ProductDiscovery for ShellcheckProcessor {
+    fn scan_config(&self) -> &crate::config::ScanConfig {
+        &self.config.scan
+    }
+
+    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
+        Some(&self.config)
+    }
+
     fn description(&self) -> &str {
         "Lint shell scripts using shellcheck"
     }
@@ -57,17 +65,13 @@ impl crate::processors::ProductDiscovery for ShellcheckProcessor {
         self.execute_product(product)
     }
 
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
+
+
+
 
     fn supports_batch(&self) -> bool { self.config.batch }
 
     fn execute_batch(&self, products: &[&crate::graph::Product]) -> Vec<anyhow::Result<()>> {
         crate::processors::execute_checker_batch(products, |files| self.check_files(files))
-    }
-
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
     }
 }

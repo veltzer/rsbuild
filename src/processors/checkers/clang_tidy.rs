@@ -32,6 +32,14 @@ impl ClangTidyProcessor {
 }
 
 impl crate::processors::ProductDiscovery for ClangTidyProcessor {
+    fn scan_config(&self) -> &crate::config::ScanConfig {
+        &self.config.scan
+    }
+
+    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
+        None
+    }
+
     fn description(&self) -> &str {
         "Run clang-tidy static analysis on C/C++ source files"
     }

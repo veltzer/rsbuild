@@ -33,6 +33,14 @@ impl SimpleChecker {
 }
 
 impl ProductDiscovery for SimpleChecker {
+    fn scan_config(&self) -> &crate::config::ScanConfig {
+        &self.config.scan
+    }
+
+    fn standard_config(&self) -> Option<&crate::config::StandardConfig> {
+        Some(&self.config)
+    }
+
     fn description(&self) -> &str {
         self.params.description
     }
@@ -68,9 +76,6 @@ impl ProductDiscovery for SimpleChecker {
         self.check_files(&[product.primary_input()])
     }
 
-    fn config_json(&self) -> Option<String> {
-        serde_json::to_string(&self.config).ok()
-    }
 
     fn supports_batch(&self) -> bool {
         self.config.batch
@@ -80,7 +85,4 @@ impl ProductDiscovery for SimpleChecker {
         execute_checker_batch(products, |files| self.check_files(files))
     }
 
-    fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
-    }
 }

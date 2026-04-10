@@ -79,20 +79,48 @@ fn config_diff(name: &str, current: &serde_json::Value) -> serde_json::Value {
 /// Print metadata annotations (required fields and output-affecting fields) for a processor.
 /// Only shown in text mode (not JSON mode).
 fn print_processor_metadata(name: &str) {
-    if let Some(must) = ProcessorConfig::must_fields_for(name) {
-        if must.is_empty() {
-            println!("Required fields: (none)");
+    use crate::config::{SCAN_FIELD_DESCRIPTIONS, SHARED_FIELD_DESCRIPTIONS};
+
+    let proc_descs = crate::config::ProcessorConfig::field_descriptions_for(name)
+        .unwrap_or(&[]);
+
+    let defaults: serde_json::Value = crate::config::ProcessorConfig::defconfig_json(name)
+        .and_then(|j| serde_json::from_str(&j).ok())
+        .unwrap_or(serde_json::Value::Null);
+
+    let mut builder = TableBuilder::new();
+    builder.push_record(["Field", "Type", "Default", "Description"]);
+
+    // Processor-specific fields first, then shared dep/exec, then scan fields
+    let all_descs: Vec<(&str, &str)> = proc_descs.iter()
+        .map(|(f, d)| (*f, *d))
+        .chain(SHARED_FIELD_DESCRIPTIONS.iter().map(|(f, d)| (*f, *d)))
+        .chain(SCAN_FIELD_DESCRIPTIONS.iter().map(|(f, d)| (*f, *d)))
+        .collect();
+
+    for (field, desc) in &all_descs {
+        let val = defaults.get(*field);
+        let type_str = match val {
+            Some(serde_json::Value::String(_))  => "string",
+            Some(serde_json::Value::Array(_))   => "string[]",
+            Some(serde_json::Value::Bool(_))    => "bool",
+            Some(serde_json::Value::Number(_))  => "int",
+            Some(serde_json::Value::Object(_))  => "object",
+            _                                   => "?",
+        };
+        let default_str = if *field == "max_jobs" {
+            "(global)".to_string()
         } else {
-            println!("Required fields: {}", must.join(", "));
-        }
+            match val {
+                Some(v) => serde_json::to_string(v).unwrap_or_default(),
+                None    => "(none)".to_string(),
+            }
+        };
+        builder.push_record([field, type_str, &default_str, desc]);
     }
-    if let Some(output) = ProcessorConfig::output_fields_for(name) {
-        if output.is_empty() {
-            println!("Output-affecting fields: (none)");
-        } else {
-            println!("Output-affecting fields: {}", output.join(", "));
-        }
-    }
+
+    println!("\nParameters:");
+    println!("{}", builder.build().with(Style::modern()).to_string());
 }
 
 /// Show default configuration for a processor (works without rsconstruct.toml).

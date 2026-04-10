@@ -41,6 +41,12 @@ pub(crate) trait KnownFields {
     fn must_fields() -> &'static [&'static str] {
         &[]
     }
+
+    /// Return (field_name, description) pairs for processor-specific fields only.
+    /// Shared scan/dep/exec field descriptions are added by the display layer.
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[]
+    }
 }
 
 
@@ -69,6 +75,24 @@ pub(crate) fn resolve_extra_inputs(dep_inputs: &[String]) -> Result<Vec<PathBuf>
     }
     Ok(resolved)
 }
+
+/// Descriptions for ScanConfig fields shared by every processor.
+pub(crate) const SCAN_FIELD_DESCRIPTIONS: &[(&str, &str)] = &[
+    ("src_dirs",            "Directories to scan for source files"),
+    ("src_extensions",      "File extensions to match during scanning"),
+    ("src_exclude_dirs",    "Directory path segments to skip during scanning"),
+    ("src_exclude_files",   "File names to exclude from scanning"),
+    ("src_exclude_paths",   "Relative paths to exclude from scanning"),
+    ("src_files",           "Explicit file list — bypasses scan_dirs and extensions entirely"),
+];
+
+/// Descriptions for execution/dependency fields shared by most processors.
+pub(crate) const SHARED_FIELD_DESCRIPTIONS: &[(&str, &str)] = &[
+    ("dep_inputs",  "Extra files that trigger a rebuild when their content changes"),
+    ("dep_auto",    "Config files silently added as dep_inputs when they exist on disk"),
+    ("batch",       "Pass all matched files to the tool in a single invocation"),
+    ("max_jobs",    "Maximum parallel jobs for this processor (overrides global --jobs)"),
+];
 
 /// Fields that never affect product output and are excluded from the output config hash.
 /// These control file discovery, caching strategy, and execution batching.
@@ -471,6 +495,14 @@ macro_rules! gen_processor_config {
             pub(crate) fn must_fields_for(type_name: &str) -> Option<&'static [&'static str]> {
                 match type_name {
                     $( stringify!($field) => Some(<$config_type as KnownFields>::must_fields()), )*
+                    _ => None,
+                }
+            }
+
+            /// Return (field, description) pairs for a builtin processor type, or None for Lua plugins.
+            pub(crate) fn field_descriptions_for(type_name: &str) -> Option<&'static [(&'static str, &'static str)]> {
+                match type_name {
+                    $( stringify!($field) => Some(<$config_type as KnownFields>::field_descriptions()), )*
                     _ => None,
                 }
             }

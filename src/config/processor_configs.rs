@@ -76,6 +76,11 @@ macro_rules! checker_config {
             fn output_fields() -> &'static [&'static str] {
                 &["args"]
             }
+            fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+                &[
+                    ("args", "Extra arguments passed to the tool before the file path(s)"),
+                ]
+            }
         }
     };
 
@@ -127,6 +132,12 @@ macro_rules! checker_config {
             }
             fn output_fields() -> &'static [&'static str] {
                 &["linter", "args"]
+            }
+            fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+                &[
+                    ("linter", concat!("Path to the ", $linter, " executable")),
+                    ("args", "Extra arguments passed to the tool before the file path(s)"),
+                ]
             }
         }
     };
@@ -225,6 +236,14 @@ macro_rules! generator_config {
             fn output_fields() -> &'static [&'static str] {
                 &[stringify!($tool_field), "formats", "args", "output_dir"]
             }
+            fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+                &[
+                    (stringify!($tool_field), concat!("Path to the ", $tool_default, " executable")),
+                    ("formats",    "Output formats to generate"),
+                    ("args",       "Extra arguments passed to the tool"),
+                    ("output_dir", "Directory where generated output files are written"),
+                ]
+            }
         }
     };
 
@@ -287,6 +306,14 @@ macro_rules! generator_config {
             fn output_fields() -> &'static [&'static str] {
                 &[stringify!($tool_field), "formats", "args", "output_dir"]
             }
+            fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+                &[
+                    (stringify!($tool_field), concat!("Path to the ", $tool_default, " executable")),
+                    ("formats",    "Output formats to generate"),
+                    ("args",       "Extra arguments passed to the tool"),
+                    ("output_dir", "Directory where generated output files are written"),
+                ]
+            }
         }
     };
 
@@ -345,6 +372,13 @@ macro_rules! generator_config {
             fn output_fields() -> &'static [&'static str] {
                 &[stringify!($tool_field), "args", "output_dir"]
             }
+            fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+                &[
+                    (stringify!($tool_field), concat!("Path to the ", $tool_default, " executable")),
+                    ("args",       "Extra arguments passed to the tool"),
+                    ("output_dir", "Directory where generated output files are written"),
+                ]
+            }
         }
     };
 
@@ -388,6 +422,9 @@ impl KnownFields for TeraConfig {
     fn output_fields() -> &'static [&'static str] {
         &[]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[]
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -425,6 +462,9 @@ impl KnownFields for MakoConfig {
     fn output_fields() -> &'static [&'static str] {
         &[]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[]
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -460,6 +500,9 @@ impl KnownFields for Jinja2Config {
         ]
     }
     fn output_fields() -> &'static [&'static str] {
+        &[]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
         &[]
     }
 }
@@ -523,6 +566,11 @@ impl KnownFields for CppcheckConfig {
     fn output_fields() -> &'static [&'static str] {
         &["args"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("args", "Extra arguments passed to cppcheck"),
+        ]
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -569,6 +617,12 @@ impl KnownFields for ClangTidyConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["args", "compiler_args"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("args",          "Extra arguments passed to clang-tidy"),
+            ("compiler_args", "Compiler flags forwarded to clang-tidy for parsing"),
+        ]
     }
 }
 
@@ -708,6 +762,17 @@ impl KnownFields for CcSingleFileConfig {
             "compilers", "include_paths", "output_dir", "include_scanner",
         ]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("cc",              "C compiler executable"),
+            ("cxx",             "C++ compiler executable"),
+            ("output_suffix",   "Suffix appended to output binary names"),
+            ("compilers",       "Named compiler profiles (overrides cc/cxx when set)"),
+            ("include_paths",   "Additional header search directories"),
+            ("output_dir",      "Directory where compiled binaries are written"),
+            ("include_scanner", "Header dependency scanner: native (fast) or compiler (accurate)"),
+        ]
+    }
 }
 
 // --- cc (full C/C++ project builds) ---
@@ -830,6 +895,18 @@ impl KnownFields for CcConfig {
             "include_dirs", "single_invocation",
         ]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("cc",                "C compiler executable"),
+            ("cxx",               "C++ compiler executable"),
+            ("cflags",            "Flags passed to the C compiler"),
+            ("cxxflags",          "Flags passed to the C++ compiler"),
+            ("ldflags",           "Flags passed to the linker"),
+            ("include_dirs",      "Additional header search directories"),
+            ("single_invocation", "Compile all sources in one compiler call"),
+            ("cache_output_dir",  "Cache the entire output directory as a unit"),
+        ]
+    }
 }
 
 // --- linux_module (Linux kernel module builds) ---
@@ -905,6 +982,9 @@ impl KnownFields for LinuxModuleConfig {
     fn output_fields() -> &'static [&'static str] {
         &[]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[]
+    }
 }
 
 fn default_zspell_language() -> String {
@@ -963,6 +1043,13 @@ impl KnownFields for ZspellConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["language", "auto_add_words"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("language",       "Language/locale for spell checking"),
+            ("words_file",     "Path to a personal dictionary file"),
+            ("auto_add_words", "When true, automatically add misspelled words to words_file instead of failing"),
+        ]
     }
 }
 
@@ -1031,6 +1118,14 @@ impl KnownFields for CargoConfig {
     fn output_fields() -> &'static [&'static str] {
         &["cargo", "command", "args", "profiles"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("cargo",   "Path to the cargo executable"),
+            ("command", "Cargo subcommand to run (e.g. build, test)"),
+            ("args",    "Extra arguments passed to cargo"),
+            ("profiles", "Build profiles to run (e.g. dev, release)"),
+        ]
+    }
 }
 
 fn default_clippy_command() -> String {
@@ -1081,6 +1176,13 @@ impl KnownFields for ClippyConfig {
     fn output_fields() -> &'static [&'static str] {
         &["cargo", "command", "args"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("cargo",   "Path to the cargo executable"),
+            ("command", "Cargo subcommand to run (defaults to clippy)"),
+            ("args",    "Extra arguments passed to cargo clippy"),
+        ]
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -1126,6 +1228,13 @@ impl KnownFields for MakeConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["make", "args", "target"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("make",   "Path to the make executable"),
+            ("args",   "Extra arguments passed to make"),
+            ("target", "Make target to build"),
+        ]
     }
 }
 
@@ -1231,6 +1340,19 @@ impl KnownFields for TagsConfig {
             "check_unused",
         ]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("output",                "Output tags database file path"),
+            ("tags_dir",              "Directory containing tag list files"),
+            ("required_fields",       "Frontmatter fields that every markdown file must have"),
+            ("required_values",       "Scalar fields whose values must exist in the tag lists file"),
+            ("unique_fields",         "Fields whose values must be unique across all files"),
+            ("field_types",           "Expected types for fields: scalar, list, or number"),
+            ("required_field_groups", "Groups of fields where at least one group must be fully present"),
+            ("sorted_tags",           "Require list-type fields to have items in sorted order"),
+            ("check_unused",          "Fail the build when tags in the allowlist are not used by any file"),
+        ]
+    }
 }
 
 checker_config!(ShellcheckConfig, src_extensions: [".sh", ".bash"], linter: "shellcheck", dep_auto: [".shellcheckrc"]);
@@ -1283,6 +1405,12 @@ impl KnownFields for ScriptConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["command", "args"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("command", "Script or executable to run as a checker (required)"),
+            ("args",    "Extra arguments passed to the command before file paths"),
+        ]
     }
 }
 
@@ -1348,6 +1476,14 @@ impl KnownFields for GeneratorConfig {
     fn output_fields() -> &'static [&'static str] {
         &["command", "output_dir", "output_extension", "args"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("command",          "Script or executable to run as a generator (required)"),
+            ("args",             "Extra arguments passed to the command before file paths"),
+            ("output_dir",       "Directory where generated output files are written"),
+            ("output_extension", "File extension for generated output files"),
+        ]
+    }
 }
 
 // --- explicit processor (many inputs → few outputs, fully declared) ---
@@ -1408,6 +1544,15 @@ impl KnownFields for ExplicitConfig {
     fn must_fields() -> &'static [&'static str] {
         &["outputs"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("command",     "Command to run to produce the outputs"),
+            ("args",        "Extra arguments passed before input/output paths"),
+            ("inputs",      "Explicit list of input files"),
+            ("input_globs", "Glob patterns for input files"),
+            ("outputs",     "Explicit list of output files produced by the command"),
+        ]
+    }
 }
 
 fn default_pip() -> String {
@@ -1451,6 +1596,12 @@ impl KnownFields for PipConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["pip", "args"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("pip",  "Path to the pip executable"),
+            ("args", "Extra arguments passed to pip install"),
+        ]
     }
 }
 
@@ -1509,6 +1660,14 @@ impl KnownFields for SphinxConfig {
     fn output_fields() -> &'static [&'static str] {
         &["sphinx_build", "output_dir", "working_dir", "args"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("sphinx_build", "Path to the sphinx-build executable"),
+            ("output_dir",   "Directory where built docs are written"),
+            ("working_dir",  "Working directory for sphinx-build (defaults to conf.py location)"),
+            ("args",         "Extra arguments passed to sphinx-build"),
+        ]
+    }
 }
 
 fn default_mdbook() -> String {
@@ -1563,6 +1722,13 @@ impl KnownFields for MdbookConfig {
     fn output_fields() -> &'static [&'static str] {
         &["mdbook", "output_dir", "args"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("mdbook",     "Path to the mdbook executable"),
+            ("output_dir", "Directory where the built book is written"),
+            ("args",       "Extra arguments passed to mdbook build"),
+        ]
+    }
 }
 
 fn default_npm() -> String {
@@ -1616,6 +1782,13 @@ impl KnownFields for NpmConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["npm", "command", "args"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("npm",     "Path to the npm executable"),
+            ("command", "npm command to run (e.g. install, run)"),
+            ("args",    "Arguments passed to the npm command"),
+        ]
     }
 }
 
@@ -1685,6 +1858,15 @@ impl KnownFields for MdlConfig {
     fn output_fields() -> &'static [&'static str] {
         &["local_repo", "gem_home", "mdl_bin", "args", "gem_stamp"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("local_repo", "Use a local gem repository instead of system install"),
+            ("gem_home",   "Path to the local gem repository"),
+            ("mdl_bin",    "Path to the mdl executable"),
+            ("args",       "Extra arguments passed to mdl"),
+            ("gem_stamp",  "Stamp file tracking the local gem installation"),
+        ]
+    }
 }
 
 fn default_markdownlint_bin() -> String {
@@ -1745,6 +1927,14 @@ impl KnownFields for MarkdownlintConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["local_repo", "markdownlint_bin", "args", "npm_stamp"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("local_repo",       "Use a local npm repository instead of system install"),
+            ("markdownlint_bin", "Path to the markdownlint executable"),
+            ("args",             "Extra arguments passed to markdownlint"),
+            ("npm_stamp",        "Stamp file tracking the local npm installation"),
+        ]
     }
 }
 
@@ -1814,6 +2004,15 @@ impl KnownFields for AspellConfig {
     fn output_fields() -> &'static [&'static str] {
         &["aspell", "args", "conf", "auto_add_words"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("aspell",         "Path to the aspell executable"),
+            ("args",           "Extra arguments passed to aspell"),
+            ("conf",           "Path to the aspell configuration file"),
+            ("auto_add_words", "When true, automatically add misspelled words to words_file instead of failing"),
+            ("words_file",     "Path to the personal word list file"),
+        ]
+    }
 }
 
 checker_config!(AsciiConfig, src_extensions: [".md"]);
@@ -1857,6 +2056,11 @@ impl KnownFields for TermsConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["terms_dir"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("terms_dir", "Directory containing term definition files"),
+        ]
     }
 }
 
@@ -1918,6 +2122,14 @@ impl KnownFields for PandocConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["pandoc", "formats", "args", "output_dir"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("pandoc",     "Path to the pandoc executable"),
+            ("formats",    "Output formats to generate (e.g. pdf, html, docx)"),
+            ("args",       "Extra arguments passed to pandoc"),
+            ("output_dir", "Directory where converted files are written"),
+        ]
     }
 }
 
@@ -1994,6 +2206,15 @@ impl KnownFields for PdflatexConfig {
     fn output_fields() -> &'static [&'static str] {
         &["pdflatex", "args", "runs", "qpdf", "output_dir"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("pdflatex",  "Path to the pdflatex executable"),
+            ("args",      "Extra arguments passed to pdflatex"),
+            ("runs",      "Number of pdflatex compilation passes"),
+            ("qpdf",      "Run qpdf to optimize the output PDF"),
+            ("output_dir","Directory where compiled PDFs are written"),
+        ]
+    }
 }
 
 fn default_a2x() -> String {
@@ -2048,6 +2269,13 @@ impl KnownFields for A2xConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["a2x", "args", "output_dir"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("a2x",       "Path to the a2x executable"),
+            ("args",      "Extra arguments passed to a2x"),
+            ("output_dir","Directory where converted files are written"),
+        ]
     }
 }
 
@@ -2110,6 +2338,14 @@ impl KnownFields for GemConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["bundler", "command", "gem_home", "args"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("bundler",  "Path to the bundle executable"),
+            ("command",  "Bundler subcommand to run (e.g. install, exec)"),
+            ("gem_home", "Directory where gems are installed"),
+            ("args",     "Extra arguments passed to bundler"),
+        ]
     }
 }
 
@@ -2180,6 +2416,11 @@ impl KnownFields for IyamlschemaConfig {
     fn output_fields() -> &'static [&'static str] {
         &["check_ordering"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("check_ordering", "Require YAML keys to appear in the order defined by the schema"),
+        ]
+    }
 }
 
 checker_config!(ItaploConfig, src_extensions: [".toml"]);
@@ -2222,6 +2463,11 @@ impl KnownFields for Imarkdown2htmlConfig {
     fn output_fields() -> &'static [&'static str] {
         &["output_dir"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("output_dir", "Directory where rendered HTML files are written"),
+        ]
+    }
 }
 
 fn default_yaml2json_output_dir() -> String { "out/yaml2json".into() }
@@ -2262,6 +2508,11 @@ impl KnownFields for Yaml2jsonConfig {
     fn output_fields() -> &'static [&'static str] {
         &["output_dir"]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("output_dir", "Directory where converted JSON files are written"),
+        ]
+    }
 }
 
 fn default_isass_output_dir() -> String { "out/isass".into() }
@@ -2301,6 +2552,11 @@ impl KnownFields for IsassConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["output_dir"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("output_dir", "Directory where compiled CSS files are written"),
+        ]
     }
 }
 
@@ -2352,6 +2608,14 @@ impl KnownFields for RustSingleFileConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["rustc", "flags", "output_suffix", "output_dir"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("rustc",         "Path to the rustc executable"),
+            ("flags",         "Extra flags passed to rustc"),
+            ("output_suffix", "Suffix appended to output binary names"),
+            ("output_dir",    "Directory where compiled binaries are written"),
+        ]
     }
 }
 
@@ -2432,6 +2696,16 @@ impl KnownFields for PdfuniteConfig {
             "args", "output_dir",
         ]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("pdfunite_bin",      "Path to the pdfunite executable"),
+            ("source_dir",        "Directory containing course YAML files listing PDFs to merge"),
+            ("source_ext",        "Extension of source files used to find PDFs"),
+            ("source_output_dir", "Directory where source PDFs (to be merged) are located"),
+            ("args",              "Extra arguments passed to pdfunite"),
+            ("output_dir",        "Directory where merged PDFs are written"),
+        ]
+    }
 }
 
 // --- ipdfunite (internal PDF merge, no external binary) ---
@@ -2502,6 +2776,14 @@ impl KnownFields for IpdfuniteConfig {
             "source_dir", "source_ext", "source_output_dir", "output_dir",
         ]
     }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("source_dir",        "Directory containing course YAML files listing PDFs to merge"),
+            ("source_ext",        "Extension of source files used to find PDFs"),
+            ("source_output_dir", "Directory where source PDFs (to be merged) are located"),
+            ("output_dir",        "Directory where merged PDFs are written"),
+        ]
+    }
 }
 
 checker_config!(CpplintConfig, scan_dir: "src", src_extensions: [".c", ".cc", ".h", ".hh"]);
@@ -2549,6 +2831,12 @@ impl KnownFields for ObjdumpConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["args", "output_dir"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("args",       "Extra arguments passed to objdump"),
+            ("output_dir", "Directory where disassembly output files are written"),
+        ]
     }
 }
 
@@ -2651,5 +2939,11 @@ impl KnownFields for LicenseHeaderConfig {
     }
     fn output_fields() -> &'static [&'static str] {
         &["args", "header_lines"]
+    }
+    fn field_descriptions() -> &'static [(&'static str, &'static str)] {
+        &[
+            ("args",         "Extra arguments passed to the license header checker"),
+            ("header_lines", "Lines of the license header that must appear at the top of each file"),
+        ]
     }
 }

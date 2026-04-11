@@ -115,6 +115,11 @@ pub(crate) fn simple_checker_params(type_name: &str) -> Option<SimpleCheckerPara
         "tidy" => SimpleCheckerParams { description: "Validate HTML files with tidy", subcommand: Some("-errors"), prepend_args: &[], extra_tools: &[] },
         "xmllint" => SimpleCheckerParams { description: "Validate XML files with xmllint", subcommand: Some("--noout"), prepend_args: &[], extra_tools: &[] },
         "yq" => SimpleCheckerParams { description: "Validate YAML files with yq", subcommand: Some("."), prepend_args: &[], extra_tools: &[] },
+        "cppcheck" => SimpleCheckerParams { description: "Run cppcheck static analysis on C/C++ source files", subcommand: None, prepend_args: &[], extra_tools: &[] },
+        "cpplint" => SimpleCheckerParams { description: "Run cpplint (Google C++ style checker) on C/C++ source files", subcommand: None, prepend_args: &[], extra_tools: &[] },
+        "checkpatch" => SimpleCheckerParams { description: "Run kernel checkpatch.pl on C source files", subcommand: None, prepend_args: &["--no-tree", "-f"], extra_tools: &["perl"] },
+        "shellcheck" => SimpleCheckerParams { description: "Lint shell scripts using shellcheck", subcommand: None, prepend_args: &[], extra_tools: &[] },
+        "luacheck" => SimpleCheckerParams { description: "Lint Lua scripts using luacheck", subcommand: None, prepend_args: &[], extra_tools: &[] },
         _ => return None,
     })
 }
@@ -127,6 +132,7 @@ pub(crate) fn simple_checker_type_names() -> &'static [&'static str] {
         "htmlhint", "stylelint", "checkstyle", "cmake", "hadolint", "htmllint",
         "jslint", "perlcritic", "php_lint", "slidev", "standard", "svglint",
         "tidy", "xmllint", "yq",
+        "cppcheck", "cpplint", "checkpatch", "shellcheck", "luacheck",
     ]
 }
 
@@ -722,6 +728,9 @@ pub(crate) fn processor_defaults_for(type_name: &str) -> Option<ProcessorDefault
         "jq" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "jq", dep_auto: &[] },
         "jsonlint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "jsonlint", dep_auto: &[] },
         "taplo" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "taplo", dep_auto: &["taplo.toml", ".taplo.toml"] },
+        "cppcheck" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "cppcheck", dep_auto: &[] },
+        "cpplint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "cpplint", dep_auto: &[] },
+        "checkpatch" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "checkpatch.pl", dep_auto: &[] },
         "shellcheck" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "shellcheck", dep_auto: &[".shellcheckrc"] },
         "luacheck" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "luacheck", dep_auto: &[".luacheckrc"] },
         "eslint" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "eslint", dep_auto: &[".eslintrc", ".eslintrc.json", ".eslintrc.js", ".eslintrc.yml", ".eslintrc.yaml", ".eslintrc.cjs", "eslint.config.js", "eslint.config.mjs", "eslint.config.cjs"] },

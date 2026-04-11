@@ -434,15 +434,15 @@ pub enum ProcessorAction {
         #[arg(long)]
         headers: bool,
     },
-    /// Show resolved configuration for a processor (uses config if available)
+    /// Show resolved configuration for a processor instance (requires config)
     Config {
-        /// Processor name (omit to show all enabled processors)
+        /// Instance name as declared in rsconstruct.toml (omit to show all)
         name: Option<String>,
         /// Show only fields that differ from the default configuration
         #[arg(short, long)]
         diff: bool,
     },
-    /// Show default configuration for a processor (no config needed)
+    /// Show default configuration for a processor type (no config needed)
     Defconfig {
         /// Processor name
         name: String,

@@ -303,19 +303,10 @@ fn run() -> Result<()> {
                     builder::processors::list_recommendations();
                 }
                 cli::ProcessorAction::Defconfig { ref name } => {
-                    if has_config {
-                        let builder = Builder::new()?;
-                        builder.processor(action, cli.verbose)?;
-                    } else {
-                        builder::processors::processor_defconfig(name)?;
-                    }
+                    builder::processors::processor_defconfig(name)?;
                 }
-                cli::ProcessorAction::Config { ref name, .. } if !has_config => {
-                    // Without a config file, show default config (like defconfig)
-                    match name {
-                        Some(n) => builder::processors::processor_defconfig(n)?,
-                        None => bail!("No rsconstruct.toml found. Specify a processor name to show its default config."),
-                    }
+                cli::ProcessorAction::Config { .. } if !has_config => {
+                    bail!("No rsconstruct.toml found. Use 'processors defconfig <name>' to see default config without a project.");
                 }
                 action => {
                     let builder = Builder::new()?;

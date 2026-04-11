@@ -75,5 +75,5 @@ impl crate::processors::ProductDiscovery for IjsonlintProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::IjsonlintConfig>(
         "ijsonlint", |cfg| Box::new(IjsonlintProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

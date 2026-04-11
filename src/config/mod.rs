@@ -446,15 +446,15 @@ pub(crate) struct ProcessorInstance {
     pub config_toml: toml::Value,
 }
 
-use crate::registry::{self, RegistryOps};
+use crate::registry::{self, ProcessorPlugin};
 
-pub(crate) fn find_registry_entry(type_name: &str) -> Option<&'static dyn RegistryOps> {
-    registry::all_plugins().find(|e| e.name() == type_name).map(|e| *e)
+pub(crate) fn find_registry_entry(type_name: &str) -> Option<&'static dyn ProcessorPlugin> {
+    registry::all_plugins().find(|e| e.name() == type_name)
 }
 
 /// Return all registered processor plugins.
-pub(crate) fn registry_entries() -> impl Iterator<Item = &'static dyn RegistryOps> {
-    registry::all_plugins().map(|e| *e)
+pub(crate) fn registry_entries() -> impl Iterator<Item = &'static dyn ProcessorPlugin> {
+    registry::all_plugins()
 }
 
 /// Return all known builtin processor type names.

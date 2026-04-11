@@ -118,5 +118,5 @@ impl ProductDiscovery for NpmProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::NpmConfig>(
         "npm", |cfg| Box::new(NpmProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

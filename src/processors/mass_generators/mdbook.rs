@@ -100,5 +100,5 @@ impl ProductDiscovery for MdbookProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::MdbookConfig>(
         "mdbook", |cfg| Box::new(MdbookProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

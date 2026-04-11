@@ -666,5 +666,5 @@ pub fn stats(config: &TermsConfig) -> Result<()> {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::TermsConfig>(
         "terms", |cfg| Box::new(TermsProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

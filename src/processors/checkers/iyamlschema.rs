@@ -230,5 +230,5 @@ impl crate::processors::ProductDiscovery for IyamlschemaProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::IyamlschemaConfig>(
         "iyamlschema", |cfg| Box::new(IyamlschemaProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

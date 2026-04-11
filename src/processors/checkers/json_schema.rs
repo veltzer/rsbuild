@@ -128,5 +128,5 @@ impl crate::processors::ProductDiscovery for JsonSchemaProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::JsonSchemaConfig>(
         "json_schema", |cfg| Box::new(JsonSchemaProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

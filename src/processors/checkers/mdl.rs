@@ -100,5 +100,5 @@ impl ProductDiscovery for MdlProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::MdlConfig>(
         "mdl", |cfg| Box::new(MdlProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

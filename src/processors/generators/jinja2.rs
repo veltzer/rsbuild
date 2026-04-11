@@ -120,5 +120,5 @@ impl ProductDiscovery for Jinja2Processor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::Jinja2Config>(
         "jinja2", |cfg| Box::new(Jinja2Processor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

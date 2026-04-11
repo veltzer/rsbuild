@@ -75,5 +75,5 @@ impl crate::processors::ProductDiscovery for IyamllintProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::IyamllintConfig>(
         "iyamllint", |cfg| Box::new(IyamllintProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

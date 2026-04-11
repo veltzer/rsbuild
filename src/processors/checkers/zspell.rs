@@ -236,5 +236,5 @@ impl ProductDiscovery for ZspellProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::ZspellConfig>(
         "zspell", |cfg| Box::new(ZspellProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

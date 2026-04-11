@@ -83,5 +83,5 @@ impl crate::processors::ProductDiscovery for ClangTidyProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::ClangTidyConfig>(
         "clang_tidy", |cfg| Box::new(ClangTidyProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

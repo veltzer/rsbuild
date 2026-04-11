@@ -135,5 +135,5 @@ impl ProductDiscovery for CargoProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::CargoConfig>(
         "cargo", |cfg| Box::new(CargoProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

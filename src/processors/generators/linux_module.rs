@@ -231,5 +231,5 @@ impl ProductDiscovery for LinuxModuleProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::LinuxModuleConfig>(
         "linux_module", |cfg| Box::new(LinuxModuleProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

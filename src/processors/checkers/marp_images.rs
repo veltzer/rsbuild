@@ -100,5 +100,5 @@ impl crate::processors::ProductDiscovery for MarpImagesProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::MarpImagesConfig>(
         "marp_images", |cfg| Box::new(MarpImagesProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

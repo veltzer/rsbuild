@@ -119,5 +119,5 @@ impl crate::processors::ProductDiscovery for LicenseHeaderProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::LicenseHeaderConfig>(
         "license_header", |cfg| Box::new(LicenseHeaderProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

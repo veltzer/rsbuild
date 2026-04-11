@@ -120,5 +120,5 @@ impl ProductDiscovery for MakoProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::MakoConfig>(
         "mako", |cfg| Box::new(MakoProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

@@ -350,5 +350,5 @@ impl ProductDiscovery for CcProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::CcConfig>(
         "cc", |cfg| Box::new(CcProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

@@ -96,5 +96,5 @@ impl ProductDiscovery for MarkdownlintProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::MarkdownlintConfig>(
         "markdownlint", |cfg| Box::new(MarkdownlintProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

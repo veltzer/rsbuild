@@ -100,5 +100,5 @@ impl ProductDiscovery for PipProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::PipConfig>(
         "pip", |cfg| Box::new(PipProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

@@ -75,5 +75,5 @@ impl crate::processors::ProductDiscovery for ItaploProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::ItaploConfig>(
         "itaplo", |cfg| Box::new(ItaploProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

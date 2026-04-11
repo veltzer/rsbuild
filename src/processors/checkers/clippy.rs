@@ -88,5 +88,5 @@ impl ProductDiscovery for ClippyProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::ClippyConfig>(
         "clippy", |cfg| Box::new(ClippyProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

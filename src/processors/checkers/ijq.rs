@@ -75,5 +75,5 @@ impl crate::processors::ProductDiscovery for IjqProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::IjqConfig>(
         "ijq", |cfg| Box::new(IjqProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

@@ -94,5 +94,5 @@ impl crate::processors::ProductDiscovery for EncodingProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::EncodingConfig>(
         "encoding", |cfg| Box::new(EncodingProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

@@ -128,5 +128,5 @@ impl ProductDiscovery for CreatorProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::CreatorConfig>(
         "creator", |cfg| Box::new(CreatorProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

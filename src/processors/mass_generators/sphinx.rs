@@ -116,5 +116,5 @@ impl ProductDiscovery for SphinxProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::SphinxConfig>(
         "sphinx", |cfg| Box::new(SphinxProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

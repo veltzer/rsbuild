@@ -5,9 +5,9 @@ use serde::Serialize;
 use crate::config::{self, KnownFields, StandardConfig};
 use crate::processors::ProductDiscovery;
 
-/// Operations that each processor plugin provides.
-/// Implemented generically via `TypedPlugin<C>`.
-pub(crate) trait RegistryOps: Send + Sync {
+/// The single plugin interface for all processor types.
+/// Every processor registers an implementation of this trait via `inventory::submit!`.
+pub(crate) trait ProcessorPlugin: Send + Sync {
     fn name(&self) -> &'static str;
     fn create(&self, config_toml: &toml::Value) -> Result<Box<dyn ProductDiscovery>>;
     fn create_default(&self) -> Box<dyn ProductDiscovery>;
@@ -19,12 +19,11 @@ pub(crate) trait RegistryOps: Send + Sync {
     fn defconfig_json(&self) -> Option<String>;
 }
 
-// Collect all processor plugins via inventory
-inventory::collect!(&'static dyn RegistryOps);
+inventory::collect!(&'static dyn ProcessorPlugin);
 
 /// Iterate over all registered processor plugins.
-pub(crate) fn all_plugins() -> impl Iterator<Item = &'static &'static dyn RegistryOps> {
-    inventory::iter::<&'static dyn RegistryOps>.into_iter()
+pub(crate) fn all_plugins() -> impl Iterator<Item = &'static dyn ProcessorPlugin> {
+    inventory::iter::<&'static dyn ProcessorPlugin>.into_iter().copied()
 }
 
 /// Apply both processor defaults and scan defaults to a TOML value.
@@ -33,16 +32,16 @@ fn apply_all_defaults(name: &str, value: &mut toml::Value) {
     config::apply_scan_defaults(name, value);
 }
 
-/// Generic implementation of RegistryOps for a (Config, Processor) pair.
-pub(crate) struct TypedPlugin<C> {
-    name: &'static str,
-    ctor: fn(C) -> Box<dyn ProductDiscovery>,
+// --- Typed plugin (processors with custom config structs) ---
+
+pub struct TypedPlugin<C> {
+    pub name: &'static str,
+    pub ctor: fn(C) -> Box<dyn ProductDiscovery>,
 }
 
-// Safety: TypedPlugin contains only static data (name is &'static str, ctor is fn pointer)
 unsafe impl<C> Sync for TypedPlugin<C> {}
 
-impl<C> RegistryOps for TypedPlugin<C>
+impl<C> ProcessorPlugin for TypedPlugin<C>
 where
     C: Default + DeserializeOwned + Serialize + Clone + KnownFields + Send + Sync + 'static,
 {
@@ -81,32 +80,16 @@ where
     }
 }
 
-/// Create a static plugin registration for a typed processor.
-/// Use with `inventory::submit!` in the processor's module.
-pub(crate) const fn typed_plugin<C>(
-    name: &'static str,
-    ctor: fn(C) -> Box<dyn ProductDiscovery>,
-) -> TypedPlugin<C> {
-    TypedPlugin { name, ctor }
-}
+// --- SimpleChecker plugin ---
 
-/// Create a static plugin registration for a SimpleChecker.
-pub(crate) const fn simple_checker_plugin(
-    name: &'static str,
-    params: crate::config::SimpleCheckerParams,
-) -> SimpleCheckerPlugin {
-    SimpleCheckerPlugin { name, params }
-}
-
-/// Plugin for data-driven simple checkers.
 pub struct SimpleCheckerPlugin {
-    name: &'static str,
-    params: crate::config::SimpleCheckerParams,
+    pub name: &'static str,
+    pub params: crate::config::SimpleCheckerParams,
 }
 
 unsafe impl Sync for SimpleCheckerPlugin {}
 
-impl RegistryOps for SimpleCheckerPlugin {
+impl ProcessorPlugin for SimpleCheckerPlugin {
     fn name(&self) -> &'static str { self.name }
 
     fn create(&self, config_toml: &toml::Value) -> Result<Box<dyn ProductDiscovery>> {
@@ -142,15 +125,24 @@ impl RegistryOps for SimpleCheckerPlugin {
     }
 }
 
-/// Plugin for data-driven simple generators.
-pub struct SimpleGeneratorPlugin {
+/// Helper to construct a SimpleCheckerPlugin for use in inventory::submit!.
+pub const fn simple_checker_plugin(
     name: &'static str,
-    params: crate::processors::generators::simple::SimpleGeneratorParams,
+    params: crate::config::SimpleCheckerParams,
+) -> SimpleCheckerPlugin {
+    SimpleCheckerPlugin { name, params }
+}
+
+// --- SimpleGenerator plugin ---
+
+pub struct SimpleGeneratorPlugin {
+    pub name: &'static str,
+    pub params: crate::processors::generators::simple::SimpleGeneratorParams,
 }
 
 unsafe impl Sync for SimpleGeneratorPlugin {}
 
-impl RegistryOps for SimpleGeneratorPlugin {
+impl ProcessorPlugin for SimpleGeneratorPlugin {
     fn name(&self) -> &'static str { self.name }
 
     fn create(&self, config_toml: &toml::Value) -> Result<Box<dyn ProductDiscovery>> {
@@ -186,10 +178,18 @@ impl RegistryOps for SimpleGeneratorPlugin {
     }
 }
 
-/// Create a static plugin registration for a SimpleGenerator.
-pub(crate) const fn simple_generator_plugin(
+/// Helper to construct a SimpleGeneratorPlugin for use in inventory::submit!.
+pub const fn simple_generator_plugin(
     name: &'static str,
     params: crate::processors::generators::simple::SimpleGeneratorParams,
 ) -> SimpleGeneratorPlugin {
     SimpleGeneratorPlugin { name, params }
+}
+
+/// Helper to construct a TypedPlugin for use in inventory::submit!.
+pub const fn typed_plugin<C>(
+    name: &'static str,
+    ctor: fn(C) -> Box<dyn ProductDiscovery>,
+) -> TypedPlugin<C> {
+    TypedPlugin { name, ctor }
 }

@@ -90,5 +90,5 @@ impl ProductDiscovery for MakeProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::MakeConfig>(
         "make", |cfg| Box::new(MakeProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

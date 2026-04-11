@@ -93,5 +93,5 @@ impl crate::processors::ProductDiscovery for AsciiProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::AsciiConfig>(
         "ascii", |cfg| Box::new(AsciiProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

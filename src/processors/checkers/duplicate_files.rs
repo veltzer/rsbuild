@@ -89,5 +89,5 @@ impl crate::processors::ProductDiscovery for DuplicateFilesProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::DuplicateFilesConfig>(
         "duplicate_files", |cfg| Box::new(DuplicateFilesProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

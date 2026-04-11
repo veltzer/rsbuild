@@ -141,5 +141,5 @@ impl ProductDiscovery for GeneratorProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::GeneratorConfig>(
         "generator", |cfg| Box::new(GeneratorProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

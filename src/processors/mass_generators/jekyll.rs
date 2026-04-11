@@ -101,5 +101,5 @@ impl ProductDiscovery for JekyllProcessor {
 inventory::submit! {
     &crate::registry::typed_plugin::<crate::config::JekyllConfig>(
         "jekyll", |cfg| Box::new(JekyllProcessor::new(cfg))
-    ) as &dyn crate::registry::RegistryOps
+    ) as &dyn crate::registry::ProcessorPlugin
 }

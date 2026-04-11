@@ -92,9 +92,11 @@ impl ObjectStore {
             // Store locally
             let path = self.descriptor_path(descriptor_key);
             if let Some(parent) = path.parent() {
-                fs::create_dir_all(parent)?;
+                fs::create_dir_all(parent)
+                    .with_context(|| format!("Failed to create descriptor directory: {}", parent.display()))?;
             }
-            fs::write(&path, data)?;
+            fs::write(&path, data)
+                .with_context(|| format!("Failed to write remote descriptor: {}", path.display()))?;
         }
         Ok(data)
     }

@@ -253,15 +253,19 @@ impl ObjectStore {
             .context("Failed to serialize cache descriptor")?;
         // Remove existing file if read-only (from a previous build)
         if path.exists() {
-            let mut perms = fs::metadata(&path)?.permissions();
+            let mut perms = fs::metadata(&path)
+                .with_context(|| format!("Failed to read metadata for descriptor: {}", path.display()))?.permissions();
             perms.set_readonly(false);
-            fs::set_permissions(&path, perms)?;
+            fs::set_permissions(&path, perms)
+                .with_context(|| format!("Failed to make descriptor writable: {}", path.display()))?;
         }
         fs::write(&path, &data)
-            .context("Failed to write cache descriptor")?;
-        let mut perms = fs::metadata(&path)?.permissions();
+            .with_context(|| format!("Failed to write cache descriptor: {}", path.display()))?;
+        let mut perms = fs::metadata(&path)
+            .with_context(|| format!("Failed to read metadata for descriptor: {}", path.display()))?.permissions();
         perms.set_readonly(true);
-        fs::set_permissions(&path, perms)?;
+        fs::set_permissions(&path, perms)
+            .with_context(|| format!("Failed to make descriptor read-only: {}", path.display()))?;
         Ok(())
     }
 
@@ -390,11 +394,14 @@ impl ObjectStore {
                     return Ok(false);
                 }
                 if let Some(parent) = output_path.parent() {
-                    fs::create_dir_all(parent)?;
+                    fs::create_dir_all(parent)
+                        .with_context(|| format!("Failed to create output directory: {}", parent.display()))?;
                 }
-                self.restore_file(&checksum, output_path)?;
+                self.restore_file(&checksum, output_path)
+                    .with_context(|| format!("Failed to restore blob to: {}", output_path.display()))?;
                 if let Some(m) = mode {
-                    crate::platform::set_permissions_mode(output_path, m)?;
+                    crate::platform::set_permissions_mode(output_path, m)
+                        .with_context(|| format!("Failed to set permissions on: {}", output_path.display()))?;
                 }
                 Ok(true)
             }
@@ -415,11 +422,14 @@ impl ObjectStore {
                         return Ok(false);
                     }
                     if let Some(parent) = file_path.parent() {
-                        fs::create_dir_all(parent)?;
+                        fs::create_dir_all(parent)
+                            .with_context(|| format!("Failed to create directory for tree restore: {}", parent.display()))?;
                     }
-                    self.restore_file(&entry.checksum, file_path)?;
+                    self.restore_file(&entry.checksum, file_path)
+                        .with_context(|| format!("Failed to restore tree entry: {}", file_path.display()))?;
                     if let Some(m) = entry.mode {
-                        crate::platform::set_permissions_mode(file_path, m)?;
+                        crate::platform::set_permissions_mode(file_path, m)
+                            .with_context(|| format!("Failed to set permissions on: {}", file_path.display()))?;
                     }
                 }
                 Ok(true)
@@ -580,7 +590,8 @@ impl ObjectStore {
 
         if self.compression {
             // Decompress and write the output file
-            let content = self.read_object(checksum)?;
+            let content = self.read_object(checksum)
+                .with_context(|| format!("Failed to read cached object: {}", checksum))?;
             fs::write(output_path, &content)
                 .with_context(|| format!("Failed to write decompressed output: {}", output_path.display()))?;
             crate::platform::set_permissions_mode(output_path, 0o644)

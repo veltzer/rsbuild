@@ -2,6 +2,23 @@
 
 Rules that apply to the RSConstruct codebase and its documentation.
 
+## Always add context to errors
+
+Every `?` on an IO operation must have `.with_context()` from `anyhow::Context`. A bare `?` on `fs::read`, `fs::write`, `fs::create_dir_all`, `Command::spawn`, or any other syscall-wrapping function is a bug. It produces error messages like "No such file or directory" with no indication of which file or which operation failed.
+
+Good:
+```rust
+fs::read(&path)
+    .with_context(|| format!("Failed to read config file: {}", path.display()))?;
+```
+
+Bad:
+```rust
+fs::read(&path)?;  // useless error message
+```
+
+The error chain should read like a stack trace of intent: "Failed to build project > Failed to execute ruff on src/main.py > Failed to spawn command: ruff > No such file or directory".
+
 ## Fail hard, never degrade gracefully
 
 When something fails, it must fail the entire build. Do not try-and-fallback,

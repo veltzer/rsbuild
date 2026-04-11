@@ -18,3 +18,8 @@ python files dependency analysis:
       - several folders
       - or any combination of the above
     And we should really know how to cache their outputs.
+
+- want rsconstruct processors config [TAB] to complete inames
+- want rsconstruct processors defconfig [TAB] to complete pnames
+
+  - do a command "rsconstruct errors" which prints name of errors and their error code (BUILD_ERROR=1 etc)

@@ -33,7 +33,8 @@ pub trait RemoteCache: Send + Sync {
     fn upload_bytes(&self, key: &str, data: &[u8]) -> Result<()> {
         let temp_dir = std::env::temp_dir();
         let temp_file = temp_dir.join(format!("rsconstruct-upload-{}", uuid_simple()));
-        fs::write(&temp_file, data)?;
+        fs::write(&temp_file, data)
+            .with_context(|| format!("Failed to write temp upload file: {}", temp_file.display()))?;
         let result = self.upload(key, &temp_file);
         let _ = fs::remove_file(&temp_file);
         result
@@ -106,7 +107,8 @@ impl RemoteCache for S3Backend {
     fn download(&self, key: &str, dest: &Path) -> Result<bool> {
         // Ensure parent directory exists
         if let Some(parent) = dest.parent() {
-            fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory for remote download: {}", parent.display()))?;
         }
 
         let mut cmd = Command::new("aws");
@@ -176,7 +178,8 @@ impl RemoteCache for HttpBackend {
 
     fn download(&self, key: &str, dest: &Path) -> Result<bool> {
         if let Some(parent) = dest.parent() {
-            fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory for remote download: {}", parent.display()))?;
         }
 
         let mut cmd = Command::new("curl");
@@ -251,7 +254,8 @@ impl RemoteCache for FileBackend {
         }
 
         if let Some(parent) = dest.parent() {
-            fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory for local cache: {}", parent.display()))?;
         }
 
         fs::copy(&src, dest)
@@ -264,7 +268,8 @@ impl RemoteCache for FileBackend {
         let dest = self.full_path(key);
 
         if let Some(parent) = dest.parent() {
-            fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory for local cache upload: {}", parent.display()))?;
         }
 
         fs::copy(src, &dest)

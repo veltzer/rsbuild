@@ -261,7 +261,7 @@ impl CcProcessor {
 
 impl Processor for CcProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
-        &self.config.scan
+        &self.config.standard.scan
     }
 
 
@@ -279,7 +279,7 @@ impl Processor for CcProcessor {
     }
 
     fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
+        self.config.standard.max_jobs
     }
 
     fn clean(&self, product: &crate::graph::Product, verbose: bool) -> anyhow::Result<usize> {
@@ -291,11 +291,11 @@ impl Processor for CcProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
-        let Some(files) = crate::processors::scan_or_skip(&self.config.scan, file_index) else {
+        let Some(files) = crate::processors::scan_or_skip(&self.config.standard.scan, file_index) else {
             return Ok(());
         };
         let hash = Some(output_config_hash(&self.config, &[]));
-        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
 
         for yaml_path in files {
             let manifest = match Self::parse_manifest(&yaml_path) {

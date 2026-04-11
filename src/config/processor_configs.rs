@@ -415,6 +415,7 @@ pub struct CcManifest {
     pub programs: Vec<CcProgramDef>,
 }
 
+/// CC (full C/C++ project) config. Custom: cc, cxx, cflags, cxxflags, ldflags, include_dirs, single_invocation, cache_output_dir.
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CcConfig {
     #[serde(default = "default_cc_compiler")]
@@ -431,16 +432,10 @@ pub struct CcConfig {
     pub include_dirs: Vec<String>,
     #[serde(default)]
     pub single_invocation: bool,
-    #[serde(default)]
-    pub dep_inputs: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_jobs: Option<usize>,
     #[serde(flatten)]
-    pub scan: ScanConfig,
+    pub standard: StandardConfig,
 }
 
 impl Default for CcConfig {
@@ -453,11 +448,8 @@ impl Default for CcConfig {
             ldflags: Vec::new(),
             include_dirs: Vec::new(),
             single_invocation: false,
-            dep_inputs: Vec::new(),
             cache_output_dir: true,
-            batch: true,
-            max_jobs: None,
-            scan: ScanConfig::default(),
+            standard: StandardConfig::default(),
         }
     }
 }

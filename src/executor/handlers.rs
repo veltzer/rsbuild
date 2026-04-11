@@ -160,14 +160,15 @@ impl<'a> Executor<'a> {
         duration: Option<std::time::Duration>,
     ) -> bool {
         let desc_key = ctx.product.descriptor_key(ctx.input_checksum);
-        let cache_result = if ctx.product.has_output_dirs() {
-            object_store.store_tree_descriptor(&desc_key, &ctx.product.output_dirs, &ctx.product.outputs)
-        } else if ctx.product.outputs.is_empty() {
+        let cache_result = if ctx.product.outputs.is_empty() && !ctx.product.has_output_dirs() {
+            // Checker: no outputs, just mark as passed
             object_store.store_marker(&desc_key).map(|()| false)
-        } else if ctx.product.outputs.len() == 1 {
+        } else if ctx.product.outputs.len() == 1 && !ctx.product.has_output_dirs() {
+            // Generator: single output file → blob
             object_store.store_blob_descriptor(&desc_key, &ctx.product.outputs[0])
         } else {
-            object_store.store_tree_descriptor(&desc_key, &[], &ctx.product.outputs)
+            // Creator/Explicit or multi-output: always tree
+            object_store.store_tree_descriptor(&desc_key, &ctx.product.output_dirs, &ctx.product.outputs)
         };
         match cache_result {
             Ok(changed) => {

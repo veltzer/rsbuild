@@ -26,19 +26,19 @@ impl CargoProcessor {
     /// Run cargo build in the Cargo.toml's directory with the given profile
     fn execute_cargo(&self, cargo_toml: &Path, profile: &str) -> Result<()> {
         let mut cmd = Command::new(&self.config.cargo);
-        cmd.arg(&self.config.command);
+        cmd.arg(&self.config.standard.command);
         cmd.args(["--profile", profile]);
-        for arg in &self.config.args {
+        for arg in &self.config.standard.args {
             cmd.arg(arg);
         }
         let output = run_in_anchor_dir(&mut cmd, cargo_toml)?;
-        check_command_output(&output, format_args!("cargo {} --profile {} in {}", self.config.command, profile, anchor_display_dir(cargo_toml)))
+        check_command_output(&output, format_args!("cargo {} --profile {} in {}", self.config.standard.command, profile, anchor_display_dir(cargo_toml)))
     }
 }
 
 impl Processor for CargoProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
-        &self.config.scan
+        &self.config.standard.scan
     }
 
 
@@ -56,7 +56,7 @@ impl Processor for CargoProcessor {
     }
 
     fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
+        self.config.standard.max_jobs
     }
 
     fn clean(&self, product: &crate::graph::Product, verbose: bool) -> anyhow::Result<usize> {
@@ -68,7 +68,7 @@ impl Processor for CargoProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
-        let Some(files) = crate::processors::scan_or_skip(&self.config.scan, file_index) else {
+        let Some(files) = crate::processors::scan_or_skip(&self.config.standard.scan, file_index) else {
             return Ok(());
         };
 
@@ -77,7 +77,7 @@ impl Processor for CargoProcessor {
             excludes: &["/.git/", "/target/", "/.rsconstruct/"],
         };
         let hash = Some(output_config_hash(&self.config, &[]));
-        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
 
         for anchor in files {
             let anchor_dir = anchor.parent().map(|p| p.to_path_buf()).unwrap_or_default();

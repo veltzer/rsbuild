@@ -667,6 +667,8 @@ pub(crate) fn processor_defaults_for(type_name: &str) -> Option<ProcessorDefault
         "libreoffice" => ProcessorDefaults { output_dir: "out/libreoffice", formats: &["pdf"], args: &[], command: "libreoffice", dep_auto: &[] },
         "protobuf" => ProcessorDefaults { output_dir: "out/protobuf", formats: &[], args: &[], command: "protoc", dep_auto: &[] },
         "cc_single_file" => ProcessorDefaults { output_dir: "out/cc_single_file", formats: &[], args: &[], command: "", dep_auto: &[] },
+        "cargo" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "build", dep_auto: &[] },
+        "clippy" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "clippy", dep_auto: &[] },
         "sass" => ProcessorDefaults { output_dir: "out/sass", formats: &[], args: &[], command: "sass", dep_auto: &[] },
         "pandoc" => ProcessorDefaults { output_dir: "out/pandoc", formats: &["pdf", "html", "docx"], args: &[], command: "pandoc", dep_auto: &[] },
         "a2x" => ProcessorDefaults { output_dir: "out/a2x", formats: &[], args: &[], command: "a2x", dep_auto: &[] },

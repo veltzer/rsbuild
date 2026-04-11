@@ -23,18 +23,18 @@ impl ClippyProcessor {
     /// Run cargo clippy in the Cargo.toml's directory
     fn execute_clippy(&self, cargo_toml: &Path) -> Result<()> {
         let mut cmd = Command::new(&self.config.cargo);
-        cmd.arg(&self.config.command);
-        for arg in &self.config.args {
+        cmd.arg(&self.config.standard.command);
+        for arg in &self.config.standard.args {
             cmd.arg(arg);
         }
         let output = run_in_anchor_dir(&mut cmd, cargo_toml)?;
-        check_command_output(&output, format_args!("cargo {} in {}", self.config.command, anchor_display_dir(cargo_toml)))
+        check_command_output(&output, format_args!("cargo {} in {}", self.config.standard.command, anchor_display_dir(cargo_toml)))
     }
 }
 
 impl Processor for ClippyProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
-        &self.config.scan
+        &self.config.standard.scan
     }
 
 
@@ -52,7 +52,7 @@ impl Processor for ClippyProcessor {
     }
 
     fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
+        self.config.standard.max_jobs
     }
 
     fn required_tools(&self) -> Vec<String> {
@@ -60,14 +60,14 @@ impl Processor for ClippyProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
-        if !crate::processors::scan_root_valid(&self.config.scan) {
+        if !crate::processors::scan_root_valid(&self.config.standard.scan) {
             return Ok(());
         }
 
         discover_directory_products(graph, DirectoryProductOpts {
-            scan: &self.config.scan,
+            scan: &self.config.standard.scan,
             file_index,
-            dep_inputs: &self.config.dep_inputs,
+            dep_inputs: &self.config.standard.dep_inputs,
             cfg_hash: &self.config,
             siblings: &SiblingFilter {
                 extensions: &[".rs", ".toml"],

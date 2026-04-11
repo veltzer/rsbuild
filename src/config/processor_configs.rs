@@ -600,48 +600,33 @@ fn default_cargo() -> String {
     "cargo".into()
 }
 
-fn default_cargo_command() -> String {
-    "build".into()
-}
-
 fn default_cargo_profiles() -> Vec<String> {
     vec!["dev".into(), "release".into()]
 }
 
+/// Cargo config. Custom: cargo, profiles, cache_output_dir.
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CargoConfig {
     #[serde(default = "default_cargo")]
     pub cargo: String,
-    #[serde(default = "default_cargo_command")]
-    pub command: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub dep_inputs: Vec<String>,
     #[serde(default = "default_cargo_profiles")]
     pub profiles: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_jobs: Option<usize>,
     #[serde(flatten)]
-    pub scan: ScanConfig,
+    pub standard: StandardConfig,
 }
 
 impl Default for CargoConfig {
     fn default() -> Self {
         Self {
             cargo: "cargo".into(),
-            command: "build".into(),
-            args: Vec::new(),
-            dep_inputs: Vec::new(),
             profiles: default_cargo_profiles(),
             cache_output_dir: true,
-            batch: true,
-            max_jobs: None,
-            scan: ScanConfig::default(),
+            standard: StandardConfig {
+                command: "build".into(),
+                ..StandardConfig::default()
+            },
         }
     }
 }
@@ -667,41 +652,21 @@ impl KnownFields for CargoConfig {
     }
 }
 
-fn default_clippy_command() -> String {
-    "clippy".into()
-}
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+/// Clippy config. Custom: cargo.
 pub struct ClippyConfig {
     #[serde(default = "default_cargo")]
     pub cargo: String,
-    #[serde(default = "default_clippy_command")]
-    pub command: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub dep_inputs: Vec<String>,
-    #[serde(default)]
-    pub dep_auto: Vec<String>,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_jobs: Option<usize>,
     #[serde(flatten)]
-    pub scan: ScanConfig,
+    pub standard: StandardConfig,
 }
 
 impl Default for ClippyConfig {
     fn default() -> Self {
         Self {
             cargo: "cargo".into(),
-            command: "clippy".into(),
-            args: Vec::new(),
-            dep_inputs: Vec::new(),
-            dep_auto: Vec::new(),
-            batch: true,
-            max_jobs: None,
-            scan: ScanConfig::default(),
+            standard: StandardConfig { command: "clippy".into(), ..StandardConfig::default() },
         }
     }
 }

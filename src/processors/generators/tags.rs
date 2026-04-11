@@ -1633,7 +1633,7 @@ pub fn merge_tags(tags_dir: &str, source_dir: &str) -> Result<()> {
         let filename = path.file_name().unwrap();
         let dest_path = dest.join(filename);
 
-        let source_content = fs::read_to_string(&path)?;
+        let source_content = ctx!(fs::read_to_string(&path), format!("Failed to read tags source: {}", path.display()))?;
         let source_entries: HashSet<String> = source_content
             .lines()
             .map(|l| l.trim().to_string())
@@ -1641,7 +1641,7 @@ pub fn merge_tags(tags_dir: &str, source_dir: &str) -> Result<()> {
             .collect();
 
         if dest_path.exists() {
-            let dest_content = fs::read_to_string(&dest_path)?;
+            let dest_content = ctx!(fs::read_to_string(&dest_path), format!("Failed to read tags dest: {}", dest_path.display()))?;
             let mut all_entries: HashSet<String> = dest_content
                 .lines()
                 .map(|l| l.trim().to_string())
@@ -1653,14 +1653,14 @@ pub fn merge_tags(tags_dir: &str, source_dir: &str) -> Result<()> {
             if added > 0 {
                 let mut sorted: Vec<String> = all_entries.into_iter().collect();
                 sorted.sort();
-                fs::write(&dest_path, sorted.join("\n") + "\n")?;
+                ctx!(fs::write(&dest_path, sorted.join("\n") + "\n"), format!("Failed to write {}", dest_path.display()))?;
                 merged_count += 1;
                 println!("  Merged: {} ({} new entries)", filename.to_string_lossy(), added);
             }
         } else {
             let mut sorted: Vec<String> = source_entries.into_iter().collect();
             sorted.sort();
-            fs::write(&dest_path, sorted.join("\n") + "\n")?;
+            ctx!(fs::write(&dest_path, sorted.join("\n") + "\n"), format!("Failed to write {}", dest_path.display()))?;
             copied_count += 1;
             println!("  Copied: {}", filename.to_string_lossy());
         }

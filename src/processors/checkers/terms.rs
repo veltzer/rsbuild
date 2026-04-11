@@ -617,7 +617,7 @@ pub fn merge_terms(config: &TermsConfig, source_dir: &str) -> Result<()> {
         } else {
             let mut sorted: Vec<String> = source_terms.into_iter().collect();
             sorted.sort();
-            fs::write(&dest_path, sorted.join("\n") + "\n")?;
+            ctx!(fs::write(&dest_path, sorted.join("\n") + "\n"), format!("Failed to write {}", dest_path.display()))?;
             copied_count += 1;
             println!("  Copied to dest: {}", filename.to_string_lossy());
         }
@@ -633,7 +633,7 @@ pub fn merge_terms(config: &TermsConfig, source_dir: &str) -> Result<()> {
         let filename = path.file_name().unwrap();
         let src_path = src.join(filename);
         if !src_path.exists() {
-            fs::copy(&path, &src_path)?;
+            ctx!(fs::copy(&path, &src_path), format!("Failed to copy {} to {}", path.display(), src_path.display()))?;
             copied_count += 1;
             println!("  Copied to source: {}", filename.to_string_lossy());
         }
@@ -655,7 +655,7 @@ pub fn stats(config: &TermsConfig) -> Result<()> {
         let entry = entry?;
         if entry.path().extension().is_some_and(|e| e == "txt") {
             file_count += 1;
-            let content = fs::read_to_string(entry.path())?;
+            let content = ctx!(fs::read_to_string(entry.path()), format!("Failed to read {}", entry.path().display()))?;
             total_terms += content.lines().filter(|l| !l.trim().is_empty()).count();
         }
     }

@@ -448,18 +448,18 @@ pub(crate) struct ProcessorInstance {
 
 use crate::registry::{self, ProcessorPlugin};
 
-pub(crate) fn find_registry_entry(type_name: &str) -> Option<&'static dyn ProcessorPlugin> {
-    registry::all_plugins().find(|e| e.name() == type_name)
+pub(crate) fn find_registry_entry(type_name: &str) -> Option<&'static ProcessorPlugin> {
+    registry::all_plugins().find(|e| e.name == type_name)
 }
 
 /// Return all registered processor plugins.
-pub(crate) fn registry_entries() -> impl Iterator<Item = &'static dyn ProcessorPlugin> {
+pub(crate) fn registry_entries() -> impl Iterator<Item = &'static ProcessorPlugin> {
     registry::all_plugins()
 }
 
 /// Return all known builtin processor type names.
 pub(crate) fn all_type_names() -> Vec<&'static str> {
-    registry::all_plugins().map(|e| e.name()).collect()
+    registry::all_plugins().map(|e| e.name).collect()
 }
 
 /// Check if a name is a known builtin processor type.
@@ -470,7 +470,7 @@ pub(crate) fn is_builtin_type(name: &str) -> bool {
 /// Resolve scan and processor defaults for an instance config in-place.
 pub(crate) fn resolve_instance_defaults(type_name: &str, value: &mut toml::Value) -> anyhow::Result<()> {
     if let Some(entry) = find_registry_entry(type_name) {
-        return entry.resolve_defaults(value);
+        return (entry.resolve_defaults)(entry.name, value);
     }
     Ok(()) // Lua plugins handle their own defaults
 }
@@ -494,22 +494,22 @@ impl ProcessorConfig {
 
     /// Return known fields for a builtin processor type, or None for Lua plugins.
     pub(crate) fn known_fields_for(type_name: &str) -> Option<&'static [&'static str]> {
-        find_registry_entry(type_name).map(|e| e.known_fields())
+        find_registry_entry(type_name).map(|e| (e.known_fields)())
     }
 
     /// Return output-affecting fields for a builtin processor type, or None for Lua plugins.
     pub(crate) fn output_fields_for(type_name: &str) -> Option<&'static [&'static str]> {
-        find_registry_entry(type_name).map(|e| e.output_fields())
+        find_registry_entry(type_name).map(|e| (e.output_fields)())
     }
 
     /// Return must fields (required non-empty fields) for a builtin processor type, or None for Lua plugins.
     pub(crate) fn must_fields_for(type_name: &str) -> Option<&'static [&'static str]> {
-        find_registry_entry(type_name).map(|e| e.must_fields())
+        find_registry_entry(type_name).map(|e| (e.must_fields)())
     }
 
     /// Return (field, description) pairs for a builtin processor type, or None for Lua plugins.
     pub(crate) fn field_descriptions_for(type_name: &str) -> Option<&'static [(&'static str, &'static str)]> {
-        find_registry_entry(type_name).map(|e| e.field_descriptions())
+        find_registry_entry(type_name).map(|e| (e.field_descriptions)())
     }
 
     /// Return the default src_dirs for a builtin processor type, or None for Lua plugins.
@@ -519,7 +519,8 @@ impl ProcessorConfig {
 
     /// Return the default config for a processor type as pretty JSON, or None if unknown.
     pub(crate) fn defconfig_json(type_name: &str) -> Option<String> {
-        find_registry_entry(type_name)?.defconfig_json()
+        let entry = find_registry_entry(type_name)?;
+        (entry.defconfig_json)(entry.name)
     }
 }
 

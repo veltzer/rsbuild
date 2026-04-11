@@ -91,7 +91,7 @@ pub(crate) fn create_processor_for_instance(
     config_toml: &toml::Value,
 ) -> anyhow::Result<Option<Box<dyn ProductDiscovery>>> {
     if let Some(entry) = find_registry_entry(type_name) {
-        return entry.create(config_toml).map(Some);
+        return (entry.create)(entry.name, config_toml).map(Some);
     }
     Ok(None)
 }
@@ -100,8 +100,8 @@ pub(crate) fn create_processor_for_instance(
 pub(crate) fn create_all_default_processors() -> ProcessorMap {
     let mut processors: ProcessorMap = HashMap::new();
     for entry in registry_entries() {
-        let proc = entry.create_default();
-        processors.insert(entry.name().to_string(), proc);
+        let proc = (entry.create_default)(entry.name);
+        processors.insert(entry.name.to_string(), proc);
     }
     processors
 }

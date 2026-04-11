@@ -499,8 +499,26 @@ fn load_lua_config(lua_file: &Path) -> Result<Map<String, Value>> {
     Ok(result)
 }
 
+use crate::registry;
+
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    registry::typed_create(name, toml, |cfg| Box::new(TeraProcessor::new(cfg)))
+}
+fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    registry::typed_create_default(name, |cfg| Box::new(TeraProcessor::new(cfg)))
+}
+
 inventory::submit! {
-    &crate::registry::typed_plugin::<crate::config::TeraConfig>(
-        "tera", |cfg| Box::new(TeraProcessor::new(cfg))
-    ) as &dyn crate::registry::ProcessorPlugin
+    registry::ProcessorPlugin {
+        name: "tera",
+        processor_type: crate::processors::ProcessorType::Generator,
+        create: plugin_create,
+        create_default: plugin_create_default,
+        resolve_defaults: registry::typed_resolve_defaults::<crate::config::TeraConfig>,
+        defconfig_json: registry::typed_defconfig_json::<crate::config::TeraConfig>,
+        known_fields: registry::typed_known_fields::<crate::config::TeraConfig>,
+        output_fields: registry::typed_output_fields::<crate::config::TeraConfig>,
+        must_fields: registry::typed_must_fields::<crate::config::TeraConfig>,
+        field_descriptions: registry::typed_field_descriptions::<crate::config::TeraConfig>,
+    }
 }

@@ -90,8 +90,23 @@ impl crate::processors::ProductDiscovery for AsciiProcessor {
     }
 }
 
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(AsciiProcessor::new(cfg)))
+}
+fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(AsciiProcessor::new(cfg)))
+}
 inventory::submit! {
-    &crate::registry::typed_plugin::<crate::config::AsciiConfig>(
-        "ascii", |cfg| Box::new(AsciiProcessor::new(cfg))
-    ) as &dyn crate::registry::ProcessorPlugin
+    crate::registry::ProcessorPlugin {
+        name: "ascii",
+        processor_type: crate::processors::ProcessorType::Checker,
+        create: plugin_create,
+        create_default: plugin_create_default,
+        resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::AsciiConfig>,
+        defconfig_json: crate::registry::typed_defconfig_json::<crate::config::AsciiConfig>,
+        known_fields: crate::registry::typed_known_fields::<crate::config::AsciiConfig>,
+        output_fields: crate::registry::typed_output_fields::<crate::config::AsciiConfig>,
+        must_fields: crate::registry::typed_must_fields::<crate::config::AsciiConfig>,
+        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::AsciiConfig>,
+    }
 }

@@ -117,8 +117,23 @@ impl ProductDiscovery for GemProcessor {
     }
 }
 
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(GemProcessor::new(cfg)))
+}
+fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(GemProcessor::new(cfg)))
+}
 inventory::submit! {
-    &crate::registry::typed_plugin::<crate::config::GemConfig>(
-        "gem", |cfg| Box::new(GemProcessor::new(cfg))
-    ) as &dyn crate::registry::ProcessorPlugin
+    crate::registry::ProcessorPlugin {
+        name: "gem",
+        processor_type: crate::processors::ProcessorType::Creator,
+        create: plugin_create,
+        create_default: plugin_create_default,
+        resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::GemConfig>,
+        defconfig_json: crate::registry::typed_defconfig_json::<crate::config::GemConfig>,
+        known_fields: crate::registry::typed_known_fields::<crate::config::GemConfig>,
+        output_fields: crate::registry::typed_output_fields::<crate::config::GemConfig>,
+        must_fields: crate::registry::typed_must_fields::<crate::config::GemConfig>,
+        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::GemConfig>,
+    }
 }

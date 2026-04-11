@@ -12,7 +12,6 @@ pub(crate) mod simple;
 pub mod tags;
 mod tera;
 
-pub use simple::SimpleGenerator;
 
 use std::path::{Path, PathBuf};
 use anyhow::Result;

@@ -7,6 +7,7 @@ use crate::processors::{ProductDiscovery, ProcessorType};
 
 /// A processor plugin. One struct for all processor types.
 /// Each processor file submits one of these via `inventory::submit!`.
+#[allow(dead_code)]
 pub struct ProcessorPlugin {
     pub name: &'static str,
     pub processor_type: ProcessorType,

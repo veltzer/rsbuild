@@ -125,8 +125,23 @@ impl crate::processors::ProductDiscovery for JsonSchemaProcessor {
 
 }
 
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(JsonSchemaProcessor::new(cfg)))
+}
+fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(JsonSchemaProcessor::new(cfg)))
+}
 inventory::submit! {
-    &crate::registry::typed_plugin::<crate::config::JsonSchemaConfig>(
-        "json_schema", |cfg| Box::new(JsonSchemaProcessor::new(cfg))
-    ) as &dyn crate::registry::ProcessorPlugin
+    crate::registry::ProcessorPlugin {
+        name: "json_schema",
+        processor_type: crate::processors::ProcessorType::Checker,
+        create: plugin_create,
+        create_default: plugin_create_default,
+        resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::JsonSchemaConfig>,
+        defconfig_json: crate::registry::typed_defconfig_json::<crate::config::JsonSchemaConfig>,
+        known_fields: crate::registry::typed_known_fields::<crate::config::JsonSchemaConfig>,
+        output_fields: crate::registry::typed_output_fields::<crate::config::JsonSchemaConfig>,
+        must_fields: crate::registry::typed_must_fields::<crate::config::JsonSchemaConfig>,
+        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::JsonSchemaConfig>,
+    }
 }

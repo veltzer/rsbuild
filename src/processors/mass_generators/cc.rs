@@ -347,8 +347,23 @@ impl ProductDiscovery for CcProcessor {
     }
 }
 
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(CcProcessor::new(cfg)))
+}
+fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(CcProcessor::new(cfg)))
+}
 inventory::submit! {
-    &crate::registry::typed_plugin::<crate::config::CcConfig>(
-        "cc", |cfg| Box::new(CcProcessor::new(cfg))
-    ) as &dyn crate::registry::ProcessorPlugin
+    crate::registry::ProcessorPlugin {
+        name: "cc",
+        processor_type: crate::processors::ProcessorType::Creator,
+        create: plugin_create,
+        create_default: plugin_create_default,
+        resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::CcConfig>,
+        defconfig_json: crate::registry::typed_defconfig_json::<crate::config::CcConfig>,
+        known_fields: crate::registry::typed_known_fields::<crate::config::CcConfig>,
+        output_fields: crate::registry::typed_output_fields::<crate::config::CcConfig>,
+        must_fields: crate::registry::typed_must_fields::<crate::config::CcConfig>,
+        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::CcConfig>,
+    }
 }

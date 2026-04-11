@@ -228,8 +228,23 @@ impl ProductDiscovery for LinuxModuleProcessor {
 
 }
 
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(LinuxModuleProcessor::new(cfg)))
+}
+fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(LinuxModuleProcessor::new(cfg)))
+}
 inventory::submit! {
-    &crate::registry::typed_plugin::<crate::config::LinuxModuleConfig>(
-        "linux_module", |cfg| Box::new(LinuxModuleProcessor::new(cfg))
-    ) as &dyn crate::registry::ProcessorPlugin
+    crate::registry::ProcessorPlugin {
+        name: "linux_module",
+        processor_type: crate::processors::ProcessorType::Creator,
+        create: plugin_create,
+        create_default: plugin_create_default,
+        resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::LinuxModuleConfig>,
+        defconfig_json: crate::registry::typed_defconfig_json::<crate::config::LinuxModuleConfig>,
+        known_fields: crate::registry::typed_known_fields::<crate::config::LinuxModuleConfig>,
+        output_fields: crate::registry::typed_output_fields::<crate::config::LinuxModuleConfig>,
+        must_fields: crate::registry::typed_must_fields::<crate::config::LinuxModuleConfig>,
+        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::LinuxModuleConfig>,
+    }
 }

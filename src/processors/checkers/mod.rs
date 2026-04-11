@@ -20,4 +20,3 @@ mod iyamlschema;
 mod json_schema;
 pub(crate) mod terms;
 
-pub use simple::SimpleChecker;

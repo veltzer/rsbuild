@@ -765,9 +765,6 @@ where
     }
 }
 
-// Re-export types used by the registry and external code
-pub use checkers::SimpleChecker;
-pub use generators::SimpleGenerator;
 pub(crate) use checkers::terms;
 pub(crate) use generators::tags as tags_cmd;
 pub use lua_processor::LuaProcessor;

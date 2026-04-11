@@ -150,8 +150,23 @@ impl ProductDiscovery for PdflatexProcessor {
 
 }
 
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(PdflatexProcessor::new(cfg)))
+}
+fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(PdflatexProcessor::new(cfg)))
+}
 inventory::submit! {
-    &crate::registry::typed_plugin::<crate::config::PdflatexConfig>(
-        "pdflatex", |cfg| Box::new(PdflatexProcessor::new(cfg))
-    ) as &dyn crate::registry::ProcessorPlugin
+    crate::registry::ProcessorPlugin {
+        name: "pdflatex",
+        processor_type: crate::processors::ProcessorType::Generator,
+        create: plugin_create,
+        create_default: plugin_create_default,
+        resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::PdflatexConfig>,
+        defconfig_json: crate::registry::typed_defconfig_json::<crate::config::PdflatexConfig>,
+        known_fields: crate::registry::typed_known_fields::<crate::config::PdflatexConfig>,
+        output_fields: crate::registry::typed_output_fields::<crate::config::PdflatexConfig>,
+        must_fields: crate::registry::typed_must_fields::<crate::config::PdflatexConfig>,
+        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::PdflatexConfig>,
+    }
 }

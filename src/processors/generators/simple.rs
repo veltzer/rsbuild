@@ -367,19 +367,118 @@ fn execute_yaml2json(_config: &StandardConfig, product: &Product) -> Result<()> 
     Ok(())
 }
 
-// --- Plugin registrations (auto-discovered via inventory) ---
 
-inventory::submit! { &crate::registry::simple_generator_plugin("mermaid", SimpleGeneratorParams { description: "Convert Mermaid diagrams to PNG/SVG/PDF", extra_tools: &["node"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_mermaid, is_native: false }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("drawio", SimpleGeneratorParams { description: "Convert Draw.io diagrams to PNG/SVG/PDF", extra_tools: &[], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_drawio, is_native: false }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("sass", SimpleGeneratorParams { description: "Compile SCSS/SASS files to CSS", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("css"), execute_fn: execute_sass, is_native: false }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("protobuf", SimpleGeneratorParams { description: "Compile Protocol Buffer files", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("pb.cc"), execute_fn: execute_protobuf, is_native: false }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("chromium", SimpleGeneratorParams { description: "Convert HTML to PDF using headless Chromium", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("pdf"), execute_fn: execute_chromium, is_native: false }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("markdown2html", SimpleGeneratorParams { description: "Convert Markdown to HTML using markdown", extra_tools: &["perl"], discover_mode: DiscoverMode::SingleFormat("html"), execute_fn: execute_markdown2html, is_native: false }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("libreoffice", SimpleGeneratorParams { description: "Convert LibreOffice documents to PDF/PPTX", extra_tools: &["flock"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_libreoffice, is_native: false }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("marp", SimpleGeneratorParams { description: "Convert Marp slides to PDF/PPTX/HTML", extra_tools: &["node"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_marp, is_native: false }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("pandoc", SimpleGeneratorParams { description: "Convert documents using pandoc", extra_tools: &[], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_pandoc, is_native: false }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("a2x", SimpleGeneratorParams { description: "Convert AsciiDoc to PDF using a2x", extra_tools: &["python3"], discover_mode: DiscoverMode::SingleFormat("pdf"), execute_fn: execute_a2x, is_native: false }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("objdump", SimpleGeneratorParams { description: "Disassemble binaries using objdump", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("dis"), execute_fn: execute_objdump, is_native: false }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("imarkdown2html", SimpleGeneratorParams { description: "Convert Markdown to HTML (in-process)", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("html"), execute_fn: execute_imarkdown2html, is_native: true }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("isass", SimpleGeneratorParams { description: "Compile SCSS/SASS files to CSS (in-process)", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("css"), execute_fn: execute_isass, is_native: true }) as &dyn crate::registry::ProcessorPlugin }
-inventory::submit! { &crate::registry::simple_generator_plugin("yaml2json", SimpleGeneratorParams { description: "Convert YAML to JSON (in-process)", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("json"), execute_fn: execute_yaml2json, is_native: true }) as &dyn crate::registry::ProcessorPlugin }
+// --- Plugin registrations ---
+
+fn create_mermaid(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &["node"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_mermaid, is_native: false })))
+}
+fn create_mermaid_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &["node"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_mermaid, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "mermaid", processor_type: crate::processors::ProcessorType::Generator, create: create_mermaid, create_default: create_mermaid_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_drawio(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_drawio, is_native: false })))
+}
+fn create_drawio_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_drawio, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "drawio", processor_type: crate::processors::ProcessorType::Generator, create: create_drawio, create_default: create_drawio_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_sass(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("css"), execute_fn: execute_sass, is_native: false })))
+}
+fn create_sass_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("css"), execute_fn: execute_sass, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "sass", processor_type: crate::processors::ProcessorType::Generator, create: create_sass, create_default: create_sass_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_protobuf(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("pb.cc"), execute_fn: execute_protobuf, is_native: false })))
+}
+fn create_protobuf_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("pb.cc"), execute_fn: execute_protobuf, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "protobuf", processor_type: crate::processors::ProcessorType::Generator, create: create_protobuf, create_default: create_protobuf_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_chromium(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("pdf"), execute_fn: execute_chromium, is_native: false })))
+}
+fn create_chromium_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("pdf"), execute_fn: execute_chromium, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "chromium", processor_type: crate::processors::ProcessorType::Generator, create: create_chromium, create_default: create_chromium_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_markdown2html(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &["perl"], discover_mode: DiscoverMode::SingleFormat("html"), execute_fn: execute_markdown2html, is_native: false })))
+}
+fn create_markdown2html_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &["perl"], discover_mode: DiscoverMode::SingleFormat("html"), execute_fn: execute_markdown2html, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "markdown2html", processor_type: crate::processors::ProcessorType::Generator, create: create_markdown2html, create_default: create_markdown2html_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_libreoffice(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &["flock"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_libreoffice, is_native: false })))
+}
+fn create_libreoffice_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &["flock"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_libreoffice, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "libreoffice", processor_type: crate::processors::ProcessorType::Generator, create: create_libreoffice, create_default: create_libreoffice_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_marp(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &["node"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_marp, is_native: false })))
+}
+fn create_marp_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &["node"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_marp, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "marp", processor_type: crate::processors::ProcessorType::Generator, create: create_marp, create_default: create_marp_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_pandoc(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_pandoc, is_native: false })))
+}
+fn create_pandoc_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_pandoc, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "pandoc", processor_type: crate::processors::ProcessorType::Generator, create: create_pandoc, create_default: create_pandoc_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_a2x(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &["python3"], discover_mode: DiscoverMode::SingleFormat("pdf"), execute_fn: execute_a2x, is_native: false })))
+}
+fn create_a2x_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &["python3"], discover_mode: DiscoverMode::SingleFormat("pdf"), execute_fn: execute_a2x, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "a2x", processor_type: crate::processors::ProcessorType::Generator, create: create_a2x, create_default: create_a2x_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_objdump(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("dis"), execute_fn: execute_objdump, is_native: false })))
+}
+fn create_objdump_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("dis"), execute_fn: execute_objdump, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "objdump", processor_type: crate::processors::ProcessorType::Generator, create: create_objdump, create_default: create_objdump_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_imarkdown2html(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("html"), execute_fn: execute_imarkdown2html, is_native: true })))
+}
+fn create_imarkdown2html_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("html"), execute_fn: execute_imarkdown2html, is_native: true })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "imarkdown2html", processor_type: crate::processors::ProcessorType::Generator, create: create_imarkdown2html, create_default: create_imarkdown2html_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_isass(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("css"), execute_fn: execute_isass, is_native: true })))
+}
+fn create_isass_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("css"), execute_fn: execute_isass, is_native: true })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "isass", processor_type: crate::processors::ProcessorType::Generator, create: create_isass, create_default: create_isass_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+
+fn create_yaml2json(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("json"), execute_fn: execute_yaml2json, is_native: true })))
+}
+fn create_yaml2json_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("json"), execute_fn: execute_yaml2json, is_native: true })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin { name: "yaml2json", processor_type: crate::processors::ProcessorType::Generator, create: create_yaml2json, create_default: create_yaml2json_default, resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::StandardConfig>, defconfig_json: crate::registry::typed_defconfig_json::<crate::config::StandardConfig>, known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>, output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>, must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>, field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig> } }
+

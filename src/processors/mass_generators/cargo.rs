@@ -132,8 +132,23 @@ impl ProductDiscovery for CargoProcessor {
     }
 }
 
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+    crate::registry::typed_create(name, toml, |cfg| Box::new(CargoProcessor::new(cfg)))
+}
+fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
+    crate::registry::typed_create_default(name, |cfg| Box::new(CargoProcessor::new(cfg)))
+}
 inventory::submit! {
-    &crate::registry::typed_plugin::<crate::config::CargoConfig>(
-        "cargo", |cfg| Box::new(CargoProcessor::new(cfg))
-    ) as &dyn crate::registry::ProcessorPlugin
+    crate::registry::ProcessorPlugin {
+        name: "cargo",
+        processor_type: crate::processors::ProcessorType::Creator,
+        create: plugin_create,
+        create_default: plugin_create_default,
+        resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::CargoConfig>,
+        defconfig_json: crate::registry::typed_defconfig_json::<crate::config::CargoConfig>,
+        known_fields: crate::registry::typed_known_fields::<crate::config::CargoConfig>,
+        output_fields: crate::registry::typed_output_fields::<crate::config::CargoConfig>,
+        must_fields: crate::registry::typed_must_fields::<crate::config::CargoConfig>,
+        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::CargoConfig>,
+    }
 }

@@ -1676,7 +1676,7 @@ pub fn merge_tags(tags_dir: &str, source_dir: &str) -> Result<()> {
         let filename = path.file_name().unwrap();
         let src_path = src.join(filename);
         if !src_path.exists() {
-            fs::copy(&path, &src_path)?;
+            ctx!(fs::copy(&path, &src_path), format!("Failed to copy {} to {}", path.display(), src_path.display()))?;
             copied_count += 1;
             println!("  Copied to source: {}", filename.to_string_lossy());
         }

@@ -22,4 +22,6 @@ python files dependency analysis:
 - want rsconstruct processors config [TAB] to complete inames
 - want rsconstruct processors defconfig [TAB] to complete pnames
 
-  - do a command "rsconstruct errors" which prints name of errors and their error code (BUILD_ERROR=1 etc)
+- do a command "rsconstruct errors" which prints name of errors and their error code (BUILD_ERROR=1 etc)
+
+- do we have a test that checks that we get an error if we have two processors in the same tmpl file without differentiating between then with a different name.

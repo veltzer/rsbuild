@@ -22,7 +22,7 @@ fn render_template(item: &TemplateItem) -> Result<()> {
     crate::processors::ensure_output_dir(&item.output_path)?;
 
     // Read template content
-    let template_content = fs::read_to_string(&item.source_path)?;
+    let template_content = ctx!(fs::read_to_string(&item.source_path), format!("Failed to read template: {}", item.source_path.display()))?;
 
     // Create a new Tera instance for this template
     let mut tera = Tera::default();
@@ -68,7 +68,7 @@ fn render_template(item: &TemplateItem) -> Result<()> {
         .with_context(|| format!("Failed to render template: {}", item.source_path.display()))?;
 
     // Write to output file
-    fs::write(&item.output_path, rendered)?;
+    ctx!(fs::write(&item.output_path, rendered), format!("Failed to write output: {}", item.output_path.display()))?;
 
     Ok(())
 }

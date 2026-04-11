@@ -438,9 +438,9 @@ impl Builder {
                 }
             };
 
-            let desc_key = crate::object_store::ObjectStore::descriptor_key(&cache_key, &input_checksum);
+            let desc_key = product.descriptor_key(&input_checksum);
             let (status_idx, reason) = if opts.explain {
-                let action = self.object_store.explain_descriptor(&desc_key, opts.force);
+                let action = self.object_store.explain_descriptor(&desc_key, &product.outputs, opts.force);
                 let reason = format!(" ({})", action);
                 let idx = match action {
                     ExplainAction::Skip => 0,
@@ -449,7 +449,7 @@ impl Builder {
                     ExplainAction::Rebuild(_) => 2,
                 };
                 (idx, reason)
-            } else if !opts.force && !self.object_store.needs_rebuild_descriptor(&desc_key) {
+            } else if !opts.force && !self.object_store.needs_rebuild_descriptor(&desc_key, &product.outputs) {
                 (0, String::new())
             } else if !opts.force && self.object_store.can_restore_descriptor(&desc_key) {
                 (1, String::new())

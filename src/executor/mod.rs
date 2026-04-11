@@ -45,7 +45,6 @@ struct WorkItem {
 struct HandlerContext<'b> {
     product: &'b crate::graph::Product,
     id: usize,
-    cache_key: String,
     input_checksum: &'b str,
     proc_name: &'b str,
     keep_going: bool,
@@ -102,7 +101,6 @@ pub fn classify_products(
 
     for &id in order {
         let product = graph.get_product(id).expect(errors::INVALID_PRODUCT_ID);
-        let cache_key = product.cache_key();
 
         // If any dependency will change, this product must rebuild
         let dep_changed = graph.get_dependencies(id).iter().any(|d| will_change.contains(d));
@@ -116,8 +114,8 @@ pub fn classify_products(
             }
         };
 
-        let desc_key = crate::object_store::ObjectStore::descriptor_key(&cache_key, &input_checksum);
-        let needs_rebuild = object_store.needs_rebuild_descriptor(&desc_key);
+        let desc_key = product.descriptor_key(&input_checksum);
+        let needs_rebuild = object_store.needs_rebuild_descriptor(&desc_key, &product.outputs);
         let can_restore = object_store.can_restore_descriptor(&desc_key);
 
         if !force && !dep_changed && !needs_rebuild {

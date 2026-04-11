@@ -272,11 +272,10 @@ impl<'a> Executor<'a> {
         emit_fail_event: bool,
     ) -> PreCheckResult {
         let product = lctx.graph.get_product(item.product_id).expect(errors::INVALID_PRODUCT_ID);
-        let cache_key = product.cache_key();
 
         if self.explain {
-            let desc_key = crate::object_store::ObjectStore::descriptor_key(&cache_key, &item.input_checksum);
-            let action = lctx.object_store.explain_descriptor(&desc_key, lctx.force);
+            let desc_key = product.descriptor_key(&item.input_checksum);
+            let action = lctx.object_store.explain_descriptor(&desc_key, &product.outputs, lctx.force);
             self.print_explain(product, &action);
         }
 
@@ -286,7 +285,7 @@ impl<'a> Executor<'a> {
         }
 
         let ctx = HandlerContext {
-            product, id: item.product_id, cache_key, input_checksum: &item.input_checksum,
+            product, id: item.product_id, input_checksum: &item.input_checksum,
             proc_name, keep_going: lctx.keep_going, shared: lctx.shared, pb: lctx.pb,
         };
         match self.handle_restore(&ctx, lctx.object_store, lctx.force, emit_fail_event) {
@@ -387,10 +386,9 @@ impl<'a> Executor<'a> {
             // Process per-product results
             for (item, result) in chunk.iter().zip(results) {
                 let product = lctx.graph.get_product(item.product_id).expect(errors::INVALID_PRODUCT_ID);
-                let cache_key = product.cache_key();
 
                 let ctx = HandlerContext {
-                    product, id: item.product_id, cache_key, input_checksum: &item.input_checksum,
+                    product, id: item.product_id, input_checksum: &item.input_checksum,
                     proc_name, keep_going: lctx.keep_going, shared: lctx.shared, pb: lctx.pb,
                 };
                 match result {
@@ -452,9 +450,8 @@ impl<'a> Executor<'a> {
             }
 
             if let Some(processor) = self.processors.get(&product.processor) {
-                let cache_key = product.cache_key();
                 let ctx = HandlerContext {
-                    product, id: item.product_id, cache_key, input_checksum: &item.input_checksum,
+                    product, id: item.product_id, input_checksum: &item.input_checksum,
                     proc_name: &product.processor, keep_going: lctx.keep_going,
                     shared: lctx.shared, pb: lctx.pb,
                 };
@@ -697,8 +694,8 @@ impl<'a> Executor<'a> {
                     }
                 };
 
-                let desc_key = crate::object_store::ObjectStore::descriptor_key(&cache_key, &input_checksum);
-                let needs_rebuild = force || object_store.needs_rebuild_descriptor(&desc_key);
+                let desc_key = product.descriptor_key(&input_checksum);
+                let needs_rebuild = force || object_store.needs_rebuild_descriptor(&desc_key, &product.outputs);
                 work_items.push(WorkItem { product_id: id, input_checksum, needs_rebuild });
             }
         }

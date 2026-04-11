@@ -145,8 +145,8 @@ impl ObjectStore {
 
                 let outputs = match desc {
                     CacheDescriptor::Marker => Vec::new(),
-                    CacheDescriptor::Blob { checksum, path, .. } => {
-                        vec![CacheListOutput { path, exists: self.has_object(&checksum) }]
+                    CacheDescriptor::Blob { ref checksum, .. } => {
+                        vec![CacheListOutput { path: "(blob)".to_string(), exists: self.has_object(checksum) }]
                     }
                     CacheDescriptor::Tree { entries } => {
                         entries.iter().map(|e| CacheListOutput {

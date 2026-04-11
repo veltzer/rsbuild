@@ -225,7 +225,7 @@ fn parallel_build_with_j_flag() {
     for name in &["alpha", "beta", "gamma", "delta"] {
         fs::write(
             project_path.join(format!("tera.templates/{}.txt.tera", name)),
-            "hello"
+            format!("content of {}", name),
         ).unwrap();
     }
 
@@ -270,7 +270,7 @@ fn parallel_builds_all_independent_products() {
     for i in 0..8 {
         fs::write(
             project_path.join(format!("tera.templates/task_{:02}.txt.tera", i)),
-            "hello"
+            format!("content of task {}", i),
         ).unwrap();
     }
     fs::write(
@@ -334,11 +334,11 @@ fn deterministic_build_order() {
         let temp_dir = setup_test_project();
         let project_path = temp_dir.path();
 
-        // Create several template files with distinct names
+        // Create several template files with distinct names and content
         for name in &["zebra", "alpha", "mango", "banana", "cherry"] {
             fs::write(
                 project_path.join(format!("tera.templates/{}.txt.tera", name)),
-                "hello"
+                format!("content of {}", name),
             ).unwrap();
         }
 

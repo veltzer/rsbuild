@@ -21,9 +21,17 @@ A blob is a file's raw content, addressed by its SHA-256 content hash. Blobs are
 
 Blobs are stored content-addressed — two products producing identical output share the same blob. This enables deduplication and hardlink-based restoration.
 
+### Why blobs don't store output paths
+
+A blob is pure content — it has no knowledge of where it will be restored. This is critical for two reasons:
+
+1. **Rename survival.** If you rename `foo.md` to `bar.md` without changing its content, the cache key (which is content-addressed) is the same. The blob is reused and restored to the new output path (`bar.txt` instead of `foo.txt`). If the blob stored its output path, this wouldn't work.
+
+2. **Deduplication across trees.** Multiple tree entries can point to the same blob under different paths. For example, if two files in a creator's output have identical content, they share the same blob object in the store. The tree records the path; the blob just holds the content.
+
 ### Trees
 
-A tree is a serialized list of `(path, mode, blob_checksum)` entries describing a set of output files. Trees are stored in the object store, addressed by the cache key (not by content hash). A tree maps relative file paths to content-addressed blobs.
+A tree is a serialized list of `(path, mode, blob_checksum)` entries describing a set of output files. Trees are stored in the object store, addressed by the cache key (not by content hash). A tree maps relative file paths to content-addressed blobs. Multiple trees can point to the same blobs — deduplication happens at the blob level.
 
 ### Markers
 
@@ -34,10 +42,12 @@ A marker is a zero-byte object indicating that a check passed. Markers are store
 A cache entry is a small descriptor stored in the object store at the path derived from the cache key. It contains:
 
 ```json
-{"type": "blob", "checksum": "abc123..."}
+{"type": "blob", "checksum": "abc123...", "mode": 493}
 ```
 
-or:
+Note: the blob descriptor has no path — the product knows where its output goes.
+
+Or:
 
 ```json
 {"type": "tree", "entries": [{"path": "dir/file.txt", "checksum": "def456...", "mode": 493}]}

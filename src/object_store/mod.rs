@@ -132,7 +132,6 @@ enum CacheDescriptor {
     #[serde(rename = "blob")]
     Blob {
         checksum: String,
-        path: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         mode: Option<u32>,
     },
@@ -255,13 +254,6 @@ impl ObjectStore {
 
     // --- Descriptor-based cache (new system) ---
 
-    /// Compute a content-addressed descriptor key from the structural cache key
-    /// and the input content checksum. This key changes when either the product
-    /// structure or the input content changes.
-    pub fn descriptor_key(cache_key: &str, input_checksum: &str) -> String {
-        Self::calculate_checksum_bytes(format!("{}:{}", cache_key, input_checksum).as_bytes())
-    }
-
     /// Path for a cache descriptor, sharded like objects.
     fn descriptor_path(&self, descriptor_key: &str) -> PathBuf {
         let (prefix, rest) = descriptor_key.split_at(CHECKSUM_PREFIX_LEN.min(descriptor_key.len()));
@@ -323,7 +315,6 @@ impl ObjectStore {
 
         self.store_descriptor(cache_key, &CacheDescriptor::Blob {
             checksum,
-            path: Self::path_string(output_path),
             mode,
         })?;
 
@@ -396,15 +387,20 @@ impl ObjectStore {
     }
 
     /// Restore outputs from a cache descriptor. Returns Ok(true) if restored.
-    pub fn restore_from_descriptor(&self, cache_key: &str) -> Result<bool> {
+    /// For blob descriptors, `output_paths` provides the target path (the descriptor
+    /// does not store it — the product knows where its output goes).
+    pub fn restore_from_descriptor(&self, cache_key: &str, output_paths: &[PathBuf]) -> Result<bool> {
         let descriptor = match self.get_descriptor(cache_key) {
             Some(d) => d,
             None => return Ok(false),
         };
         match descriptor {
             CacheDescriptor::Marker => Ok(true),
-            CacheDescriptor::Blob { checksum, path, mode } => {
-                let output_path = Path::new(&path);
+            CacheDescriptor::Blob { checksum, mode } => {
+                let output_path = match output_paths.first() {
+                    Some(p) => p,
+                    None => return Ok(true), // no output to restore
+                };
                 if output_path.exists() {
                     return Ok(true);
                 }
@@ -451,14 +447,17 @@ impl ObjectStore {
 
     /// Check if a product needs rebuilding based on its descriptor.
     /// Returns true if no descriptor exists or any output is missing.
-    pub fn needs_rebuild_descriptor(&self, cache_key: &str) -> bool {
+    /// For blob descriptors, `output_paths` provides the paths to check.
+    pub fn needs_rebuild_descriptor(&self, cache_key: &str, output_paths: &[PathBuf]) -> bool {
         let descriptor = match self.get_descriptor(cache_key) {
             Some(d) => d,
             None => return true,
         };
         match descriptor {
             CacheDescriptor::Marker => false,
-            CacheDescriptor::Blob { path, .. } => !Path::new(&path).exists(),
+            CacheDescriptor::Blob { .. } => {
+                output_paths.iter().any(|p| !p.exists())
+            }
             CacheDescriptor::Tree { entries } => {
                 entries.iter().any(|e| {
                     let p = Path::new(&e.path);
@@ -484,7 +483,8 @@ impl ObjectStore {
     }
 
     /// Explain what action will be taken based on descriptor state.
-    pub fn explain_descriptor(&self, descriptor_key: &str, force: bool) -> ExplainAction {
+    /// For blob descriptors, `output_paths` provides the paths to check.
+    pub fn explain_descriptor(&self, descriptor_key: &str, output_paths: &[PathBuf], force: bool) -> ExplainAction {
         if force {
             return ExplainAction::Rebuild(RebuildReason::Force);
         }
@@ -494,14 +494,18 @@ impl ObjectStore {
         };
         match descriptor {
             CacheDescriptor::Marker => ExplainAction::Skip,
-            CacheDescriptor::Blob { checksum, path, .. } => {
-                if Path::new(&path).exists() {
-                    ExplainAction::Skip
-                } else if self.has_object(&checksum) {
-                    ExplainAction::Restore(RebuildReason::OutputMissing(path))
-                } else {
-                    ExplainAction::Rebuild(RebuildReason::OutputMissing(path))
+            CacheDescriptor::Blob { checksum, .. } => {
+                for p in output_paths {
+                    if !p.exists() {
+                        let display = p.display().to_string();
+                        if self.has_object(&checksum) {
+                            return ExplainAction::Restore(RebuildReason::OutputMissing(display));
+                        } else {
+                            return ExplainAction::Rebuild(RebuildReason::OutputMissing(display));
+                        }
+                    }
                 }
+                ExplainAction::Skip
             }
             CacheDescriptor::Tree { entries } => {
                 for entry in &entries {

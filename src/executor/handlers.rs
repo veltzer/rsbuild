@@ -89,8 +89,8 @@ impl<'a> Executor<'a> {
         if force {
             return RestoreOutcome::NotRestorable;
         }
-        let desc_key = crate::object_store::ObjectStore::descriptor_key(&ctx.cache_key, ctx.input_checksum);
-        let restore_result = object_store.restore_from_descriptor(&desc_key);
+        let desc_key = ctx.product.descriptor_key(ctx.input_checksum);
+        let restore_result = object_store.restore_from_descriptor(&desc_key, &ctx.product.outputs);
         match restore_result {
             Ok(true) => {
                 if self.verbose {
@@ -159,7 +159,7 @@ impl<'a> Executor<'a> {
         object_store: &crate::object_store::ObjectStore,
         duration: Option<std::time::Duration>,
     ) -> bool {
-        let desc_key = crate::object_store::ObjectStore::descriptor_key(&ctx.cache_key, ctx.input_checksum);
+        let desc_key = ctx.product.descriptor_key(ctx.input_checksum);
         let cache_result = if ctx.product.has_output_dirs() {
             object_store.store_tree_descriptor(&desc_key, &ctx.product.output_dirs, &ctx.product.outputs)
         } else if ctx.product.outputs.is_empty() {

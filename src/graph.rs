@@ -72,6 +72,26 @@ impl Product {
         !self.output_dirs.is_empty()
     }
 
+    /// Compute a content-addressed descriptor key from processor identity and input content.
+    /// This key does NOT include file paths — renaming a file with identical content
+    /// produces the same key. The blob in the cache is path-free; the product knows
+    /// where to restore it.
+    pub fn descriptor_key(&self, input_checksum: &str) -> String {
+        let mut parts = String::new();
+        parts.push_str(&self.processor);
+        if let Some(ref hash) = self.config_hash {
+            parts.push(':');
+            parts.push_str(hash);
+        }
+        if let Some(ref variant) = self.variant {
+            parts.push(':');
+            parts.push_str(variant);
+        }
+        parts.push(':');
+        parts.push_str(input_checksum);
+        crate::checksum::bytes_checksum(parts.as_bytes())
+    }
+
     /// Format a path according to the given format
     fn format_path(path: &Path, format: PathFormat) -> String {
         match format {

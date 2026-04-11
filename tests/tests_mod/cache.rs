@@ -211,3 +211,43 @@ fn cache_clear_removes_everything() {
     assert!(stdout.contains("Processing:"), "Should do a full rebuild after cache clear: {}", stdout);
     assert!(!stdout.contains("Restored from cache:"), "Should not restore after cache clear: {}", stdout);
 }
+
+#[test]
+fn cache_survives_input_rename() {
+    let temp_dir = setup_test_project();
+    let project_path = temp_dir.path();
+
+    // Create a template and build it
+    fs::write(
+        project_path.join("tera.templates/original.txt.tera"),
+        "rename test content"
+    ).unwrap();
+
+    let build1 = run_rsconstruct(project_path, &["build"]);
+    assert!(build1.status.success());
+    assert!(project_path.join("original.txt").exists());
+
+    // Remove the output and rename the input (same content, different name)
+    fs::remove_file(project_path.join("original.txt")).unwrap();
+    fs::rename(
+        project_path.join("tera.templates/original.txt.tera"),
+        project_path.join("tera.templates/renamed.txt.tera"),
+    ).unwrap();
+
+    // Build again — the content is identical, so the cache should hit
+    // and restore the output (under the new name) from cache
+    let build2 = run_rsconstruct_with_env(project_path, &["build", "--verbose"], &[("NO_COLOR", "1")]);
+    assert!(build2.status.success(),
+        "Build after rename should succeed: stderr={}",
+        String::from_utf8_lossy(&build2.stderr));
+
+    let stdout = String::from_utf8_lossy(&build2.stdout);
+    assert!(stdout.contains("Restored from cache:"),
+        "Renamed input with same content should restore from cache: {}", stdout);
+    assert!(project_path.join("renamed.txt").exists(),
+        "Output under new name should exist after restore");
+
+    // Verify content is correct
+    let content = fs::read_to_string(project_path.join("renamed.txt")).unwrap();
+    assert_eq!(content.trim(), "rename test content");
+}

@@ -6,7 +6,7 @@ use crate::config::GeneratorConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{
-    ProcessorBase, ProductDiscovery, scan_root_valid,
+    ProcessorBase, Processor, scan_root_valid,
     run_command, check_command_output, execute_generator_batch,
     config_file_inputs,
 };
@@ -56,7 +56,7 @@ impl GeneratorProcessor {
     }
 }
 
-impl ProductDiscovery for GeneratorProcessor {
+impl Processor for GeneratorProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
         &self.config.scan
     }
@@ -138,18 +138,14 @@ impl ProductDiscovery for GeneratorProcessor {
     }
 }
 
-fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
     crate::registry::typed_create(name, toml, |cfg| Box::new(GeneratorProcessor::new(cfg)))
-}
-fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
-    crate::registry::typed_create_default(name, |cfg| Box::new(GeneratorProcessor::new(cfg)))
 }
 inventory::submit! {
     crate::registry::ProcessorPlugin {
         name: "generator",
         processor_type: crate::processors::ProcessorType::Generator,
         create: plugin_create,
-        create_default: plugin_create_default,
         resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::GeneratorConfig>,
         defconfig_json: crate::registry::typed_defconfig_json::<crate::config::GeneratorConfig>,
         known_fields: crate::registry::typed_known_fields::<crate::config::GeneratorConfig>,

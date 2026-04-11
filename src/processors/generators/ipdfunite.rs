@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use crate::config::{IpdfuniteConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, ProductDiscovery};
+use crate::processors::{ProcessorBase, Processor};
 
 use super::find_dirs_with_ext;
 
@@ -149,7 +149,7 @@ fn merge_pdfs(inputs: &[PathBuf], output: &Path) -> Result<()> {
     Ok(())
 }
 
-impl ProductDiscovery for IpdfuniteProcessor {
+impl Processor for IpdfuniteProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
         &self.config.scan
     }
@@ -257,18 +257,14 @@ impl ProductDiscovery for IpdfuniteProcessor {
 
 }
 
-fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
     crate::registry::typed_create(name, toml, |cfg| Box::new(IpdfuniteProcessor::new(cfg)))
-}
-fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
-    crate::registry::typed_create_default(name, |cfg| Box::new(IpdfuniteProcessor::new(cfg)))
 }
 inventory::submit! {
     crate::registry::ProcessorPlugin {
         name: "ipdfunite",
         processor_type: crate::processors::ProcessorType::Generator,
         create: plugin_create,
-        create_default: plugin_create_default,
         resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::IpdfuniteConfig>,
         defconfig_json: crate::registry::typed_defconfig_json::<crate::config::IpdfuniteConfig>,
         known_fields: crate::registry::typed_known_fields::<crate::config::IpdfuniteConfig>,

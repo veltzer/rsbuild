@@ -5,7 +5,7 @@ use anyhow::Result;
 use crate::config::{CreatorConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, ProductDiscovery, ProcessorType,
+use crate::processors::{ProcessorBase, Processor, ProcessorType,
     run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 /// A data-driven processor that runs a command and caches declared outputs.
@@ -36,7 +36,7 @@ impl CreatorProcessor {
     }
 }
 
-impl ProductDiscovery for CreatorProcessor {
+impl Processor for CreatorProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
         &self.config.scan
     }
@@ -125,18 +125,14 @@ impl ProductDiscovery for CreatorProcessor {
     }
 }
 
-fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
     crate::registry::typed_create(name, toml, |cfg| Box::new(CreatorProcessor::new(cfg)))
-}
-fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
-    crate::registry::typed_create_default(name, |cfg| Box::new(CreatorProcessor::new(cfg)))
 }
 inventory::submit! {
     crate::registry::ProcessorPlugin {
         name: "creator",
         processor_type: crate::processors::ProcessorType::Creator,
         create: plugin_create,
-        create_default: plugin_create_default,
         resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::CreatorConfig>,
         defconfig_json: crate::registry::typed_defconfig_json::<crate::config::CreatorConfig>,
         known_fields: crate::registry::typed_known_fields::<crate::config::CreatorConfig>,

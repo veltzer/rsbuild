@@ -469,10 +469,10 @@ pub(crate) fn is_builtin_type(name: &str) -> bool {
 
 /// Resolve scan and processor defaults for an instance config in-place.
 pub(crate) fn resolve_instance_defaults(type_name: &str, value: &mut toml::Value) -> anyhow::Result<()> {
-    if let Some(entry) = find_registry_entry(type_name) {
-        return (entry.resolve_defaults)(entry.name, value);
+    if find_registry_entry(type_name).is_some() {
+        registry::apply_all_defaults(type_name, value);
     }
-    Ok(()) // Lua plugins handle their own defaults
+    Ok(())
 }
 
 impl ProcessorConfig {
@@ -519,8 +519,7 @@ impl ProcessorConfig {
 
     /// Return the default config for a processor type as pretty JSON, or None if unknown.
     pub(crate) fn defconfig_json(type_name: &str) -> Option<String> {
-        let entry = find_registry_entry(type_name)?;
-        (entry.defconfig_json)(entry.name)
+        (find_registry_entry(type_name)?.defconfig_json)()
     }
 }
 

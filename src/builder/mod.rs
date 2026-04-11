@@ -25,7 +25,7 @@ use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
 use crate::object_store::{ObjectStore, ObjectStoreOptions};
-use crate::processors::{LuaProcessor, ProcessorMap, ProductDiscovery};
+use crate::processors::{LuaProcessor, ProcessorMap, Processor};
 use crate::remote_cache;
 use crate::tool_lock;
 
@@ -89,9 +89,11 @@ struct StatusPrintOptions<'a> {
 pub(crate) fn create_processor_for_instance(
     type_name: &str,
     config_toml: &toml::Value,
-) -> anyhow::Result<Option<Box<dyn ProductDiscovery>>> {
+) -> anyhow::Result<Option<Box<dyn Processor>>> {
     if let Some(entry) = find_registry_entry(type_name) {
-        return (entry.create)(entry.name, config_toml).map(Some);
+        let mut resolved = config_toml.clone();
+        crate::registry::apply_all_defaults(entry.name, &mut resolved);
+        return (entry.create)(&resolved).map(Some);
     }
     Ok(None)
 }
@@ -100,7 +102,9 @@ pub(crate) fn create_processor_for_instance(
 pub(crate) fn create_all_default_processors() -> ProcessorMap {
     let mut processors: ProcessorMap = HashMap::new();
     for entry in registry_entries() {
-        let proc = (entry.create_default)(entry.name);
+        let mut empty_toml = toml::Value::Table(toml::map::Map::new());
+        crate::registry::apply_all_defaults(entry.name, &mut empty_toml);
+        let proc = (entry.create)(&empty_toml).unwrap();
         processors.insert(entry.name.to_string(), proc);
     }
     processors
@@ -371,7 +375,7 @@ impl Builder {
 
     /// Check whether a processor should run. In the instance-based model,
     /// all declared processors are active (existence in config = enabled).
-    fn is_processor_active(&self, _name: &str, _processor: &dyn ProductDiscovery) -> bool {
+    fn is_processor_active(&self, _name: &str, _processor: &dyn Processor) -> bool {
         true
     }
 

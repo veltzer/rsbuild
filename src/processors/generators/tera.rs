@@ -12,7 +12,7 @@ use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value}
 use crate::config::{TeraConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, ProductDiscovery, run_command_capture};
+use crate::processors::{ProcessorBase, Processor, run_command_capture};
 
 use super::TemplateItem;
 
@@ -90,7 +90,7 @@ impl TeraProcessor {
     }
 }
 
-impl ProductDiscovery for TeraProcessor {
+impl Processor for TeraProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
         &self.config.scan
     }
@@ -501,11 +501,8 @@ fn load_lua_config(lua_file: &Path) -> Result<Map<String, Value>> {
 
 use crate::registry;
 
-fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
     registry::typed_create(name, toml, |cfg| Box::new(TeraProcessor::new(cfg)))
-}
-fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
-    registry::typed_create_default(name, |cfg| Box::new(TeraProcessor::new(cfg)))
 }
 
 inventory::submit! {
@@ -513,7 +510,6 @@ inventory::submit! {
         name: "tera",
         processor_type: crate::processors::ProcessorType::Generator,
         create: plugin_create,
-        create_default: plugin_create_default,
         resolve_defaults: registry::typed_resolve_defaults::<crate::config::TeraConfig>,
         defconfig_json: registry::typed_defconfig_json::<crate::config::TeraConfig>,
         known_fields: registry::typed_known_fields::<crate::config::TeraConfig>,

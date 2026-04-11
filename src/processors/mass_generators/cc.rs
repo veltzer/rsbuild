@@ -6,7 +6,7 @@ use std::process::Command;
 use crate::config::{CcConfig, CcManifest, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output, anchor_display_dir};
+use crate::processors::{ProcessorBase, Processor, run_command, check_command_output, anchor_display_dir};
 
 pub struct CcProcessor {
     base: ProcessorBase,
@@ -259,7 +259,7 @@ impl CcProcessor {
     }
 }
 
-impl ProductDiscovery for CcProcessor {
+impl Processor for CcProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
         &self.config.scan
     }
@@ -347,18 +347,14 @@ impl ProductDiscovery for CcProcessor {
     }
 }
 
-fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
     crate::registry::typed_create(name, toml, |cfg| Box::new(CcProcessor::new(cfg)))
-}
-fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
-    crate::registry::typed_create_default(name, |cfg| Box::new(CcProcessor::new(cfg)))
 }
 inventory::submit! {
     crate::registry::ProcessorPlugin {
         name: "cc",
         processor_type: crate::processors::ProcessorType::Creator,
         create: plugin_create,
-        create_default: plugin_create_default,
         resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::CcConfig>,
         defconfig_json: crate::registry::typed_defconfig_json::<crate::config::CcConfig>,
         known_fields: crate::registry::typed_known_fields::<crate::config::CcConfig>,

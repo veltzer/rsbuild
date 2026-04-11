@@ -6,7 +6,7 @@ use crate::config::ExplicitConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{
-    ProcessorBase, ProductDiscovery,
+    ProcessorBase, Processor,
     run_command, check_command_output, ensure_output_dir,
 };
 use crate::config::output_config_hash;
@@ -67,7 +67,7 @@ impl ExplicitProcessor {
     }
 }
 
-impl ProductDiscovery for ExplicitProcessor {
+impl Processor for ExplicitProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
         &self.config.scan
     }
@@ -158,18 +158,14 @@ impl ProductDiscovery for ExplicitProcessor {
     }
 }
 
-fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
     crate::registry::typed_create(name, toml, |cfg| Box::new(ExplicitProcessor::new(cfg)))
-}
-fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
-    crate::registry::typed_create_default(name, |cfg| Box::new(ExplicitProcessor::new(cfg)))
 }
 inventory::submit! {
     crate::registry::ProcessorPlugin {
         name: "explicit",
         processor_type: crate::processors::ProcessorType::Explicit,
         create: plugin_create,
-        create_default: plugin_create_default,
         resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::ExplicitConfig>,
         defconfig_json: crate::registry::typed_defconfig_json::<crate::config::ExplicitConfig>,
         known_fields: crate::registry::typed_known_fields::<crate::config::ExplicitConfig>,

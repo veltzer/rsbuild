@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::ClippyConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, ProductDiscovery, SiblingFilter, DirectoryProductOpts, discover_directory_products, run_in_anchor_dir, anchor_display_dir, check_command_output};
+use crate::processors::{ProcessorBase, Processor, SiblingFilter, DirectoryProductOpts, discover_directory_products, run_in_anchor_dir, anchor_display_dir, check_command_output};
 
 pub struct ClippyProcessor {
     base: ProcessorBase,
@@ -32,7 +32,7 @@ impl ClippyProcessor {
     }
 }
 
-impl ProductDiscovery for ClippyProcessor {
+impl Processor for ClippyProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
         &self.config.scan
     }
@@ -85,18 +85,14 @@ impl ProductDiscovery for ClippyProcessor {
     }
 }
 
-fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
     crate::registry::typed_create(name, toml, |cfg| Box::new(ClippyProcessor::new(cfg)))
-}
-fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
-    crate::registry::typed_create_default(name, |cfg| Box::new(ClippyProcessor::new(cfg)))
 }
 inventory::submit! {
     crate::registry::ProcessorPlugin {
         name: "clippy",
         processor_type: crate::processors::ProcessorType::Checker,
         create: plugin_create,
-        create_default: plugin_create_default,
         resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::ClippyConfig>,
         defconfig_json: crate::registry::typed_defconfig_json::<crate::config::ClippyConfig>,
         known_fields: crate::registry::typed_known_fields::<crate::config::ClippyConfig>,

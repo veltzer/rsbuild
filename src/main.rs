@@ -22,6 +22,7 @@ mod object_store;
 mod platform;
 mod processors;
 mod progress;
+pub(crate) mod word_manager;
 mod runtime_flags;
 mod remote_cache;
 mod tool_lock;

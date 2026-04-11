@@ -8,7 +8,7 @@ use std::process::Command;
 use crate::config::{output_config_hash, scan_config_from_toml, ScanConfig};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use super::{clean_outputs, ensure_stub_dir, run_command, ProductDiscovery};
+use super::{clean_outputs, ensure_stub_dir, run_command, Processor};
 
 /// Convert a LuaResult to an anyhow::Result with a contextual message.
 fn lua_context<T>(result: LuaResult<T>, msg: impl std::fmt::Display) -> Result<T> {
@@ -330,7 +330,7 @@ impl LuaProcessor {
     }
 }
 
-impl ProductDiscovery for LuaProcessor {
+impl Processor for LuaProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
         &self.scan_config
     }

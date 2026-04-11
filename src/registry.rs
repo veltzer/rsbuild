@@ -3,22 +3,29 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::config::KnownFields;
-use crate::processors::{ProductDiscovery, ProcessorType};
+use crate::processors::{Processor, ProcessorType};
 
 /// A processor plugin. One struct for all processor types.
 /// Each processor file submits one of these via `inventory::submit!`.
-#[allow(dead_code)]
+///
+/// The plugin is a factory: it knows its name, type, how to create a processor
+/// from TOML config, and metadata about its config fields.
+///
+/// The framework applies defaults to the TOML before calling `create`.
+/// The `create` function deserializes the TOML and returns a fully configured,
+/// immutable processor.
 pub struct ProcessorPlugin {
     pub name: &'static str,
     pub processor_type: ProcessorType,
-    pub create: fn(&str, &toml::Value) -> Result<Box<dyn ProductDiscovery>>,
-    pub create_default: fn(&str) -> Box<dyn ProductDiscovery>,
-    pub resolve_defaults: fn(&str, &mut toml::Value) -> Result<()>,
-    pub defconfig_json: fn(&str) -> Option<String>,
+    /// Create a processor from resolved TOML config (defaults already applied).
+    pub create: fn(&toml::Value) -> Result<Box<dyn Processor>>,
+    /// Config metadata
     pub known_fields: fn() -> &'static [&'static str],
     pub output_fields: fn() -> &'static [&'static str],
     pub must_fields: fn() -> &'static [&'static str],
     pub field_descriptions: fn() -> &'static [(&'static str, &'static str)],
+    /// Return the default config as pretty JSON.
+    pub defconfig_json: fn() -> Option<String>,
 }
 
 unsafe impl Sync for ProcessorPlugin {}
@@ -35,36 +42,19 @@ pub fn apply_all_defaults(name: &str, value: &mut toml::Value) {
     crate::config::apply_scan_defaults(name, value);
 }
 
-// --- Generic helpers that processors call from their plugin functions ---
+// --- Helpers that processor files call from their create/defconfig functions ---
 
-pub fn typed_create<C: Default + DeserializeOwned + Serialize + Clone>(
-    name: &str, config_toml: &toml::Value, ctor: fn(C) -> Box<dyn ProductDiscovery>,
-) -> Result<Box<dyn ProductDiscovery>> {
-    let mut val = config_toml.clone();
-    apply_all_defaults(name, &mut val);
-    let cfg: C = toml::from_str(&toml::to_string(&val)?)?;
+/// Deserialize TOML into config type C and call the constructor.
+/// The TOML should already have defaults applied by the framework.
+pub fn deserialize_and_create<C: Default + DeserializeOwned>(
+    config_toml: &toml::Value, ctor: fn(C) -> Box<dyn Processor>,
+) -> Result<Box<dyn Processor>> {
+    let cfg: C = toml::from_str(&toml::to_string(config_toml)?)?;
     Ok(ctor(cfg))
 }
 
-pub fn typed_create_default<C: Default + DeserializeOwned + Serialize + Clone>(
-    name: &str, ctor: fn(C) -> Box<dyn ProductDiscovery>,
-) -> Box<dyn ProductDiscovery> {
-    let val = toml::Value::Table(toml::map::Map::new());
-    typed_create(name, &val, ctor).unwrap()
-}
-
-pub fn typed_resolve_defaults<C: Default + DeserializeOwned + Serialize + Clone>(
-    name: &str, value: &mut toml::Value,
-) -> Result<()> {
-    apply_all_defaults(name, value);
-    let cfg: C = toml::from_str(&toml::to_string(value)?)?;
-    *value = toml::Value::try_from(&cfg)?;
-    Ok(())
-}
-
-pub fn typed_defconfig_json<C: Default + DeserializeOwned + Serialize + Clone>(
-    name: &str,
-) -> Option<String> {
+/// Build default config JSON for a config type, applying defaults for the given processor name.
+pub fn default_config_json<C: Default + DeserializeOwned + Serialize>(name: &str) -> Option<String> {
     let mut val = toml::Value::Table(toml::map::Map::new());
     apply_all_defaults(name, &mut val);
     let cfg: C = toml::from_str(&toml::to_string(&val).ok()?).ok()?;

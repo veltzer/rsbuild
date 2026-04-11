@@ -4,7 +4,7 @@ use crate::graph::Product;
 use crate::processors::ProcessorType;
 
 /// Common base for all processors. Holds fields needed by boilerplate
-/// ProductDiscovery methods so each processor doesn't repeat them.
+/// Processor methods so each processor doesn't repeat them.
 #[allow(dead_code)]
 pub struct ProcessorBase {
     /// Processor name constant (e.g., "marp", "pylint")

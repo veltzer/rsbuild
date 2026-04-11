@@ -6,7 +6,6 @@ mod creator;
 pub(crate) mod generators;
 mod mass_generators;
 pub mod lua_processor;
-pub(crate) mod word_manager;
 
 use anyhow::{Context, Result};
 #[cfg(debug_assertions)]
@@ -770,7 +769,7 @@ pub(crate) use generators::tags as tags_cmd;
 pub use lua_processor::LuaProcessor;
 
 /// Map from processor name to processor instance. Used throughout the build pipeline.
-pub type ProcessorMap = HashMap<String, Box<dyn ProductDiscovery>>;
+pub type ProcessorMap = HashMap<String, Box<dyn Processor>>;
 
 /// The type of processor - whether it generates new files, checks existing files,
 /// or produces a mass of output files in a directory.
@@ -847,7 +846,7 @@ impl ProcessorType {
 /// Checkers are simpler - just implement the required methods and use defaults for the rest:
 ///
 /// ```ignore
-/// impl ProductDiscovery for MyChecker {
+/// impl Processor for MyChecker {
 ///     fn description(&self) -> &str { "Check files with mytool" }
 ///     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
 ///         discover_checker_products(graph, ..., instance_name)  // empty outputs
@@ -864,7 +863,7 @@ impl ProcessorType {
 /// Generators must override `processor_type()` and `clean()`:
 ///
 /// ```ignore
-/// impl ProductDiscovery for MyGenerator {
+/// impl Processor for MyGenerator {
 ///     fn description(&self) -> &str { "Generate files" }
 ///     fn processor_type(&self) -> ProcessorType { ProcessorType::Generator }
 ///     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
@@ -879,7 +878,7 @@ impl ProcessorType {
 /// ```
 ///
 /// Must be Sync + Send for parallel execution support.
-pub trait ProductDiscovery: Sync + Send {
+pub trait Processor: Sync + Send {
     /// Human-readable description of what this processor does
     fn description(&self) -> &str;
 

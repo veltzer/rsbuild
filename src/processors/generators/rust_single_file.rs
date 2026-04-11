@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::{RustSingleFileConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, ProductDiscovery, run_command, check_command_output};
+use crate::processors::{ProcessorBase, Processor, run_command, check_command_output};
 
 pub struct RustSingleFileProcessor {
     base: ProcessorBase,
@@ -36,7 +36,7 @@ impl RustSingleFileProcessor {
     }
 }
 
-impl ProductDiscovery for RustSingleFileProcessor {
+impl Processor for RustSingleFileProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
         &self.config.scan
     }
@@ -114,18 +114,14 @@ impl ProductDiscovery for RustSingleFileProcessor {
 
 }
 
-fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
     crate::registry::typed_create(name, toml, |cfg| Box::new(RustSingleFileProcessor::new(cfg)))
-}
-fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
-    crate::registry::typed_create_default(name, |cfg| Box::new(RustSingleFileProcessor::new(cfg)))
 }
 inventory::submit! {
     crate::registry::ProcessorPlugin {
         name: "rust_single_file",
         processor_type: crate::processors::ProcessorType::Generator,
         create: plugin_create,
-        create_default: plugin_create_default,
         resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::RustSingleFileConfig>,
         defconfig_json: crate::registry::typed_defconfig_json::<crate::config::RustSingleFileConfig>,
         known_fields: crate::registry::typed_known_fields::<crate::config::RustSingleFileConfig>,

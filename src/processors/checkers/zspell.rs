@@ -9,8 +9,8 @@ use crate::config::ZspellConfig;
 use crate::errors;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, ProductDiscovery, config_file_inputs, discover_checker_products};
-use crate::processors::word_manager::WordManager;
+use crate::processors::{ProcessorBase, Processor, config_file_inputs, discover_checker_products};
+use crate::word_manager::WordManager;
 
 const DICT_DIR: &str = "/usr/share/hunspell";
 
@@ -170,7 +170,7 @@ impl ZspellProcessor {
     }
 }
 
-impl ProductDiscovery for ZspellProcessor {
+impl Processor for ZspellProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
         &self.config.scan
     }
@@ -233,18 +233,14 @@ impl ProductDiscovery for ZspellProcessor {
     }
 }
 
-fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::ProductDiscovery>> {
+fn plugin_create(name: &str, toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
     crate::registry::typed_create(name, toml, |cfg| Box::new(ZspellProcessor::new(cfg)))
-}
-fn plugin_create_default(name: &str) -> Box<dyn crate::processors::ProductDiscovery> {
-    crate::registry::typed_create_default(name, |cfg| Box::new(ZspellProcessor::new(cfg)))
 }
 inventory::submit! {
     crate::registry::ProcessorPlugin {
         name: "zspell",
         processor_type: crate::processors::ProcessorType::Checker,
         create: plugin_create,
-        create_default: plugin_create_default,
         resolve_defaults: crate::registry::typed_resolve_defaults::<crate::config::ZspellConfig>,
         defconfig_json: crate::registry::typed_defconfig_json::<crate::config::ZspellConfig>,
         known_fields: crate::registry::typed_known_fields::<crate::config::ZspellConfig>,

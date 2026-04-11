@@ -207,16 +207,12 @@ impl Builder {
                 for name in &proc_names {
                     let proc = &processors[name.as_str()];
                     let detected = proc.auto_detect(&self.file_index);
-                    let detected_str = if detected {
-                        color::green("yes").to_string()
-                    } else {
-                        color::dim("no").to_string()
-                    };
+                    let detected_str = if detected { "yes" } else { "no" };
                     builder.push_record([
-                        name.to_string(),
-                        proc.processor_type().as_str().to_string(),
+                        name.as_str(),
+                        proc.processor_type().as_str(),
                         detected_str,
-                        proc.description().to_string(),
+                        proc.description(),
                     ]);
                 }
                 color::print_table(builder.build());

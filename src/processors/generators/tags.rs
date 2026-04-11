@@ -50,7 +50,7 @@ impl Processor for TagsProcessor {
     }
 
     fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
+        self.config.standard.max_jobs
     }
 
     fn clean(&self, product: &crate::graph::Product, verbose: bool) -> anyhow::Result<usize> {
@@ -79,7 +79,7 @@ impl Processor for TagsProcessor {
             return Ok(());
         }
 
-        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
         let mut inputs = Vec::with_capacity(files.len() + extra.len() + 1);
         inputs.extend(files);
         inputs.extend_from_slice(&extra);
@@ -1209,7 +1209,7 @@ pub fn orphan_files(db_path: &str) -> Result<()> {
 /// Run all tag validations without building.
 pub fn check_tags(config: &crate::config::TagsConfig) -> Result<()> {
     let file_index = crate::file_index::FileIndex::build()?;
-    let files = file_index.scan(&config.scan, true);
+    let files = file_index.scan(&config.standard.scan, true);
     if files.is_empty() {
         println!("No files to check.");
         return Ok(());

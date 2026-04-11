@@ -444,7 +444,7 @@ pub enum ProcessorAction {
     },
     /// Show default configuration for a processor type (no config needed)
     Defconfig {
-        /// Processor name
+        /// Processor type name (e.g., ruff, pip, tera)
         name: String,
     },
     /// Show the current processor allowlist (requires config)

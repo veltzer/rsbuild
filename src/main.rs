@@ -4,6 +4,8 @@
 #[macro_use]
 mod registry;
 
+#[macro_use]
+mod errors;
 mod analyzers;
 mod builder;
 mod checksum;
@@ -12,7 +14,6 @@ mod color;
 mod config;
 mod db;
 mod deps_cache;
-mod errors;
 mod executor;
 mod exit_code;
 mod file_index;

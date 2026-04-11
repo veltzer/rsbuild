@@ -28,7 +28,7 @@ impl MarkdownDepAnalyzer {
     /// Scan a Markdown file for local file references.
     /// Returns paths to local files referenced via `![alt](path)` or `[text](path)` syntax.
     fn scan_references(&self, source: &Path) -> Result<Vec<PathBuf>> {
-        let content = fs::read_to_string(source)?;
+        let content = ctx!(fs::read_to_string(source), format!("Failed to read markdown: {}", source.display()))?;
         let mut refs = Vec::new();
         let mut seen = HashSet::new();
 

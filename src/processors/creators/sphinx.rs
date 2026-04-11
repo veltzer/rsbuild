@@ -36,8 +36,8 @@ impl SphinxProcessor {
             cmd.arg(anchor_dir);
         }
         // Output dir at project root level (e.g. "docs")
-        cmd.arg(&self.config.output_dir);
-        for arg in &self.config.args {
+        cmd.arg(&self.config.standard.output_dir);
+        for arg in &self.config.standard.args {
             cmd.arg(arg);
         }
         if let Some(ref dir) = self.config.working_dir {
@@ -50,7 +50,7 @@ impl SphinxProcessor {
 
 impl Processor for SphinxProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
-        &self.config.scan
+        &self.config.standard.scan
     }
 
 
@@ -68,7 +68,7 @@ impl Processor for SphinxProcessor {
     }
 
     fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
+        self.config.standard.max_jobs
     }
 
     fn clean(&self, product: &crate::graph::Product, verbose: bool) -> anyhow::Result<usize> {
@@ -80,11 +80,11 @@ impl Processor for SphinxProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
-        let Some(files) = crate::processors::scan_or_skip(&self.config.scan, file_index) else {
+        let Some(files) = crate::processors::scan_or_skip(&self.config.standard.scan, file_index) else {
             return Ok(());
         };
         let hash = Some(output_config_hash(&self.config, &[]));
-        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
         let siblings = SiblingFilter {
             extensions: &[".rst", ".py", ".md"],
             excludes: &["/.git/", "/out/", "/.rsconstruct/", "/_build/", "/docs/"],
@@ -97,7 +97,7 @@ impl Processor for SphinxProcessor {
             let inputs = crate::processors::build_anchor_inputs(&anchor, &sibling_files, &extra);
             if self.config.cache_output_dir {
                 // output_dir is at project root, NOT joined with anchor_dir
-                let output_dir = PathBuf::from(&self.config.output_dir);
+                let output_dir = PathBuf::from(&self.config.standard.output_dir);
                 graph.add_product_with_output_dir(inputs, vec![], instance_name, hash.clone(), output_dir)?;
             } else {
                 graph.add_product(inputs, vec![], instance_name, hash.clone())?;

@@ -28,7 +28,7 @@ impl MdbookProcessor {
         let mut cmd = Command::new(&self.config.mdbook);
         cmd.arg("build");
         cmd.arg(".");
-        for arg in &self.config.args {
+        for arg in &self.config.standard.args {
             cmd.arg(arg);
         }
         let output = run_in_anchor_dir(&mut cmd, book_toml)?;
@@ -38,7 +38,7 @@ impl MdbookProcessor {
 
 impl Processor for MdbookProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
-        &self.config.scan
+        &self.config.standard.scan
     }
 
 
@@ -56,7 +56,7 @@ impl Processor for MdbookProcessor {
     }
 
     fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
+        self.config.standard.max_jobs
     }
 
     fn clean(&self, product: &crate::graph::Product, verbose: bool) -> anyhow::Result<usize> {
@@ -68,14 +68,14 @@ impl Processor for MdbookProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
-        if !scan_root_valid(&self.config.scan) {
+        if !scan_root_valid(&self.config.standard.scan) {
             return Ok(());
         }
 
         discover_directory_products(graph, DirectoryProductOpts {
-            scan: &self.config.scan,
+            scan: &self.config.standard.scan,
             file_index,
-            dep_inputs: &self.config.dep_inputs,
+            dep_inputs: &self.config.standard.dep_inputs,
             cfg_hash: &self.config,
             siblings: &SiblingFilter {
                 extensions: &[".md", ".toml"],
@@ -83,7 +83,7 @@ impl Processor for MdbookProcessor {
             },
             processor_name: instance_name,
             output_dir_name: if self.config.cache_output_dir {
-                Some(self.config.output_dir.as_str())
+                Some(self.config.standard.output_dir.as_str())
             } else {
                 None
             },

@@ -28,7 +28,7 @@ impl PipProcessor {
         let mut cmd = Command::new(&self.config.pip);
         cmd.arg("install");
         cmd.arg("-r").arg(requirements_txt.file_name().unwrap_or_default());
-        for arg in &self.config.args {
+        for arg in &self.config.standard.args {
             cmd.arg(arg);
         }
         let output = run_in_anchor_dir(&mut cmd, requirements_txt)?;
@@ -38,7 +38,7 @@ impl PipProcessor {
 
 impl Processor for PipProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
-        &self.config.scan
+        &self.config.standard.scan
     }
 
 
@@ -51,7 +51,7 @@ impl Processor for PipProcessor {
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        scan_root_valid(&self.config.scan) && !file_index.scan(&self.config.scan, false).is_empty()
+        scan_root_valid(&self.config.standard.scan) && !file_index.scan(&self.config.standard.scan, false).is_empty()
     }
 
     fn config_json(&self) -> Option<String> {
@@ -59,7 +59,7 @@ impl Processor for PipProcessor {
     }
 
     fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
+        self.config.standard.max_jobs
     }
 
     fn required_tools(&self) -> Vec<String> {
@@ -67,17 +67,17 @@ impl Processor for PipProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
-        if !scan_root_valid(&self.config.scan) {
+        if !scan_root_valid(&self.config.standard.scan) {
             return Ok(());
         }
 
-        let files = file_index.scan(&self.config.scan, false);
+        let files = file_index.scan(&self.config.standard.scan, false);
         if files.is_empty() {
             return Ok(());
         }
 
         let hash = Some(output_config_hash(&self.config, &[]));
-        let extra = resolve_extra_inputs(&self.config.dep_inputs)?;
+        let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
 
         for anchor in files {
             let mut inputs: Vec<PathBuf> = Vec::with_capacity(1 + extra.len());

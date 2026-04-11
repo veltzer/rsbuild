@@ -841,10 +841,6 @@ impl KnownFields for ScriptConfig {
     fn field_descriptions() -> &'static [(&'static str, &'static str)] { StandardConfig::field_descriptions() }
 }
 
-fn default_generator_output_dir() -> String {
-    "out/generator".into()
-}
-
 fn default_generator_output_extension() -> String {
     "out".into()
 }
@@ -888,10 +884,6 @@ impl KnownFields for GeneratorConfig {
 }
 
 // --- explicit processor (many inputs → few outputs, fully declared) ---
-
-fn default_explicit_command() -> String {
-    "true".into()
-}
 
 /// Explicit config. Custom: inputs, input_globs, output_files, output_dirs.
 #[derive(Debug, Deserialize, Serialize, Clone)]

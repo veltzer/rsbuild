@@ -29,7 +29,7 @@ impl GeneratorProcessor {
     }
 
     fn should_process(&self) -> bool {
-        scan_root_valid(&self.config.scan) && self.config.command.is_some()
+        scan_root_valid(&self.config.standard.scan) && !self.config.standard.command.is_empty()
     }
 
     fn execute_product(&self, product: &Product) -> Result<()> {
@@ -41,9 +41,9 @@ impl GeneratorProcessor {
             crate::processors::ensure_output_dir(pair.1)?;
         }
 
-        let command = self.config.command.as_deref().unwrap();
+        let command = &self.config.standard.command;
         let mut cmd = Command::new(command);
-        for arg in &self.config.args {
+        for arg in &self.config.standard.args {
             cmd.arg(arg);
         }
         for (input, output) in pairs {
@@ -58,7 +58,7 @@ impl GeneratorProcessor {
 
 impl Processor for GeneratorProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
-        &self.config.scan
+        &self.config.standard.scan
     }
 
 
@@ -75,7 +75,7 @@ impl Processor for GeneratorProcessor {
     }
 
     fn max_jobs(&self) -> Option<usize> {
-        self.config.max_jobs
+        self.config.standard.max_jobs
     }
 
     fn clean(&self, product: &crate::graph::Product, verbose: bool) -> anyhow::Result<usize> {
@@ -83,13 +83,14 @@ impl Processor for GeneratorProcessor {
     }
 
     fn auto_detect(&self, file_index: &FileIndex) -> bool {
-        self.should_process() && !file_index.scan(&self.config.scan, true).is_empty()
+        self.should_process() && !file_index.scan(&self.config.standard.scan, true).is_empty()
     }
 
     fn required_tools(&self) -> Vec<String> {
-        match &self.config.command {
-            Some(cmd) => vec![cmd.clone()],
-            None => vec![],
+        if self.config.standard.command.is_empty() {
+            Vec::new()
+        } else {
+            vec![self.config.standard.command.clone()]
         }
     }
 
@@ -97,25 +98,25 @@ impl Processor for GeneratorProcessor {
         if !self.should_process() {
             return Ok(());
         }
-        let files = file_index.scan(&self.config.scan, true);
+        let files = file_index.scan(&self.config.standard.scan, true);
         if files.is_empty() {
             return Ok(());
         }
 
         let hash = Some(output_config_hash(&self.config, &[]));
-        let mut dep_inputs = self.config.dep_inputs.clone();
-        for ai in &self.config.dep_auto {
+        let mut dep_inputs = self.config.standard.dep_inputs.clone();
+        for ai in &self.config.standard.dep_auto {
             dep_inputs.extend(config_file_inputs(ai));
         }
         // If the command is a local file, depend on its contents
-        let command = self.config.command.as_deref().unwrap();
+        let command = &self.config.standard.command;
         dep_inputs.extend(config_file_inputs(command));
         let extra = resolve_extra_inputs(&dep_inputs)?;
-        let src_dirs = self.config.scan.src_dirs();
+        let src_dirs = self.config.standard.scan.src_dirs();
 
         for source in &files {
             let output = super::output_path(
-                source, src_dirs, &self.config.output_dir, &self.config.output_extension,
+                source, src_dirs, &self.config.standard.output_dir, &self.config.output_extension,
             );
             let mut inputs = Vec::with_capacity(1 + extra.len());
             inputs.push(source.clone());
@@ -130,7 +131,7 @@ impl Processor for GeneratorProcessor {
     }
 
     fn supports_batch(&self) -> bool {
-        self.config.batch
+        self.config.standard.batch
     }
 
     fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {

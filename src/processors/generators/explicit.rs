@@ -69,7 +69,7 @@ impl ExplicitProcessor {
 
 impl Processor for ExplicitProcessor {
     fn scan_config(&self) -> &crate::config::ScanConfig {
-        &self.config.scan
+        &self.config.standard.scan
     }
 
 
@@ -83,15 +83,15 @@ impl Processor for ExplicitProcessor {
 
     fn auto_detect(&self, _file_index: &FileIndex) -> bool {
         // Only active if command is set to something real and outputs are declared
-        self.config.command != "true"
+        self.config.standard.command != "true"
             && (!self.config.output_files.is_empty() || !self.config.output_dirs.is_empty())
     }
 
     fn required_tools(&self) -> Vec<String> {
-        if self.config.command == "true" {
+        if self.config.standard.command == "true" {
             Vec::new()
         } else {
-            vec![self.config.command.clone()]
+            vec![self.config.standard.command.clone()]
         }
     }
 
@@ -128,8 +128,8 @@ impl Processor for ExplicitProcessor {
             ensure_output_dir(output)?;
         }
 
-        let mut cmd = Command::new(&self.config.command);
-        for arg in &self.config.args {
+        let mut cmd = Command::new(&self.config.standard.command);
+        for arg in &self.config.standard.args {
             cmd.arg(arg);
         }
         cmd.arg("--inputs");
@@ -153,7 +153,7 @@ impl Processor for ExplicitProcessor {
         check_command_output(
             &out,
             format_args!("{} ({} inputs)",
-                self.config.command,
+                self.config.standard.command,
                 product.inputs.len(),
             ),
         )

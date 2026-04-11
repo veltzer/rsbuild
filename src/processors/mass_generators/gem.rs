@@ -110,6 +110,8 @@ impl ProductDiscovery for GemProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_gem(product.primary_input())
     }

@@ -55,7 +55,7 @@ impl crate::processors::ProductDiscovery for ItaploProcessor {
     }
 
 
-    fn execute(&self, product: &crate::graph::Product) -> anyhow::Result<()> {
+    fn execute(&self, product: &Product) -> Result<()> {
         self.execute_product(product)
     }
 
@@ -67,7 +67,7 @@ impl crate::processors::ProductDiscovery for ItaploProcessor {
 
     fn supports_batch(&self) -> bool { self.config.batch }
 
-    fn execute_batch(&self, products: &[&crate::graph::Product]) -> Vec<anyhow::Result<()>> {
+    fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
         crate::processors::execute_checker_batch(products, |files| self.check_files(files))
     }
 }

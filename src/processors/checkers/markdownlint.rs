@@ -79,6 +79,8 @@ impl ProductDiscovery for MarkdownlintProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         let file = product.primary_input();
         let mut cmd = Command::new(&self.config.markdownlint_bin);

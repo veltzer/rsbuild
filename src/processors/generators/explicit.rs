@@ -117,6 +117,8 @@ impl ProductDiscovery for ExplicitProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         // Ensure output directories exist
         for output in &product.outputs {

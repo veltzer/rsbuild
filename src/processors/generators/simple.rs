@@ -85,14 +85,6 @@ impl ProductDiscovery for SimpleGenerator {
         }
     }
 
-    fn supports_batch(&self) -> bool {
-        self.config.batch
-    }
-
-    fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
-        products.iter().map(|p| self.execute(p)).collect()
-    }
-
     fn max_jobs(&self) -> Option<usize> {
         self.config.max_jobs
     }
@@ -114,6 +106,8 @@ impl ProductDiscovery for SimpleGenerator {
             }
         }
     }
+
+    fn supports_batch(&self) -> bool { false }
 
     fn execute(&self, product: &Product) -> Result<()> {
         (self.params.execute_fn)(&self.config, product)

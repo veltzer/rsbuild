@@ -84,6 +84,8 @@ impl ProductDiscovery for PdflatexProcessor {
         super::discover_single_format(graph, file_index, &params, "pdf")
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         let input = product.primary_input();
         let final_output = product.primary_output();

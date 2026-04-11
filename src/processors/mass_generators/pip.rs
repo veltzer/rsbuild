@@ -90,6 +90,8 @@ impl ProductDiscovery for PipProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_pip(product.primary_input())
     }

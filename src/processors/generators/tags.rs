@@ -112,6 +112,8 @@ impl ProductDiscovery for TagsProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         let output_path = product.primary_output();
 

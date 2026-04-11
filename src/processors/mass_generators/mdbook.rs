@@ -90,6 +90,8 @@ impl ProductDiscovery for MdbookProcessor {
         })
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_mdbook(product.primary_input())
     }

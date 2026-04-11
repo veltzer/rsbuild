@@ -237,6 +237,8 @@ impl ProductDiscovery for IpdfuniteProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         let output = product.primary_output();
         crate::processors::ensure_output_dir(output)?;
@@ -253,11 +255,4 @@ impl ProductDiscovery for IpdfuniteProcessor {
         merge_pdfs(&pdf_inputs, output)
     }
 
-    fn supports_batch(&self) -> bool {
-        self.config.batch
-    }
-
-    fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
-        products.iter().map(|p| self.execute(p)).collect()
-    }
 }

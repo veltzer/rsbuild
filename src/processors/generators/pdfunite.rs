@@ -117,6 +117,8 @@ impl ProductDiscovery for PdfuniteProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         let output = product.primary_output();
 

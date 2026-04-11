@@ -423,6 +423,8 @@ impl ProductDiscovery for LuaProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         ensure_stub_dir(&self.stub_dir, &self.name)?;
 

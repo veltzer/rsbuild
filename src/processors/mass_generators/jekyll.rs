@@ -91,6 +91,8 @@ impl ProductDiscovery for JekyllProcessor {
         })
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_jekyll(product.primary_input())
     }

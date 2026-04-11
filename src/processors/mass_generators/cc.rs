@@ -337,6 +337,8 @@ impl ProductDiscovery for CcProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         let yaml_path = product.primary_input();
         let display_dir = anchor_display_dir(yaml_path);

@@ -106,6 +106,8 @@ impl ProductDiscovery for Jinja2Processor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         let item = TemplateItem::new(
             product.primary_input().to_path_buf(),

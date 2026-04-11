@@ -124,6 +124,8 @@ impl ProductDiscovery for CargoProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         let profile = product.variant.as_deref().unwrap_or("dev");
         self.execute_cargo(product.primary_input(), profile)

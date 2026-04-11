@@ -234,6 +234,8 @@ impl ProductDiscovery for CcSingleFileProcessor {
         self.discover_impl(graph, file_index, true, instance_name)
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         let source = product.primary_input();
         let executable = product.primary_output();

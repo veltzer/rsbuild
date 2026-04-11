@@ -94,6 +94,8 @@ impl ProductDiscovery for RustSingleFileProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         let source = product.primary_input();
         let output = product.primary_output();

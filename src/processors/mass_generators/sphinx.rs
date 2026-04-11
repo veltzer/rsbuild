@@ -106,6 +106,8 @@ impl ProductDiscovery for SphinxProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_sphinx(product.primary_input())
     }

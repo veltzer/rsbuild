@@ -108,6 +108,8 @@ impl ProductDiscovery for NpmProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_npm(product.primary_input())
     }

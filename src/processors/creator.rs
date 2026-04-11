@@ -112,6 +112,8 @@ impl ProductDiscovery for CreatorProcessor {
         Ok(())
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         let anchor = product.primary_input();
         let mut cmd = Command::new(&self.config.command);

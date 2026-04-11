@@ -78,6 +78,8 @@ impl ProductDiscovery for ClippyProcessor {
         })
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_clippy(product.primary_input())
     }

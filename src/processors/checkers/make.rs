@@ -80,6 +80,8 @@ impl ProductDiscovery for MakeProcessor {
         })
     }
 
+    fn supports_batch(&self) -> bool { false }
+
     fn execute(&self, product: &Product) -> Result<()> {
         self.execute_make(product.primary_input())
     }

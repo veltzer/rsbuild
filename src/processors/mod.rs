@@ -961,13 +961,13 @@ pub trait ProductDiscovery: Sync + Send {
         false
     }
 
-    /// Whether this processor supports batch execution.
-    /// Default: reads from standard_config().batch if available.
-    fn supports_batch(&self) -> bool {
-        self.standard_config().is_some_and(|c| c.batch)
-    }
+    /// Whether this processor supports real batch execution (passing multiple
+    /// files to the tool in one invocation). Every processor must declare this
+    /// explicitly — there is no default.
+    fn supports_batch(&self) -> bool;
 
     /// Execute multiple products in one invocation.
+    /// Only called when supports_batch() returns true.
     fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
         products.iter().map(|p| self.execute(p)).collect()
     }

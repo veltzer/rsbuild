@@ -60,7 +60,9 @@ impl crate::processors::ProductDiscovery for CheckpatchProcessor {
         )
     }
 
-    fn execute(&self, product: &crate::graph::Product) -> anyhow::Result<()> {
+    fn supports_batch(&self) -> bool { false }
+
+    fn execute(&self, product: &Product) -> Result<()> {
         self.execute_product(product)
     }
 

@@ -666,6 +666,7 @@ pub(crate) fn processor_defaults_for(type_name: &str) -> Option<ProcessorDefault
         "drawio" => ProcessorDefaults { output_dir: "out/drawio", formats: &["png"], args: &[], command: "drawio", dep_auto: &[] },
         "libreoffice" => ProcessorDefaults { output_dir: "out/libreoffice", formats: &["pdf"], args: &[], command: "libreoffice", dep_auto: &[] },
         "protobuf" => ProcessorDefaults { output_dir: "out/protobuf", formats: &[], args: &[], command: "protoc", dep_auto: &[] },
+        "cc_single_file" => ProcessorDefaults { output_dir: "out/cc_single_file", formats: &[], args: &[], command: "", dep_auto: &[] },
         "sass" => ProcessorDefaults { output_dir: "out/sass", formats: &[], args: &[], command: "sass", dep_auto: &[] },
         "pandoc" => ProcessorDefaults { output_dir: "out/pandoc", formats: &["pdf", "html", "docx"], args: &[], command: "pandoc", dep_auto: &[] },
         "a2x" => ProcessorDefaults { output_dir: "out/a2x", formats: &[], args: &[], command: "a2x", dep_auto: &[] },

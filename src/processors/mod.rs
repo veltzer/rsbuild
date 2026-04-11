@@ -427,7 +427,7 @@ pub(crate) fn clean_output_dir(product: &Product, processor_name: &str, verbose:
             if verbose {
                 println!("Removing {} output directory: {}", processor_name, output_dir.display());
             }
-            fs::remove_dir_all(output_dir.as_ref())?;
+            ctx!(fs::remove_dir_all(output_dir.as_ref()), format!("Failed to remove output directory: {}", output_dir.display()))?;
             count += 1;
         }
     }

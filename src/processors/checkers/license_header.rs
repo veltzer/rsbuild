@@ -24,7 +24,7 @@ impl LicenseHeaderProcessor {
         let mut errors = Vec::new();
 
         for &file in files {
-            let content = std::fs::read_to_string(file)?;
+            let content = ctx!(std::fs::read_to_string(file), format!("Failed to read {}", file.display()))?;
             let mut lines = content.lines();
 
             // Skip shebang line if present

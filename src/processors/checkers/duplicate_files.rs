@@ -24,7 +24,7 @@ impl DuplicateFilesProcessor {
         let mut checksums: HashMap<Vec<u8>, Vec<&Path>> = HashMap::new();
 
         for &file in files {
-            let bytes = std::fs::read(file)?;
+            let bytes = ctx!(std::fs::read(file), format!("Failed to read {}", file.display()))?;
             let hash = Sha256::digest(&bytes).to_vec();
             checksums.entry(hash).or_default().push(file);
         }

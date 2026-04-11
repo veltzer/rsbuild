@@ -21,7 +21,7 @@ impl AsciiProcessor {
         let mut errors = Vec::new();
 
         for file in files {
-            let content = std::fs::read(file)?;
+            let content = ctx!(std::fs::read(file), format!("Failed to read {}", file.display()))?;
             let mut line_num = 1usize;
             let mut col = 1usize;
             let mut line_errors: Vec<String> = Vec::new();

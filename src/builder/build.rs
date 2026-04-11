@@ -539,7 +539,7 @@ fn write_trace_file(path: &str, stats: &BuildStats) -> Result<()> {
     }
 
     let trace = serde_json::json!({ "traceEvents": events });
-    std::fs::write(path, serde_json::to_string_pretty(&trace)?)?;
+    ctx!(std::fs::write(path, serde_json::to_string_pretty(&trace)?), format!("Failed to write trace file: {}", path))?;
     if !crate::runtime_flags::quiet() {
         println!("Wrote trace to {}", color::bold(path));
     }

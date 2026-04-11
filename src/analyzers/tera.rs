@@ -28,7 +28,7 @@ impl TeraDepAnalyzer {
     /// Scan a Tera template file for include, import, and extends references.
     /// Returns paths to local template files that are referenced.
     fn scan_includes(&self, source: &Path) -> Result<Vec<PathBuf>> {
-        let content = fs::read_to_string(source)?;
+        let content = ctx!(fs::read_to_string(source), format!("Failed to read template: {}", source.display()))?;
         let mut includes = Vec::new();
         let mut seen = HashSet::new();
 

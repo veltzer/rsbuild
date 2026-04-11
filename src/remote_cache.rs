@@ -298,7 +298,8 @@ impl RemoteCache for FileBackend {
         let path = self.full_path(key);
 
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory for cache upload: {}", parent.display()))?;
         }
 
         fs::write(&path, data)

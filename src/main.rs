@@ -136,7 +136,7 @@ fn run() -> Result<()> {
                     // database is corrupted and Builder::new() would fail.
                     let rsconstruct_dir = std::path::Path::new(".rsconstruct");
                     if rsconstruct_dir.exists() {
-                        fs::remove_dir_all(rsconstruct_dir)?;
+                        ctx!(fs::remove_dir_all(rsconstruct_dir), "Failed to remove .rsconstruct directory")?;
                     }
                     println!("Cache cleared.");
                 }
@@ -567,7 +567,7 @@ fn init_project() -> Result<()> {
 # [plugins]
 # dir = "plugins"  # directory containing .lua processor plugins
 "#;
-    fs::write(&config_path, config_content)?;
+    ctx!(fs::write(&config_path, config_content), format!("Failed to write {}", config_path.display()))?;
     println!("Created {}", config_path.display());
 
     // Create .rsconstructignore if it doesn't exist
@@ -584,7 +584,7 @@ fn init_project() -> Result<()> {
 # /experiments/     # Exclude experimental code
 # *.bak             # Exclude backup files
 "#;
-        fs::write(&rsconstructignore_path, rsconstructignore_content)?;
+        ctx!(fs::write(&rsconstructignore_path, rsconstructignore_content), "Failed to write .rsconstructignore")?;
         println!("Created .rsconstructignore");
     }
 

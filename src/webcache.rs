@@ -28,7 +28,8 @@ pub fn fetch(url: &str) -> Result<String> {
 
     // Check cache
     {
-        let read_txn = db.begin_read()?;
+        let read_txn = db.begin_read()
+            .context("Failed to begin read transaction on webcache")?;
         if let Ok(table) = read_txn.open_table(TABLE)
             && let Some(entry) = table.get(url)?
         {
@@ -45,12 +46,16 @@ pub fn fetch(url: &str) -> Result<String> {
         .with_context(|| format!("Failed to read response body from {url}"))?;
 
     // Store in cache
-    let write_txn = db.begin_write()?;
+    let write_txn = db.begin_write()
+        .context("Failed to begin write transaction on webcache")?;
     {
-        let mut table = write_txn.open_table(TABLE)?;
-        table.insert(url, body.as_str())?;
+        let mut table = write_txn.open_table(TABLE)
+            .context("Failed to open webcache table for write")?;
+        table.insert(url, body.as_str())
+            .with_context(|| format!("Failed to insert webcache entry for {}", url))?;
     }
-    write_txn.commit()?;
+    write_txn.commit()
+        .context("Failed to commit webcache write")?;
 
     Ok(body)
 }
@@ -62,13 +67,18 @@ pub fn clear() -> Result<usize> {
         return Ok(0);
     }
     let db = open_db()?;
-    let write_txn = db.begin_write()?;
+    let write_txn = db.begin_write()
+        .context("Failed to begin write transaction for webcache clear")?;
     let count = {
-        let table = write_txn.open_table(TABLE)?;
-        table.len()? as usize
+        let table = write_txn.open_table(TABLE)
+            .context("Failed to open webcache table for clear")?;
+        table.len()
+            .context("Failed to read webcache table length")? as usize
     };
-    write_txn.delete_table(TABLE)?;
-    write_txn.commit()?;
+    write_txn.delete_table(TABLE)
+        .context("Failed to delete webcache table")?;
+    write_txn.commit()
+        .context("Failed to commit webcache clear")?;
     Ok(count)
 }
 
@@ -79,7 +89,8 @@ pub fn list() -> Result<Vec<CacheEntry>> {
         return Ok(Vec::new());
     }
     let db = open_db()?;
-    let read_txn = db.begin_read()?;
+    let read_txn = db.begin_read()
+        .context("Failed to begin read transaction on webcache")?;
     let table = match read_txn.open_table(TABLE) {
         Ok(t) => t,
         Err(_) => return Ok(Vec::new()),

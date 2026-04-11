@@ -1,3 +1,18 @@
+/// Add context to a Result with automatic file:line location.
+///
+/// Usage:
+///   ctx!(fs::read(&path), "Failed to read config")?;
+///   ctx!(fs::write(&path, data), format!("Failed to write {}", path.display()))?;
+///
+/// Produces error messages like:
+///   "Failed to read config (at src/config/mod.rs:42)"
+#[macro_export]
+macro_rules! ctx {
+    ($expr:expr, $msg:expr) => {
+        anyhow::Context::with_context($expr, || format!("{} (at {}:{})", $msg, file!(), line!()))
+    };
+}
+
 /// Centralized catalog of `.expect()` messages for internal errors.
 ///
 /// Every `expect()` in production code should reference a constant from this

@@ -849,39 +849,20 @@ fn default_generator_output_extension() -> String {
     "out".into()
 }
 
+/// Generator config. Custom: output_extension.
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct GeneratorConfig {
-    pub command: Option<String>,
-    #[serde(default = "default_generator_output_dir")]
-    pub output_dir: String,
     #[serde(default = "default_generator_output_extension")]
     pub output_extension: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub dep_inputs: Vec<String>,
-    #[serde(default)]
-    pub dep_auto: Vec<String>,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_jobs: Option<usize>,
     #[serde(flatten)]
-    pub scan: ScanConfig,
+    pub standard: StandardConfig,
 }
 
 impl Default for GeneratorConfig {
     fn default() -> Self {
         Self {
-            command: None,
-            output_dir: "out/generator".into(),
             output_extension: "out".into(),
-            args: Vec::new(),
-            dep_inputs: Vec::new(),
-            dep_auto: Vec::new(),
-            batch: true,
-            max_jobs: None,
-            scan: ScanConfig::default(),
+            standard: StandardConfig { output_dir: "out/generator".into(), ..StandardConfig::default() },
         }
     }
 }
@@ -912,40 +893,29 @@ fn default_explicit_command() -> String {
     "true".into()
 }
 
+/// Explicit config. Custom: inputs, input_globs, output_files, output_dirs.
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ExplicitConfig {
-    /// Script or binary to execute
-    #[serde(default = "default_explicit_command")]
-    pub command: String,
-    /// Extra arguments passed before --inputs
-    #[serde(default)]
-    pub args: Vec<String>,
-    /// Literal input file paths
     #[serde(default)]
     pub inputs: Vec<String>,
-    /// Glob patterns resolved to input files
     #[serde(default)]
     pub input_globs: Vec<String>,
-    /// Output file paths produced by the command
     #[serde(default)]
     pub output_files: Vec<String>,
-    /// Output directories produced by the command
     #[serde(default)]
     pub output_dirs: Vec<String>,
     #[serde(flatten)]
-    pub scan: ScanConfig,
+    pub standard: StandardConfig,
 }
 
 impl Default for ExplicitConfig {
     fn default() -> Self {
         Self {
-            command: "true".into(),
-            args: Vec::new(),
             inputs: Vec::new(),
             input_globs: Vec::new(),
             output_files: Vec::new(),
             output_dirs: Vec::new(),
-            scan: ScanConfig::default(),
+            standard: StandardConfig { command: "true".into(), ..StandardConfig::default() },
         }
     }
 }
@@ -974,31 +944,17 @@ fn default_pip() -> String {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+/// Pip config. Custom: pip.
 pub struct PipConfig {
     #[serde(default = "default_pip")]
     pub pip: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub dep_inputs: Vec<String>,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_jobs: Option<usize>,
     #[serde(flatten)]
-    pub scan: ScanConfig,
+    pub standard: StandardConfig,
 }
 
 impl Default for PipConfig {
     fn default() -> Self {
-        Self {
-            pip: "pip".into(),
-            args: Vec::new(),
-            dep_inputs: Vec::new(),
-            batch: true,
-            max_jobs: None,
-            scan: ScanConfig::default(),
-        }
+        Self { pip: "pip".into(), standard: StandardConfig::default() }
     }
 }
 
@@ -1028,39 +984,25 @@ fn default_sphinx_output_dir() -> String {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+/// Sphinx config. Custom: sphinx_build, working_dir, cache_output_dir.
 pub struct SphinxConfig {
     #[serde(default = "default_sphinx_build")]
     pub sphinx_build: String,
-    #[serde(default = "default_sphinx_output_dir")]
-    pub output_dir: String,
     #[serde(default)]
     pub working_dir: Option<String>,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub dep_inputs: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_jobs: Option<usize>,
     #[serde(flatten)]
-    pub scan: ScanConfig,
+    pub standard: StandardConfig,
 }
 
 impl Default for SphinxConfig {
     fn default() -> Self {
         Self {
             sphinx_build: "sphinx-build".into(),
-            output_dir: "docs".into(),
             working_dir: None,
-            args: Vec::new(),
-            dep_inputs: Vec::new(),
             cache_output_dir: true,
-            batch: true,
-            max_jobs: None,
-            scan: ScanConfig::default(),
+            standard: StandardConfig { output_dir: "docs".into(), ..StandardConfig::default() },
         }
     }
 }
@@ -1093,36 +1035,22 @@ fn default_mdbook_output_dir() -> String {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+/// Mdbook config. Custom: mdbook, cache_output_dir.
 pub struct MdbookConfig {
     #[serde(default = "default_mdbook")]
     pub mdbook: String,
-    #[serde(default = "default_mdbook_output_dir")]
-    pub output_dir: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub dep_inputs: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_jobs: Option<usize>,
     #[serde(flatten)]
-    pub scan: ScanConfig,
+    pub standard: StandardConfig,
 }
 
 impl Default for MdbookConfig {
     fn default() -> Self {
         Self {
             mdbook: "mdbook".into(),
-            output_dir: "book".into(),
-            args: Vec::new(),
-            dep_inputs: Vec::new(),
             cache_output_dir: true,
-            batch: true,
-            max_jobs: None,
-            scan: ScanConfig::default(),
+            standard: StandardConfig { output_dir: "book".into(), ..StandardConfig::default() },
         }
     }
 }
@@ -1154,36 +1082,22 @@ fn default_npm_command() -> String {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+/// Npm config. Custom: npm, cache_output_dir.
 pub struct NpmConfig {
     #[serde(default = "default_npm")]
     pub npm: String,
-    #[serde(default = "default_npm_command")]
-    pub command: String,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub dep_inputs: Vec<String>,
     #[serde(default = "default_true")]
     pub cache_output_dir: bool,
-    #[serde(default = "default_true")]
-    pub batch: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_jobs: Option<usize>,
     #[serde(flatten)]
-    pub scan: ScanConfig,
+    pub standard: StandardConfig,
 }
 
 impl Default for NpmConfig {
     fn default() -> Self {
         Self {
             npm: "npm".into(),
-            command: "install".into(),
-            args: Vec::new(),
-            dep_inputs: Vec::new(),
             cache_output_dir: true,
-            batch: true,
-            max_jobs: None,
-            scan: ScanConfig::default(),
+            standard: StandardConfig { command: "install".into(), ..StandardConfig::default() },
         }
     }
 }

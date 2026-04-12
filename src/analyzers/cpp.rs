@@ -226,7 +226,7 @@ impl DepAnalyzer for CppDepAnalyzer {
 }
 
 inventory::submit! {
-    crate::registry::AnalyzerPlugin {
+    crate::registries::AnalyzerPlugin {
         name: "cpp",
         description: "Scan C/C++ source files for #include dependencies (using compiler -MM)",
         is_native: false,

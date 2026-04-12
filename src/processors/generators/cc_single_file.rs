@@ -567,18 +567,18 @@ impl Processor for CcSingleFileProcessor {
 }
 
 fn plugin_create(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
-    crate::registry::deserialize_and_create(toml, |cfg| Box::new(CcSingleFileProcessor::new(cfg)))
+    crate::registries::deserialize_and_create(toml, |cfg| Box::new(CcSingleFileProcessor::new(cfg)))
 }
 inventory::submit! {
-    crate::registry::ProcessorPlugin {
+    crate::registries::ProcessorPlugin {
         version: 1,
         name: "cc_single_file",
         processor_type: crate::processors::ProcessorType::Generator,
         create: plugin_create,
-        defconfig_json: crate::registry::default_config_json::<crate::config::CcSingleFileConfig>,
-        known_fields: crate::registry::typed_known_fields::<crate::config::CcSingleFileConfig>,
-        output_fields: crate::registry::typed_output_fields::<crate::config::CcSingleFileConfig>,
-        must_fields: crate::registry::typed_must_fields::<crate::config::CcSingleFileConfig>,
-        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::CcSingleFileConfig>,
+        defconfig_json: crate::registries::default_config_json::<crate::config::CcSingleFileConfig>,
+        known_fields: crate::registries::typed_known_fields::<crate::config::CcSingleFileConfig>,
+        output_fields: crate::registries::typed_output_fields::<crate::config::CcSingleFileConfig>,
+        must_fields: crate::registries::typed_must_fields::<crate::config::CcSingleFileConfig>,
+        field_descriptions: crate::registries::typed_field_descriptions::<crate::config::CcSingleFileConfig>,
     }
 }

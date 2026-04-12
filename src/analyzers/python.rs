@@ -147,7 +147,7 @@ impl DepAnalyzer for PythonDepAnalyzer {
 }
 
 inventory::submit! {
-    crate::registry::AnalyzerPlugin {
+    crate::registries::AnalyzerPlugin {
         name: "python",
         description: "Scan Python files for local import dependencies",
         is_native: true,

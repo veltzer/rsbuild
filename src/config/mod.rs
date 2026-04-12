@@ -360,7 +360,7 @@ pub(crate) struct ProcessorInstance {
     pub config_toml: toml::Value,
 }
 
-use crate::registry::{self, ProcessorPlugin};
+use crate::registries::{self as registry, ProcessorPlugin};
 
 pub(crate) fn find_registry_entry(type_name: &str) -> Option<&'static ProcessorPlugin> {
     registry::all_plugins().find(|e| e.name == type_name)

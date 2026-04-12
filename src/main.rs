@@ -2,7 +2,7 @@
 #![deny(warnings)]
 
 #[macro_use]
-mod registry;
+mod registries;
 
 #[macro_use]
 mod errors;

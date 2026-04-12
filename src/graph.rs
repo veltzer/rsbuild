@@ -85,7 +85,7 @@ impl Product {
         let mut parts = String::new();
         parts.push_str(&self.processor);
         parts.push_str(":v");
-        let version = crate::registry::processor_version(&self.processor).unwrap_or(0);
+        let version = crate::registries::processor_version(&self.processor).unwrap_or(0);
         parts.push_str(&version.to_string());
         if let Some(ref hash) = self.config_hash {
             parts.push(':');

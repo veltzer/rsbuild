@@ -31,14 +31,14 @@ fn execute_yaml2json(_config: &StandardConfig, product: &Product) -> Result<()> 
 
 
 fn create_yaml2json(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
-    crate::registry::deserialize_and_create(toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "Convert YAML files to JSON (in-process)", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("json"), execute_fn: execute_yaml2json, is_native: true })))
+    crate::registries::deserialize_and_create(toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "Convert YAML files to JSON (in-process)", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("json"), execute_fn: execute_yaml2json, is_native: true })))
 }
-inventory::submit! { crate::registry::ProcessorPlugin {
+inventory::submit! { crate::registries::ProcessorPlugin {
     version: 1,
     name: "yaml2json", processor_type: crate::processors::ProcessorType::Generator, create: create_yaml2json,
-    known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>,
-    output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>,
-    must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>,
-    field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig>,
-    defconfig_json: crate::registry::default_config_json::<crate::config::StandardConfig>,
+    known_fields: crate::registries::typed_known_fields::<crate::config::StandardConfig>,
+    output_fields: crate::registries::typed_output_fields::<crate::config::StandardConfig>,
+    must_fields: crate::registries::typed_must_fields::<crate::config::StandardConfig>,
+    field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
+    defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
 } }

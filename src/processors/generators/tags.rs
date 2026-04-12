@@ -1955,18 +1955,18 @@ mod tests {
 }
 
 fn plugin_create(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
-    crate::registry::deserialize_and_create(toml, |cfg| Box::new(TagsProcessor::new(cfg)))
+    crate::registries::deserialize_and_create(toml, |cfg| Box::new(TagsProcessor::new(cfg)))
 }
 inventory::submit! {
-    crate::registry::ProcessorPlugin {
+    crate::registries::ProcessorPlugin {
         version: 1,
         name: "tags",
         processor_type: crate::processors::ProcessorType::Generator,
         create: plugin_create,
-        defconfig_json: crate::registry::default_config_json::<crate::config::TagsConfig>,
-        known_fields: crate::registry::typed_known_fields::<crate::config::TagsConfig>,
-        output_fields: crate::registry::typed_output_fields::<crate::config::TagsConfig>,
-        must_fields: crate::registry::typed_must_fields::<crate::config::TagsConfig>,
-        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::TagsConfig>,
+        defconfig_json: crate::registries::default_config_json::<crate::config::TagsConfig>,
+        known_fields: crate::registries::typed_known_fields::<crate::config::TagsConfig>,
+        output_fields: crate::registries::typed_output_fields::<crate::config::TagsConfig>,
+        must_fields: crate::registries::typed_must_fields::<crate::config::TagsConfig>,
+        field_descriptions: crate::registries::typed_field_descriptions::<crate::config::TagsConfig>,
     }
 }

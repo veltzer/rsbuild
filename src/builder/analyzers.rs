@@ -8,7 +8,7 @@ use super::{Builder, sorted_keys};
 
 /// List all available dependency analyzers (works without rsconstruct.toml).
 pub fn list_analyzers(verbose: bool) {
-    use crate::registry;
+    use crate::registries as registry;
 
     let mut plugins: Vec<_> = registry::all_analyzer_plugins().collect();
     plugins.sort_by_key(|p| p.name);
@@ -42,7 +42,7 @@ pub fn list_analyzers(verbose: bool) {
 
 /// Show default analyzer configuration (works without rsconstruct.toml).
 pub fn analyzer_defconfig(name: Option<&str>) -> Result<()> {
-    use crate::registry;
+    use crate::registries as registry;
 
     let names: Vec<String> = if let Some(name) = name {
         if registry::find_analyzer_plugin(name).is_none() {

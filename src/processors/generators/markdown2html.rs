@@ -26,14 +26,14 @@ fn execute_markdown2html(config: &StandardConfig, product: &Product) -> Result<(
 
 
 fn create_markdown2html(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
-    crate::registry::deserialize_and_create(toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "Convert Markdown files to HTML", extra_tools: &["perl"], discover_mode: DiscoverMode::SingleFormat("html"), execute_fn: execute_markdown2html, is_native: false })))
+    crate::registries::deserialize_and_create(toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "Convert Markdown files to HTML", extra_tools: &["perl"], discover_mode: DiscoverMode::SingleFormat("html"), execute_fn: execute_markdown2html, is_native: false })))
 }
-inventory::submit! { crate::registry::ProcessorPlugin {
+inventory::submit! { crate::registries::ProcessorPlugin {
     version: 1,
     name: "markdown2html", processor_type: crate::processors::ProcessorType::Generator, create: create_markdown2html,
-    known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>,
-    output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>,
-    must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>,
-    field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig>,
-    defconfig_json: crate::registry::default_config_json::<crate::config::StandardConfig>,
+    known_fields: crate::registries::typed_known_fields::<crate::config::StandardConfig>,
+    output_fields: crate::registries::typed_output_fields::<crate::config::StandardConfig>,
+    must_fields: crate::registries::typed_must_fields::<crate::config::StandardConfig>,
+    field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
+    defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
 } }

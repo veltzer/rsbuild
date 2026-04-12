@@ -499,7 +499,7 @@ fn load_lua_config(lua_file: &Path) -> Result<Map<String, Value>> {
     Ok(result)
 }
 
-use crate::registry;
+use crate::registries as registry;
 
 fn plugin_create(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
     registry::deserialize_and_create(toml, |cfg| Box::new(TeraProcessor::new(cfg)))

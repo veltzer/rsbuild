@@ -171,18 +171,18 @@ impl Processor for ExplicitProcessor {
 }
 
 fn plugin_create(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
-    crate::registry::deserialize_and_create(toml, |cfg| Box::new(ExplicitProcessor::new(cfg)))
+    crate::registries::deserialize_and_create(toml, |cfg| Box::new(ExplicitProcessor::new(cfg)))
 }
 inventory::submit! {
-    crate::registry::ProcessorPlugin {
+    crate::registries::ProcessorPlugin {
         version: 1,
         name: "explicit",
         processor_type: crate::processors::ProcessorType::Explicit,
         create: plugin_create,
-        defconfig_json: crate::registry::default_config_json::<crate::config::ExplicitConfig>,
-        known_fields: crate::registry::typed_known_fields::<crate::config::ExplicitConfig>,
-        output_fields: crate::registry::typed_output_fields::<crate::config::ExplicitConfig>,
-        must_fields: crate::registry::typed_must_fields::<crate::config::ExplicitConfig>,
-        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::ExplicitConfig>,
+        defconfig_json: crate::registries::default_config_json::<crate::config::ExplicitConfig>,
+        known_fields: crate::registries::typed_known_fields::<crate::config::ExplicitConfig>,
+        output_fields: crate::registries::typed_output_fields::<crate::config::ExplicitConfig>,
+        must_fields: crate::registries::typed_must_fields::<crate::config::ExplicitConfig>,
+        field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ExplicitConfig>,
     }
 }

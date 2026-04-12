@@ -1,8 +1,13 @@
+//! Processor plugin registry.
+//!
+//! Every built-in processor (checker, generator, creator, mass-generator) submits
+//! a [`ProcessorPlugin`] entry via `inventory::submit!`. The inventory is collected
+//! at link time.
+
 use anyhow::Result;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::analyzers::DepAnalyzer;
 use crate::config::KnownFields;
 use crate::processors::{Processor, ProcessorType};
 
@@ -55,45 +60,6 @@ pub(crate) fn all_plugins() -> impl Iterator<Item = &'static ProcessorPlugin> {
 /// processor's cached outputs.
 pub(crate) fn processor_version(name: &str) -> Option<u32> {
     all_plugins().find(|p| p.name == name).map(|p| p.version)
-}
-
-// --- Analyzer registry ---
-
-/// An analyzer plugin. Each analyzer file submits one via `inventory::submit!`.
-pub struct AnalyzerPlugin {
-    pub name: &'static str,
-    pub description: &'static str,
-    pub is_native: bool,
-    /// Create an analyzer from its TOML config section.
-    /// Receives the raw `[analyzer.NAME]` table value and a verbose flag.
-    pub create: fn(&toml::Value, bool) -> Result<Box<dyn DepAnalyzer>>,
-    /// Return the default config as a TOML string, or None if the analyzer has no config.
-    pub defconfig_toml: fn() -> Option<String>,
-}
-
-unsafe impl Sync for AnalyzerPlugin {}
-
-inventory::collect!(AnalyzerPlugin);
-
-pub(crate) fn all_analyzer_plugins() -> impl Iterator<Item = &'static AnalyzerPlugin> {
-    inventory::iter::<AnalyzerPlugin>.into_iter()
-}
-
-/// Return sorted analyzer names from the registry.
-pub(crate) fn all_analyzer_names() -> Vec<&'static str> {
-    let mut names: Vec<&str> = all_analyzer_plugins().map(|p| p.name).collect();
-    names.sort();
-    names
-}
-
-/// Find an analyzer plugin by name.
-pub(crate) fn find_analyzer_plugin(name: &str) -> Option<&'static AnalyzerPlugin> {
-    all_analyzer_plugins().find(|p| p.name == name)
-}
-
-/// Build a clap value parser that accepts any registered analyzer name.
-pub(crate) fn analyzer_name_parser() -> clap::builder::PossibleValuesParser {
-    clap::builder::PossibleValuesParser::new(all_analyzer_names())
 }
 
 /// Build a clap value parser that accepts any registered processor type name (pname).

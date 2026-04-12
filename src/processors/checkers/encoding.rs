@@ -92,18 +92,18 @@ impl crate::processors::Processor for EncodingProcessor {
 }
 
 fn plugin_create(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
-    crate::registry::deserialize_and_create(toml, |cfg| Box::new(EncodingProcessor::new(cfg)))
+    crate::registries::deserialize_and_create(toml, |cfg| Box::new(EncodingProcessor::new(cfg)))
 }
 inventory::submit! {
-    crate::registry::ProcessorPlugin {
+    crate::registries::ProcessorPlugin {
         version: 1,
         name: "encoding",
         processor_type: crate::processors::ProcessorType::Checker,
         create: plugin_create,
-        defconfig_json: crate::registry::default_config_json::<crate::config::EncodingConfig>,
-        known_fields: crate::registry::typed_known_fields::<crate::config::EncodingConfig>,
-        output_fields: crate::registry::typed_output_fields::<crate::config::EncodingConfig>,
-        must_fields: crate::registry::typed_must_fields::<crate::config::EncodingConfig>,
-        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::EncodingConfig>,
+        defconfig_json: crate::registries::default_config_json::<crate::config::EncodingConfig>,
+        known_fields: crate::registries::typed_known_fields::<crate::config::EncodingConfig>,
+        output_fields: crate::registries::typed_output_fields::<crate::config::EncodingConfig>,
+        must_fields: crate::registries::typed_must_fields::<crate::config::EncodingConfig>,
+        field_descriptions: crate::registries::typed_field_descriptions::<crate::config::EncodingConfig>,
     }
 }

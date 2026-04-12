@@ -474,7 +474,7 @@ pub enum ProcessorAction {
     /// Show default configuration for a processor type (no config needed)
     Defconfig {
         /// Processor name (pname) — the type name (e.g., ruff, pip, tera)
-        #[arg(value_parser = crate::registry::processor_name_parser())]
+        #[arg(value_parser = crate::registries::processor_name_parser())]
         pname: String,
     },
     /// Show the current processor allowlist (requires config)
@@ -552,13 +552,13 @@ pub enum AnalyzersAction {
     /// Show default analyzer configuration (no config needed)
     Defconfig {
         /// Analyzer name; omit to show all
-        #[arg(value_parser = crate::registry::analyzer_name_parser())]
+        #[arg(value_parser = crate::registries::analyzer_name_parser())]
         name: Option<String>,
     },
     /// Show analyzer configuration (requires config)
     Config {
         /// Analyzer name (e.g., "cpp", "python"); omit to show all
-        #[arg(value_parser = crate::registry::analyzer_name_parser())]
+        #[arg(value_parser = crate::registries::analyzer_name_parser())]
         name: Option<String>,
     },
     /// Show cached dependencies (requires config)
@@ -571,7 +571,7 @@ pub enum AnalyzersAction {
     /// Clear the dependency cache (requires config)
     Clean {
         /// Only clear entries from this analyzer (e.g., "cpp", "python")
-        #[arg(long, value_parser = crate::registry::analyzer_name_parser())]
+        #[arg(long, value_parser = crate::registries::analyzer_name_parser())]
         analyzer: Option<String>,
     },
 }

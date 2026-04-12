@@ -229,18 +229,18 @@ impl Processor for LinuxModuleProcessor {
 }
 
 fn plugin_create(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
-    crate::registry::deserialize_and_create(toml, |cfg| Box::new(LinuxModuleProcessor::new(cfg)))
+    crate::registries::deserialize_and_create(toml, |cfg| Box::new(LinuxModuleProcessor::new(cfg)))
 }
 inventory::submit! {
-    crate::registry::ProcessorPlugin {
+    crate::registries::ProcessorPlugin {
         version: 1,
         name: "linux_module",
         processor_type: crate::processors::ProcessorType::Creator,
         create: plugin_create,
-        defconfig_json: crate::registry::default_config_json::<crate::config::LinuxModuleConfig>,
-        known_fields: crate::registry::typed_known_fields::<crate::config::LinuxModuleConfig>,
-        output_fields: crate::registry::typed_output_fields::<crate::config::LinuxModuleConfig>,
-        must_fields: crate::registry::typed_must_fields::<crate::config::LinuxModuleConfig>,
-        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::LinuxModuleConfig>,
+        defconfig_json: crate::registries::default_config_json::<crate::config::LinuxModuleConfig>,
+        known_fields: crate::registries::typed_known_fields::<crate::config::LinuxModuleConfig>,
+        output_fields: crate::registries::typed_output_fields::<crate::config::LinuxModuleConfig>,
+        must_fields: crate::registries::typed_must_fields::<crate::config::LinuxModuleConfig>,
+        field_descriptions: crate::registries::typed_field_descriptions::<crate::config::LinuxModuleConfig>,
     }
 }

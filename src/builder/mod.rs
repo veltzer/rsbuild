@@ -92,7 +92,7 @@ pub(crate) fn create_processor_for_instance(
 ) -> anyhow::Result<Option<Box<dyn Processor>>> {
     if let Some(entry) = find_registry_entry(type_name) {
         let mut resolved = config_toml.clone();
-        crate::registry::apply_all_defaults(entry.name, &mut resolved);
+        crate::registries::apply_all_defaults(entry.name, &mut resolved);
         return (entry.create)(&resolved).map(Some);
     }
     Ok(None)
@@ -103,7 +103,7 @@ pub(crate) fn create_all_default_processors() -> ProcessorMap {
     let mut processors: ProcessorMap = HashMap::new();
     for entry in registry_entries() {
         let mut empty_toml = toml::Value::Table(toml::map::Map::new());
-        crate::registry::apply_all_defaults(entry.name, &mut empty_toml);
+        crate::registries::apply_all_defaults(entry.name, &mut empty_toml);
         let proc = (entry.create)(&empty_toml).unwrap();
         processors.insert(entry.name.to_string(), proc);
     }
@@ -261,7 +261,7 @@ impl Builder {
     fn create_analyzers(&self, verbose: bool) -> Result<HashMap<String, Box<dyn DepAnalyzer>>> {
         let mut analyzers: HashMap<String, Box<dyn DepAnalyzer>> = HashMap::new();
         for inst in &self.config.analyzer.instances {
-            let plugin = crate::registry::find_analyzer_plugin(&inst.name)
+            let plugin = crate::registries::find_analyzer_plugin(&inst.name)
                 .ok_or_else(|| anyhow::anyhow!("Unknown analyzer '{}'", inst.name))?;
             let analyzer = (plugin.create)(&inst.config_toml, verbose)?;
             analyzers.insert(inst.name.clone(), analyzer);

@@ -114,7 +114,7 @@ impl DepAnalyzer for TeraDepAnalyzer {
 }
 
 inventory::submit! {
-    crate::registry::AnalyzerPlugin {
+    crate::registries::AnalyzerPlugin {
         name: "tera",
         description: "Scan Tera templates for include/import/extends dependencies",
         is_native: true,

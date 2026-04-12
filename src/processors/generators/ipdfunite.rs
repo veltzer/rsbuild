@@ -253,18 +253,18 @@ impl Processor for IpdfuniteProcessor {
 }
 
 fn plugin_create(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
-    crate::registry::deserialize_and_create(toml, |cfg| Box::new(IpdfuniteProcessor::new(cfg)))
+    crate::registries::deserialize_and_create(toml, |cfg| Box::new(IpdfuniteProcessor::new(cfg)))
 }
 inventory::submit! {
-    crate::registry::ProcessorPlugin {
+    crate::registries::ProcessorPlugin {
         version: 1,
         name: "ipdfunite",
         processor_type: crate::processors::ProcessorType::Generator,
         create: plugin_create,
-        defconfig_json: crate::registry::default_config_json::<crate::config::IpdfuniteConfig>,
-        known_fields: crate::registry::typed_known_fields::<crate::config::IpdfuniteConfig>,
-        output_fields: crate::registry::typed_output_fields::<crate::config::IpdfuniteConfig>,
-        must_fields: crate::registry::typed_must_fields::<crate::config::IpdfuniteConfig>,
-        field_descriptions: crate::registry::typed_field_descriptions::<crate::config::IpdfuniteConfig>,
+        defconfig_json: crate::registries::default_config_json::<crate::config::IpdfuniteConfig>,
+        known_fields: crate::registries::typed_known_fields::<crate::config::IpdfuniteConfig>,
+        output_fields: crate::registries::typed_output_fields::<crate::config::IpdfuniteConfig>,
+        must_fields: crate::registries::typed_must_fields::<crate::config::IpdfuniteConfig>,
+        field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IpdfuniteConfig>,
     }
 }

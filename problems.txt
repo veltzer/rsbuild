@@ -7,8 +7,6 @@ python files dependency analysis:
 
 - do we have a test that checks that we get an error if we have two processors in the same tmpl file without differentiating between then with a different name.
 
-- rsconstruct processors types should print out a table. --json will emit json output.
-
   - I want rscontrcut processor add [TAB] -> name of processor that will add the processor to my toml file with all the must fill variables already there with default values and comments to fill them correctly.
     and the same for analyzers.
 

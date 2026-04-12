@@ -381,6 +381,9 @@ impl Builder {
             let before = graph.products().len();
             for name in active {
                 let name = name.as_ref();
+                if !processors[name].scan_config().enabled {
+                    continue;
+                }
                 if for_clean {
                     processors[name].discover_for_clean(graph, &file_index, name)?;
                 } else {

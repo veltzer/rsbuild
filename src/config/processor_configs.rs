@@ -28,6 +28,10 @@ pub struct StandardConfig {
     /// Set to false to always rebuild and never store results.
     #[serde(default = "default_true")]
     pub cache: bool,
+    /// Whether this processor is active. Set to false to disable without
+    /// removing the stanza from rsconstruct.toml.
+    #[serde(default = "default_true")]
+    pub enabled: bool,
     // --- Scan fields (file discovery) ---
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub src_dirs: Option<Vec<String>>,
@@ -55,6 +59,7 @@ impl Default for StandardConfig {
             batch: true,
             max_jobs: None,
             cache: true,
+            enabled: true,
             src_dirs: None,
             src_extensions: None,
             src_exclude_dirs: None,
@@ -118,7 +123,7 @@ impl StandardConfig {
 
 impl KnownFields for StandardConfig {
     fn known_fields() -> &'static [&'static str] {
-        &["command", "formats", "args", "dep_inputs", "dep_auto", "output_dir", "batch", "max_jobs"]
+        &["command", "formats", "args", "dep_inputs", "dep_auto", "output_dir", "batch", "max_jobs", "enabled"]
     }
     fn output_fields() -> &'static [&'static str] {
         &["command", "formats", "args", "output_dir"]
@@ -129,6 +134,7 @@ impl KnownFields for StandardConfig {
             ("formats",    "Output formats to generate"),
             ("args",       "Extra arguments passed to the tool"),
             ("output_dir", "Directory where generated output files are written"),
+            ("enabled",    "Set to false to disable this processor without removing the stanza"),
         ]
     }
 }

@@ -13,7 +13,7 @@ use super::{Builder, ProductStatusLabels, StatusPrintOptions, phases_debug};
 /// Expand `@`-prefixed shortcuts in the processor filter.
 ///
 /// Three categories of shortcuts:
-/// - **By type**: `@checkers`, `@generators`, `@creators`
+/// - **By type**: `@checkers`, `@generators`, `@creators`, `@lua`
 /// - **By tool**: `@python3`, `@node`, etc. — matches processors whose `required_tools()` contains the name
 /// - **By processor name**: `@ruff` → `"ruff"` — strips the `@` prefix
 fn expand_aliases(filter: &[String], processors: &ProcessorMap) -> Vec<String> {
@@ -39,6 +39,13 @@ fn expand_aliases(filter: &[String], processors: &ProcessorMap) -> Vec<String> {
                     expanded.extend(
                         processors.iter()
                             .filter(|(_, p)| p.processor_type() == ProcessorType::Creator)
+                            .map(|(n, _)| n.clone())
+                    );
+                }
+                "lua" => {
+                    expanded.extend(
+                        processors.iter()
+                            .filter(|(_, p)| p.processor_type() == ProcessorType::Lua)
                             .map(|(n, _)| n.clone())
                     );
                 }

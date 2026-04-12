@@ -8,7 +8,7 @@ use std::process::Command;
 use crate::config::{output_config_hash, standard_config_from_toml, StandardConfig};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use super::{clean_outputs, ensure_stub_dir, run_command, Processor};
+use crate::processors::{clean_outputs, ensure_stub_dir, run_command, Processor, ProcessorType};
 
 /// Convert a LuaResult to an anyhow::Result with a contextual message.
 fn lua_context<T>(result: LuaResult<T>, msg: impl std::fmt::Display) -> Result<T> {
@@ -124,7 +124,7 @@ impl LuaProcessor {
             lua.create_function(|_, (source, suffix): (String, String)| {
                 let src = PathBuf::from(&source);
                 let stub_dir = PathBuf::from("out").join(&suffix);
-                let stub = super::stub_path(&stub_dir, &src, &suffix);
+                let stub = crate::processors::stub_path(&stub_dir, &src, &suffix);
                 Ok(stub.to_string_lossy().to_string())
             }),
             "Failed to create stub_path function",
@@ -340,21 +340,23 @@ impl Processor for LuaProcessor {
         &self.description
     }
 
-    fn processor_type(&self) -> super::ProcessorType {
+    fn processor_type(&self) -> ProcessorType {
         if self.has_function("processor_type") {
             let type_str = self.lua.lock().globals()
                 .get::<LuaFunction>("processor_type")
                 .and_then(|f| f.call::<String>(()))
-                .unwrap_or_else(|_| "checker".to_string());
+                .unwrap_or_else(|_| "lua".to_string());
             match type_str.to_lowercase().as_str() {
-                "generator" => super::ProcessorType::Generator,
-                "creator" => super::ProcessorType::Creator,
-                "explicit" => super::ProcessorType::Explicit,
-                _ => super::ProcessorType::Checker,
+                "generator" => ProcessorType::Generator,
+                "checker" => ProcessorType::Checker,
+                "creator" => ProcessorType::Creator,
+                "explicit" => ProcessorType::Explicit,
+                _ => ProcessorType::Lua,
             }
         } else {
-            // Default to Checker since most lint plugins are checkers
-            super::ProcessorType::Checker
+            // No processor_type declared: categorize as Lua. Lua scripts that
+            // want to match @checkers/@generators/@creators must declare it.
+            ProcessorType::Lua
         }
     }
 

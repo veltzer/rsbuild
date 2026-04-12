@@ -1,13 +1,11 @@
-mod base;
-pub use base::ProcessorBase;
-
 mod checkers;
-mod creator;
+mod explicit;
 pub(crate) mod generators;
 mod creators;
-pub mod lua_processor;
+pub mod lua;
 
 use anyhow::{Context, Result};
+use serde::Serialize;
 #[cfg(debug_assertions)]
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -769,7 +767,7 @@ where
 
 pub(crate) use checkers::terms;
 pub(crate) use generators::tags as tags_cmd;
-pub use lua_processor::LuaProcessor;
+pub use lua::LuaProcessor;
 
 /// Map from processor name to processor instance. Used throughout the build pipeline.
 pub type ProcessorMap = HashMap<String, Box<dyn Processor>>;
@@ -812,6 +810,11 @@ pub enum ProcessorType {
     /// Many inputs aggregated into (possibly) many output files and/or directories.
     /// Unlike Generator (one product per input file), creates a single product.
     Explicit,
+    /// A user-defined processor implemented in Lua via the plugin runtime.
+    /// Lua scripts may override this by declaring `processor_type()` returning
+    /// "checker"/"generator"/"creator"/"explicit" — only scripts that omit that
+    /// function are categorized as Lua.
+    Lua,
 }
 
 impl ProcessorType {
@@ -822,6 +825,7 @@ impl ProcessorType {
             ProcessorType::Checker => "checker",
             ProcessorType::Creator => "creator",
             ProcessorType::Explicit => "explicit",
+            ProcessorType::Lua => "lua",
         }
     }
 
@@ -832,9 +836,57 @@ impl ProcessorType {
             ProcessorType::Checker => "Validates input files without producing outputs",
             ProcessorType::Creator => "Runs a command and caches declared output files and directories",
             ProcessorType::Explicit => "Many inputs aggregated into (possibly) many output files and/or directories",
+            ProcessorType::Lua => "User-defined processor implemented in Lua via the plugin runtime",
         }
     }
 
+}
+
+/// Common base for all processors. Holds fields needed by boilerplate
+/// Processor methods so each processor doesn't repeat them.
+pub struct ProcessorBase {
+    /// Human-readable description
+    pub description: &'static str,
+    /// Generator or Checker
+    pub processor_type: ProcessorType,
+}
+
+impl ProcessorBase {
+    pub fn generator(_name: &'static str, description: &'static str) -> Self {
+        Self { description, processor_type: ProcessorType::Generator }
+    }
+
+    pub fn creator(_name: &'static str, description: &'static str) -> Self {
+        Self { description, processor_type: ProcessorType::Creator }
+    }
+
+    pub fn checker(_name: &'static str, description: &'static str) -> Self {
+        Self { description, processor_type: ProcessorType::Checker }
+    }
+
+    pub fn explicit(_name: &'static str, description: &'static str) -> Self {
+        Self { description, processor_type: ProcessorType::Explicit }
+    }
+
+    pub fn description(&self) -> &str {
+        self.description
+    }
+
+    pub fn processor_type(&self) -> ProcessorType {
+        self.processor_type
+    }
+
+    pub fn config_json<C: Serialize>(config: &C) -> Option<String> {
+        serde_json::to_string(config).ok()
+    }
+
+    pub fn clean(product: &Product, name: &str, verbose: bool) -> anyhow::Result<usize> {
+        clean_outputs(product, name, verbose)
+    }
+
+    pub fn clean_output_dir(product: &Product, name: &str, verbose: bool) -> anyhow::Result<usize> {
+        clean_output_dir(product, name, verbose)
+    }
 }
 
 /// Trait for processors that can discover products for the build graph.

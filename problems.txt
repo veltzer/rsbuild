@@ -22,3 +22,5 @@ python files dependency analysis:
     create a document about the source code layout and specific the rules of 1 processor per file and the structure.
 
 - do a pass of making the code more strict (whenever we relax strictness try to figure out if we can return the strictness)
+
+- add "analyzer" to the nomenclature dociumentation. and add all processor types.

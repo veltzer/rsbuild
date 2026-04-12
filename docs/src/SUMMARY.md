@@ -127,6 +127,7 @@ The chapters below cover the internal design and implementation of rsconstruct. 
 - [Profiling](internal/profiling.md)
 - [Path Interning](internal/path-interning.md)
 - [Unreferenced Files](internal/unreferenced-files.md)
+- [Distributed Execution](internal/distributed-execution.md)
 - [Internal Processors](internal/internal-processors.md)
 - [Missing Processors](internal/missing-processors.md)
 - [Crates.io Publishing](internal/crates-io.md)

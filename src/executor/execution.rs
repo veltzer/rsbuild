@@ -56,11 +56,28 @@ impl Semaphore {
 /// overwrite the read-only file. Removing outputs first ensures the tool
 /// can create fresh files.
 ///
-/// For products with output_dirs, removes the entire directories.
-fn remove_stale_outputs(product: &Product) {
-    for output_dir in &product.output_dirs {
-        if output_dir.exists() {
-            let _ = fs::remove_dir_all(output_dir.as_ref());
+/// For products with output_dirs (Creators), we do NOT wipe entire directories
+/// because other processors may contribute files to the same directory. Instead,
+/// we remove just the files recorded in this product's last tree descriptor
+/// (falling back to creating empty dirs if there is no prior tree).
+fn remove_stale_outputs(
+    product: &Product,
+    object_store: &ObjectStore,
+    input_checksum: &str,
+) {
+    if !product.output_dirs.is_empty() {
+        // Creator-style: remove only files we owned in the previous run.
+        // Files that belong to other processors (sharing the same directory)
+        // are left alone and restored/rebuilt independently.
+        let cache_key = product.descriptor_key(input_checksum);
+        for file in object_store.previous_tree_paths(&cache_key) {
+            if file.exists() {
+                let _ = fs::remove_file(&file);
+            }
+        }
+        // Ensure output dirs still exist (the tool may assume they do)
+        for output_dir in &product.output_dirs {
+            let _ = fs::create_dir_all(output_dir.as_ref());
         }
     }
     for output in &product.outputs {
@@ -368,9 +385,9 @@ impl<'a> Executor<'a> {
                 lctx.pb.set_message(format!("[{}] batch {} files", proc_name, product_refs.len()));
             }
 
-            for p in &product_refs {
+            for (p, item) in product_refs.iter().zip(chunk.iter()) {
                 json_output::emit_product_start(&self.product_display(p), &p.processor);
-                remove_stale_outputs(p);
+                remove_stale_outputs(p, lctx.object_store, &item.input_checksum);
             }
             let batch_start = Instant::now();
             crate::processors::set_declared_tools(Some(processor.required_tools()));
@@ -484,7 +501,7 @@ impl<'a> Executor<'a> {
                 }
 
                 json_output::emit_product_start(&self.product_display(product), &product.processor);
-                remove_stale_outputs(product);
+                remove_stale_outputs(product, lctx.object_store, &item.input_checksum);
                 let product_start = Instant::now();
                 let mut last_error = None;
                 let max_attempts = 1 + self.retry;

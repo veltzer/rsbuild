@@ -82,13 +82,13 @@ impl Processor for ExplicitProcessor {
     }
 
     fn auto_detect(&self, _file_index: &FileIndex) -> bool {
-        // Only active if command is set to something real and outputs are declared
-        self.config.standard.command != "true"
+        // Only active if a command is configured and outputs are declared.
+        !self.config.standard.command.is_empty()
             && (!self.config.output_files.is_empty() || !self.config.output_dirs.is_empty())
     }
 
     fn required_tools(&self) -> Vec<String> {
-        if self.config.standard.command == "true" {
+        if self.config.standard.command.is_empty() {
             Vec::new()
         } else {
             vec![self.config.standard.command.clone()]

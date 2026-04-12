@@ -276,6 +276,19 @@ impl ObjectStore {
         serde_json::from_slice(&data).ok()
     }
 
+    /// Return the list of file paths recorded in the product's last tree descriptor,
+    /// or an empty vec if there is no prior tree (first build, or marker/blob descriptor).
+    /// Used to clean ONLY the files a Creator owned in its previous run, rather than
+    /// wiping entire output_dirs (which would destroy other processors' contributions).
+    pub fn previous_tree_paths(&self, cache_key: &str) -> Vec<PathBuf> {
+        match self.get_descriptor(cache_key) {
+            Some(CacheDescriptor::Tree { entries }) => {
+                entries.into_iter().map(|e| PathBuf::from(e.path)).collect()
+            }
+            _ => Vec::new(),
+        }
+    }
+
     /// Store a marker descriptor (checker passed).
     pub fn store_marker(&self, cache_key: &str) -> Result<()> {
         self.store_descriptor(cache_key, &CacheDescriptor::Marker)

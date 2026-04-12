@@ -90,7 +90,8 @@ fn shared_dir_both_build_successfully() {
     assert!(project_path.join("_site/assets/style.css").exists(),
         "mkdocs should have created _site/assets/style.css");
     assert!(project_path.join("_site/about.html").exists(),
-        "pandoc (explicit) should have created _site/about.html");
+        "pandoc (explicit) should have created _site/about.html; \
+         when the Creator runs after the Generator, it must NOT wipe the shared _site/ dir.");
 
     assert_eq!(fs::read_to_string(project_path.join("_site/index.html")).unwrap().trim(),
         "mkdocs-index");

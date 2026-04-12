@@ -2,7 +2,7 @@
 
 ## Status
 
-**Designed, not yet implemented.** This document describes the intended user-facing contract for the MassGenerator processor type. The full design rationale is in [Output Prediction](../output-prediction.md).
+**Designed, not yet implemented.** This document describes the intended user-facing contract for the MassGenerator processor type. The full design rationale is in [Output Prediction](../internal/output-prediction.md).
 
 ## Why "mass generator"?
 
@@ -173,7 +173,7 @@ No code changes; existing downstream processors start getting precise dependenci
 
 ## See also
 
-- [Output Prediction](../output-prediction.md) — full design rationale, invariants, execution shape
-- [Shared Output Directory](../shared-output-directory.md) — the fallback mechanism for opaque Creators
-- [Processor Ordering](../processor-ordering.md) — sibling discussion about explicit ordering knobs
+- [Output Prediction](../internal/output-prediction.md) — full design rationale, invariants, execution shape
+- [Shared Output Directory](../internal/shared-output-directory.md) — the fallback mechanism for opaque Creators
+- [Processor Ordering](../internal/processor-ordering.md) — sibling discussion about explicit ordering knobs
 - [rssite](https://github.com/veltzer/rssite) — a static site generator being built to implement this contract

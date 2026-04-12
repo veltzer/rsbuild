@@ -147,3 +147,39 @@ Never create a git tag named `latest`. Use only semver tags (e.g. `v0.3.0`).
 A `latest` tag causes confusion with container registries and package managers
 that use the word "latest" as a moving pointer, and it conflicts with GitHub's
 release conventions.
+
+## Book layout mirrors the filesystem
+
+The book (`docs/src/`) is divided into two sections by `SUMMARY.md`:
+
+1. A top-level user-facing section (introduction, commands, configuration,
+   processors, etc.) — for people who use rsconstruct to build their projects.
+2. A "For Maintainers" section — for contributors modifying rsconstruct
+   itself: architecture, design decisions, coding standards, cache internals,
+   and so on.
+
+**The filesystem must mirror this split.** A reader glancing at a path
+should be able to tell which audience the document is for:
+
+- **User-facing chapters live at the top level of `docs/src/`** — e.g.
+  `docs/src/configuration.md`, `docs/src/commands.md`.
+- **Maintainer chapters live under `docs/src/internal/`** — e.g.
+  `docs/src/internal/architecture.md`, `docs/src/internal/cache.md`.
+- **Per-processor reference docs live under `docs/src/processors/`** —
+  these are user-facing (they document how to configure each processor).
+
+When adding a new doc, decide first whether it's user-facing or internal,
+then place it accordingly. Moving a doc across the boundary requires
+moving the file too — don't leave an internal document at the top level
+just because its links would break.
+
+When cross-referencing:
+
+- Inside `internal/` → link to sibling files directly (``[X](other.md)``).
+- From a top-level doc to an internal doc → ``[X](internal/other.md)``.
+- From `processors/` to an internal doc → ``[X](../internal/other.md)``.
+- From `internal/` to a user-facing doc → ``[X](../other.md)``.
+
+This rule is enforced by convention, not by tooling. Reviewers should
+reject PRs that add a maintainer-only document at the top level (or
+vice versa).

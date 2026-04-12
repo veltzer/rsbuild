@@ -264,7 +264,7 @@ When implemented, do it in this order:
 
 ## See also
 
-- [MassGenerator processor type](processors/mass_generator.md) — processor-type documentation (forthcoming)
+- [MassGenerator processor type](../processors/mass_generator.md) — processor-type documentation (forthcoming)
 - [Shared Output Directory](shared-output-directory.md) — how we handle opaque Creators today
 - [Processor Ordering](processor-ordering.md) — the sibling discussion about explicit ordering
 - [Cross-Processor Dependencies](cross-processor-dependencies.md) — why per-file outputs enable proper dependency graphs

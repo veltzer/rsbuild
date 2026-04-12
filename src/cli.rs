@@ -50,7 +50,7 @@ pub struct Cli {
 
     /// When to use ANSI color output: auto (tty only), always, or never.
     /// Also honored via the NO_COLOR env var (sets mode to never).
-    #[arg(long, global = true, value_enum, default_value = "never")]
+    #[arg(long, global = true, value_enum, default_value = "auto")]
     pub color: ColorMode,
 
     #[command(subcommand)]

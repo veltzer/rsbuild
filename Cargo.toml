@@ -38,7 +38,7 @@ serde_yaml = "0.9.34"
 grass = { version = "0.13.4", default-features = false }
 pulldown-cmark = { version = "0.13.3", default-features = false, features = ["html"] }
 jsonschema = { version = "0.45.1", default-features = false, features = ["resolve-file"] }
-tabled = "0.20.0"
+tabled = { version = "0.20.0", features = ["ansi"] }
 ureq = "3"
 strum = { version = "0.28.0", features = ["derive"] }
 inventory = "0.3.24"

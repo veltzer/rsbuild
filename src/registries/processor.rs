@@ -20,9 +20,13 @@ use crate::processors::{Processor, ProcessorType};
 /// The framework applies defaults to the TOML before calling `create`.
 /// The `create` function deserializes the TOML and returns a fully configured,
 /// immutable processor.
-#[allow(dead_code)]
 pub struct ProcessorPlugin {
     pub name: &'static str,
+    /// Processor type. Declared by every plugin but not yet queried by any
+    /// runtime code path — kept as plugin metadata so future features
+    /// (e.g. `processors list --type=checker`) can filter without touching
+    /// every registration.
+    #[allow(dead_code)]
     pub processor_type: ProcessorType,
     /// Implementation version. **Bump this when changes would make the processor
     /// produce different output for the same inputs**, or change which inputs are

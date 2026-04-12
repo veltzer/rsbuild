@@ -104,7 +104,10 @@ pub struct ObjectStore {
     remote: Option<Box<dyn RemoteCache>>,
     /// Whether to push to remote cache
     remote_push: bool,
-    /// Whether to pull from remote cache
+    /// Whether to pull from remote cache.
+    /// Wired into the constructor but not yet consulted by any read path —
+    /// remote-pull integration is scaffolded in `operations.rs` (the
+    /// `try_fetch_*` helpers) but not yet called from the executor.
     #[allow(dead_code)]
     remote_pull: bool,
 }

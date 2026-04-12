@@ -33,6 +33,8 @@ impl ObjectStore {
     }
 
     /// Try to fetch an object from remote cache
+    // Scaffolding for remote-pull: wired into the API surface but not yet
+    // called from any read path. Intentional; tracked under remote-pull WIP.
     #[allow(dead_code)]
     pub(super) fn try_fetch_object_from_remote(&self, checksum: &str) -> Result<bool> {
         let remote = match &self.remote {
@@ -63,6 +65,8 @@ impl ObjectStore {
     }
 
     /// Try to push a descriptor to remote cache
+    // Scaffolding for remote-pull (for paired fetch-after-push semantics).
+    // Not yet called from any write path; tracked under remote-pull WIP.
     #[allow(dead_code)]
     pub(super) fn try_push_descriptor_to_remote(&self, descriptor_key: &str, data: &[u8]) -> Result<()> {
         let remote = match &self.remote {
@@ -78,7 +82,8 @@ impl ObjectStore {
         Ok(())
     }
 
-    /// Try to fetch a descriptor from remote cache
+    /// Try to fetch a descriptor from remote cache.
+    /// Scaffolding for remote-pull; not yet called from any read path.
     #[allow(dead_code)]
     pub(super) fn try_fetch_descriptor_from_remote(&self, descriptor_key: &str) -> Result<Option<Vec<u8>>> {
         let remote = match &self.remote {

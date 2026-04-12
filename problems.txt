@@ -24,3 +24,15 @@ python files dependency analysis:
 - do a pass of making the code more strict (whenever we relax strictness try to figure out if we can return the strictness)
 
 - add "analyzer" to the nomenclature dociumentation. and add all processor types.
+
+
+- also lets start writing a document about distributed execution.
+    The problems, the design, how other tools do it etc.
+
+- error handling.
+    This is a big one.
+    I want every processor to know how to parse the output of the tools it is running (if they are exernal) and collect errors in a organized fashion: file, line number, desription of the error, stack etc.
+    then we can do something like: rsconstruct errors edit
+    and it will launch an editors of my choice on all the previous errors.
+    Internal processros will surely be able to collect all the errors into that predefined structure with no problems.
+    rsconstruct errors show  will show the latest errors

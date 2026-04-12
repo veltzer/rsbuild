@@ -18,7 +18,6 @@ use anyhow::Result;
 use crate::analyzers::DepAnalyzer;
 use crate::cli::{BuildPhase, DisplayOptions};
 use crate::color;
-#[allow(unused_imports)]
 use crate::config::*;
 use crate::deps_cache::DepsCache;
 use crate::errors;

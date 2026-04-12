@@ -171,24 +171,6 @@ pub(crate) fn combined_input_checksum(inputs: &[PathBuf]) -> Result<String> {
     Ok(hash_checksums(&checksums))
 }
 
-/// Invalidate a cached checksum for a path (e.g., after writing a new output file).
-#[allow(dead_code)]
-pub(crate) fn invalidate(path: &Path) {
-    if let Ok(mut guard) = CACHE.lock() {
-        if let Some(cache) = guard.as_mut() {
-            cache.remove(path);
-        }
-    }
-}
-
-/// Clear the entire in-memory checksum cache.
-#[allow(dead_code)]
-pub(crate) fn clear_cache() {
-    if let Ok(mut guard) = CACHE.lock() {
-        *guard = None;
-    }
-}
-
 /// Calculate SHA-256 checksum of a byte slice. Not cached.
 pub(crate) fn bytes_checksum(data: &[u8]) -> String {
     hex::encode(Sha256::digest(data))

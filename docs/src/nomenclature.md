@@ -12,6 +12,10 @@ This page defines the terminology used throughout RSConstruct's code, configurat
 | **plugin** | A factory registered at compile time via `inventory::submit!`. Knows how to create processors from TOML config. Has a pname, a processor type, and config metadata. |
 | **product** | A single build unit with inputs, outputs, and a processor. The atomic unit of incremental building. |
 | **processor type** | One of four categories: `checker`, `generator`, `creator`, `explicit`. Determines how inputs are discovered, how outputs are declared, and how results are cached. See [Processor Types](processor-types.md). |
+| **analyzer** | A dependency scanner that runs after product discovery to add extra input edges to existing products (e.g., the `cpp` analyzer adds every `#include`d header as an extra input of a C/C++ product). Analyzers never create products of their own. Declared with `[analyzer.NAME]` sections in `rsconstruct.toml`. Unlike processors, only analyzers explicitly declared in config run — there is no "auto-enable" default. See [Dependency Analyzers](analyzers.md). |
+| **analyzer plugin** | A factory registered at compile time via `inventory::submit!` in the analyzer registry. Knows how to construct an analyzer from its `[analyzer.NAME]` TOML section. Each plugin declares its name, description, and whether it is `native` (pure Rust) or external (may invoke subprocesses). |
+| **native analyzer** | An analyzer whose default configuration runs entirely in-process (no subprocesses). Example: `icpp` uses a pure-Rust regex scanner for `#include` directives. Some native analyzers become external in non-default configurations (e.g., `icpp` with `pkg_config` set shells out to `pkg-config` for include paths). |
+| **external analyzer** | An analyzer that shells out to another program to do its work. Example: `cpp` always runs `gcc -MM` for exact compiler-accurate header scanning. |
 
 ## Configuration
 
@@ -51,3 +55,5 @@ This page defines the terminology used throughout RSConstruct's code, configurat
 | `processors defconfig PNAME` | pname | Processor type name — shows factory defaults |
 | `processors config [INAME]` | iname | Instance name from config — shows resolved config |
 | `processors files [INAME]` | iname | Instance name from config — shows discovered files |
+| `analyzers defconfig [NAME]` | analyzer name | Analyzer name from the analyzer registry — shows factory defaults |
+| `analyzers config [NAME]` | analyzer name | Analyzer name as declared in `[analyzer.NAME]` — shows resolved config |

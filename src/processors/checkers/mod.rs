@@ -24,6 +24,7 @@ mod php_lint;
 mod slidev;
 mod standard;
 mod svglint;
+mod svgo;
 mod tidy;
 mod xmllint;
 mod yq;

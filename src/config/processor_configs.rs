@@ -1712,6 +1712,8 @@ impl KnownFields for IpdfuniteConfig {
 
 // --- svglint (SVG linter) ---
 
+// --- svgo (SVG validator via svgo; stdout discarded, non-zero exit = malformed) ---
+
 // --- checkstyle (Java style checker) ---
 
 // --- yq (YAML processor/validator) ---

@@ -69,7 +69,7 @@ Scans for `.md` files, checks spelling with the built-in zspell engine.
 
 ### Built-in checkers
 
-ruff, pylint, mypy, pyrefly, black, pytest, doctest, shellcheck, luacheck, yamllint, jq, jsonlint, taplo, cppcheck, clang_tidy, cpplint, checkpatch, mdl, markdownlint, rumdl, aspell, zspell, ascii, encoding, duplicate_files, terms, eslint, jshint, standard, htmlhint, htmllint, tidy, stylelint, jslint, svglint, perlcritic, xmllint, checkstyle, php_lint, yq, hadolint, slidev, json_schema, iyamlschema, ijq, ijsonlint, iyamllint, itaplo, marp_images, license_header
+ruff, pylint, mypy, pyrefly, black, pytest, doctest, shellcheck, luacheck, yamllint, jq, jsonlint, taplo, cppcheck, clang_tidy, cpplint, checkpatch, mdl, markdownlint, rumdl, aspell, zspell, ascii, encoding, duplicate_files, terms, eslint, jshint, standard, htmlhint, htmllint, tidy, stylelint, jslint, svglint, svgo, perlcritic, xmllint, checkstyle, php_lint, yq, hadolint, slidev, json_schema, iyamlschema, ijq, ijsonlint, iyamllint, itaplo, marp_images, license_header
 
 ## Generator
 

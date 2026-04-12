@@ -94,6 +94,7 @@ mod processors {
     pub mod perlcritic;
     pub mod xmllint;
     pub mod svglint;
+    pub mod svgo;
     pub mod checkstyle;
     pub mod yq;
     pub mod cmake;

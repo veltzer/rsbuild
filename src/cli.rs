@@ -463,7 +463,7 @@ pub enum ProcessorAction {
         #[arg(long)]
         headers: bool,
     },
-    /// Show resolved configuration for a processor instance (requires config)
+    /// Show resolved configuration for a processor instance by iname (requires config)
     Config {
         /// Instance name (iname) as declared in rsconstruct.toml (omit to show all)
         iname: Option<String>,
@@ -471,7 +471,7 @@ pub enum ProcessorAction {
         #[arg(short, long)]
         diff: bool,
     },
-    /// Show default configuration for a processor type (no config needed)
+    /// Show default configuration for a processor type by pname (no config needed)
     Defconfig {
         /// Processor name (pname) — the type name (e.g., ruff, pip, tera)
         #[arg(value_parser = crate::registries::processor_name_parser())]
@@ -719,7 +719,7 @@ pub struct SharedBuildArgs {
     #[arg(long, allow_negative_numbers = true)]
     pub batch_size: Option<i32>,
 
-    /// Only run specific processors (comma-separated list)
+    /// Only run specific processors, by instance name (iname) as declared in rsconstruct.toml (comma-separated list)
     #[arg(short, long, value_delimiter = ',')]
     pub processors: Option<Vec<String>>,
 
@@ -858,12 +858,11 @@ pub fn print_completions(shell: Shell) {
 ///
 /// - `processors config` and `processors files` complete with **instance names** (inames)
 ///   read from the project's `rsconstruct.toml` at tab time via a helper function.
-/// - `--processors` / `-p` flags in `build`/`watch` complete with static type names (pnames).
+/// - `--processors` / `-p` flags in `build`/`watch` complete with **instance
+///   names** (inames) from `rsconstruct.toml` — you can only build a processor
+///   that is declared in the project.
 /// - `processors defconfig` is handled automatically by clap via `#[arg(value_parser = ...)]`.
 fn inject_bash_processor_completions(script: &str) -> String {
-    let names = crate::config::all_type_names();
-    let names_str = names.join(" ");
-
     // Bash helper: extract instance names from rsconstruct.toml.
     // Matches [processor.NAME] and [processor.NAME.SUBNAME] headings.
     let helper = r#"
@@ -908,11 +907,13 @@ _rsconstruct_inames() {
         }
     }
 
-    // Inject static processor type names for --processors/-p flags in build/watch commands.
+    // Inject completion for --processors/-p in build/watch: inames only,
+    // read from rsconstruct.toml at tab time via _rsconstruct_inames. You can
+    // only build a processor that is declared in the project.
     let old_processors = "                --processors)\n                    COMPREPLY=($(compgen -f \"${cur}\"))";
-    let new_processors = format!("                --processors)\n                    COMPREPLY=($(compgen -W \"{names_str}\" -- \"${{cur}}\"))");
+    let new_processors = "                --processors)\n                    COMPREPLY=($(compgen -W \"$(_rsconstruct_inames)\" -- \"${cur}\"))".to_string();
     let old_p = "                -p)\n                    COMPREPLY=($(compgen -f \"${cur}\"))";
-    let new_p = format!("                -p)\n                    COMPREPLY=($(compgen -W \"{names_str}\" -- \"${{cur}}\"))");
+    let new_p = "                -p)\n                    COMPREPLY=($(compgen -W \"$(_rsconstruct_inames)\" -- \"${cur}\"))".to_string();
 
     let result = result.replace(old_processors, &new_processors).replace(old_p, &new_p);
 

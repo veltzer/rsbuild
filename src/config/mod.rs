@@ -883,43 +883,65 @@ impl Default for CompletionsConfig {
     }
 }
 
-fn default_analyzers() -> Vec<String> {
-    crate::registry::all_analyzer_names().iter().map(|s| s.to_string()).collect()
+/// A single analyzer instance parsed from the TOML config.
+/// `[analyzer.cpp]` produces one instance with name="cpp".
+#[derive(Debug, Clone)]
+pub(crate) struct AnalyzerInstance {
+    /// Analyzer name (must match a registered AnalyzerPlugin name)
+    pub name: String,
+    /// The raw TOML config for this instance
+    pub config_toml: toml::Value,
 }
 
-/// Configuration for dependency analyzers
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+/// Configuration for dependency analyzers.
+/// Each `[analyzer.NAME]` section in rsconstruct.toml creates an AnalyzerInstance.
+/// No analyzers run unless explicitly declared in the config.
+#[derive(Debug, Default)]
 pub(crate) struct AnalyzerConfig {
-    /// Whether to auto-detect which analyzers are relevant
-    #[serde(default = "default_true")]
-    pub auto_detect: bool,
-    /// List of enabled analyzer names
-    #[serde(default = "default_analyzers")]
-    pub enabled: Vec<String>,
-    /// C/C++ analyzer configuration
-    #[serde(default)]
-    pub cpp: CppAnalyzerConfig,
-    /// Python analyzer configuration
-    #[serde(default)]
-    pub python: PythonAnalyzerConfig,
+    /// All declared analyzer instances
+    pub instances: Vec<AnalyzerInstance>,
 }
 
-impl Default for AnalyzerConfig {
-    fn default() -> Self {
-        Self {
-            auto_detect: true,
-            enabled: default_analyzers(),
-            cpp: CppAnalyzerConfig::default(),
-            python: PythonAnalyzerConfig::default(),
+impl Serialize for AnalyzerConfig {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let mut map = serializer.serialize_map(Some(self.instances.len()))?;
+        for inst in &self.instances {
+            map.serialize_entry(&inst.name, &inst.config_toml)?;
         }
+        map.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for AnalyzerConfig {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+        let table = toml::Value::deserialize(deserializer)?;
+        AnalyzerConfig::from_toml(&table).map_err(serde::de::Error::custom)
     }
 }
 
 impl AnalyzerConfig {
-    pub(crate) fn is_enabled(&self, name: &str) -> bool {
-        self.enabled.iter().any(|a| a == name)
+    /// Parse the `[analyzer]` table from TOML into instances.
+    pub(crate) fn from_toml(value: &toml::Value) -> Result<Self> {
+        let table = match value.as_table() {
+            Some(t) => t,
+            None => return Ok(Self::default()),
+        };
+
+        let mut instances = Vec::new();
+        for (key, val) in table {
+            // Verify the analyzer name is registered.
+            if registry::find_analyzer_plugin(key).is_none() {
+                anyhow::bail!("Unknown analyzer '{}'. Run 'rsconstruct analyzers list' to see available analyzers.", key);
+            }
+            instances.push(AnalyzerInstance {
+                name: key.clone(),
+                config_toml: val.clone(),
+            });
+        }
+        Ok(Self { instances })
     }
+
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]

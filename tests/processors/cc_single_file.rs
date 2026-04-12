@@ -895,6 +895,7 @@ fn cc_single_file_missing_include_errors() {
         project_path.join("rsconstruct.toml"),
         r#"[processor.cc_single_file]
 src_dirs = ["src"]
+[analyzer.icpp]
 "#
     ).unwrap();
 

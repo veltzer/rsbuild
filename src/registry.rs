@@ -3,7 +3,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::analyzers::DepAnalyzer;
-use crate::config::{AnalyzerConfig, KnownFields};
+use crate::config::KnownFields;
 use crate::processors::{Processor, ProcessorType};
 
 /// A processor plugin. One struct for all processor types.
@@ -46,8 +46,9 @@ pub struct AnalyzerPlugin {
     pub name: &'static str,
     pub description: &'static str,
     pub is_native: bool,
-    /// Create an analyzer from the project's analyzer config.
-    pub create: fn(&AnalyzerConfig, bool) -> Box<dyn DepAnalyzer>,
+    /// Create an analyzer from its TOML config section.
+    /// Receives the raw `[analyzer.NAME]` table value and a verbose flag.
+    pub create: fn(&toml::Value, bool) -> Result<Box<dyn DepAnalyzer>>,
     /// Return the default config as a TOML string, or None if the analyzer has no config.
     pub defconfig_toml: fn() -> Option<String>,
 }

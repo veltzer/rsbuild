@@ -118,7 +118,7 @@ inventory::submit! {
         name: "tera",
         description: "Scan Tera templates for include/import/extends dependencies",
         is_native: true,
-        create: |_, _| Box::new(TeraDepAnalyzer::new()),
+        create: |_, _| Ok(Box::new(TeraDepAnalyzer::new())),
         defconfig_toml: || None,
     }
 }

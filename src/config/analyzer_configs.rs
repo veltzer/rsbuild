@@ -1,15 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use super::{default_cc_compiler, default_cxx_compiler};
-use super::processor_configs::IncludeScanner;
 
-/// Configuration for the C/C++ dependency analyzer
+/// Configuration for the C/C++ dependency analyzer (`cpp`) — uses compiler -MM scanning.
+/// External analyzer: runs gcc/g++ -MM and optional pkg-config/include_path_commands.
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct CppAnalyzerConfig {
-    /// Method for scanning header dependencies (native or compiler)
-    #[serde(default)]
-    pub include_scanner: IncludeScanner,
     /// Additional include paths for header search
     #[serde(default)]
     pub include_paths: Vec<String>,
@@ -17,16 +14,15 @@ pub struct CppAnalyzerConfig {
     #[serde(default)]
     pub pkg_config: Vec<String>,
     /// Commands that output include paths (e.g., ["gcc -print-file-name=plugin"])
-    /// Each command is run and its stdout is added to the include search paths.
     #[serde(default)]
     pub include_path_commands: Vec<String>,
     /// Directory path segments to exclude from analysis (e.g., ["/kernel/", "/vendor/"])
     #[serde(default)]
     pub src_exclude_dirs: Vec<String>,
-    /// C compiler (for -MM scanning with compiler method)
+    /// C compiler (for -MM scanning)
     #[serde(default = "default_cc_compiler")]
     pub cc: String,
-    /// C++ compiler (for -MM scanning with compiler method)
+    /// C++ compiler (for -MM scanning)
     #[serde(default = "default_cxx_compiler")]
     pub cxx: String,
     /// C compiler flags (for -MM scanning)
@@ -40,7 +36,6 @@ pub struct CppAnalyzerConfig {
 impl Default for CppAnalyzerConfig {
     fn default() -> Self {
         Self {
-            include_scanner: IncludeScanner::default(),
             include_paths: Vec::new(),
             pkg_config: Vec::new(),
             include_path_commands: Vec::new(),
@@ -53,10 +48,16 @@ impl Default for CppAnalyzerConfig {
     }
 }
 
-/// Configuration for the Python dependency analyzer
+/// Configuration for the in-process C/C++ dependency analyzer (`icpp`) — native regex scanner.
+/// Native analyzer: pure Rust, no external commands.
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 #[serde(deny_unknown_fields)]
-pub struct PythonAnalyzerConfig {
-    // Currently no specific configuration needed
-    // Could add: package_paths, ignore_stdlib, etc.
+pub struct IcppAnalyzerConfig {
+    /// Additional include paths for header search
+    #[serde(default)]
+    pub include_paths: Vec<String>,
+    /// Directory path segments to exclude from analysis
+    #[serde(default)]
+    pub src_exclude_dirs: Vec<String>,
 }
+

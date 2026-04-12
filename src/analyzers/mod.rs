@@ -4,6 +4,7 @@
 //! dependency information (like header files for C/C++ or imports for Python).
 
 mod cpp;
+mod icpp;
 mod markdown;
 mod python;
 mod tera;

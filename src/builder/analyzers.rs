@@ -44,26 +44,67 @@ pub fn list_analyzers(verbose: bool) {
 pub fn analyzer_defconfig(name: Option<&str>) -> Result<()> {
     use crate::registry;
 
-    let print_one = |name: &str| -> Result<()> {
-        let plugin = registry::find_analyzer_plugin(name)
-            .ok_or_else(|| anyhow::anyhow!("Unknown analyzer '{}'. Run 'rsconstruct analyzers list' to see available analyzers.", name))?;
-        println!("[analyzer.{}]", name);
-        match (plugin.defconfig_toml)() {
-            Some(toml) => print!("{}", toml),
-            None => println!("# no configuration options"),
+    let names: Vec<String> = if let Some(name) = name {
+        if registry::find_analyzer_plugin(name).is_none() {
+            anyhow::bail!("Unknown analyzer '{}'. Run 'rsconstruct analyzers list' to see available analyzers.", name);
         }
-        Ok(())
+        vec![name.to_string()]
+    } else {
+        registry::all_analyzer_names().iter().map(|s| s.to_string()).collect()
     };
 
-    if let Some(name) = name {
-        print_one(name)?;
-    } else {
-        let names = registry::all_analyzer_names();
-        for (i, name) in names.iter().enumerate() {
-            if i > 0 { println!(); }
-            print_one(name)?;
+    if crate::json_output::is_json_mode() {
+        #[derive(serde::Serialize)]
+        struct Entry { name: String, config: serde_json::Value }
+        let entries: Vec<Entry> = names.iter().map(|n| {
+            let plugin = registry::find_analyzer_plugin(n).expect("checked above");
+            let config = match (plugin.defconfig_toml)() {
+                Some(toml_str) => toml::from_str::<serde_json::Value>(&toml_str).unwrap_or(serde_json::Value::Null),
+                None => serde_json::Value::Null,
+            };
+            Entry { name: n.clone(), config }
+        }).collect();
+        println!("{}", serde_json::to_string_pretty(&entries)?);
+        return Ok(());
+    }
+
+    for (i, n) in names.iter().enumerate() {
+        if i > 0 { println!(); }
+        let plugin = registry::find_analyzer_plugin(n).expect("checked above");
+        println!("[analyzer.{}]", n);
+        match (plugin.defconfig_toml)() {
+            Some(toml_str) => print_config_table(&toml_str)?,
+            None => println!("(no configuration options)"),
         }
     }
+    Ok(())
+}
+
+/// Parse a TOML string and print its fields as a table (Field, Type, Default).
+fn print_config_table(toml_str: &str) -> Result<()> {
+    let value: toml::Value = toml::from_str(toml_str).context("Failed to parse analyzer defconfig TOML")?;
+    let table = value.as_table().context("Analyzer defconfig is not a TOML table")?;
+
+    let mut builder = TableBuilder::new();
+    builder.push_record(["Field", "Type", "Default"]);
+    for (key, val) in table {
+        let type_str = match val {
+            toml::Value::String(_)  => "string",
+            toml::Value::Integer(_) => "int",
+            toml::Value::Float(_)   => "float",
+            toml::Value::Boolean(_) => "bool",
+            toml::Value::Array(_)   => "string[]",
+            toml::Value::Table(_)   => "table",
+            toml::Value::Datetime(_) => "datetime",
+        };
+        let default_str = match val {
+            toml::Value::String(s) => format!("\"{}\"", s),
+            toml::Value::Array(a) if a.is_empty() => "[]".to_string(),
+            _ => val.to_string(),
+        };
+        builder.push_record([key.as_str(), type_str, &default_str]);
+    }
+    color::print_table(builder.build());
     Ok(())
 }
 
@@ -91,35 +132,21 @@ impl Builder {
         match action {
             AnalyzersAction::List | AnalyzersAction::Defconfig { .. } => unreachable!("handled in main.rs"),
             AnalyzersAction::Used => {
-                let analyzers = self.create_analyzers(false);
+                let analyzers = self.create_analyzers(false)?;
                 let mut builder = TableBuilder::new();
                 if verbose {
-                    builder.push_record(["Name", "Status", "Description"]);
+                    builder.push_record(["Name", "Detected", "Description"]);
                     for name in sorted_keys(&analyzers) {
                         let analyzer = &analyzers[name];
-                        let enabled = self.config.analyzer.is_enabled(name);
-                        let detected = analyzer.auto_detect(&self.file_index);
-                        let status = match (enabled, detected) {
-                            (true, true) => color::green("enabled, detected"),
-                            (true, false) => color::yellow("enabled, not detected"),
-                            (false, true) => color::yellow("disabled, detected"),
-                            (false, false) => color::dim("disabled"),
-                        };
-                        builder.push_record([name.to_string(), status.to_string(), analyzer.description().to_string()]);
+                        let detected = if analyzer.auto_detect(&self.file_index) { "yes" } else { "no" };
+                        builder.push_record([name.as_str(), detected, analyzer.description()]);
                     }
                 } else {
-                    builder.push_record(["Name", "Status"]);
+                    builder.push_record(["Name", "Detected"]);
                     for name in sorted_keys(&analyzers) {
                         let analyzer = &analyzers[name];
-                        let enabled = self.config.analyzer.is_enabled(name);
-                        let detected = analyzer.auto_detect(&self.file_index);
-                        let status = match (enabled, detected) {
-                            (true, true) => color::green("enabled, detected"),
-                            (true, false) => color::yellow("enabled, not detected"),
-                            (false, true) => color::yellow("disabled, detected"),
-                            (false, false) => color::dim("disabled"),
-                        };
-                        builder.push_record([name.to_string(), status.to_string()]);
+                        let detected = if analyzer.auto_detect(&self.file_index) { "yes" } else { "no" };
+                        builder.push_record([name.as_str(), detected]);
                     }
                 }
                 color::print_table(builder.build());
@@ -152,37 +179,23 @@ impl Builder {
                 }
             }
             AnalyzersAction::Config { name } => {
-                if let Some(name) = name {
-                    match name.as_str() {
-                        "cpp" => {
-                            let toml = toml::to_string_pretty(&self.config.analyzer.cpp)
-                                .context("Failed to serialize cpp analyzer config")?;
-                            println!("[analyzer.cpp]");
-                            print!("{}", toml);
-                        }
-                        "python" => {
-                            let toml = toml::to_string_pretty(&self.config.analyzer.python)
-                                .context("Failed to serialize python analyzer config")?;
-                            println!("[analyzer.python]");
-                            print!("{}", toml);
-                        }
-                        _ => bail!("Unknown analyzer '{}'. Available: cpp, python", name),
-                    }
+                let instances: Vec<&crate::config::AnalyzerInstance> = if let Some(ref n) = name {
+                    let inst = self.config.analyzer.instances.iter().find(|i| &i.name == n)
+                        .ok_or_else(|| anyhow::anyhow!("Analyzer '{}' is not declared in rsconstruct.toml", n))?;
+                    vec![inst]
                 } else {
-                    // Show all analyzer configs
-                    println!("[analyzer]");
-                    println!("auto_detect = {}", self.config.analyzer.auto_detect);
-                    println!("enabled = {:?}", self.config.analyzer.enabled);
-                    println!();
-                    let toml = toml::to_string_pretty(&self.config.analyzer.cpp)
-                        .context("Failed to serialize cpp analyzer config")?;
-                    println!("[analyzer.cpp]");
-                    print!("{}", toml);
-                    println!();
-                    let toml = toml::to_string_pretty(&self.config.analyzer.python)
-                        .context("Failed to serialize python analyzer config")?;
-                    println!("[analyzer.python]");
-                    print!("{}", toml);
+                    self.config.analyzer.instances.iter().collect()
+                };
+
+                if instances.is_empty() {
+                    println!("No analyzers declared in rsconstruct.toml. Add `[analyzer.NAME]` sections to enable.");
+                } else {
+                    for (i, inst) in instances.iter().enumerate() {
+                        if i > 0 { println!(); }
+                        let toml_str = crate::errors::ctx(toml::to_string_pretty(&inst.config_toml), &format!("Failed to serialize {} analyzer config", inst.name))?;
+                        println!("[analyzer.{}]", inst.name);
+                        print!("{}", toml_str);
+                    }
                 }
             }
             AnalyzersAction::Clean { analyzer } => {

@@ -75,7 +75,7 @@ pub fn setup_cc_project(project_path: &Path) {
     fs::create_dir_all(project_path.join("src")).unwrap();
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.cc_single_file]\n"
+        "[processor.cc_single_file]\n[analyzer.icpp]\n"
     ).unwrap();
 }
 

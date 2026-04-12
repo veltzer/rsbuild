@@ -151,7 +151,7 @@ inventory::submit! {
         name: "python",
         description: "Scan Python files for local import dependencies",
         is_native: true,
-        create: |_, _| Box::new(PythonDepAnalyzer::new()),
+        create: |_, _| Ok(Box::new(PythonDepAnalyzer::new())),
         defconfig_toml: || None,
     }
 }

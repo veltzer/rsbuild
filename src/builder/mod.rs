@@ -256,33 +256,31 @@ impl Builder {
         }
     }
 
-    /// Create all available dependency analyzers
-    fn create_analyzers(&self, verbose: bool) -> HashMap<String, Box<dyn DepAnalyzer>> {
+    /// Create dependency analyzers for each declared instance in `[analyzer.*]`.
+    /// Only analyzers that appear in the config are instantiated.
+    fn create_analyzers(&self, verbose: bool) -> Result<HashMap<String, Box<dyn DepAnalyzer>>> {
         let mut analyzers: HashMap<String, Box<dyn DepAnalyzer>> = HashMap::new();
-        for plugin in crate::registry::all_analyzer_plugins() {
-            let analyzer = (plugin.create)(&self.config.analyzer, verbose);
-            analyzers.insert(plugin.name.to_string(), analyzer);
+        for inst in &self.config.analyzer.instances {
+            let plugin = crate::registry::find_analyzer_plugin(&inst.name)
+                .ok_or_else(|| anyhow::anyhow!("Unknown analyzer '{}'", inst.name))?;
+            let analyzer = (plugin.create)(&inst.config_toml, verbose)?;
+            analyzers.insert(inst.name.clone(), analyzer);
         }
-        analyzers
+        Ok(analyzers)
     }
 
-    /// Run all enabled dependency analyzers on the graph
+    /// Run all declared dependency analyzers on the graph.
+    /// Only analyzers with `[analyzer.NAME]` sections in rsconstruct.toml run;
+    /// they are further filtered to those that detect relevant files.
     fn run_analyzers(&self, graph: &mut BuildGraph, verbose: bool) -> Result<()> {
-        let analyzers = self.create_analyzers(verbose);
+        let analyzers = self.create_analyzers(verbose)?;
         let mut deps_cache = DepsCache::open()?;
 
-        // Collect which analyzers should run
+        // Only run analyzers that auto-detect relevant files in the project.
         let active_analyzers: Vec<&String> = sorted_keys(&analyzers).into_iter()
-            .filter(|name| {
-                let in_enabled_list = self.config.analyzer.is_enabled(name);
-                if !in_enabled_list {
-                    return false;
-                }
-                !self.config.analyzer.auto_detect || analyzers[*name].auto_detect(&self.file_index)
-            })
+            .filter(|name| analyzers[*name].auto_detect(&self.file_index))
             .collect();
 
-        // Run each analyzer
         for name in &active_analyzers {
             analyzers[*name].analyze(graph, &mut deps_cache, &self.file_index, verbose)?;
         }

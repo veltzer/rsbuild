@@ -310,6 +310,52 @@ fn config_global_output_dir_remaps_processor_defaults() {
 }
 
 #[test]
+fn analyzers_multi_instance_produces_separate_instances() {
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsconstruct.toml"),
+        "[processor.cc_single_file]\n\n[analyzer.icpp.kernel]\ninclude_paths = [\"kernel_include\"]\n\n[analyzer.icpp.user]\ninclude_paths = [\"user_include\"]\nfollow_angle_brackets = true\n",
+    ).unwrap();
+
+    let output = run_rsconstruct_with_env(
+        project_path,
+        &["analyzers", "config"],
+        &[("NO_COLOR", "1")],
+    );
+    assert!(output.status.success(), "analyzers config failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("[analyzer.icpp.kernel]"), "Expected icpp.kernel section; got:\n{}", stdout);
+    assert!(stdout.contains("[analyzer.icpp.user]"), "Expected icpp.user section; got:\n{}", stdout);
+    assert!(stdout.contains("kernel_include"), "Kernel include path missing");
+    assert!(stdout.contains("user_include"), "User include path missing");
+}
+
+#[test]
+fn analyzers_single_instance_still_works() {
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsconstruct.toml"),
+        "[processor.cc_single_file]\n\n[analyzer.icpp]\ninclude_paths = [\"src\"]\n",
+    ).unwrap();
+
+    let output = run_rsconstruct_with_env(
+        project_path,
+        &["analyzers", "config"],
+        &[("NO_COLOR", "1")],
+    );
+    assert!(output.status.success(), "analyzers config failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("[analyzer.icpp]"), "Expected [analyzer.icpp] section");
+    assert!(!stdout.contains("[analyzer.icpp."), "Single instance must not emit sub-sections");
+}
+
+#[test]
 fn config_named_instances_get_separate_output_dirs() {
     let temp_dir = tempfile::TempDir::new().unwrap();
     let project_path = temp_dir.path();

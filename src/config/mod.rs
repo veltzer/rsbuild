@@ -886,11 +886,14 @@ impl Default for CompletionsConfig {
 }
 
 /// A single analyzer instance parsed from the TOML config.
-/// `[analyzer.cpp]` produces one instance with name="cpp".
+/// `[analyzer.cpp]` produces one instance with type_name="cpp", instance_name="cpp".
+/// `[analyzer.cpp.kernel]` produces one with type_name="cpp", instance_name="cpp.kernel".
 #[derive(Debug, Clone)]
 pub(crate) struct AnalyzerInstance {
-    /// Analyzer name (must match a registered AnalyzerPlugin name)
-    pub name: String,
+    /// Instance name: "cpp" for single, "cpp.kernel" for named
+    pub instance_name: String,
+    /// Analyzer type name (must match a registered AnalyzerPlugin name)
+    pub type_name: String,
     /// The raw TOML config for this instance
     pub config_toml: toml::Value,
 }
@@ -907,9 +910,26 @@ pub(crate) struct AnalyzerConfig {
 impl Serialize for AnalyzerConfig {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
         use serde::ser::SerializeMap;
-        let mut map = serializer.serialize_map(Some(self.instances.len()))?;
+        let mut map = serializer.serialize_map(None)?;
+        // Emit single instances directly; group named sub-instances under the type.
         for inst in &self.instances {
-            map.serialize_entry(&inst.name, &inst.config_toml)?;
+            if inst.instance_name == inst.type_name {
+                map.serialize_entry(&inst.instance_name, &inst.config_toml)?;
+            }
+        }
+        let mut types: HashMap<&str, Vec<&AnalyzerInstance>> = HashMap::new();
+        for inst in &self.instances {
+            if inst.instance_name != inst.type_name {
+                types.entry(inst.type_name.as_str()).or_default().push(inst);
+            }
+        }
+        for (type_name, insts) in &types {
+            let mut table = toml::map::Map::new();
+            for inst in insts {
+                let name = &inst.instance_name[type_name.len() + 1..];
+                table.insert(name.to_string(), inst.config_toml.clone());
+            }
+            map.serialize_entry(type_name, &toml::Value::Table(table))?;
         }
         map.end()
     }
@@ -924,6 +944,11 @@ impl<'de> Deserialize<'de> for AnalyzerConfig {
 
 impl AnalyzerConfig {
     /// Parse the `[analyzer]` table from TOML into instances.
+    ///
+    /// Supports both single-instance and multi-instance syntax:
+    /// - `[analyzer.cpp]` with config fields → one instance, instance_name="cpp"
+    /// - `[analyzer.cpp.kernel]` + `[analyzer.cpp.userspace]` → two instances,
+    ///   instance_name="cpp.kernel" and "cpp.userspace"
     pub(crate) fn from_toml(value: &toml::Value) -> Result<Self> {
         let table = match value.as_table() {
             Some(t) => t,
@@ -931,17 +956,37 @@ impl AnalyzerConfig {
         };
 
         let mut instances = Vec::new();
-        for (key, val) in table {
-            // Verify the analyzer name is registered.
-            if registry::find_analyzer_plugin(key).is_none() {
-                anyhow::bail!("Unknown analyzer '{}'. Run 'rsconstruct analyzers list' to see available analyzers.", key);
+        for (type_name, val) in table {
+            if registry::find_analyzer_plugin(type_name).is_none() {
+                anyhow::bail!("Unknown analyzer '{}'. Run 'rsconstruct analyzers list' to see available analyzers.", type_name);
             }
-            instances.push(AnalyzerInstance {
-                name: key.clone(),
-                config_toml: val.clone(),
-            });
+            let sub_table = match val.as_table() {
+                Some(t) => t,
+                None => anyhow::bail!("Expected [analyzer.{}] to be a table", type_name),
+            };
+            if Self::is_multi_instance(sub_table) {
+                for (name, inst_val) in sub_table {
+                    instances.push(AnalyzerInstance {
+                        instance_name: format!("{}.{}", type_name, name),
+                        type_name: type_name.clone(),
+                        config_toml: inst_val.clone(),
+                    });
+                }
+            } else {
+                instances.push(AnalyzerInstance {
+                    instance_name: type_name.clone(),
+                    type_name: type_name.clone(),
+                    config_toml: val.clone(),
+                });
+            }
         }
         Ok(Self { instances })
+    }
+
+    /// Multi-instance iff the table is non-empty and every value is itself a
+    /// table. Single-instance if any value is a scalar/array (i.e. a config field).
+    fn is_multi_instance(table: &toml::map::Map<String, toml::Value>) -> bool {
+        !table.is_empty() && table.values().all(|v| v.is_table())
     }
 
 }

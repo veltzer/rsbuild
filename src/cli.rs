@@ -558,26 +558,25 @@ pub enum AnalyzersAction {
     Used,
     /// Run dependency analysis without building (requires config)
     Build,
-    /// Show default analyzer configuration (no config needed)
+    /// Show default analyzer configuration by pname (no config needed)
     Defconfig {
-        /// Analyzer name; omit to show all
+        /// Analyzer type name (pname) (e.g., cpp, icpp, python); omit to show all
         #[arg(value_parser = crate::registries::analyzer_name_parser())]
-        name: Option<String>,
+        pname: Option<String>,
     },
     /// Add an analyzer to rsconstruct.toml with must-fill fields pre-populated and comments
     Add {
-        /// Analyzer name (e.g., cpp, icpp, python, markdown, tera)
+        /// Analyzer type name (pname) (e.g., cpp, icpp, python, markdown, tera)
         #[arg(value_parser = crate::registries::analyzer_name_parser())]
-        name: String,
+        pname: String,
         /// Print the generated TOML snippet to stdout instead of writing to rsconstruct.toml
         #[arg(long)]
         dry_run: bool,
     },
-    /// Show analyzer configuration (requires config)
+    /// Show resolved analyzer configuration by iname (requires config)
     Config {
-        /// Analyzer name (e.g., "cpp", "python"); omit to show all
-        #[arg(value_parser = crate::registries::analyzer_name_parser())]
-        name: Option<String>,
+        /// Analyzer instance name (iname) as declared in rsconstruct.toml; omit to show all
+        iname: Option<String>,
     },
     /// Show cached dependencies (requires config)
     Show {
@@ -588,8 +587,8 @@ pub enum AnalyzersAction {
     Stats,
     /// Clear the dependency cache (requires config)
     Clean {
-        /// Only clear entries from this analyzer (e.g., "cpp", "python")
-        #[arg(long, value_parser = crate::registries::analyzer_name_parser())]
+        /// Only clear entries tagged with this analyzer iname (e.g., "cpp", "cpp.kernel")
+        #[arg(long)]
         analyzer: Option<String>,
     },
 }

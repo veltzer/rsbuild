@@ -18,11 +18,13 @@ use crate::graph::BuildGraph;
 use super::DepAnalyzer;
 
 /// Tera template dependency analyzer that scans for include/import/extends directives.
-pub struct TeraDepAnalyzer;
+pub struct TeraDepAnalyzer {
+    iname: String,
+}
 
 impl TeraDepAnalyzer {
-    pub fn new() -> Self {
-        Self
+    pub fn new(iname: &str) -> Self {
+        Self { iname: iname.to_string() }
     }
 
     /// Scan a Tera template file for include, import, and extends references.
@@ -94,7 +96,7 @@ impl DepAnalyzer for TeraDepAnalyzer {
         super::analyze_with_scanner(
             graph,
             deps_cache,
-            "tera",
+            &self.iname,
             |p| {
                 if p.inputs.is_empty() {
                     return None;
@@ -118,7 +120,7 @@ inventory::submit! {
         name: "tera",
         description: "Scan Tera templates for include/import/extends dependencies",
         is_native: true,
-        create: |_, _| Ok(Box::new(TeraDepAnalyzer::new())),
+        create: |iname, _, _| Ok(Box::new(TeraDepAnalyzer::new(iname))),
         defconfig_toml: || None,
     }
 }

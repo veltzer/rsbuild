@@ -18,11 +18,13 @@ use crate::graph::BuildGraph;
 use super::DepAnalyzer;
 
 /// Markdown dependency analyzer that scans source files for image and link references.
-pub struct MarkdownDepAnalyzer;
+pub struct MarkdownDepAnalyzer {
+    iname: String,
+}
 
 impl MarkdownDepAnalyzer {
-    pub fn new() -> Self {
-        Self
+    pub fn new(iname: &str) -> Self {
+        Self { iname: iname.to_string() }
     }
 
     /// Scan a Markdown file for local file references.
@@ -95,7 +97,7 @@ impl DepAnalyzer for MarkdownDepAnalyzer {
         super::analyze_with_scanner(
             graph,
             deps_cache,
-            "markdown",
+            &self.iname,
             |p| {
                 if p.inputs.is_empty() {
                     return None;
@@ -119,7 +121,7 @@ inventory::submit! {
         name: "markdown",
         description: "Scan Markdown files for local file dependencies",
         is_native: true,
-        create: |_, _| Ok(Box::new(MarkdownDepAnalyzer::new())),
+        create: |iname, _, _| Ok(Box::new(MarkdownDepAnalyzer::new(iname))),
         defconfig_toml: || None,
     }
 }

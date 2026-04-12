@@ -188,15 +188,15 @@ impl Builder {
                 let deps_cache = DepsCache::open()?;
                 let stats = deps_cache.stats_by_analyzer();
                 let declared: Vec<String> = self.config.analyzer.instances.iter()
-                    .map(|i| i.name.clone()).collect();
+                    .map(|i| i.instance_name.clone()).collect();
                 if !stats.is_empty() || !declared.is_empty() {
                     print_deps_stats(&stats, &declared);
                 }
             }
-            AnalyzersAction::Config { name } => {
-                let instances: Vec<&crate::config::AnalyzerInstance> = if let Some(ref n) = name {
-                    let inst = self.config.analyzer.instances.iter().find(|i| &i.name == n)
-                        .ok_or_else(|| anyhow::anyhow!("Analyzer '{}' is not declared in rsconstruct.toml", n))?;
+            AnalyzersAction::Config { iname } => {
+                let instances: Vec<&crate::config::AnalyzerInstance> = if let Some(ref n) = iname {
+                    let inst = self.config.analyzer.instances.iter().find(|i| &i.instance_name == n)
+                        .ok_or_else(|| anyhow::anyhow!("Analyzer instance '{}' is not declared in rsconstruct.toml", n))?;
                     vec![inst]
                 } else {
                     self.config.analyzer.instances.iter().collect()
@@ -207,8 +207,8 @@ impl Builder {
                 } else {
                     for (i, inst) in instances.iter().enumerate() {
                         if i > 0 { println!(); }
-                        let toml_str = crate::errors::ctx(toml::to_string_pretty(&inst.config_toml), &format!("Failed to serialize {} analyzer config", inst.name))?;
-                        println!("[analyzer.{}]", inst.name);
+                        let toml_str = crate::errors::ctx(toml::to_string_pretty(&inst.config_toml), &format!("Failed to serialize {} analyzer config", inst.instance_name))?;
+                        println!("[analyzer.{}]", inst.instance_name);
                         print!("{}", toml_str);
                     }
                 }
@@ -240,7 +240,7 @@ impl Builder {
                 let deps_cache = DepsCache::open()?;
                 let stats = deps_cache.stats_by_analyzer();
                 let declared: Vec<String> = self.config.analyzer.instances.iter()
-                    .map(|i| i.name.clone()).collect();
+                    .map(|i| i.instance_name.clone()).collect();
                 if stats.is_empty() && declared.is_empty() {
                     println!("Dependency cache is empty. Run a build first.");
                     return Ok(());

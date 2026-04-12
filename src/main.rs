@@ -278,11 +278,11 @@ fn run() -> Result<()> {
                 cli::AnalyzersAction::List => {
                     builder::analyzers::list_analyzers(cli.verbose);
                 }
-                cli::AnalyzersAction::Defconfig { name } => {
-                    builder::analyzers::analyzer_defconfig(name.as_deref())?;
+                cli::AnalyzersAction::Defconfig { pname } => {
+                    builder::analyzers::analyzer_defconfig(pname.as_deref())?;
                 }
-                cli::AnalyzersAction::Add { name, dry_run } => {
-                    builder::add_analyzer(name, *dry_run)?;
+                cli::AnalyzersAction::Add { pname, dry_run } => {
+                    builder::add_analyzer(pname, *dry_run)?;
                 }
                 _ => {
                     let builder = Builder::new()?;

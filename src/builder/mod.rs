@@ -263,10 +263,10 @@ impl Builder {
     fn create_analyzers(&self, verbose: bool) -> Result<HashMap<String, Box<dyn DepAnalyzer>>> {
         let mut analyzers: HashMap<String, Box<dyn DepAnalyzer>> = HashMap::new();
         for inst in &self.config.analyzer.instances {
-            let plugin = crate::registries::find_analyzer_plugin(&inst.name)
-                .ok_or_else(|| anyhow::anyhow!("Unknown analyzer '{}'", inst.name))?;
-            let analyzer = (plugin.create)(&inst.config_toml, verbose)?;
-            analyzers.insert(inst.name.clone(), analyzer);
+            let plugin = crate::registries::find_analyzer_plugin(&inst.type_name)
+                .ok_or_else(|| anyhow::anyhow!("Unknown analyzer type '{}'", inst.type_name))?;
+            let analyzer = (plugin.create)(&inst.instance_name, &inst.config_toml, verbose)?;
+            analyzers.insert(inst.instance_name.clone(), analyzer);
         }
         Ok(analyzers)
     }

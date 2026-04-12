@@ -19,6 +19,7 @@ use super::DepAnalyzer;
 
 /// C/C++ dependency analyzer that scans source files for #include directives.
 pub struct CppDepAnalyzer {
+    iname: String,
     config: CppAnalyzerConfig,
     verbose: bool,
     /// Cached canonical project root path (for stripping absolute prefixes from compiler output)
@@ -30,8 +31,9 @@ pub struct CppDepAnalyzer {
 }
 
 impl CppDepAnalyzer {
-    pub fn new(config: CppAnalyzerConfig, verbose: bool) -> Self {
+    pub fn new(iname: &str, config: CppAnalyzerConfig, verbose: bool) -> Self {
         Self {
+            iname: iname.to_string(),
             config,
             verbose,
             canonical_root: OnceLock::new(),
@@ -198,7 +200,7 @@ impl DepAnalyzer for CppDepAnalyzer {
         super::analyze_with_scanner(
             graph,
             deps_cache,
-            "cpp",
+            &self.iname,
             |p| {
                 if p.inputs.is_empty() {
                     return None;
@@ -230,9 +232,9 @@ inventory::submit! {
         name: "cpp",
         description: "Scan C/C++ source files for #include dependencies (using compiler -MM)",
         is_native: false,
-        create: |toml_value, verbose| {
+        create: |iname, toml_value, verbose| {
             let cfg: CppAnalyzerConfig = toml::from_str(&toml::to_string(toml_value)?)?;
-            Ok(Box::new(CppDepAnalyzer::new(cfg, verbose)))
+            Ok(Box::new(CppDepAnalyzer::new(iname, cfg, verbose)))
         },
         defconfig_toml: || {
             toml::to_string_pretty(&crate::config::CppAnalyzerConfig::default()).ok()

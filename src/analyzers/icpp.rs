@@ -21,6 +21,7 @@ use super::DepAnalyzer;
 
 /// In-process C/C++ dependency analyzer using a pure-Rust regex scanner.
 pub struct IcppDepAnalyzer {
+    iname: String,
     config: IcppAnalyzerConfig,
     verbose: bool,
     /// Cached include paths discovered from pkg-config
@@ -30,8 +31,9 @@ pub struct IcppDepAnalyzer {
 }
 
 impl IcppDepAnalyzer {
-    pub fn new(config: IcppAnalyzerConfig, verbose: bool) -> Self {
+    pub fn new(iname: &str, config: IcppAnalyzerConfig, verbose: bool) -> Self {
         Self {
+            iname: iname.to_string(),
             config,
             verbose,
             pkg_config_include_paths: OnceLock::new(),
@@ -166,7 +168,7 @@ impl DepAnalyzer for IcppDepAnalyzer {
         super::analyze_with_scanner(
             graph,
             deps_cache,
-            "icpp",
+            &self.iname,
             |p| {
                 if p.inputs.is_empty() {
                     return None;
@@ -194,9 +196,9 @@ inventory::submit! {
         name: "icpp",
         description: "Scan C/C++ source files for #include dependencies (in-process, regex-based)",
         is_native: true,
-        create: |toml_value, verbose| {
+        create: |iname, toml_value, verbose| {
             let cfg: IcppAnalyzerConfig = toml::from_str(&toml::to_string(toml_value)?)?;
-            Ok(Box::new(IcppDepAnalyzer::new(cfg, verbose)))
+            Ok(Box::new(IcppDepAnalyzer::new(iname, cfg, verbose)))
         },
         defconfig_toml: || {
             toml::to_string_pretty(&crate::config::IcppAnalyzerConfig::default()).ok()

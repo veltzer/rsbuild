@@ -15,8 +15,9 @@ pub struct AnalyzerPlugin {
     pub description: &'static str,
     pub is_native: bool,
     /// Create an analyzer from its TOML config section.
-    /// Receives the raw `[analyzer.NAME]` table value and a verbose flag.
-    pub create: fn(&toml::Value, bool) -> Result<Box<dyn DepAnalyzer>>,
+    /// Receives the instance name (iname) for cache-tagging, the raw
+    /// `[analyzer.IN]` table value, and a verbose flag.
+    pub create: fn(&str, &toml::Value, bool) -> Result<Box<dyn DepAnalyzer>>,
     /// Return the default config as a TOML string, or None if the analyzer has no config.
     pub defconfig_toml: fn() -> Option<String>,
 }

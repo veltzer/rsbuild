@@ -18,11 +18,13 @@ use crate::graph::BuildGraph;
 use super::DepAnalyzer;
 
 /// Python dependency analyzer that scans source files for import statements.
-pub struct PythonDepAnalyzer;
+pub struct PythonDepAnalyzer {
+    iname: String,
+}
 
 impl PythonDepAnalyzer {
-    pub fn new() -> Self {
-        Self
+    pub fn new(iname: &str) -> Self {
+        Self { iname: iname.to_string() }
     }
 
     /// Scan a Python file for import statements.
@@ -124,7 +126,7 @@ impl DepAnalyzer for PythonDepAnalyzer {
         super::analyze_with_scanner(
             graph,
             deps_cache,
-            "python",
+            &self.iname,
             |p| {
                 if p.inputs.is_empty() {
                     return None;
@@ -151,7 +153,7 @@ inventory::submit! {
         name: "python",
         description: "Scan Python files for local import dependencies",
         is_native: true,
-        create: |_, _| Ok(Box::new(PythonDepAnalyzer::new())),
+        create: |iname, _, _| Ok(Box::new(PythonDepAnalyzer::new(iname))),
         defconfig_toml: || None,
     }
 }

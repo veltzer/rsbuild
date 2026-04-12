@@ -48,8 +48,23 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub no_mtime_cache: bool,
 
+    /// When to use ANSI color output: auto (tty only), always, or never.
+    /// Also honored via the NO_COLOR env var (sets mode to never).
+    #[arg(long, global = true, value_enum, default_value = "never")]
+    pub color: ColorMode,
+
     #[command(subcommand)]
     pub command: Commands,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+pub enum ColorMode {
+    /// Enable color if stdout is a tty and NO_COLOR is not set
+    Auto,
+    /// Always emit ANSI color escapes
+    Always,
+    /// Never emit ANSI color escapes
+    Never,
 }
 
 impl Cli {

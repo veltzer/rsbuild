@@ -18,6 +18,9 @@ pub(crate) struct RuntimeFlags {
     pub json_mode: bool,
     /// Suppress all output except errors (--quiet)
     pub quiet: bool,
+    /// Whether to emit ANSI color escape sequences.
+    /// Resolved from --color (auto/always/never) and the NO_COLOR env var.
+    pub color_enabled: bool,
 }
 
 static FLAGS: OnceLock<RuntimeFlags> = OnceLock::new();
@@ -50,4 +53,10 @@ pub(crate) fn json_mode() -> bool {
 
 pub(crate) fn quiet() -> bool {
     get().quiet
+}
+
+pub(crate) fn color_enabled() -> bool {
+    // If flags aren't initialized yet, fall back to "no color". This can happen
+    // during very early startup (e.g., CLI parse errors from clap).
+    FLAGS.get().map(|f| f.color_enabled).unwrap_or(false)
 }

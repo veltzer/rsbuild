@@ -13,9 +13,11 @@ mod tera;
 use anyhow::Result;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use crate::deps_cache::DepsCache;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
+use crate::processors::{format_command, run_command_capture};
 use crate::progress;
 
 /// Trait for dependency analyzers that scan source files and add dependencies to the graph.
@@ -41,6 +43,115 @@ pub trait DepAnalyzer: Sync + Send {
     /// 3. Use deps_cache to avoid re-scanning unchanged files
     /// 4. Add discovered dependencies to the product's inputs
     fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, file_index: &FileIndex, verbose: bool) -> Result<()>;
+}
+
+/// Query pkg-config for include paths from the given packages.
+/// Uses `pkg-config --cflags-only-I` and strips the `-I` prefix.
+/// Returns an empty list if `packages` is empty or the query fails.
+///
+/// - `tag`: prefix for log messages (e.g., "cpp" or "icpp")
+/// - `packages`: pkg-config package names to query
+/// - `verbose`: whether to emit diagnostic messages to stderr
+pub fn query_pkg_config_include_paths(tag: &str, packages: &[String], verbose: bool) -> Vec<PathBuf> {
+    if packages.is_empty() {
+        return Vec::new();
+    }
+
+    let mut cmd = Command::new("pkg-config");
+    cmd.arg("--cflags-only-I");
+    cmd.args(packages);
+
+    if verbose {
+        eprintln!("[{}] Querying pkg-config: {}", tag, format_command(&cmd));
+    }
+
+    let output = match run_command_capture(&mut cmd) {
+        Ok(o) => o,
+        Err(e) => {
+            eprintln!("[{}] Failed to query pkg-config: {}", tag, e);
+            return Vec::new();
+        }
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        eprintln!("[{}] pkg-config failed: {}", tag, stderr.trim());
+        return Vec::new();
+    }
+
+    let paths: Vec<PathBuf> = String::from_utf8_lossy(&output.stdout)
+        .split_whitespace()
+        .filter_map(|flag| flag.strip_prefix("-I").map(PathBuf::from))
+        .collect();
+
+    if verbose && !paths.is_empty() {
+        eprintln!("[{}] Found {} include paths from pkg-config", tag, paths.len());
+    }
+
+    paths
+}
+
+/// Run each command in `commands` via `sh -c` and collect its stdout (trimmed) as an include path.
+/// Commands that fail, produce empty output, or yield non-directory paths are skipped with a warning.
+///
+/// - `tag`: prefix for log messages (e.g., "cpp" or "icpp")
+/// - `commands`: shell command strings to run
+/// - `verbose`: whether to emit diagnostic messages to stderr
+pub fn run_include_path_commands(tag: &str, commands: &[String], verbose: bool) -> Vec<PathBuf> {
+    if commands.is_empty() {
+        return Vec::new();
+    }
+
+    let mut paths = Vec::new();
+    for cmd_str in commands {
+        if cmd_str.trim().is_empty() {
+            continue;
+        }
+
+        // Run via shell to support shell syntax (command substitution, etc.)
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c");
+        cmd.arg(cmd_str);
+
+        if verbose {
+            eprintln!("[{}] Running include path command: sh -c '{}'", tag, cmd_str);
+        }
+
+        let output = match run_command_capture(&mut cmd) {
+            Ok(o) => o,
+            Err(e) => {
+                eprintln!("[{}] Failed to run '{}': {}", tag, cmd_str, e);
+                continue;
+            }
+        };
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            eprintln!("[{}] Command '{}' failed: {}", tag, cmd_str, stderr.trim());
+            continue;
+        }
+
+        let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if path_str.is_empty() {
+            continue;
+        }
+
+        let path = PathBuf::from(&path_str);
+        if path.is_dir() {
+            if verbose {
+                eprintln!("[{}] Added include path from command: {}", tag, path.display());
+            }
+            paths.push(path);
+        } else if verbose {
+            eprintln!("[{}] Command output is not a directory: {}", tag, path_str);
+        }
+    }
+
+    if verbose && !paths.is_empty() {
+        eprintln!("[{}] Found {} include paths from commands", tag, paths.len());
+    }
+
+    paths
 }
 
 /// Shared helper for analyzer `analyze()` implementations.

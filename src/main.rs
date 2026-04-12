@@ -71,12 +71,24 @@ fn run() -> Result<()> {
 
     // Initialize runtime flags from CLI arguments (once, before any reads)
     let t = Instant::now();
+    let color_enabled = match cli.color {
+        cli::ColorMode::Always => true,
+        cli::ColorMode::Never => false,
+        cli::ColorMode::Auto => {
+            // Disable if NO_COLOR is set (any value, per the no-color.org spec)
+            // or if stdout is not a tty. Also disable in JSON mode.
+            std::env::var_os("NO_COLOR").is_none()
+                && !cli.json
+                && std::io::IsTerminal::is_terminal(&std::io::stdout())
+        }
+    };
     runtime_flags::init(runtime_flags::RuntimeFlags {
         show_child_processes: cli.show_child_processes,
         show_output: cli.show_output,
         phases_debug: cli.phases,
         json_mode: cli.json,
         quiet: cli.quiet,
+        color_enabled,
     });
 
     // Apply CLI override for mtime cache before any Builder is created

@@ -9,7 +9,6 @@ use regex::Regex;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::OnceLock;
 
 use crate::config::IcppAnalyzerConfig;
@@ -17,7 +16,6 @@ use crate::errors;
 use crate::deps_cache::DepsCache;
 use crate::file_index::FileIndex;
 use crate::graph::BuildGraph;
-use crate::processors::{format_command, run_command_capture};
 
 use super::DepAnalyzer;
 
@@ -27,6 +25,8 @@ pub struct IcppDepAnalyzer {
     verbose: bool,
     /// Cached include paths discovered from pkg-config
     pkg_config_include_paths: OnceLock<Vec<PathBuf>>,
+    /// Cached include paths from include_path_commands
+    command_include_paths: OnceLock<Vec<PathBuf>>,
 }
 
 impl IcppDepAnalyzer {
@@ -35,6 +35,7 @@ impl IcppDepAnalyzer {
             config,
             verbose,
             pkg_config_include_paths: OnceLock::new(),
+            command_include_paths: OnceLock::new(),
         }
     }
 
@@ -43,53 +44,23 @@ impl IcppDepAnalyzer {
         self.config.src_exclude_dirs.iter().any(|seg| path_str.contains(seg))
     }
 
-    /// Query pkg-config for include paths from configured packages.
-    /// Uses `pkg-config --cflags-only-I` and strips the -I prefix.
-    /// Returns an empty list if pkg_config is empty or the query fails.
+    /// Query pkg-config for include paths (lazy, cached).
     fn get_pkg_config_include_paths(&self) -> &[PathBuf] {
         self.pkg_config_include_paths.get_or_init(|| {
-            if self.config.pkg_config.is_empty() {
-                return Vec::new();
-            }
+            super::query_pkg_config_include_paths("icpp", &self.config.pkg_config, self.verbose)
+        })
+    }
 
-            let mut cmd = Command::new("pkg-config");
-            cmd.arg("--cflags-only-I");
-            cmd.args(&self.config.pkg_config);
-
-            if self.verbose {
-                eprintln!("[icpp] Querying pkg-config: {}", format_command(&cmd));
-            }
-
-            let output = match run_command_capture(&mut cmd) {
-                Ok(o) => o,
-                Err(e) => {
-                    eprintln!("[icpp] Failed to query pkg-config: {}", e);
-                    return Vec::new();
-                }
-            };
-
-            if !output.status.success() {
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                eprintln!("[icpp] pkg-config failed: {}", stderr.trim());
-                return Vec::new();
-            }
-
-            let paths: Vec<PathBuf> = String::from_utf8_lossy(&output.stdout)
-                .split_whitespace()
-                .filter_map(|flag| flag.strip_prefix("-I").map(PathBuf::from))
-                .collect();
-
-            if self.verbose && !paths.is_empty() {
-                eprintln!("[icpp] Found {} include paths from pkg-config", paths.len());
-            }
-
-            paths
+    /// Run configured include_path_commands to get additional include paths (lazy, cached).
+    fn get_command_include_paths(&self) -> &[PathBuf] {
+        self.command_include_paths.get_or_init(|| {
+            super::run_include_path_commands("icpp", &self.config.include_path_commands, self.verbose)
         })
     }
 
     /// Resolve a single `#include` directive to a file, if any.
     /// Searches in order: including file's directory, configured include_paths,
-    /// then pkg-config-discovered include paths.
+    /// pkg-config-discovered include paths, then include paths from configured commands.
     fn resolve_include(&self, include: &str, including_dir: &Path) -> Option<PathBuf> {
         let candidate = including_dir.join(include);
         if candidate.is_file() {
@@ -102,6 +73,12 @@ impl IcppDepAnalyzer {
             }
         }
         for inc_dir in self.get_pkg_config_include_paths() {
+            let candidate = inc_dir.join(include);
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+        for inc_dir in self.get_command_include_paths() {
             let candidate = inc_dir.join(include);
             if candidate.is_file() {
                 return Some(candidate);

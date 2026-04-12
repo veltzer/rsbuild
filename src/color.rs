@@ -2,10 +2,11 @@ use std::borrow::Cow;
 use tabled::Table;
 use tabled::settings::Style;
 
-/// Color is globally disabled because ANSI escape codes break table column alignment.
-/// To re-enable, change this to check an AtomicBool flag or the NO_COLOR env var.
+/// Color is enabled based on the global runtime flag (--color auto|always|never).
+/// Default resolution: off unless `--color always`, or `--color auto` with a tty
+/// stdout and no `NO_COLOR` env var set.
 fn no_color() -> bool {
-    true
+    !crate::runtime_flags::color_enabled()
 }
 
 fn wrap<'a>(code: &str, text: &'a str) -> Cow<'a, str> {

@@ -167,11 +167,29 @@ fn config_diff(name: &str, current: &serde_json::Value) -> serde_json::Value {
 
 /// Print metadata annotations (required fields and output-affecting fields) for a processor.
 /// Only shown in text mode (not JSON mode).
+///
+/// Columns: Field, Type, Default, Required, Output (and Description in verbose mode).
+/// - Required: "yes" if the field is in `must_fields()` (must be set non-empty by user).
+/// - Output:   "yes" if the field is in `output_fields()` (changes affect what the tool produces
+///             and trigger rebuilds).
 fn print_processor_metadata(name: &str, verbose: bool) {
     use crate::config::{SCAN_FIELD_DESCRIPTIONS, SHARED_FIELD_DESCRIPTIONS};
 
     let proc_descs = crate::config::ProcessorConfig::field_descriptions_for(name)
         .unwrap_or(&[]);
+
+    let must_fields: std::collections::HashSet<&str> =
+        crate::config::ProcessorConfig::must_fields_for(name)
+            .unwrap_or(&[])
+            .iter()
+            .copied()
+            .collect();
+    let output_fields: std::collections::HashSet<&str> =
+        crate::config::ProcessorConfig::output_fields_for(name)
+            .unwrap_or(&[])
+            .iter()
+            .copied()
+            .collect();
 
     let defaults: serde_json::Value = crate::config::ProcessorConfig::defconfig_json(name)
         .and_then(|j| serde_json::from_str(&j).ok())
@@ -179,9 +197,9 @@ fn print_processor_metadata(name: &str, verbose: bool) {
 
     let mut builder = TableBuilder::new();
     if verbose {
-        builder.push_record(["Field", "Type", "Default", "Description"]);
+        builder.push_record(["Field", "Type", "Default", "Required", "Output", "Description"]);
     } else {
-        builder.push_record(["Field", "Type", "Default"]);
+        builder.push_record(["Field", "Type", "Default", "Required", "Output"]);
     }
 
     // Processor-specific fields first, then shared dep/exec, then scan fields
@@ -209,10 +227,12 @@ fn print_processor_metadata(name: &str, verbose: bool) {
                 None    => "(none)".to_string(),
             }
         };
+        let required = if must_fields.contains(*field) { "Y" } else { "N" };
+        let output = if output_fields.contains(*field) { "Y" } else { "N" };
         if verbose {
-            builder.push_record([field, type_str, &default_str, desc]);
+            builder.push_record([field, type_str, &default_str, required, output, desc]);
         } else {
-            builder.push_record([field, type_str, &default_str]);
+            builder.push_record([field, type_str, &default_str, required, output]);
         }
     }
 

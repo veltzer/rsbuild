@@ -236,22 +236,22 @@ fn print_processor_metadata(name: &str, verbose: bool) {
         }
     }
 
-    println!("\nParameters:");
     color::print_table(builder.build());
 }
 
 /// Show default configuration for a processor (works without rsconstruct.toml).
+/// In text mode, prints only the parameters table.
+/// In JSON mode (`--json`), prints only the defaults as JSON.
 pub fn processor_defconfig(name: &str, verbose: bool) -> Result<()> {
-    match ProcessorConfig::defconfig_json(name) {
-        Some(json) => {
-            println!("{}", json);
-            if !crate::json_output::is_json_mode() {
-                print_processor_metadata(name, verbose);
-            }
-            Ok(())
-        }
-        None => bail!("Unknown processor: '{}'. Run 'rsconstruct processors list' to see available processors.", name),
+    let json = ProcessorConfig::defconfig_json(name)
+        .ok_or_else(|| anyhow::anyhow!("Unknown processor: '{}'. Run 'rsconstruct processors list' to see available processors.", name))?;
+
+    if crate::json_output::is_json_mode() {
+        println!("{}", json);
+    } else {
+        print_processor_metadata(name, verbose);
     }
+    Ok(())
 }
 
 impl Builder {
@@ -328,6 +328,7 @@ impl Builder {
                         // Show the processor's type name for metadata lookup.
                         // Multi-instance names are like "explicit.report" — strip the instance suffix.
                         let type_name = n.split('.').next().unwrap_or(n);
+                        println!("\nParameters:");
                         print_processor_metadata(type_name, verbose);
                         if i + 1 < names.len() {
                             println!();

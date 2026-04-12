@@ -309,11 +309,16 @@ impl ObjectStore {
 
     /// Store a tree descriptor (creator/creator produced multiple outputs).
     /// Walks all output_dirs and collects output_files.
+    ///
+    /// `is_foreign`: predicate that returns true for paths declared as outputs of OTHER
+    /// products. These files live in a shared output directory but are owned by a
+    /// different processor; they are skipped so that restore never clobbers them.
     pub fn store_tree_descriptor(
         &self,
         cache_key: &str,
         output_dirs: &[std::sync::Arc<PathBuf>],
         output_files: &[PathBuf],
+        is_foreign: &dyn Fn(&Path) -> bool,
     ) -> Result<bool> {
         let prev = self.get_descriptor(cache_key);
         let mut entries = Vec::new();
@@ -324,6 +329,10 @@ impl ObjectStore {
             anyhow::ensure!(dir.exists() && dir.is_dir(),
                 "Expected output directory not produced: {}", dir.display());
             for file_path in walk_files(dir) {
+                // Skip paths owned by another processor that shares this directory.
+                if is_foreign(&file_path) {
+                    continue;
+                }
                 let content = fs::read(&file_path)
                     .with_context(|| format!("Failed to read: {}", file_path.display()))?;
                 let checksum = self.store_object(&content)?;

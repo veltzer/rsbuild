@@ -978,6 +978,9 @@ impl KnownFields for ExplicitConfig {
     fn output_fields() -> &'static [&'static str] {
         &["command", "args", "inputs", "input_globs", "output_files", "output_dirs"]
     }
+    fn must_fields() -> &'static [&'static str] {
+        &["command"]
+    }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
         &[
             ("command",      "Command to run to produce the outputs"),

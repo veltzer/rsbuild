@@ -584,7 +584,7 @@ pub(crate) fn processor_defaults_for(type_name: &str) -> Option<ProcessorDefault
         "cargo" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "build", dep_auto: &[] },
         "clippy" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "clippy", dep_auto: &[] },
         "generator" => ProcessorDefaults { output_dir: "out/generator", formats: &[], args: &[], command: "", dep_auto: &[] },
-        "explicit" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "true", dep_auto: &[] },
+        "explicit" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "", dep_auto: &[] },
         "sphinx" => ProcessorDefaults { output_dir: "docs", formats: &[], args: &[], command: "", dep_auto: &[] },
         "mdbook" => ProcessorDefaults { output_dir: "book", formats: &[], args: &[], command: "", dep_auto: &[] },
         "npm" => ProcessorDefaults { output_dir: "", formats: &[], args: &[], command: "install", dep_auto: &[] },

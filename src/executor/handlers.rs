@@ -157,6 +157,7 @@ impl<'a> Executor<'a> {
         &self,
         ctx: &HandlerContext,
         object_store: &crate::object_store::ObjectStore,
+        graph: &crate::graph::BuildGraph,
         duration: Option<std::time::Duration>,
     ) -> bool {
         let desc_key = ctx.product.descriptor_key(ctx.input_checksum);
@@ -167,8 +168,13 @@ impl<'a> Executor<'a> {
             // Generator: single output file → blob
             object_store.store_blob_descriptor(&desc_key, &ctx.product.outputs[0])
         } else {
-            // Creator/Explicit or multi-output: always tree
-            object_store.store_tree_descriptor(&desc_key, &ctx.product.output_dirs, &ctx.product.outputs)
+            // Creator/Explicit or multi-output: always tree.
+            // When walking output_dirs, skip paths declared as outputs of OTHER products —
+            // they're owned by some other processor that contributes to the shared directory.
+            let is_foreign = |path: &std::path::Path| -> bool {
+                matches!(graph.path_owner(path), Some(owner) if owner != ctx.id)
+            };
+            object_store.store_tree_descriptor(&desc_key, &ctx.product.output_dirs, &ctx.product.outputs, &is_foreign)
         };
         match cache_result {
             Ok(changed) => {

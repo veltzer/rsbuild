@@ -394,7 +394,7 @@ impl<'a> Executor<'a> {
                 match result {
                     Ok(()) => {
                         // handle_success returns false if cache_outputs failed
-                        self.handle_success(&ctx, lctx.object_store, None);
+                        self.handle_success(&ctx, lctx.object_store, lctx.graph, None);
                     }
                     Err(e) => {
                         self.handle_error(&ctx, e, None);
@@ -495,7 +495,7 @@ impl<'a> Executor<'a> {
                             let duration = product_start.elapsed();
                             last_error = None; // Clear before handle_success to avoid double-failure if caching fails
 
-                            if !self.handle_success(&ctx, lctx.object_store, Some(duration)) {
+                            if !self.handle_success(&ctx, lctx.object_store, lctx.graph, Some(duration)) {
                                 // cache_outputs failed and error was handled
                                 break;
                             }

@@ -374,6 +374,17 @@ impl BuildGraph {
         &self.products
     }
 
+    /// Return the id of the product that declares `path` as one of its outputs,
+    /// or None if no product owns it.
+    /// Used by Creators caching a shared output directory: any path owned by a
+    /// different product must be excluded from this Creator's tree so restore
+    /// never clobbers another processor's file.
+    pub fn path_owner(&self, path: &Path) -> Option<usize> {
+        self.products.iter()
+            .find(|p| p.outputs.iter().any(|o| o.as_path() == path))
+            .map(|p| p.id)
+    }
+
     /// Get dependencies of a product (products that must be built before this one)
     pub fn get_dependencies(&self, id: usize) -> &[usize] {
         self.dependencies.get(id).expect(crate::errors::INVALID_PRODUCT_ID)

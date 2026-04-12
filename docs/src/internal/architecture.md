@@ -241,6 +241,40 @@ For each product:
    `.rsconstruct/objects/`)
 5. On failure: report error (or continue if `--keep-going`)
 
+## Processor source layout
+
+All processor code lives under `src/processors/`. The folder structure mirrors processor type:
+
+```
+src/processors/
+├── mod.rs          # Processor trait, shared helpers (run_command, run_checker,
+│                   # SimpleChecker, SimpleGenerator, ProcessorBase, …)
+├── checkers/       # One file per checker (ruff.rs, pylint.rs, cppcheck.rs, …)
+│   └── mod.rs      # Re-exports
+├── generators/     # One file per generator (generator.rs, marp.rs, sass.rs, …)
+│   ├── mod.rs      # Shared helpers: find_templates, output_path, discover_single_format, …
+│   └── tags/       # Tags generator (multi-file, has its own subfolder)
+├── creators/       # One file per creator (cargo.rs, npm.rs, gem.rs, pip.rs, …)
+│   ├── mod.rs      # Re-exports
+│   └── creator.rs  # Generic creator processor
+├── explicit/       # Explicit processor (user-defined command with declared outputs)
+│   ├── mod.rs
+│   └── explicit.rs
+└── lua/            # Lua plugin host
+    ├── mod.rs
+    └── lua_processor.rs
+```
+
+### Conventions
+
+- **Every file in `src/processors/` is a real processor** — no utility-only files at the top level. Shared helpers live in `mod.rs` or `generators/mod.rs`.
+- **Checkers** use `SimpleChecker` (data-driven, no boilerplate) or implement `Processor` directly for checkers with custom discovery logic (e.g., `clippy`, `script`).
+- **Generators** use `SimpleGenerator` (data-driven with a custom `execute_fn`) or `GeneratorProcessor` for the generic pass-through generator.
+- **Creators** use `CreatorProcessor` for the generic case, or their own struct for creators with special discovery (cargo profiles, npm siblings, etc.).
+- **Explicit** is a singleton processor type with its own folder because it is neither a checker nor a generator.
+- **Lua** is the only processor type that hosts external scripts rather than wrapping a fixed external tool. It has its own folder because it carries significant runtime state (the Lua VM).
+- All processors self-register via `inventory::submit!` at the bottom of their file — no central registry table to update.
+
 ## Determinism
 
 Build order is deterministic:

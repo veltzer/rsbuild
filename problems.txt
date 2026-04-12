@@ -5,8 +5,6 @@ python files dependency analysis:
 
 - when doing batch processing we are not using multi core. What can we do about it?
 
-- do we have a test that checks that we get an error if we have two processors in the same tmpl file without differentiating between then with a different name.
-
 - do a pass of making the code more strict (whenever we relax strictness try to figure out if we can return the strictness)
 
 - error handling.

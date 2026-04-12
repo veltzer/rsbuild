@@ -227,8 +227,8 @@ fn print_processor_metadata(name: &str, verbose: bool) {
                 None    => "(none)".to_string(),
             }
         };
-        let required = if must_fields.contains(*field) { "Y" } else { "N" };
-        let output = if output_fields.contains(*field) { "Y" } else { "N" };
+        let required = if must_fields.contains(*field) { "Yes" } else { "No" };
+        let output = if output_fields.contains(*field) { "Yes" } else { "No" };
         if verbose {
             builder.push_record([field, type_str, &default_str, required, output, desc]);
         } else {

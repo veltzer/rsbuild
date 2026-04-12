@@ -7,7 +7,7 @@ use crate::config::StandardConfig;
 use crate::graph::Product;
 use crate::processors::ensure_output_dir;
 
-use super::simple::{SimpleGenerator, SimpleGeneratorParams, DiscoverMode};
+use crate::processors::{SimpleGenerator, SimpleGeneratorParams, DiscoverMode};
 
 fn execute_yaml2json(_config: &StandardConfig, product: &Product) -> Result<()> {
     let input = product.primary_input();

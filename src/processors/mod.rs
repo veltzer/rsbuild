@@ -23,7 +23,10 @@ use tokio::sync::watch;
 
 use crate::color;
 use crate::errors;
-use crate::config::{output_config_hash, resolve_extra_inputs};
+use crate::config::{
+    output_config_hash, resolve_extra_inputs,
+    CheckerConfigWithCommand, SimpleCheckerParams, StandardConfig,
+};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 
@@ -1309,6 +1312,202 @@ impl BuildStats {
             let total: f64 = self.phase_timings.iter().map(|(_, d)| d.as_secs_f64()).sum();
             println!("{}", color::bold(&format!("Total: {:.3}s", total)));
         }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Shared runtime types for data-driven per-processor files.
+//
+// Most single-file processors don't need their own Processor struct — they
+// configure one of these generic runtimes instead and submit a plugin entry.
+// Moved here from checkers/simple.rs and generators/simple.rs so the
+// checkers/ and generators/ directories contain ONLY per-processor files.
+// ----------------------------------------------------------------------------
+
+/// A simple checker processor driven entirely by data.
+/// Each trivial checker file (ruff.rs, pylint.rs, etc.) registers an instance
+/// of this struct with its own `SimpleCheckerParams`.
+pub struct SimpleChecker {
+    config: CheckerConfigWithCommand,
+    params: SimpleCheckerParams,
+}
+
+impl SimpleChecker {
+    pub fn new(config: CheckerConfigWithCommand, params: SimpleCheckerParams) -> Self {
+        Self { config, params }
+    }
+
+    fn check_files(&self, files: &[&Path]) -> Result<()> {
+        let tool = &self.config.standard.command;
+        if self.params.prepend_args.is_empty() {
+            run_checker(tool, self.params.subcommand, &self.config.standard.args, files)
+        } else {
+            let mut combined_args: Vec<String> = self.params.prepend_args.iter().map(|s| s.to_string()).collect();
+            combined_args.extend_from_slice(&self.config.standard.args);
+            run_checker(tool, self.params.subcommand, &combined_args, files)
+        }
+    }
+}
+
+impl Processor for SimpleChecker {
+    fn scan_config(&self) -> &StandardConfig {
+        &self.config.standard
+    }
+
+    fn standard_config(&self) -> Option<&StandardConfig> {
+        Some(&self.config.standard)
+    }
+
+    fn description(&self) -> &str {
+        self.params.description
+    }
+
+    fn auto_detect(&self, file_index: &FileIndex) -> bool {
+        !file_index.scan(&self.config.standard, true).is_empty()
+    }
+
+    fn required_tools(&self) -> Vec<String> {
+        let mut tools = vec![self.config.standard.command.clone()];
+        for t in self.params.extra_tools {
+            tools.push(t.to_string());
+        }
+        tools
+    }
+
+    fn discover(
+        &self,
+        graph: &mut BuildGraph,
+        file_index: &FileIndex,
+        instance_name: &str,
+    ) -> Result<()> {
+        let mut dep_inputs = self.config.standard.dep_inputs.clone();
+        for ai in &self.config.standard.dep_auto {
+            dep_inputs.extend(config_file_inputs(ai));
+        }
+        discover_checker_products(
+            graph, &self.config.standard, file_index, &dep_inputs, &self.config, instance_name,
+        )
+    }
+
+    fn execute(&self, product: &Product) -> Result<()> {
+        self.check_files(&[product.primary_input()])
+    }
+
+    fn supports_batch(&self) -> bool {
+        self.config.standard.batch
+    }
+
+    fn execute_batch(&self, products: &[&Product]) -> Vec<Result<()>> {
+        execute_checker_batch(products, |files| self.check_files(files))
+    }
+}
+
+/// How a simple generator discovers its products.
+#[derive(Copy, Clone)]
+pub(crate) enum DiscoverMode {
+    /// Discover one product per source x format (uses config.formats).
+    MultiFormat,
+    /// Discover one product per source file with a fixed output extension.
+    SingleFormat(&'static str),
+}
+
+/// Parameters for a [`SimpleGenerator`]. Each trivial generator file
+/// (mermaid.rs, pandoc.rs, etc.) configures one and registers it via the
+/// processor registry.
+#[derive(Copy, Clone)]
+pub(crate) struct SimpleGeneratorParams {
+    pub description: &'static str,
+    pub extra_tools: &'static [&'static str],
+    pub discover_mode: DiscoverMode,
+    pub execute_fn: fn(&StandardConfig, &Product) -> Result<()>,
+    pub is_native: bool,
+}
+
+/// Data-driven generator processor. Replaces identical boilerplate across
+/// generators that use `StandardConfig` with standard discover logic.
+pub struct SimpleGenerator {
+    base: ProcessorBase,
+    config: StandardConfig,
+    params: SimpleGeneratorParams,
+}
+
+impl SimpleGenerator {
+    pub fn new(config: StandardConfig, params: SimpleGeneratorParams) -> Self {
+        Self {
+            base: ProcessorBase::generator("", params.description),
+            config,
+            params,
+        }
+    }
+}
+
+impl Processor for SimpleGenerator {
+    fn scan_config(&self) -> &StandardConfig {
+        &self.config
+    }
+
+    fn standard_config(&self) -> Option<&StandardConfig> {
+        Some(&self.config)
+    }
+
+    fn description(&self) -> &str {
+        self.base.description()
+    }
+
+    fn processor_type(&self) -> ProcessorType {
+        self.base.processor_type()
+    }
+
+    fn config_json(&self) -> Option<String> {
+        ProcessorBase::config_json(&self.config)
+    }
+
+    fn clean(&self, product: &Product, verbose: bool) -> Result<usize> {
+        ProcessorBase::clean(product, &product.processor, verbose)
+    }
+
+    fn is_native(&self) -> bool {
+        self.params.is_native
+    }
+
+    fn required_tools(&self) -> Vec<String> {
+        if self.params.is_native {
+            self.params.extra_tools.iter().map(|t| t.to_string()).collect()
+        } else {
+            let mut tools = vec![self.config.command.clone()];
+            for t in self.params.extra_tools {
+                tools.push(t.to_string());
+            }
+            tools
+        }
+    }
+
+    fn max_jobs(&self) -> Option<usize> {
+        self.config.max_jobs
+    }
+
+    fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
+        let params = generators::DiscoverParams {
+            scan: &self.config,
+            dep_inputs: &self.config.dep_inputs,
+            config: &self.config,
+            output_dir: &self.config.output_dir,
+            processor_name: instance_name,
+        };
+        match &self.params.discover_mode {
+            DiscoverMode::MultiFormat => {
+                generators::discover_multi_format(graph, file_index, &params, &self.config.formats)
+            }
+            DiscoverMode::SingleFormat(ext) => {
+                generators::discover_single_format(graph, file_index, &params, ext)
+            }
+        }
+    }
+
+    fn supports_batch(&self) -> bool { false }
+
+    fn execute(&self, product: &Product) -> Result<()> {
+        (self.params.execute_fn)(&self.config, product)
     }
 }
 

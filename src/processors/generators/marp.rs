@@ -8,7 +8,7 @@ use crate::config::StandardConfig;
 use crate::graph::Product;
 use crate::processors::{run_command, check_command_output, ensure_output_dir};
 
-use super::simple::{SimpleGenerator, SimpleGeneratorParams, DiscoverMode};
+use crate::processors::{SimpleGenerator, SimpleGeneratorParams, DiscoverMode};
 
 fn cleanup_marp_tmp_dirs() {
     let Ok(entries) = fs::read_dir("/tmp") else { return };

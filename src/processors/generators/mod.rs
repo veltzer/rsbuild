@@ -8,21 +8,20 @@ mod mako;
 mod pdflatex;
 mod pdfunite;
 mod rust_single_file;
-pub(crate) mod simple;
-pub(crate) mod mermaid;
-pub(crate) mod drawio;
-pub(crate) mod sass;
-pub(crate) mod protobuf;
-pub(crate) mod chromium;
-pub(crate) mod markdown2html;
-pub(crate) mod libreoffice;
-pub(crate) mod marp;
-pub(crate) mod pandoc;
-pub(crate) mod a2x;
-pub(crate) mod objdump;
-pub(crate) mod imarkdown2html;
-pub(crate) mod isass;
-pub(crate) mod yaml2json;
+mod mermaid;
+mod drawio;
+mod sass;
+mod protobuf;
+mod chromium;
+mod markdown2html;
+mod libreoffice;
+mod marp;
+mod pandoc;
+mod a2x;
+mod objdump;
+mod imarkdown2html;
+mod isass;
+mod yaml2json;
 
 pub mod tags;
 mod tera;
@@ -83,7 +82,7 @@ pub(super) fn find_templates(scan: &StandardConfig, file_index: &FileIndex) -> R
 }
 
 /// Parameters shared by multi-format and single-format discover helpers.
-pub(super) struct DiscoverParams<'a, C: Serialize> {
+pub(crate) struct DiscoverParams<'a, C: Serialize> {
     pub scan: &'a StandardConfig,
     pub dep_inputs: &'a [String],
     pub config: &'a C,
@@ -148,7 +147,7 @@ pub(super) fn output_path(source: &Path, src_dirs: &[String], output_dir: &str, 
 
 /// Discover one product per source x format pair. Returns Ok(()) immediately
 /// if the scan root is invalid (directory doesn't exist).
-pub(super) fn discover_multi_format(
+pub(crate) fn discover_multi_format(
     graph: &mut BuildGraph,
     file_index: &FileIndex,
     params: &DiscoverParams<'_, impl Serialize>,
@@ -179,7 +178,7 @@ pub(super) fn discover_multi_format(
 
 /// Discover one product per source file. Returns Ok(()) immediately
 /// if the scan root is invalid (directory doesn't exist).
-pub(super) fn discover_single_format(
+pub(crate) fn discover_single_format(
     graph: &mut BuildGraph,
     file_index: &FileIndex,
     params: &DiscoverParams<'_, impl Serialize>,

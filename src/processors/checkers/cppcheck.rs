@@ -1,6 +1,6 @@
 //! cppcheck checker — registered as a {SimpleChecker}.
 
-use super::simple::SimpleChecker;
+use crate::processors::SimpleChecker;
 use crate::config::SimpleCheckerParams;
 
 fn create_cppcheck(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {

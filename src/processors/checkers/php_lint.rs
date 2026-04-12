@@ -1,6 +1,6 @@
 //! php_lint checker — registered as a {SimpleChecker}.
 
-use super::simple::SimpleChecker;
+use crate::processors::SimpleChecker;
 use crate::config::SimpleCheckerParams;
 
 fn create_php_lint(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {

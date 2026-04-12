@@ -8,7 +8,7 @@ use crate::config::StandardConfig;
 use crate::graph::Product;
 use crate::processors::{run_command, check_command_output};
 
-use super::simple::{SimpleGenerator, SimpleGeneratorParams, DiscoverMode};
+use crate::processors::{SimpleGenerator, SimpleGeneratorParams, DiscoverMode};
 
 fn execute_libreoffice(config: &StandardConfig, product: &Product) -> Result<()> {
     let input = product.primary_input();

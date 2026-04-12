@@ -8,7 +8,7 @@ use crate::config::StandardConfig;
 use crate::graph::Product;
 use crate::processors::{run_command_capture, check_command_output, ensure_output_dir};
 
-use super::simple::{SimpleGenerator, SimpleGeneratorParams, DiscoverMode};
+use crate::processors::{SimpleGenerator, SimpleGeneratorParams, DiscoverMode};
 
 fn execute_objdump(config: &StandardConfig, product: &Product) -> Result<()> {
     let input = product.primary_input();

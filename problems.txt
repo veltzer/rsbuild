@@ -10,11 +10,6 @@ python files dependency analysis:
   - I want rscontrcut processor add [TAB] -> name of processor that will add the processor to my toml file with all the must fill variables already there with default values and comments to fill them correctly.
     and the same for analyzers.
 
-- I want src/processors to have a subfolder for every type of processor.
-    document this structure:
-    all generators are in src/processors/generators etc.
-    create a document about the source code layout and specific the rules of 1 processor per file and the structure.
-
 - do a pass of making the code more strict (whenever we relax strictness try to figure out if we can return the strictness)
 
 - also lets start writing a document about distributed execution.

@@ -606,6 +606,21 @@ pub enum AnalyzersAction {
         #[arg(long)]
         analyzer: Option<String>,
     },
+    /// Remove an analyzer stanza from rsconstruct.toml entirely (requires config)
+    Delete {
+        /// Instance name (iname) as declared in rsconstruct.toml
+        iname: String,
+    },
+    /// Set enabled = false on an analyzer stanza in rsconstruct.toml (requires config)
+    Disable {
+        /// Instance name (iname) as declared in rsconstruct.toml
+        iname: String,
+    },
+    /// Set enabled = true on an analyzer stanza in rsconstruct.toml (requires config)
+    Enable {
+        /// Instance name (iname) as declared in rsconstruct.toml
+        iname: String,
+    },
 }
 
 #[derive(Subcommand)]

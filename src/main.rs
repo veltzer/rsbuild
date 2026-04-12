@@ -284,6 +284,15 @@ fn run() -> Result<()> {
                 cli::AnalyzersAction::Add { pname, dry_run } => {
                     builder::add_analyzer(pname, *dry_run)?;
                 }
+                cli::AnalyzersAction::Delete { iname } => {
+                    builder::smart::delete_analyzer(iname)?;
+                }
+                cli::AnalyzersAction::Disable { iname } => {
+                    builder::smart::disable_analyzer(iname)?;
+                }
+                cli::AnalyzersAction::Enable { iname } => {
+                    builder::smart::enable_analyzer(iname)?;
+                }
                 _ => {
                     let builder = Builder::new()?;
                     builder.analyzers(action, cli.verbose)?;
@@ -329,6 +338,15 @@ fn run() -> Result<()> {
                 }
                 cli::ProcessorAction::Add { ref pname, dry_run } => {
                     builder::add_processor(pname, dry_run)?;
+                }
+                cli::ProcessorAction::Delete { ref iname } => {
+                    builder::smart::delete_processor(iname)?;
+                }
+                cli::ProcessorAction::Disable { ref iname } => {
+                    builder::smart::disable_processor(iname)?;
+                }
+                cli::ProcessorAction::Enable { ref iname } => {
+                    builder::smart::enable_processor(iname)?;
                 }
                 cli::ProcessorAction::Config { .. } if !has_config => {
                     bail!("No rsconstruct.toml found. Use 'processors defconfig <name>' to see default config without a project.");

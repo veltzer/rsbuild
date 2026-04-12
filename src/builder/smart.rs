@@ -214,6 +214,127 @@ pub(crate) fn auto(available: &HashSet<String>) -> Result<()> {
     Ok(())
 }
 
+/// Get or create the [analyzer] table in the document.
+fn analyzer_table(doc: &mut toml_edit::DocumentMut) -> Result<&mut toml_edit::Table> {
+    doc.entry("analyzer")
+        .or_insert_with(|| toml_edit::Item::Table(toml_edit::Table::new()))
+        .as_table_mut()
+        .context("[analyzer] must be a table")
+}
+
+/// Delete a single entry (processor or analyzer) by iname from the given section table.
+/// Supports both simple inames ("ruff") and dotted named instances ("pylint.core").
+fn delete_iname(section_table: &mut toml_edit::Table, iname: &str) -> bool {
+    if let Some(dot) = iname.find('.') {
+        let type_name = &iname[..dot];
+        let sub_name = &iname[dot + 1..];
+        if let Some(type_table) = section_table.get_mut(type_name).and_then(|t| t.as_table_mut()) {
+            if type_table.remove(sub_name).is_some() {
+                if type_table.is_empty() {
+                    section_table.remove(type_name);
+                }
+                return true;
+            }
+        }
+        false
+    } else {
+        section_table.remove(iname).is_some()
+    }
+}
+
+/// Set `enabled = VALUE` on a single entry by iname from the given section table.
+/// Supports both simple inames ("ruff") and dotted named instances ("pylint.core").
+/// Returns an error if the iname is not found.
+fn set_enabled_iname(section_table: &mut toml_edit::Table, iname: &str, value: bool, section: &str) -> Result<()> {
+    let entry = if let Some(dot) = iname.find('.') {
+        let type_name = &iname[..dot];
+        let sub_name = &iname[dot + 1..];
+        section_table
+            .get_mut(type_name)
+            .and_then(|t| t.as_table_mut())
+            .and_then(|t| t.get_mut(sub_name))
+            .and_then(|v| v.as_table_mut())
+    } else {
+        section_table
+            .get_mut(iname)
+            .and_then(|v| v.as_table_mut())
+    };
+
+    match entry {
+        Some(t) => {
+            t.insert("enabled", toml_edit::value(value));
+            Ok(())
+        }
+        None => bail!("{} '{}' is not declared in rsconstruct.toml.", section, iname),
+    }
+}
+
+/// Delete a processor by iname from rsconstruct.toml.
+pub(crate) fn delete_processor(iname: &str) -> Result<()> {
+    let mut doc = load_doc()?;
+    let table = processor_table(&mut doc)?;
+    if delete_iname(table, iname) {
+        save_doc(&doc)?;
+        println!("Deleted processor '{}'.", iname);
+    } else {
+        println!("Processor '{}' is not declared.", iname);
+    }
+    Ok(())
+}
+
+/// Set enabled = false on a processor by iname.
+pub(crate) fn disable_processor(iname: &str) -> Result<()> {
+    let mut doc = load_doc()?;
+    let table = processor_table(&mut doc)?;
+    set_enabled_iname(table, iname, false, "Processor")?;
+    save_doc(&doc)?;
+    println!("Disabled processor '{}'.", iname);
+    Ok(())
+}
+
+/// Set enabled = true on a processor by iname.
+pub(crate) fn enable_processor(iname: &str) -> Result<()> {
+    let mut doc = load_doc()?;
+    let table = processor_table(&mut doc)?;
+    set_enabled_iname(table, iname, true, "Processor")?;
+    save_doc(&doc)?;
+    println!("Enabled processor '{}'.", iname);
+    Ok(())
+}
+
+/// Delete an analyzer by iname from rsconstruct.toml.
+pub(crate) fn delete_analyzer(iname: &str) -> Result<()> {
+    let mut doc = load_doc()?;
+    let table = analyzer_table(&mut doc)?;
+    if delete_iname(table, iname) {
+        save_doc(&doc)?;
+        println!("Deleted analyzer '{}'.", iname);
+    } else {
+        println!("Analyzer '{}' is not declared.", iname);
+    }
+    Ok(())
+}
+
+/// Set enabled = false on an analyzer by iname.
+pub(crate) fn disable_analyzer(iname: &str) -> Result<()> {
+    let mut doc = load_doc()?;
+    let table = analyzer_table(&mut doc)?;
+    set_enabled_iname(table, iname, false, "Analyzer")?;
+    save_doc(&doc)?;
+    println!("Disabled analyzer '{}'.", iname);
+    Ok(())
+}
+
+/// Set enabled = true on an analyzer by iname.
+pub(crate) fn enable_analyzer(iname: &str) -> Result<()> {
+    let mut doc = load_doc()?;
+    let table = analyzer_table(&mut doc)?;
+    set_enabled_iname(table, iname, true, "Analyzer")?;
+    save_doc(&doc)?;
+    println!("Enabled analyzer '{}'.", iname);
+    Ok(())
+}
+
 /// Remove processors from rsconstruct.toml that don't match any files.
 pub(crate) fn remove_no_file_processors(empty_processors: &[String]) -> Result<()> {
     if empty_processors.is_empty() {

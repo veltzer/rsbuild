@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::{Path, PathBuf};
 
 use crate::config::StandardConfig;
@@ -30,7 +30,7 @@ impl FileIndex {
 
         let mut files: Vec<PathBuf> = Vec::new();
         for entry in walker {
-            let entry = entry.context("Failed to read directory entry during file indexing")?;
+            let entry = crate::errors::ctx(entry, "Failed to read directory entry during file indexing")?;
             if entry.file_type().is_some_and(|ft| ft.is_file()) {
                 let path = entry.into_path();
                 // Store relative paths (strip "./" prefix)

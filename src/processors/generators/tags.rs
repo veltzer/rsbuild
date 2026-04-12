@@ -479,7 +479,7 @@ impl Processor for TagsProcessor {
                     .context("Failed to insert tag index")?;
             }
         }
-        ctx!(write_txn.commit(), "Failed to commit tags database")?;
+        crate::errors::ctx(write_txn.commit(), "Failed to commit tags database")?;
 
         Ok(())
     }
@@ -647,8 +647,8 @@ pub fn grep_tags(db_path: &str, text: &str, ignore_case: bool) -> Result<()> {
 /// List files matching given tags. AND by default, OR if `use_or` is true.
 pub fn files_for_tags(db_path: &str, tags: &[String], use_or: bool) -> Result<()> {
     let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
-    let table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
+    let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction")?;
+    let table = crate::errors::ctx(read_txn.open_table(TAG_INDEX), "Failed to open tag_index table")?;
 
     let mut result: Option<BTreeSet<String>> = None;
 
@@ -770,20 +770,20 @@ pub fn tree_tags(db_path: &str) -> Result<()> {
 /// Show statistics about the tags database.
 pub fn stats_tags(db_path: &str) -> Result<()> {
     let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
+    let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction")?;
 
     // Count indexed files from the frontmatter table
-    let fm_table = read_txn.open_table(FRONTMATTER).context("Failed to open frontmatter table")?;
-    let file_count = fm_table.len().context("Failed to count frontmatter entries")?;
+    let fm_table = crate::errors::ctx(read_txn.open_table(FRONTMATTER), "Failed to open frontmatter table")?;
+    let file_count = crate::errors::ctx(fm_table.len(), "Failed to count frontmatter entries")?;
 
     // Count and classify tags, and sum total associations
-    let tag_table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
+    let tag_table = crate::errors::ctx(read_txn.open_table(TAG_INDEX), "Failed to open tag_index table")?;
     let mut bare_count: u64 = 0;
     let mut kv_count: u64 = 0;
     let mut total_associations: u64 = 0;
-    let iter = tag_table.iter().context("Failed to iterate tag_index")?;
+    let iter = crate::errors::ctx(tag_table.iter(), "Failed to iterate tag_index")?;
     for entry in iter {
-        let (key, value) = entry.context("Failed to read tag entry")?;
+        let (key, value) = crate::errors::ctx(entry, "Failed to read tag entry")?;
         if key.value().contains(':') {
             kv_count += 1;
         } else {
@@ -819,13 +819,13 @@ pub fn stats_tags(db_path: &str) -> Result<()> {
 /// List all tags for a specific file.
 pub fn tags_for_file(db_path: &str, path: &str) -> Result<()> {
     let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
-    let table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
+    let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction")?;
+    let table = crate::errors::ctx(read_txn.open_table(TAG_INDEX), "Failed to open tag_index table")?;
 
     let mut file_tags: Vec<String> = Vec::new();
-    let iter = table.iter().context("Failed to iterate tag_index")?;
+    let iter = crate::errors::ctx(table.iter(), "Failed to iterate tag_index")?;
     for entry in iter {
-        let (key, value) = entry.context("Failed to read tag entry")?;
+        let (key, value) = crate::errors::ctx(entry, "Failed to read tag entry")?;
         let files: Vec<String> = serde_json::from_str(value.value())
             .context("Failed to parse tag file list")?;
         if files.iter().any(|f| path_matches(f, path)) {
@@ -850,8 +850,8 @@ pub fn tags_for_file(db_path: &str, path: &str) -> Result<()> {
 /// Show the raw frontmatter for a specific file.
 pub fn frontmatter_for_file(db_path: &str, path: &str) -> Result<()> {
     let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
-    let table = read_txn.open_table(FRONTMATTER).context("Failed to open frontmatter table")?;
+    let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction")?;
+    let table = crate::errors::ctx(read_txn.open_table(FRONTMATTER), "Failed to open frontmatter table")?;
 
     // Try exact match first, then suffix match
     let mut found_key: Option<String> = None;
@@ -863,9 +863,9 @@ pub fn frontmatter_for_file(db_path: &str, path: &str) -> Result<()> {
     } else {
         // Suffix match with path boundary — collect all matches to detect ambiguity
         let mut all_matches: Vec<(String, String)> = Vec::new();
-        let iter = table.iter().context("Failed to iterate frontmatter")?;
+        let iter = crate::errors::ctx(table.iter(), "Failed to iterate frontmatter")?;
         for entry in iter {
-            let (key, value) = entry.context("Failed to read frontmatter entry")?;
+            let (key, value) = crate::errors::ctx(entry, "Failed to read frontmatter entry")?;
             if path_matches(key.value(), path) {
                 all_matches.push((key.value().to_string(), value.value().to_string()));
             }
@@ -1059,25 +1059,25 @@ pub fn validate_tags(db_path: &str, tags_dir: &str) -> Result<()> {
 /// Show a coverage matrix of tag categories per file.
 pub fn matrix_tags(db_path: &str) -> Result<()> {
     let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
-    let fm_table = read_txn.open_table(FRONTMATTER).context("Failed to open frontmatter table")?;
-    let tag_table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
+    let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction")?;
+    let fm_table = crate::errors::ctx(read_txn.open_table(FRONTMATTER), "Failed to open frontmatter table")?;
+    let tag_table = crate::errors::ctx(read_txn.open_table(TAG_INDEX), "Failed to open tag_index table")?;
 
     // Collect all categories and per-file category presence
     let mut categories: BTreeSet<String> = BTreeSet::new();
     let mut file_categories: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
 
     // Initialize all files from frontmatter table
-    let fm_iter = fm_table.iter().context("Failed to iterate frontmatter")?;
+    let fm_iter = crate::errors::ctx(fm_table.iter(), "Failed to iterate frontmatter")?;
     for entry in fm_iter {
-        let (key, _) = entry.context("Failed to read frontmatter entry")?;
+        let (key, _) = crate::errors::ctx(entry, "Failed to read frontmatter entry")?;
         file_categories.entry(key.value().to_string()).or_default();
     }
 
     // Build category sets from tag index
-    let tag_iter = tag_table.iter().context("Failed to iterate tag_index")?;
+    let tag_iter = crate::errors::ctx(tag_table.iter(), "Failed to iterate tag_index")?;
     for entry in tag_iter {
-        let (key, value) = entry.context("Failed to read tag entry")?;
+        let (key, value) = crate::errors::ctx(entry, "Failed to read tag entry")?;
         let tag = key.value();
         let category = tag.split(':').next().unwrap_or(tag).to_string();
         categories.insert(category.clone());
@@ -1112,11 +1112,11 @@ pub fn matrix_tags(db_path: &str) -> Result<()> {
 /// Show percentage of files that have each tag category.
 pub fn coverage_tags(db_path: &str) -> Result<()> {
     let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
-    let fm_table = read_txn.open_table(FRONTMATTER).context("Failed to open frontmatter table")?;
-    let tag_table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
+    let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction")?;
+    let fm_table = crate::errors::ctx(read_txn.open_table(FRONTMATTER), "Failed to open frontmatter table")?;
+    let tag_table = crate::errors::ctx(read_txn.open_table(TAG_INDEX), "Failed to open tag_index table")?;
 
-    let total_files = fm_table.len().context("Failed to count frontmatter entries")? as usize;
+    let total_files = crate::errors::ctx(fm_table.len(), "Failed to count frontmatter entries")? as usize;
     if total_files == 0 {
         println!("No files indexed.");
         return Ok(());
@@ -1124,9 +1124,9 @@ pub fn coverage_tags(db_path: &str) -> Result<()> {
 
     // Count files per category
     let mut category_files: HashMap<String, HashSet<String>> = HashMap::new();
-    let tag_iter = tag_table.iter().context("Failed to iterate tag_index")?;
+    let tag_iter = crate::errors::ctx(tag_table.iter(), "Failed to iterate tag_index")?;
     for entry in tag_iter {
-        let (key, value) = entry.context("Failed to read tag entry")?;
+        let (key, value) = crate::errors::ctx(entry, "Failed to read tag entry")?;
         let tag = key.value();
         let category = tag.split(':').next().unwrap_or(tag).to_string();
         let files: Vec<String> = serde_json::from_str(value.value())
@@ -1165,15 +1165,15 @@ pub fn coverage_tags(db_path: &str) -> Result<()> {
 /// Find markdown files with no tags at all.
 pub fn orphan_files(db_path: &str) -> Result<()> {
     let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
-    let fm_table = read_txn.open_table(FRONTMATTER).context("Failed to open frontmatter table")?;
-    let tag_table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
+    let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction")?;
+    let fm_table = crate::errors::ctx(read_txn.open_table(FRONTMATTER), "Failed to open frontmatter table")?;
+    let tag_table = crate::errors::ctx(read_txn.open_table(TAG_INDEX), "Failed to open tag_index table")?;
 
     // Collect all files that have at least one tag
     let mut tagged_files: HashSet<String> = HashSet::new();
-    let tag_iter = tag_table.iter().context("Failed to iterate tag_index")?;
+    let tag_iter = crate::errors::ctx(tag_table.iter(), "Failed to iterate tag_index")?;
     for entry in tag_iter {
-        let (_, value) = entry.context("Failed to read tag entry")?;
+        let (_, value) = crate::errors::ctx(entry, "Failed to read tag entry")?;
         let files: Vec<String> = serde_json::from_str(value.value())
             .context("Failed to parse tag file list")?;
         for file in files {
@@ -1183,9 +1183,9 @@ pub fn orphan_files(db_path: &str) -> Result<()> {
 
     // Find files in frontmatter that have no tags
     let mut orphans: Vec<String> = Vec::new();
-    let fm_iter = fm_table.iter().context("Failed to iterate frontmatter")?;
+    let fm_iter = crate::errors::ctx(fm_table.iter(), "Failed to iterate frontmatter")?;
     for entry in fm_iter {
-        let (key, _) = entry.context("Failed to read frontmatter entry")?;
+        let (key, _) = crate::errors::ctx(entry, "Failed to read frontmatter entry")?;
         let file = key.value().to_string();
         if !tagged_files.contains(&file) {
             orphans.push(file);
@@ -1404,14 +1404,14 @@ pub fn check_tags(config: &crate::config::TagsConfig) -> Result<()> {
 /// Suggest tags for a file based on similarity to other tagged files.
 pub fn suggest_tags(db_path: &str, path: &str) -> Result<()> {
     let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
-    let tag_table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
+    let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction")?;
+    let tag_table = crate::errors::ctx(read_txn.open_table(TAG_INDEX), "Failed to open tag_index table")?;
 
     // Build file -> tags and tag -> files maps
     let mut file_tags: HashMap<String, HashSet<String>> = HashMap::new();
-    let tag_iter = tag_table.iter().context("Failed to iterate tag_index")?;
+    let tag_iter = crate::errors::ctx(tag_table.iter(), "Failed to iterate tag_index")?;
     for entry in tag_iter {
-        let (key, value) = entry.context("Failed to read tag entry")?;
+        let (key, value) = crate::errors::ctx(entry, "Failed to read tag entry")?;
         let tag = key.value().to_string();
         let files: Vec<String> = serde_json::from_str(value.value())
             .context("Failed to parse tag file list")?;
@@ -1518,13 +1518,13 @@ fn path_matches(stored: &str, query: &str) -> bool {
 /// Load all tags from the database as a HashSet.
 fn load_all_tags(db_path: &str) -> Result<HashSet<String>> {
     let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
-    let table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
+    let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction")?;
+    let table = crate::errors::ctx(read_txn.open_table(TAG_INDEX), "Failed to open tag_index table")?;
 
     let mut tags = HashSet::new();
-    let iter = table.iter().context("Failed to iterate tag_index")?;
+    let iter = crate::errors::ctx(table.iter(), "Failed to iterate tag_index")?;
     for entry in iter {
-        let (key, _) = entry.context("Failed to read tag entry")?;
+        let (key, _) = crate::errors::ctx(entry, "Failed to read tag entry")?;
         tags.insert(key.value().to_string());
     }
 
@@ -1541,13 +1541,13 @@ fn load_all_tags_sorted(db_path: &str) -> Result<Vec<String>> {
 /// Load tag -> file count mapping from the database.
 fn load_tag_counts(db_path: &str) -> Result<HashMap<String, usize>> {
     let db = open_tags_db(db_path)?;
-    let read_txn = db.begin_read().context("Failed to begin read transaction")?;
-    let table = read_txn.open_table(TAG_INDEX).context("Failed to open tag_index table")?;
+    let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction")?;
+    let table = crate::errors::ctx(read_txn.open_table(TAG_INDEX), "Failed to open tag_index table")?;
 
     let mut counts = HashMap::new();
-    let iter = table.iter().context("Failed to iterate tag_index")?;
+    let iter = crate::errors::ctx(table.iter(), "Failed to iterate tag_index")?;
     for entry in iter {
-        let (key, value) = entry.context("Failed to read tag entry")?;
+        let (key, value) = crate::errors::ctx(entry, "Failed to read tag entry")?;
         let files: Vec<String> = serde_json::from_str(value.value())
             .context("Failed to parse tag file list")?;
         counts.insert(key.value().to_string(), files.len());
@@ -1624,7 +1624,7 @@ pub fn merge_tags(tags_dir: &str, source_dir: &str) -> Result<()> {
     let mut merged_count = 0;
     let mut copied_count = 0;
 
-    for entry in ctx!(fs::read_dir(src), format!("Failed to read source directory {}", src.display()))? {
+    for entry in crate::errors::ctx(fs::read_dir(src), &format!("Failed to read source directory {}", src.display()))? {
         let entry = entry?;
         let path = entry.path();
         if path.extension().is_none_or(|e| e != "txt") {
@@ -1633,7 +1633,7 @@ pub fn merge_tags(tags_dir: &str, source_dir: &str) -> Result<()> {
         let filename = path.file_name().unwrap();
         let dest_path = dest.join(filename);
 
-        let source_content = ctx!(fs::read_to_string(&path), format!("Failed to read tags source: {}", path.display()))?;
+        let source_content = crate::errors::ctx(fs::read_to_string(&path), &format!("Failed to read tags source: {}", path.display()))?;
         let source_entries: HashSet<String> = source_content
             .lines()
             .map(|l| l.trim().to_string())
@@ -1641,7 +1641,7 @@ pub fn merge_tags(tags_dir: &str, source_dir: &str) -> Result<()> {
             .collect();
 
         if dest_path.exists() {
-            let dest_content = ctx!(fs::read_to_string(&dest_path), format!("Failed to read tags dest: {}", dest_path.display()))?;
+            let dest_content = crate::errors::ctx(fs::read_to_string(&dest_path), &format!("Failed to read tags dest: {}", dest_path.display()))?;
             let mut all_entries: HashSet<String> = dest_content
                 .lines()
                 .map(|l| l.trim().to_string())
@@ -1653,21 +1653,21 @@ pub fn merge_tags(tags_dir: &str, source_dir: &str) -> Result<()> {
             if added > 0 {
                 let mut sorted: Vec<String> = all_entries.into_iter().collect();
                 sorted.sort();
-                ctx!(fs::write(&dest_path, sorted.join("\n") + "\n"), format!("Failed to write {}", dest_path.display()))?;
+                crate::errors::ctx(fs::write(&dest_path, sorted.join("\n") + "\n"), &format!("Failed to write {}", dest_path.display()))?;
                 merged_count += 1;
                 println!("  Merged: {} ({} new entries)", filename.to_string_lossy(), added);
             }
         } else {
             let mut sorted: Vec<String> = source_entries.into_iter().collect();
             sorted.sort();
-            ctx!(fs::write(&dest_path, sorted.join("\n") + "\n"), format!("Failed to write {}", dest_path.display()))?;
+            crate::errors::ctx(fs::write(&dest_path, sorted.join("\n") + "\n"), &format!("Failed to write {}", dest_path.display()))?;
             copied_count += 1;
             println!("  Copied: {}", filename.to_string_lossy());
         }
     }
 
     // Copy files that exist in destination but not in source back to source
-    for entry in ctx!(fs::read_dir(dest), format!("Failed to read destination directory {}", dest.display()))? {
+    for entry in crate::errors::ctx(fs::read_dir(dest), &format!("Failed to read destination directory {}", dest.display()))? {
         let entry = entry?;
         let path = entry.path();
         if path.extension().is_none_or(|e| e != "txt") {
@@ -1676,7 +1676,7 @@ pub fn merge_tags(tags_dir: &str, source_dir: &str) -> Result<()> {
         let filename = path.file_name().unwrap();
         let src_path = src.join(filename);
         if !src_path.exists() {
-            ctx!(fs::copy(&path, &src_path), format!("Failed to copy {} to {}", path.display(), src_path.display()))?;
+            crate::errors::ctx(fs::copy(&path, &src_path), &format!("Failed to copy {} to {}", path.display(), src_path.display()))?;
             copied_count += 1;
             println!("  Copied to source: {}", filename.to_string_lossy());
         }

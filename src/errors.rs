@@ -1,15 +1,29 @@
 /// Add context to a Result with automatic file:line location.
 ///
 /// Usage:
-///   ctx!(fs::read(&path), "Failed to read config")?;
-///   ctx!(fs::write(&path, data), format!("Failed to write {}", path.display()))?;
+///   ctx(fs::read(&path), "Failed to read config")?;
+///   let data = ctx(fs::read(&path), &format!("Failed to read {}", path.display()))?;
 ///
 /// Produces error messages like:
-///   "Failed to read config (at src/config/mod.rs:42)"
+///   "Failed to read config at src/config/mod.rs:42: No such file or directory"
+#[track_caller]
+pub fn ctx<T, E: std::fmt::Display>(r: Result<T, E>, msg: &str) -> anyhow::Result<T> {
+    let loc = std::panic::Location::caller();
+    r.map_err(|e| anyhow::anyhow!("{} at {}:{}: {}", msg, loc.file(), loc.line(), e))
+}
+
+/// Like ctx() but for Option — converts None to an error with file:line location.
+#[track_caller]
+pub fn ctx_opt<T>(r: Option<T>, msg: &str) -> anyhow::Result<T> {
+    let loc = std::panic::Location::caller();
+    r.ok_or_else(|| anyhow::anyhow!("{} at {}:{}", msg, loc.file(), loc.line()))
+}
+
+/// Legacy macro — forwards to ctx() function. Will be removed once all call sites are migrated.
 #[macro_export]
 macro_rules! ctx {
     ($expr:expr, $msg:expr) => {
-        anyhow::Context::with_context($expr, || format!("{} (at {}:{})", $msg, file!(), line!()))
+        crate::errors::ctx($expr, &format!("{}", $msg))
     };
 }
 

@@ -22,7 +22,7 @@ fn render_template(item: &TemplateItem) -> Result<()> {
     crate::processors::ensure_output_dir(&item.output_path)?;
 
     // Read template content
-    let template_content = ctx!(fs::read_to_string(&item.source_path), format!("Failed to read template: {}", item.source_path.display()))?;
+    let template_content = crate::errors::ctx(fs::read_to_string(&item.source_path), &format!("Failed to read template: {}", item.source_path.display()))?;
 
     // Create a new Tera instance for this template
     let mut tera = Tera::default();
@@ -68,7 +68,7 @@ fn render_template(item: &TemplateItem) -> Result<()> {
         .with_context(|| format!("Failed to render template: {}", item.source_path.display()))?;
 
     // Write to output file
-    ctx!(fs::write(&item.output_path, rendered), format!("Failed to write output: {}", item.output_path.display()))?;
+    crate::errors::ctx(fs::write(&item.output_path, rendered), &format!("Failed to write output: {}", item.output_path.display()))?;
 
     Ok(())
 }
@@ -425,7 +425,7 @@ print(json.dumps(result))
     // Parse the JSON output
     let stdout = String::from_utf8_lossy(&output.stdout);
     let variables: Map<String, Value> =
-        ctx!(serde_json::from_str(&stdout), "Failed to parse Python config output")?;
+        crate::errors::ctx(serde_json::from_str(&stdout), "Failed to parse Python config output")?;
 
     Ok(variables)
 }

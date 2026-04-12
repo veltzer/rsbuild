@@ -94,7 +94,7 @@ pub(crate) fn resolve_extra_inputs(dep_inputs: &[String]) -> Result<Vec<PathBuf>
             for entry in glob::glob(p)
                 .with_context(|| format!("Invalid glob pattern in dep_inputs: {}", p))?
             {
-                let path = entry.with_context(|| format!("Failed to read glob entry for: {}", p))?;
+                let path = crate::errors::ctx(entry, &format!("Failed to read glob entry for: {}", p))?;
                 if path.is_file() {
                     resolved.push(path);
                 }

@@ -1,7 +1,7 @@
 use std::fmt;
 
 /// Exit codes for rsconstruct, allowing CI scripts to distinguish error types.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::EnumIter)]
 pub enum RsconstructExitCode {
     Success = 0,
     BuildError = 1,
@@ -27,6 +27,18 @@ impl RsconstructExitCode {
             Self::GraphError => "GRAPH_ERROR",
             Self::IoError => "IO_ERROR",
             Self::Interrupted => "INTERRUPTED",
+        }
+    }
+
+    pub fn description(self) -> &'static str {
+        match self {
+            Self::Success => "Build completed successfully",
+            Self::BuildError => "One or more processors failed",
+            Self::ConfigError => "Invalid or missing configuration",
+            Self::ToolError => "Required external tool missing or wrong version",
+            Self::GraphError => "Dependency cycle or output conflict in build graph",
+            Self::IoError => "File system or I/O operation failed",
+            Self::Interrupted => "Build interrupted by signal (Ctrl+C)",
         }
     }
 }

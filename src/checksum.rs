@@ -38,7 +38,7 @@ fn get_mtime_db() -> Result<std::sync::MutexGuard<'static, Option<Database>>> {
     let mut guard = MTIME_DB.lock().unwrap();
     if guard.is_none() {
         let dir = PathBuf::from(".rsconstruct");
-        ctx!(fs::create_dir_all(&dir), "Failed to create .rsconstruct directory")?;
+        crate::errors::ctx(fs::create_dir_all(&dir), "Failed to create .rsconstruct directory")?;
         let db = crate::db::open_or_recreate(&dir.join("mtime.redb"), "Mtime cache")?;
         *guard = Some(db);
     }
@@ -77,7 +77,7 @@ fn fast_checksum(path: &Path) -> Result<(String, Option<(String, MtimeEntry)>)> 
     // Check mtime cache in DB
     let db_guard = get_mtime_db()?;
     let cached = if let Some(ref db) = *db_guard {
-        let read_txn = db.begin_read().context("Failed to begin read transaction for mtime cache")?;
+        let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction for mtime cache")?;
         match read_txn.open_table(MTIME_TABLE) {
             Ok(table) => {
                 table.get(path_str.as_str()).ok()
@@ -118,8 +118,8 @@ fn flush_mtime_entries(dirty: Vec<(String, MtimeEntry)>) -> Result<()> {
         return Ok(());
     }
     let db_guard = get_mtime_db()?;
-    let db = db_guard.as_ref().context("Mtime database not available")?;
-    let write_txn = db.begin_write().context("Failed to begin write transaction for mtime cache")?;
+    let db = crate::errors::ctx_opt(db_guard.as_ref(), "Mtime database not available")?;
+    let write_txn = crate::errors::ctx(db.begin_write(), "Failed to begin write transaction for mtime cache")?;
     {
         let mut table = write_txn.open_table(MTIME_TABLE)
             .context("Failed to open mtime cache table")?;
@@ -130,7 +130,7 @@ fn flush_mtime_entries(dirty: Vec<(String, MtimeEntry)>) -> Result<()> {
                 .context("Failed to insert mtime entry")?;
         }
     }
-    ctx!(write_txn.commit(), "Failed to commit mtime cache entries")?;
+    crate::errors::ctx(write_txn.commit(), "Failed to commit mtime cache entries")?;
     Ok(())
 }
 

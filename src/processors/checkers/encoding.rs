@@ -21,7 +21,7 @@ impl EncodingProcessor {
         let mut errors = Vec::new();
 
         for file in files {
-            let bytes = ctx!(std::fs::read(file), format!("Failed to read {}", file.display()))?;
+            let bytes = crate::errors::ctx(std::fs::read(file), &format!("Failed to read {}", file.display()))?;
             if let Err(msg) = validate_utf8(&bytes) {
                 errors.push(format!("{}: {}", file.display(), msg));
             }

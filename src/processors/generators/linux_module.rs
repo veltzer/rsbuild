@@ -110,7 +110,7 @@ impl LinuxModuleProcessor {
         let ko_name = format!("{}.ko", module.name);
         let ko_src = module_dir.join(&ko_name);
         if ko_src.exists() {
-            ctx!(fs::create_dir_all(output_dir), format!("Failed to create output dir: {}", output_dir.display()))?;
+            crate::errors::ctx(fs::create_dir_all(output_dir), &format!("Failed to create output dir: {}", output_dir.display()))?;
             fs::copy(&ko_src, output_dir.join(&ko_name))
                 .with_context(|| format!("Failed to copy {} to output", ko_name))?;
         }

@@ -85,7 +85,7 @@ impl crate::processors::Processor for TermsProcessor {
         }
         // Collect all .txt files from terms_dir as extra inputs
         let mut dep_inputs = self.config.standard.dep_inputs.clone();
-        for entry in ctx!(fs::read_dir(&self.config.terms_dir), format!("Failed to read terms directory {}", self.config.terms_dir))? {
+        for entry in crate::errors::ctx(fs::read_dir(&self.config.terms_dir), &format!("Failed to read terms directory {}", self.config.terms_dir))? {
             let entry = entry?;
             let path = entry.path();
             if path.extension().is_some_and(|e| e == "txt") {
@@ -128,7 +128,7 @@ pub fn load_terms(terms_dir: &str) -> Result<HashSet<String>> {
     let mut seen: std::collections::HashMap<String, (String, usize)> = std::collections::HashMap::new();
     let mut duplicates = Vec::new();
 
-    let mut entries: Vec<_> = ctx!(fs::read_dir(dir), format!("Failed to read terms directory {}", dir.display()))?
+    let mut entries: Vec<_> = crate::errors::ctx(fs::read_dir(dir), &format!("Failed to read terms directory {}", dir.display()))?
         .filter_map(|e| e.ok())
         .collect();
     entries.sort_by_key(|e| e.path());
@@ -137,7 +137,7 @@ pub fn load_terms(terms_dir: &str) -> Result<HashSet<String>> {
         let path = entry.path();
         if path.extension().is_some_and(|e| e == "txt") {
             let filename = path.file_name().unwrap().to_string_lossy().to_string();
-            let content = ctx!(fs::read_to_string(&path), format!("Failed to read terms file: {}", path.display()))?;
+            let content = crate::errors::ctx(fs::read_to_string(&path), &format!("Failed to read terms file: {}", path.display()))?;
             for (line_idx, line) in content.lines().enumerate() {
                 let term = line.trim();
                 if term.is_empty() {
@@ -510,17 +510,17 @@ fn fix_content(original: &str, terms: &HashSet<String>, sorted_terms: &[&str], r
 /// Check a file and return the list of unquoted terms found.
 /// Returns an empty vec if the file is clean.
 fn check_file_detail(path: &Path, _terms: &HashSet<String>, sorted_terms: &[&str]) -> Result<Vec<String>> {
-    let content = ctx!(fs::read_to_string(path), format!("Failed to read {}", path.display()))?;
+    let content = crate::errors::ctx(fs::read_to_string(path), &format!("Failed to read {}", path.display()))?;
     let matches = find_unquoted_positions(&content, sorted_terms);
     Ok(matches.into_iter().map(|(_, _, term)| term).collect())
 }
 
 /// Auto-fix a single markdown file. Returns true if the file was modified.
 pub fn fix_file(path: &Path, terms: &HashSet<String>, sorted_terms: &[&str], remove_non_terms: bool) -> Result<bool> {
-    let original = ctx!(fs::read_to_string(path), format!("Failed to read {}", path.display()))?;
+    let original = crate::errors::ctx(fs::read_to_string(path), &format!("Failed to read {}", path.display()))?;
     let fixed = fix_content(&original, terms, sorted_terms, remove_non_terms);
     if fixed != original {
-        ctx!(fs::write(path, &fixed), format!("Failed to write {}", path.display()))?;
+        crate::errors::ctx(fs::write(path, &fixed), &format!("Failed to write {}", path.display()))?;
         Ok(true)
     } else {
         Ok(false)
@@ -576,7 +576,7 @@ pub fn merge_terms(config: &TermsConfig, source_dir: &str) -> Result<()> {
     let mut merged_count = 0;
     let mut copied_count = 0;
 
-    for entry in ctx!(fs::read_dir(src), format!("Failed to read source directory {}", src.display()))? {
+    for entry in crate::errors::ctx(fs::read_dir(src), &format!("Failed to read source directory {}", src.display()))? {
         let entry = entry?;
         let path = entry.path();
         if path.extension().is_none_or(|e| e != "txt") {
@@ -585,7 +585,7 @@ pub fn merge_terms(config: &TermsConfig, source_dir: &str) -> Result<()> {
         let filename = path.file_name().unwrap();
         let dest_path = dest.join(filename);
 
-        let source_content = ctx!(fs::read_to_string(&path), format!("Failed to read terms source: {}", path.display()))?;
+        let source_content = crate::errors::ctx(fs::read_to_string(&path), &format!("Failed to read terms source: {}", path.display()))?;
         let source_terms: HashSet<String> = source_content
             .lines()
             .map(|l| l.trim().to_string())
@@ -593,7 +593,7 @@ pub fn merge_terms(config: &TermsConfig, source_dir: &str) -> Result<()> {
             .collect();
 
         if dest_path.exists() {
-            let dest_content = ctx!(fs::read_to_string(&dest_path), format!("Failed to read terms dest: {}", dest_path.display()))?;
+            let dest_content = crate::errors::ctx(fs::read_to_string(&dest_path), &format!("Failed to read terms dest: {}", dest_path.display()))?;
             let dest_terms: HashSet<String> = dest_content
                 .lines()
                 .map(|l| l.trim().to_string())
@@ -605,8 +605,8 @@ pub fn merge_terms(config: &TermsConfig, source_dir: &str) -> Result<()> {
             sorted.sort();
             let content = sorted.join("\n") + "\n";
             if content != source_content || content != dest_content {
-                ctx!(fs::write(&dest_path, &content), format!("Failed to write {}", dest_path.display()))?;
-                ctx!(fs::write(&path, &content), format!("Failed to write {}", path.display()))?;
+                crate::errors::ctx(fs::write(&dest_path, &content), &format!("Failed to write {}", dest_path.display()))?;
+                crate::errors::ctx(fs::write(&path, &content), &format!("Failed to write {}", path.display()))?;
                 merged_count += 1;
                 let added_to_dest = sorted.len() - dest_terms.len();
                 let added_to_src = sorted.len() - source_terms.len();
@@ -616,14 +616,14 @@ pub fn merge_terms(config: &TermsConfig, source_dir: &str) -> Result<()> {
         } else {
             let mut sorted: Vec<String> = source_terms.into_iter().collect();
             sorted.sort();
-            ctx!(fs::write(&dest_path, sorted.join("\n") + "\n"), format!("Failed to write {}", dest_path.display()))?;
+            crate::errors::ctx(fs::write(&dest_path, sorted.join("\n") + "\n"), &format!("Failed to write {}", dest_path.display()))?;
             copied_count += 1;
             println!("  Copied to dest: {}", filename.to_string_lossy());
         }
     }
 
     // Copy files that exist in destination but not in source back to source
-    for entry in ctx!(fs::read_dir(dest), format!("Failed to read destination directory {}", dest.display()))? {
+    for entry in crate::errors::ctx(fs::read_dir(dest), &format!("Failed to read destination directory {}", dest.display()))? {
         let entry = entry?;
         let path = entry.path();
         if path.extension().is_none_or(|e| e != "txt") {
@@ -632,7 +632,7 @@ pub fn merge_terms(config: &TermsConfig, source_dir: &str) -> Result<()> {
         let filename = path.file_name().unwrap();
         let src_path = src.join(filename);
         if !src_path.exists() {
-            ctx!(fs::copy(&path, &src_path), format!("Failed to copy {} to {}", path.display(), src_path.display()))?;
+            crate::errors::ctx(fs::copy(&path, &src_path), &format!("Failed to copy {} to {}", path.display(), src_path.display()))?;
             copied_count += 1;
             println!("  Copied to source: {}", filename.to_string_lossy());
         }
@@ -650,11 +650,11 @@ pub fn stats(config: &TermsConfig) -> Result<()> {
     }
     let mut file_count = 0;
     let mut total_terms = 0;
-    for entry in ctx!(fs::read_dir(dir), format!("Failed to read terms directory {}", dir.display()))? {
+    for entry in crate::errors::ctx(fs::read_dir(dir), &format!("Failed to read terms directory {}", dir.display()))? {
         let entry = entry?;
         if entry.path().extension().is_some_and(|e| e == "txt") {
             file_count += 1;
-            let content = ctx!(fs::read_to_string(entry.path()), format!("Failed to read {}", entry.path().display()))?;
+            let content = crate::errors::ctx(fs::read_to_string(entry.path()), &format!("Failed to read {}", entry.path().display()))?;
             total_terms += content.lines().filter(|l| !l.trim().is_empty()).count();
         }
     }

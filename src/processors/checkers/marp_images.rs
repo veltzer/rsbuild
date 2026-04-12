@@ -27,7 +27,7 @@ impl MarpImagesProcessor {
         let mut errors = Vec::new();
 
         for &file in files {
-            let content = ctx!(std::fs::read_to_string(file), format!("Failed to read {}", file.display()))?;
+            let content = crate::errors::ctx(std::fs::read_to_string(file), &format!("Failed to read {}", file.display()))?;
             let dir = file.parent().unwrap_or(Path::new("."));
 
             for (line_num, line) in content.lines().enumerate() {

@@ -189,7 +189,7 @@ impl Builder {
                 if let Some(analyzer_name) = analyzer {
                     // Clear only entries from specific analyzer
                     let deps_cache = DepsCache::open()?;
-                    let removed = ctx!(deps_cache.remove_by_analyzer(&analyzer_name), format!("Failed to remove deps for analyzer '{}'", analyzer_name))?;
+                    let removed = crate::errors::ctx(deps_cache.remove_by_analyzer(&analyzer_name), &format!("Failed to remove deps for analyzer '{}'", analyzer_name))?;
                     if removed > 0 {
                         println!("Removed {} entries from '{}' analyzer.", removed, analyzer_name);
                     } else {

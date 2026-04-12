@@ -45,7 +45,7 @@ impl ZspellProcessor {
 
     /// Load custom words from the words file
     fn load_custom_words(words_path: &Path) -> Result<HashSet<String>> {
-        let content = ctx!(fs::read_to_string(words_path), format!("Failed to read words file: {}", words_path.display()))?;
+        let content = crate::errors::ctx(fs::read_to_string(words_path), &format!("Failed to read words file: {}", words_path.display()))?;
         let mut words = HashSet::new();
         for line in content.lines() {
             let trimmed = line.trim();

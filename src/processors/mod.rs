@@ -276,7 +276,7 @@ fn run_command_inner(cmd: &mut Command, inherit_stdio: bool) -> Result<Output> {
                 anyhow::bail!("Interrupted")
             }
             result = child.wait_with_output() => {
-                let output = result.context("Failed to wait for child process")?;
+                let output = crate::errors::ctx(result, "Failed to wait for child process")?;
                 Ok(output)
             }
         }
@@ -427,7 +427,7 @@ pub(crate) fn clean_output_dir(product: &Product, processor_name: &str, verbose:
             if verbose {
                 println!("Removing {} output directory: {}", processor_name, output_dir.display());
             }
-            ctx!(fs::remove_dir_all(output_dir.as_ref()), format!("Failed to remove output directory: {}", output_dir.display()))?;
+            crate::errors::ctx(fs::remove_dir_all(output_dir.as_ref()), &format!("Failed to remove output directory: {}", output_dir.display()))?;
             count += 1;
         }
     }

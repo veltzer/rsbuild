@@ -28,7 +28,7 @@ impl PythonDepAnalyzer {
     /// Scan a Python file for import statements.
     /// Returns paths to local Python files that are imported.
     fn scan_imports(&self, source: &Path, file_index: &FileIndex) -> Result<Vec<PathBuf>> {
-        let content = ctx!(fs::read_to_string(source), format!("Failed to read Python source: {}", source.display()))?;
+        let content = crate::errors::ctx(fs::read_to_string(source), &format!("Failed to read Python source: {}", source.display()))?;
         let mut imports = Vec::new();
         let mut seen = HashSet::new();
 

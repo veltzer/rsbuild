@@ -507,6 +507,7 @@ fn plugin_create(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors
 
 inventory::submit! {
     registry::ProcessorPlugin {
+        version: 1,
         name: "tera",
         processor_type: crate::processors::ProcessorType::Generator,
         create: plugin_create,

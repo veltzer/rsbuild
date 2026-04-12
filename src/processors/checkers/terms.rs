@@ -667,6 +667,7 @@ fn plugin_create(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors
 }
 inventory::submit! {
     crate::registry::ProcessorPlugin {
+        version: 1,
         name: "terms",
         processor_type: crate::processors::ProcessorType::Checker,
         create: plugin_create,

@@ -76,9 +76,17 @@ impl Product {
     /// This key does NOT include file paths — renaming a file with identical content
     /// produces the same key. The blob in the cache is path-free; the product knows
     /// where to restore it.
+    ///
+    /// The key mixes in the processor's implementation `version` (from its plugin
+    /// registration). Bumping that version invalidates every cache entry produced
+    /// by this processor — see docs/src/processor-versioning.md for the bump rule.
+    /// For processors not in the builtin registry (e.g. Lua plugins), `v0` is used.
     pub fn descriptor_key(&self, input_checksum: &str) -> String {
         let mut parts = String::new();
         parts.push_str(&self.processor);
+        parts.push_str(":v");
+        let version = crate::registry::processor_version(&self.processor).unwrap_or(0);
+        parts.push_str(&version.to_string());
         if let Some(ref hash) = self.config_hash {
             parts.push(':');
             parts.push_str(hash);

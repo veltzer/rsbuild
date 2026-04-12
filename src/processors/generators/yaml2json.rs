@@ -1,0 +1,44 @@
+//! yaml2json generator — registered as a SimpleGenerator with a custom execute fn.
+
+use std::fs;
+use anyhow::{Context, Result};
+
+use crate::config::StandardConfig;
+use crate::graph::Product;
+use crate::processors::ensure_output_dir;
+
+use super::simple::{SimpleGenerator, SimpleGeneratorParams, DiscoverMode};
+
+fn execute_yaml2json(_config: &StandardConfig, product: &Product) -> Result<()> {
+    let input = product.primary_input();
+    let output = product.primary_output();
+    ensure_output_dir(output)?;
+    let contents = fs::read_to_string(input)
+        .with_context(|| format!("Failed to read {}", input.display()))?;
+    let value: serde_json::Value = serde_yml::from_str(&contents)
+        .with_context(|| format!("Failed to parse YAML from {}", input.display()))?;
+    let json = serde_json::to_string_pretty(&value)
+        .with_context(|| format!("Failed to serialize JSON for {}", input.display()))?;
+    fs::write(output, json)
+        .with_context(|| format!("Failed to write {}", output.display()))?;
+    Ok(())
+}
+
+
+// --- Plugin registrations ---
+
+// --- Plugin registrations ---
+
+
+fn create_yaml2json(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
+    crate::registry::deserialize_and_create(toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "Convert YAML files to JSON (in-process)", extra_tools: &[], discover_mode: DiscoverMode::SingleFormat("json"), execute_fn: execute_yaml2json, is_native: true })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin {
+    version: 1,
+    name: "yaml2json", processor_type: crate::processors::ProcessorType::Generator, create: create_yaml2json,
+    known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>,
+    output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>,
+    must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>,
+    field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig>,
+    defconfig_json: crate::registry::default_config_json::<crate::config::StandardConfig>,
+} }

@@ -9,6 +9,21 @@ mod pdflatex;
 mod pdfunite;
 mod rust_single_file;
 pub(crate) mod simple;
+pub(crate) mod mermaid;
+pub(crate) mod drawio;
+pub(crate) mod sass;
+pub(crate) mod protobuf;
+pub(crate) mod chromium;
+pub(crate) mod markdown2html;
+pub(crate) mod libreoffice;
+pub(crate) mod marp;
+pub(crate) mod pandoc;
+pub(crate) mod a2x;
+pub(crate) mod objdump;
+pub(crate) mod imarkdown2html;
+pub(crate) mod isass;
+pub(crate) mod yaml2json;
+
 pub mod tags;
 mod tera;
 

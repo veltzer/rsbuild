@@ -19,6 +19,15 @@ use crate::processors::{Processor, ProcessorType};
 pub struct ProcessorPlugin {
     pub name: &'static str,
     pub processor_type: ProcessorType,
+    /// Implementation version. **Bump this when changes would make the processor
+    /// produce different output for the same inputs**, or change which inputs are
+    /// discovered, which outputs are declared, or how config fields are interpreted.
+    /// Do NOT bump for refactors, comments, reformats, or behavior-preserving
+    /// bug fixes. See `docs/src/processor-versioning.md` for the full bump rule.
+    ///
+    /// The version is mixed into every product's cache key, so bumping here
+    /// invalidates caches only for this processor (leaves others untouched).
+    pub version: u32,
     /// Create a processor from resolved TOML config (defaults already applied).
     pub create: fn(&toml::Value) -> Result<Box<dyn Processor>>,
     /// Config metadata
@@ -37,6 +46,15 @@ inventory::collect!(ProcessorPlugin);
 
 pub(crate) fn all_plugins() -> impl Iterator<Item = &'static ProcessorPlugin> {
     inventory::iter::<ProcessorPlugin>.into_iter()
+}
+
+/// Look up a processor's implementation version by name.
+/// Returns `None` for processor names not in the builtin registry (e.g. Lua plugins).
+/// Used by `Product::descriptor_key` to mix the processor's version into every
+/// cache key, so bumping a processor's `version` invalidates exactly that
+/// processor's cached outputs.
+pub(crate) fn processor_version(name: &str) -> Option<u32> {
+    all_plugins().find(|p| p.name == name).map(|p| p.version)
 }
 
 // --- Analyzer registry ---

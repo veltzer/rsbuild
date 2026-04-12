@@ -1,0 +1,54 @@
+//! marp generator — registered as a SimpleGenerator with a custom execute fn.
+
+use std::fs;
+use std::process::Command;
+use anyhow::{Context, Result};
+
+use crate::config::StandardConfig;
+use crate::graph::Product;
+use crate::processors::{run_command, check_command_output, ensure_output_dir};
+
+use super::simple::{SimpleGenerator, SimpleGeneratorParams, DiscoverMode};
+
+fn cleanup_marp_tmp_dirs() {
+    let Ok(entries) = fs::read_dir("/tmp") else { return };
+    for entry in entries.filter_map(|e| e.ok()) {
+        if entry.file_name().to_string_lossy().starts_with("marp-cli-") {
+            let _ = fs::remove_dir_all(entry.path());
+        }
+    }
+}
+
+fn execute_marp(config: &StandardConfig, product: &Product) -> Result<()> {
+    let input = product.primary_input();
+    let output = product.primary_output();
+    let format = output.extension()
+        .context("marp output has no extension")?
+        .to_string_lossy();
+    ensure_output_dir(output)?;
+    let mut cmd = Command::new(&config.command);
+    if format != "html" {
+        cmd.arg(format!("--{}", format));
+    }
+    cmd.arg("--output").arg(output);
+    for arg in &config.args { cmd.arg(arg); }
+    cmd.arg(input);
+    let out = run_command(&mut cmd)?;
+    let result = check_command_output(&out, format_args!("marp {}", input.display()));
+    cleanup_marp_tmp_dirs();
+    result
+}
+
+
+fn create_marp(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
+    crate::registry::deserialize_and_create(toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "Convert Marp Markdown presentations to PDF/HTML", extra_tools: &["node"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_marp, is_native: false })))
+}
+inventory::submit! { crate::registry::ProcessorPlugin {
+    version: 1,
+    name: "marp", processor_type: crate::processors::ProcessorType::Generator, create: create_marp,
+    known_fields: crate::registry::typed_known_fields::<crate::config::StandardConfig>,
+    output_fields: crate::registry::typed_output_fields::<crate::config::StandardConfig>,
+    must_fields: crate::registry::typed_must_fields::<crate::config::StandardConfig>,
+    field_descriptions: crate::registry::typed_field_descriptions::<crate::config::StandardConfig>,
+    defconfig_json: crate::registry::default_config_json::<crate::config::StandardConfig>,
+} }

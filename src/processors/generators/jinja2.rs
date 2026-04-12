@@ -122,6 +122,7 @@ fn plugin_create(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors
 }
 inventory::submit! {
     crate::registry::ProcessorPlugin {
+        version: 1,
         name: "jinja2",
         processor_type: crate::processors::ProcessorType::Generator,
         create: plugin_create,

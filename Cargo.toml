@@ -55,3 +55,10 @@ paste = "1.0"
 strip = true
 lto = true
 codegen-units = 1
+
+# Release-equivalent build with debug symbols for profiling (samply/perf).
+# Usage: `cargo build --profile profiling`; binary lands in target/profiling/.
+[profile.profiling]
+inherits = "release"
+strip = false
+debug = true

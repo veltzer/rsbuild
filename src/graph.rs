@@ -269,13 +269,39 @@ impl BuildGraph {
         // During fixed-point discovery, processors re-run and may re-declare
         // products that already exist. Detect and deduplicate these cases.
 
-        // Checkers have no outputs, so the output-based dedup below won't catch them.
-        // Deduplicate by matching on processor name, primary input, and variant.
-        // Indexed via `checker_dedup` — O(1) average.
+        // Checkers and explicit processors have no outputs, so the output-based
+        // dedup below won't catch them. Deduplicate by matching on processor name,
+        // primary input, and variant. If the new inputs are a superset (e.g. globs
+        // resolved more files in a later fixed-point pass), update the product's
+        // inputs so dependency resolution sees the full set.
         if outputs.is_empty() && !inputs.is_empty() {
             if let Some(primary_id) = self.interner.get(&inputs[0]) {
                 let key = (processor.to_string(), primary_id, variant.map(str::to_string));
                 if let Some(&existing_id) = self.checker_dedup.get(&key) {
+                    let existing = &self.products[existing_id];
+                    if existing.inputs != inputs {
+                        let new_set: HashSet<&PathBuf> = inputs.iter().collect();
+                        let is_superset = existing.inputs.iter().all(|i| new_set.contains(i));
+                        if is_superset {
+                            let old_inputs = std::mem::replace(&mut self.products[existing_id].inputs, inputs.clone());
+                            let old_set: HashSet<&PathBuf> = old_inputs.iter().collect();
+                            for old in &old_inputs {
+                                if !new_set.contains(old) {
+                                    if let Some(old_id) = self.interner.get(old) {
+                                        if let Some(ids) = self.input_to_products.get_mut(&old_id) {
+                                            ids.retain(|&x| x != existing_id);
+                                        }
+                                    }
+                                }
+                            }
+                            for new in &inputs {
+                                if !old_set.contains(new) {
+                                    let new_id = self.interner.intern(new);
+                                    self.input_to_products.entry(new_id).or_default().push(existing_id);
+                                }
+                            }
+                        }
+                    }
                     return Ok(existing_id);
                 }
             }

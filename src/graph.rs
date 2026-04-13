@@ -1061,4 +1061,107 @@ mod tests {
         let order = g.topological_sort().unwrap();
         assert!(order.is_empty());
     }
+
+    /// Simulate the fixed-point discovery bug: a product with no outputs
+    /// (like explicit processors with output_dirs) is first discovered with
+    /// only literal inputs (globs match nothing on pass 0). On pass 1,
+    /// virtual files from upstream generators are available and the product
+    /// is re-declared with expanded inputs. The dedup must update the inputs
+    /// so dependency resolution creates edges to the upstream producers.
+    #[test]
+    fn checker_dedup_updates_inputs_on_superset() {
+        let mut g = BuildGraph::new();
+
+        // Pass 0: upstream generator declares output _site/page.html
+        let gen_id = g.add_product(
+            vec!["src/page.md".into()],
+            vec!["_site/page.html".into()],
+            "pandoc",
+            None,
+        ).unwrap();
+
+        // Pass 0: explicit processor discovered with only literal inputs
+        // (input_globs matched nothing because _site/ files don't exist yet)
+        let explicit_id = g.add_product(
+            vec!["resources/index.html".into()],
+            vec![],
+            "explicit.build_site",
+            None,
+        ).unwrap();
+        assert_ne!(gen_id, explicit_id);
+
+        // Pass 1: explicit processor re-discovered with expanded inputs
+        // (virtual files from pandoc now visible to input_globs)
+        let redeclared_id = g.add_product(
+            vec!["resources/index.html".into(), "_site/page.html".into()],
+            vec![],
+            "explicit.build_site",
+            None,
+        ).unwrap();
+
+        // Dedup should return the same product id
+        assert_eq!(redeclared_id, explicit_id);
+        // Only 2 products in the graph (not 3)
+        assert_eq!(g.products().len(), 2);
+
+        // Inputs must be updated to the expanded set
+        let product = g.get_product(explicit_id).unwrap();
+        assert_eq!(product.inputs.len(), 2);
+        assert_eq!(product.inputs[0], PathBuf::from("resources/index.html"));
+        assert_eq!(product.inputs[1], PathBuf::from("_site/page.html"));
+
+        // Dependency resolution must now link explicit -> pandoc
+        g.resolve_dependencies();
+        assert_eq!(g.get_dependencies(explicit_id), &[gen_id]);
+
+        // Topological sort must place pandoc before explicit
+        let order = g.topological_sort().unwrap();
+        let gen_pos = order.iter().position(|&id| id == gen_id).unwrap();
+        let explicit_pos = order.iter().position(|&id| id == explicit_id).unwrap();
+        assert!(gen_pos < explicit_pos,
+            "pandoc (pos {}) must run before explicit (pos {})", gen_pos, explicit_pos);
+    }
+
+    /// When a no-output product is re-declared with the same inputs,
+    /// dedup should return the existing id without modification.
+    #[test]
+    fn checker_dedup_identical_redeclaration() {
+        let mut g = BuildGraph::new();
+        let id1 = g.add_product(
+            vec!["a.py".into(), "b.py".into()],
+            vec![],
+            "ruff",
+            None,
+        ).unwrap();
+        let id2 = g.add_product(
+            vec!["a.py".into(), "b.py".into()],
+            vec![],
+            "ruff",
+            None,
+        ).unwrap();
+        assert_eq!(id1, id2);
+        assert_eq!(g.products().len(), 1);
+        assert_eq!(g.get_product(id1).unwrap().inputs.len(), 2);
+    }
+
+    /// When a no-output product is re-declared with inputs that are NOT a
+    /// superset (different primary input), it should create a new product.
+    #[test]
+    fn checker_dedup_different_primary_input_creates_new() {
+        let mut g = BuildGraph::new();
+        let id1 = g.add_product(
+            vec!["a.py".into()],
+            vec![],
+            "ruff",
+            None,
+        ).unwrap();
+        let id2 = g.add_product(
+            vec!["b.py".into()],
+            vec![],
+            "ruff",
+            None,
+        ).unwrap();
+        assert_ne!(id1, id2);
+        assert_eq!(g.products().len(), 2);
+    }
 }

@@ -233,17 +233,22 @@ Key implementation details:
 ### Deduplication during multi-pass discovery
 
 When processors re-run on subsequent passes, they may try to add products that
-already exist. `add_product()` detects this and handles two cases:
+already exist. `add_product()` detects this via two separate dedup paths,
+depending on whether the product declares outputs:
 
-1. **Identical re-declaration** — Same processor, same outputs, same inputs.
-   The product is silently skipped.
+#### Products with outputs (generators)
 
-2. **Expanded inputs** — Same processor, same outputs, but the new inputs are a
-   superset of the existing inputs. This happens when a processor like `tags`
-   collects all matching files into a single product. On pass 2, virtual files
-   from generator outputs are now in the `FileIndex`, so `tags` discovers the
-   same product with additional inputs. The existing product's inputs are
-   updated to the expanded set.
+Dedup is keyed on output paths. When a product with the same outputs is
+re-declared by the same processor:
+
+1. **Identical re-declaration** — Same inputs. The product is silently skipped.
+
+2. **Expanded inputs** — The new inputs are a superset of the existing inputs.
+   This happens when a processor like `tags` collects all matching files into
+   a single product. On pass 2, virtual files from generator outputs are now
+   in the `FileIndex`, so `tags` discovers the same product with additional
+   inputs. The existing product's inputs are updated to the expanded set, and
+   the `input_to_products` index is updated accordingly.
 
 Both cases account for instance name remapping: a product may have been
 remapped from `cc_single_file` to `cc_single_file.clang` after pass 1, but
@@ -254,3 +259,20 @@ other (e.g., `cc_single_file` matches `cc_single_file.clang`).
 Genuinely conflicting products — different processors (or the same processor
 with different inputs that are not a superset) declaring the same output —
 still produce an `Output conflict` error.
+
+#### Products without outputs (checkers, explicit processors with output_dirs)
+
+Products with no declared output files (e.g., checkers, or explicit processors
+that only declare `output_dirs`) cannot be deduped by output path. Instead,
+they are deduped by the tuple `(processor_name, primary_input, variant)` via
+the `checker_dedup` index.
+
+This path also supports expanded inputs. When a later pass re-declares the
+same product with a superset of inputs, the existing product's inputs are
+updated. This is critical for processors like `explicit` that use `input_globs`:
+on pass 0, the globs may match nothing (the target files don't exist yet); on
+pass 1, virtual files from upstream generators are available and the globs
+resolve to additional inputs. Without the input update, the product would be
+frozen with its pass-0 inputs, no dependency edges would be created to the
+upstream producers, and the product would execute too early (before its actual
+inputs exist).

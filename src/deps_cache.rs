@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::checksum::file_checksum;
+use crate::checksum::checksum_fast;
 
 const RSBUILD_DIR: &str = ".rsconstruct";
 const DEPS_DB_FILE: &str = "deps.redb";
@@ -87,8 +87,9 @@ impl DepsCache {
             }
         };
 
-        // Verify source file hasn't changed
-        let current_checksum = match file_checksum(source) {
+        // Verify source file hasn't changed. `checksum_fast` consults the
+        // persistent mtime cache so unchanged files skip the full read + hash.
+        let current_checksum = match checksum_fast(source) {
             Ok(c) => c,
             Err(_) => {
                 self.stats.misses += 1;
@@ -116,10 +117,12 @@ impl DepsCache {
         Some(deps)
     }
 
-    /// Store dependencies for a source file with analyzer tag
+    /// Store dependencies for a source file with analyzer tag.
+    /// Uses `checksum_fast` so the mtime cache is populated alongside the
+    /// deps entry — subsequent `get()` calls can then short-circuit on mtime.
     pub fn set(&self, source: &Path, dependencies: &[PathBuf], analyzer: &str) -> Result<()> {
         let key = path_to_key(source);
-        let source_checksum = file_checksum(source)?;
+        let source_checksum = checksum_fast(source)?;
 
         let entry = DepsEntry {
             source_checksum,

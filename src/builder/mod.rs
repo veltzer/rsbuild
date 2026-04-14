@@ -311,26 +311,17 @@ impl Builder {
             analyzers[*name].analyze(graph, &mut deps_cache, &self.file_index, verbose, &pb)?;
         }
 
-        // Finalize the bar. `is_hidden()` combines our explicit `hidden` flag
-        // (verbose / json / quiet) with indicatif's own TTY detection — it's
-        // true whenever no visible output was drawn. In that case we emit the
-        // summary via plain stderr so the result is still recorded (CI logs,
-        // piped output, verbose mode). In visible TTY mode, `finish_with_message`
-        // locks the bar at its final frame and leaves it on screen.
+        // Finalize: always clear the bar first, then print the summary as its
+        // own line. If we leave the bar on screen (e.g. via `finish_with_message`)
+        // the next write lands on the bar's row and the two run together.
         let stats = deps_cache.stats();
-        let summary = format!(
-            "dependency scan: {} files ({} cache hits, {} rescanned)",
-            total, stats.hits, stats.misses,
-        );
-        let bar_was_hidden = pb.is_hidden();
-        if bar_was_hidden {
-            pb.finish_and_clear();
-            let suppress = crate::json_output::is_json_mode() || crate::runtime_flags::quiet();
-            if total > 0 && !suppress {
-                eprintln!("{}", summary);
-            }
-        } else {
-            pb.finish_with_message(summary);
+        pb.finish_and_clear();
+        let suppress = crate::json_output::is_json_mode() || crate::runtime_flags::quiet();
+        if total > 0 && !suppress {
+            eprintln!(
+                "dependency scan: {} files ({} cache hits, {} rescanned)",
+                total, stats.hits, stats.misses,
+            );
         }
 
         Ok(())

@@ -175,3 +175,90 @@ src_dirs = ["."]
         stdout
     );
 }
+
+/// The dependency scanner must avoid re-reading unchanged source files.
+/// After a first build populates the deps cache, the second build should
+/// report every file as a cache hit (0 rescanned). This exercises the mtime
+/// short-circuit in `checksum_fast` together with the content-checksum
+/// comparison in `DepsCache::get`.
+#[test]
+fn analyzer_deps_cache_reports_hits_on_unchanged_files() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsconstruct.toml"),
+        r#"[processor.markdown2html]
+src_dirs = ["."]
+
+[analyzer.markdown]
+"#,
+    )
+    .unwrap();
+
+    // Three markdown files with image refs so the analyzer has real work.
+    for i in 1..=3 {
+        fs::write(project_path.join(format!("doc{i}.md")), format!("# Doc {i}\n![img](pic{i}.png)\n")).unwrap();
+        fs::write(project_path.join(format!("pic{i}.png")), []).unwrap();
+    }
+
+    // First build: populates deps cache + mtime cache. We don't assert the
+    // first-run hit/miss ratio because `DepsCache::get` has a pre-existing
+    // quirk where the very first call against a fresh DB doesn't register
+    // as a miss (returns None without incrementing the counter).
+    let out1 = run_rsconstruct_with_env(project_path, &["status"], &[("NO_COLOR", "1")]);
+    assert!(out1.status.success(), "first status failed: {}", String::from_utf8_lossy(&out1.stderr));
+
+    // Second run with unchanged files: every file should hit the cache.
+    let out2 = run_rsconstruct_with_env(project_path, &["status"], &[("NO_COLOR", "1")]);
+    assert!(out2.status.success(), "second status failed: {}", String::from_utf8_lossy(&out2.stderr));
+    let combined = format!("{}{}", String::from_utf8_lossy(&out2.stdout), String::from_utf8_lossy(&out2.stderr));
+    assert!(
+        combined.contains("dependency scan: 3 files (3 cache hits, 0 rescanned)"),
+        "unchanged files should all hit the cache: {}", combined
+    );
+}
+
+/// Modifying a source file must invalidate its deps cache entry. The mtime
+/// change is what drives the invalidation end-to-end: `checksum_fast` sees
+/// a new mtime, recomputes the checksum, and `DepsCache::get` sees the
+/// mismatch and treats it as a miss.
+#[test]
+fn analyzer_deps_cache_rescans_changed_file() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    fs::write(
+        project_path.join("rsconstruct.toml"),
+        r#"[processor.markdown2html]
+src_dirs = ["."]
+
+[analyzer.markdown]
+"#,
+    )
+    .unwrap();
+
+    for i in 1..=3 {
+        fs::write(project_path.join(format!("doc{i}.md")), format!("# Doc {i}\n![img](pic{i}.png)\n")).unwrap();
+        fs::write(project_path.join(format!("pic{i}.png")), []).unwrap();
+    }
+
+    // Prime the cache.
+    let _ = run_rsconstruct_with_env(project_path, &["status"], &[("NO_COLOR", "1")]);
+
+    // Wait for mtime granularity, then modify one file.
+    std::thread::sleep(std::time::Duration::from_millis(1100));
+    fs::write(
+        project_path.join("doc1.md"),
+        "# Doc 1 (modified)\n![img](pic1.png)\n",
+    )
+    .unwrap();
+
+    let out = run_rsconstruct_with_env(project_path, &["status"], &[("NO_COLOR", "1")]);
+    assert!(out.status.success());
+    let combined = format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    assert!(
+        combined.contains("dependency scan: 3 files (2 cache hits, 1 rescanned)"),
+        "modified file should trigger exactly one rescan: {}", combined
+    );
+}

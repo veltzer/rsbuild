@@ -140,6 +140,29 @@ fn hash_checksums(checksums: &[String]) -> String {
     bytes_checksum(combined.as_bytes())
 }
 
+/// Compute a file's checksum, consulting the persistent mtime cache first.
+/// When the file's mtime matches the cached entry, returns the cached checksum
+/// without re-reading the file — avoiding the I/O + SHA cost across builds.
+/// When the mtime cache is disabled (`set_mtime_check(false)` or the global
+/// `--no-mtime-cache` flag), falls back to a full read + hash via
+/// `file_checksum`.
+///
+/// Dirty mtime entries (new files or changed mtimes) are flushed inline, so
+/// callers don't need to batch flushes themselves. For hot loops that compute
+/// many checksums at once (like `combined_input_checksum`), prefer the
+/// internal `fast_checksum` + `flush_mtime_entries` pattern to amortize the
+/// write transaction.
+pub(crate) fn checksum_fast(path: &Path) -> Result<String> {
+    if !MTIME_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
+        return file_checksum(path);
+    }
+    let (checksum, dirty) = fast_checksum(path)?;
+    if let Some(entry) = dirty {
+        flush_mtime_entries(vec![entry])?;
+    }
+    Ok(checksum)
+}
+
 /// Get the combined input checksum for a list of input files, using mtime
 /// pre-check to avoid re-reading unchanged files across builds.
 pub(crate) fn combined_input_checksum(inputs: &[PathBuf]) -> Result<String> {

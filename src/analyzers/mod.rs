@@ -11,14 +11,14 @@ mod tera;
 
 
 use anyhow::Result;
+use indicatif::ProgressBar;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use crate::deps_cache::DepsCache;
 use crate::file_index::FileIndex;
-use crate::graph::BuildGraph;
+use crate::graph::{BuildGraph, Product};
 use crate::processors::{format_command, run_command_capture};
-use crate::progress;
 
 /// Trait for dependency analyzers that scan source files and add dependencies to the graph.
 ///
@@ -39,14 +39,35 @@ pub trait DepAnalyzer: Sync + Send {
     /// Called with the file index to check for relevant file types.
     fn auto_detect(&self, file_index: &FileIndex) -> bool;
 
+    /// Return the source path this analyzer would scan for the given product,
+    /// or None if the product is not relevant. Used by the shared progress bar
+    /// in `run_analyzers` to compute an accurate total before scanning starts,
+    /// and by `analyze_with_scanner` to filter products inside the analyze loop.
+    fn match_product(&self, product: &Product) -> Option<PathBuf>;
+
+    /// Count how many products in the graph this analyzer would scan.
+    /// Default impl iterates over products and calls `match_product`; override
+    /// only if a cheaper count is available.
+    fn count_matches(&self, graph: &BuildGraph) -> usize {
+        graph.products().iter().filter(|p| self.match_product(p).is_some()).count()
+    }
+
     /// Analyze dependencies and add them to products in the graph.
     ///
     /// The analyzer should:
-    /// 1. Find products it can analyze (based on file extensions, etc.)
+    /// 1. Find products it can analyze (via `match_product`)
     /// 2. For each product, scan the primary source file for dependencies
     /// 3. Use deps_cache to avoid re-scanning unchanged files
     /// 4. Add discovered dependencies to the product's inputs
-    fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, file_index: &FileIndex, verbose: bool) -> Result<()>;
+    /// 5. Tick `progress` once per product it processed (whether cache hit or miss)
+    fn analyze(
+        &self,
+        graph: &mut BuildGraph,
+        deps_cache: &mut DepsCache,
+        file_index: &FileIndex,
+        verbose: bool,
+        progress: &ProgressBar,
+    ) -> Result<()>;
 }
 
 /// Query pkg-config for include paths from the given packages.
@@ -172,7 +193,7 @@ pub fn analyze_with_scanner<F, G>(
     analyzer_name: &str,
     match_product: F,
     scan_deps: G,
-    verbose: bool,
+    progress: &ProgressBar,
 ) -> Result<()>
 where
     F: Fn(&crate::graph::Product) -> Option<PathBuf>,
@@ -190,14 +211,8 @@ where
         return Ok(());
     }
 
-    // Show progress bar (hidden in verbose or JSON mode, matching executor style)
-    let pb = progress::create_bar(
-        products.len() as u64,
-        verbose || crate::json_output::is_json_mode(),
-    );
-
     for (id, source) in &products {
-        pb.set_message(format!("[{}] {}", analyzer_name, source.display()));
+        progress.set_message(format!("[{}] {}", analyzer_name, source.display()));
 
         // Try to get cached dependencies, otherwise scan
         let deps = if let Some(cached) = deps_cache.get(source) {
@@ -220,17 +235,7 @@ where
                 product.inputs.extend(new_deps);
             }
 
-        pb.inc(1);
-    }
-    pb.finish_and_clear();
-
-    // Show cache stats in verbose mode
-    if verbose {
-        let stats = deps_cache.stats();
-        if stats.hits > 0 || stats.misses > 0 {
-            eprintln!("[{}] Dependency cache: {} hits, {} recalculated",
-                analyzer_name, stats.hits, stats.misses);
-        }
+        progress.inc(1);
     }
 
     Ok(())

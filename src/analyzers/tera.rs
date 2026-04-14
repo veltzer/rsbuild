@@ -14,9 +14,11 @@ use crate::config::TeraAnalyzerConfig;
 use crate::deps_cache::DepsCache;
 use crate::errors;
 use crate::file_index::FileIndex;
-use crate::graph::BuildGraph;
+use crate::graph::{BuildGraph, Product};
 
 use super::DepAnalyzer;
+
+use indicatif::ProgressBar;
 
 /// Tera template dependency analyzer that scans for include/import/extends directives.
 pub struct TeraDepAnalyzer {
@@ -98,25 +100,30 @@ impl DepAnalyzer for TeraDepAnalyzer {
         file_index.has_extension(".tera")
     }
 
-    fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, _file_index: &FileIndex, verbose: bool) -> Result<()> {
+    fn match_product(&self, p: &Product) -> Option<PathBuf> {
+        if p.inputs.is_empty() {
+            return None;
+        }
+        let source = &p.inputs[0];
+        let ext = source.extension().and_then(|s| s.to_str()).unwrap_or("");
+        if ext == "tera" { Some(source.clone()) } else { None }
+    }
+
+    fn analyze(
+        &self,
+        graph: &mut BuildGraph,
+        deps_cache: &mut DepsCache,
+        _file_index: &FileIndex,
+        _verbose: bool,
+        progress: &ProgressBar,
+    ) -> Result<()> {
         super::analyze_with_scanner(
             graph,
             deps_cache,
             &self.iname,
-            |p| {
-                if p.inputs.is_empty() {
-                    return None;
-                }
-                let source = &p.inputs[0];
-                let ext = source.extension().and_then(|s| s.to_str()).unwrap_or("");
-                if ext == "tera" {
-                    Some(source.clone())
-                } else {
-                    None
-                }
-            },
+            |p| self.match_product(p),
             |source| self.scan_includes(source),
-            verbose,
+            progress,
         )
     }
 }

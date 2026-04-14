@@ -279,6 +279,11 @@ impl Builder {
     /// Run all declared dependency analyzers on the graph.
     /// Only analyzers with `[analyzer.NAME]` sections in rsconstruct.toml run;
     /// they are further filtered to those that detect relevant files.
+    ///
+    /// A single shared progress bar is drawn across all analyzers — sized to the
+    /// total count of products all active analyzers would scan, advancing once
+    /// per product. The finished bar is left on screen with a summary of cache
+    /// hits vs rescans.
     fn run_analyzers(&self, graph: &mut BuildGraph, verbose: bool) -> Result<()> {
         let analyzers = self.create_analyzers(verbose)?;
         let mut deps_cache = DepsCache::open()?;
@@ -288,8 +293,44 @@ impl Builder {
             .filter(|name| analyzers[*name].auto_detect(&self.file_index))
             .collect();
 
+        if active_analyzers.is_empty() {
+            return Ok(());
+        }
+
+        // Total = sum of matches across active analyzers.
+        let total: usize = active_analyzers.iter()
+            .map(|name| analyzers[*name].count_matches(graph))
+            .sum();
+
+        // Hide in verbose/JSON mode, matching executor style. We still want the
+        // final summary line, so we draw it conditionally below.
+        let hidden = verbose || crate::json_output::is_json_mode() || crate::runtime_flags::quiet();
+        let pb = crate::progress::create_bar(total as u64, hidden);
+
         for name in &active_analyzers {
-            analyzers[*name].analyze(graph, &mut deps_cache, &self.file_index, verbose)?;
+            analyzers[*name].analyze(graph, &mut deps_cache, &self.file_index, verbose, &pb)?;
+        }
+
+        // Finalize the bar. `is_hidden()` combines our explicit `hidden` flag
+        // (verbose / json / quiet) with indicatif's own TTY detection — it's
+        // true whenever no visible output was drawn. In that case we emit the
+        // summary via plain stderr so the result is still recorded (CI logs,
+        // piped output, verbose mode). In visible TTY mode, `finish_with_message`
+        // locks the bar at its final frame and leaves it on screen.
+        let stats = deps_cache.stats();
+        let summary = format!(
+            "dependency scan: {} files ({} cache hits, {} rescanned)",
+            total, stats.hits, stats.misses,
+        );
+        let bar_was_hidden = pb.is_hidden();
+        if bar_was_hidden {
+            pb.finish_and_clear();
+            let suppress = crate::json_output::is_json_mode() || crate::runtime_flags::quiet();
+            if total > 0 && !suppress {
+                eprintln!("{}", summary);
+            }
+        } else {
+            pb.finish_with_message(summary);
         }
 
         Ok(())

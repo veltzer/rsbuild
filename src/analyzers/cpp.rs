@@ -4,7 +4,7 @@
 //! to products in the build graph.
 
 use anyhow::Result;
-use std::collections::HashSet;
+use indicatif::ProgressBar;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::OnceLock;
@@ -12,10 +12,12 @@ use std::sync::OnceLock;
 use crate::config::CppAnalyzerConfig;
 use crate::deps_cache::DepsCache;
 use crate::file_index::FileIndex;
-use crate::graph::BuildGraph;
+use crate::graph::{BuildGraph, Product};
 use crate::processors::{check_command_output, format_command, run_command_capture};
 
 use super::DepAnalyzer;
+
+const CPP_MATCH_EXTENSIONS: &[&str] = &["c", "cc", "cpp", "cxx"];
 
 /// C/C++ dependency analyzer that scans source files for #include directives.
 pub struct CppDepAnalyzer {
@@ -198,35 +200,37 @@ impl DepAnalyzer for CppDepAnalyzer {
         false
     }
 
-    fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, _file_index: &FileIndex, verbose: bool) -> Result<()> {
-        let cpp_extensions: HashSet<&str> = [".c", ".cc", ".cpp", ".cxx"].iter().copied().collect();
+    fn match_product(&self, p: &Product) -> Option<PathBuf> {
+        if p.inputs.is_empty() {
+            return None;
+        }
+        let source = &p.inputs[0];
+        if self.is_excluded(source) {
+            return None;
+        }
+        let ext = source.extension().and_then(|s| s.to_str()).unwrap_or("");
+        if CPP_MATCH_EXTENSIONS.contains(&ext) { Some(source.clone()) } else { None }
+    }
 
+    fn analyze(
+        &self,
+        graph: &mut BuildGraph,
+        deps_cache: &mut DepsCache,
+        _file_index: &FileIndex,
+        _verbose: bool,
+        progress: &ProgressBar,
+    ) -> Result<()> {
         super::analyze_with_scanner(
             graph,
             deps_cache,
             &self.iname,
-            |p| {
-                if p.inputs.is_empty() {
-                    return None;
-                }
-                let source = &p.inputs[0];
-                if self.is_excluded(source) {
-                    return None;
-                }
-                let ext = source.extension().and_then(|s| s.to_str()).unwrap_or("");
-                let ext_with_dot = format!(".{}", ext);
-                if cpp_extensions.contains(ext_with_dot.as_str()) {
-                    Some(source.clone())
-                } else {
-                    None
-                }
-            },
+            |p| self.match_product(p),
             |source| {
                 let ext = source.extension().and_then(|s| s.to_str()).unwrap_or("");
                 let is_cpp = ext == "cc" || ext == "cpp" || ext == "cxx";
                 self.scan_dependencies(source, is_cpp)
             },
-            verbose,
+            progress,
         )
     }
 }

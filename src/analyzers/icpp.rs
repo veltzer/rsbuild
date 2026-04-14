@@ -5,6 +5,7 @@
 //! use the `cpp` analyzer instead.
 
 use anyhow::Result;
+use indicatif::ProgressBar;
 use regex::Regex;
 use std::collections::HashSet;
 use std::fs;
@@ -15,9 +16,11 @@ use crate::config::IcppAnalyzerConfig;
 use crate::errors;
 use crate::deps_cache::DepsCache;
 use crate::file_index::FileIndex;
-use crate::graph::BuildGraph;
+use crate::graph::{BuildGraph, Product};
 
 use super::DepAnalyzer;
+
+const CPP_MATCH_EXTENSIONS: &[&str] = &["c", "cc", "cpp", "cxx"];
 
 /// In-process C/C++ dependency analyzer using a pure-Rust regex scanner.
 pub struct IcppDepAnalyzer {
@@ -166,31 +169,33 @@ impl DepAnalyzer for IcppDepAnalyzer {
         false
     }
 
-    fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, _file_index: &FileIndex, verbose: bool) -> Result<()> {
-        let cpp_extensions: HashSet<&str> = [".c", ".cc", ".cpp", ".cxx"].iter().copied().collect();
+    fn match_product(&self, p: &Product) -> Option<PathBuf> {
+        if p.inputs.is_empty() {
+            return None;
+        }
+        let source = &p.inputs[0];
+        if self.is_excluded(source) {
+            return None;
+        }
+        let ext = source.extension().and_then(|s| s.to_str()).unwrap_or("");
+        if CPP_MATCH_EXTENSIONS.contains(&ext) { Some(source.clone()) } else { None }
+    }
 
+    fn analyze(
+        &self,
+        graph: &mut BuildGraph,
+        deps_cache: &mut DepsCache,
+        _file_index: &FileIndex,
+        _verbose: bool,
+        progress: &ProgressBar,
+    ) -> Result<()> {
         super::analyze_with_scanner(
             graph,
             deps_cache,
             &self.iname,
-            |p| {
-                if p.inputs.is_empty() {
-                    return None;
-                }
-                let source = &p.inputs[0];
-                if self.is_excluded(source) {
-                    return None;
-                }
-                let ext = source.extension().and_then(|s| s.to_str()).unwrap_or("");
-                let ext_with_dot = format!(".{}", ext);
-                if cpp_extensions.contains(ext_with_dot.as_str()) {
-                    Some(source.clone())
-                } else {
-                    None
-                }
-            },
+            |p| self.match_product(p),
             |source| self.scan_includes(source),
-            verbose,
+            progress,
         )
     }
 }

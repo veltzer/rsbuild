@@ -4,6 +4,7 @@
 //! adds referenced local files as dependencies to products in the build graph.
 
 use anyhow::Result;
+use indicatif::ProgressBar;
 use regex::Regex;
 use std::collections::HashSet;
 use std::fs;
@@ -14,7 +15,7 @@ use crate::config::MarkdownAnalyzerConfig;
 use crate::deps_cache::DepsCache;
 use crate::errors;
 use crate::file_index::FileIndex;
-use crate::graph::BuildGraph;
+use crate::graph::{BuildGraph, Product};
 
 use super::DepAnalyzer;
 
@@ -99,25 +100,30 @@ impl DepAnalyzer for MarkdownDepAnalyzer {
         file_index.has_extension(".md")
     }
 
-    fn analyze(&self, graph: &mut BuildGraph, deps_cache: &mut DepsCache, _file_index: &FileIndex, verbose: bool) -> Result<()> {
+    fn match_product(&self, p: &Product) -> Option<PathBuf> {
+        if p.inputs.is_empty() {
+            return None;
+        }
+        let source = &p.inputs[0];
+        let ext = source.extension().and_then(|s| s.to_str()).unwrap_or("");
+        if ext == "md" { Some(source.clone()) } else { None }
+    }
+
+    fn analyze(
+        &self,
+        graph: &mut BuildGraph,
+        deps_cache: &mut DepsCache,
+        _file_index: &FileIndex,
+        _verbose: bool,
+        progress: &ProgressBar,
+    ) -> Result<()> {
         super::analyze_with_scanner(
             graph,
             deps_cache,
             &self.iname,
-            |p| {
-                if p.inputs.is_empty() {
-                    return None;
-                }
-                let source = &p.inputs[0];
-                let ext = source.extension().and_then(|s| s.to_str()).unwrap_or("");
-                if ext == "md" {
-                    Some(source.clone())
-                } else {
-                    None
-                }
-            },
+            |p| self.match_product(p),
             |source| self.scan_references(source),
-            verbose,
+            progress,
         )
     }
 }

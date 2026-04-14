@@ -33,3 +33,18 @@ python files dependency analysis:
     Actually we need types of deps: runtime deps, compilation deps, ...
 
     This is a dependency scanner
+
+    depenencies can be on other things, like:
+      secret keys in pass
+      external modules (import yaml)
+      other ideas?
+
+    A dependency scanner can deduce depenencies of various types
+    for instance: a cpp dependency scanner can deduce dependency on a h file (thats compilet dependency)
+    or a dependency on an external library (link dependency)
+    or some other deependency in the code (on a secret key)
+
+
+- I want to add a variant feature to every process.
+    - what is the difference between two variants and the same processor twice in the same file?
+    - the cargo processors seems to have variants, what does that mean?

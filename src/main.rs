@@ -86,6 +86,7 @@ fn run() -> Result<()> {
         show_child_processes: cli.show_child_processes,
         show_output: cli.show_output,
         phases_debug: cli.phases,
+        graph_stats: cli.graph_stats,
         json_mode: cli.json,
         quiet: cli.quiet,
         color_enabled,

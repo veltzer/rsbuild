@@ -67,6 +67,51 @@ fn phases_debug() -> bool {
     crate::runtime_flags::phases_debug()
 }
 
+/// A point in the build-graph construction pipeline at which `print_graph_stats`
+/// can snapshot the graph's size. One variant per observable transition.
+/// Kept as an enum (not a free-form label) so adding a new stage is a
+/// type-checked change, not a string typo waiting to happen.
+#[derive(Debug, Clone, Copy)]
+enum BuildStage {
+    Start,
+    AfterDiscover,
+    AfterAddDependencies,
+    AfterApplyToolHashes,
+    AfterResolve,
+}
+
+impl BuildStage {
+    fn label(self) -> &'static str {
+        match self {
+            BuildStage::Start => "start",
+            BuildStage::AfterDiscover => "after discover",
+            BuildStage::AfterAddDependencies => "after add_dependencies",
+            BuildStage::AfterApplyToolHashes => "after apply_tool_hashes",
+            BuildStage::AfterResolve => "after resolve",
+        }
+    }
+}
+
+/// Emit a one-line snapshot of the graph's size at a named stage.
+/// No-op unless `--graph-stats` is set. Output goes to stderr so it can't
+/// corrupt stdout piping (e.g., `rsconstruct graph --format=dot`).
+fn print_graph_stats(stage: BuildStage, graph: &BuildGraph) {
+    if !crate::runtime_flags::graph_stats() {
+        return;
+    }
+    let products = graph.products().len();
+    // Sum dependency-list lengths across all products to get total edges.
+    // Cheap — each product's dependency list is a Vec already held in memory.
+    let edges: usize = graph.products()
+        .iter()
+        .map(|p| graph.get_dependencies(p.id).len())
+        .sum();
+    eprintln!(
+        "[graph-stats] {:<26} products={}  edges={}",
+        stage.label(), products, edges,
+    );
+}
+
 /// Labels for the four product states used by dry_run and status.
 struct ProductStatusLabels<'a> {
     current: (Cow<'a, str>, &'static str),
@@ -325,7 +370,7 @@ impl Builder {
         pb.finish_and_clear();
         if total > 0 && !suppress {
             println!(
-                "Dependency summary: {} cache hits, {} rescanned",
+                "Dependency summary: {} cache hits ({} rescanned)",
                 stats.hits, stats.misses,
             );
         }
@@ -466,6 +511,7 @@ impl Builder {
         }
         let mut graph = BuildGraph::new();
         let mut phase_timings = PhaseTimings::new();
+        print_graph_stats(BuildStage::Start, &graph);
 
         // Collect which processors should run
         let active_processors: Vec<&String> = sorted_keys(processors).into_iter()
@@ -485,6 +531,7 @@ impl Builder {
         let t = Instant::now();
         self.discover_products(&mut graph, processors, &active_processors, mode == GraphBuildMode::ForClean)?;
         phase_timings.push(("discover".to_string(), t.elapsed()));
+        print_graph_stats(BuildStage::AfterDiscover, &graph);
 
         if stop_after == BuildPhase::Discover {
             return Ok((graph, phase_timings));
@@ -498,6 +545,7 @@ impl Builder {
             let t = Instant::now();
             self.run_analyzers(&mut graph, verbose)?;
             phase_timings.push(("add_dependencies".to_string(), t.elapsed()));
+            print_graph_stats(BuildStage::AfterAddDependencies, &graph);
         }
 
         if stop_after == BuildPhase::AddDependencies {
@@ -517,6 +565,7 @@ impl Builder {
             graph.apply_tool_version_hashes(&tool_hashes);
         }
         phase_timings.push(("tool_version_hashes".to_string(), t.elapsed()));
+        print_graph_stats(BuildStage::AfterApplyToolHashes, &graph);
 
         // Phase 4: Resolve dependencies
         if phases_debug() {
@@ -525,6 +574,7 @@ impl Builder {
         let t = Instant::now();
         graph.resolve_dependencies();
         phase_timings.push(("resolve".to_string(), t.elapsed()));
+        print_graph_stats(BuildStage::AfterResolve, &graph);
 
         // Note: BuildPhase::Resolve and BuildPhase::Build both complete the graph
         Ok((graph, phase_timings))

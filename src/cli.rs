@@ -43,6 +43,10 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub phases: bool,
 
+    /// Print graph size (product and edge counts) at each major build stage
+    #[arg(long, global = true)]
+    pub graph_stats: bool,
+
     /// Disable persistent mtime checksum cache (useful for CI/CD where the
     /// cache won't survive the build and the write overhead isn't worth it)
     #[arg(long, global = true)]

@@ -14,6 +14,8 @@ pub(crate) struct RuntimeFlags {
     pub show_output: bool,
     /// Print phase messages during graph building (--phases)
     pub phases_debug: bool,
+    /// Print graph size at each major build stage (--graph-stats)
+    pub graph_stats: bool,
     /// Output JSON instead of human-readable text (--json)
     pub json_mode: bool,
     /// Suppress all output except errors (--quiet)
@@ -45,6 +47,10 @@ pub(crate) fn show_output() -> bool {
 
 pub(crate) fn phases_debug() -> bool {
     get().phases_debug
+}
+
+pub(crate) fn graph_stats() -> bool {
+    get().graph_stats
 }
 
 pub(crate) fn json_mode() -> bool {

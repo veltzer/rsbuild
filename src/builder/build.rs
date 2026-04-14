@@ -182,18 +182,25 @@ impl Builder {
             return Ok(());
         }
 
-        // Phase: Classify products (skip/restore/build)
+        // Phase: Classify products (skip/restore/build). Printed in two lines,
+        // matching the dep-scan phase style:
+        //   - forward-looking total before classify runs (this is the checksum
+        //     pass, which is the expensive work for large graphs)
+        //   - post-classify breakdown showing what will actually be built
         if phases_debug() {
             eprintln!("{}", color::dim("  Phase: classify"));
         }
         let t = Instant::now();
         let order = graph.topological_sort()?;
+        if !crate::runtime_flags::quiet() {
+            println!("{} products to check for updates", order.len());
+        }
         let (skip_count, restore_count, build_count) =
             crate::executor::classify_products(&graph, &order, &self.object_store, opts.force);
         phase_timings.push(("classify".to_string(), t.elapsed()));
         if !crate::runtime_flags::quiet() {
-            println!("{} products ({} up-to-date, {} to restore, {} to build)",
-                order.len(), skip_count, restore_count, build_count);
+            println!("{} up-to-date ({} to restore, {} to build)",
+                skip_count, restore_count, build_count);
         }
 
         if opts.stop_after == BuildPhase::Classify {

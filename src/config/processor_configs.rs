@@ -432,6 +432,7 @@ impl KnownFields for CcSingleFileConfig {
 // --- cc (full C/C++ project builds) ---
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct CcLibraryDef {
     pub name: String,
     #[serde(default = "default_cc_lib_type")]
@@ -452,6 +453,7 @@ fn default_cc_lib_type() -> String {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct CcProgramDef {
     pub name: String,
     pub sources: Vec<String>,
@@ -469,6 +471,7 @@ pub struct CcProgramDef {
 
 /// Parsed contents of a cc.yaml file.
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct CcManifest {
     #[serde(default = "default_cc_compiler")]
     pub cc: String,
@@ -559,6 +562,7 @@ impl KnownFields for CcConfig {
 
 /// A single kernel module definition inside linux-module.yaml.
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct LinuxModuleModuleDef {
     pub name: String,
     pub sources: Vec<String>,
@@ -568,6 +572,7 @@ pub struct LinuxModuleModuleDef {
 
 /// Parsed contents of a linux-module.yaml file.
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct LinuxModuleManifest {
     #[serde(default = "default_make_tool")]
     pub make: String,

@@ -133,5 +133,6 @@ inventory::submit! {
         defconfig_toml: || {
             toml::to_string_pretty(&TeraAnalyzerConfig::default()).ok()
         },
+        known_fields: crate::registries::typed_known_fields::<TeraAnalyzerConfig>,
     }
 }

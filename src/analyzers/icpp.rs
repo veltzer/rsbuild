@@ -207,5 +207,6 @@ inventory::submit! {
         defconfig_toml: || {
             toml::to_string_pretty(&crate::config::IcppAnalyzerConfig::default()).ok()
         },
+        known_fields: crate::registries::typed_known_fields::<crate::config::IcppAnalyzerConfig>,
     }
 }

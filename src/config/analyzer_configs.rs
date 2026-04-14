@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{default_cc_compiler, default_cxx_compiler, default_true};
+use super::{default_cc_compiler, default_cxx_compiler, default_true, KnownFields};
 
 /// Configuration for the C/C++ dependency analyzer (`cpp`) — uses compiler -MM scanning.
 /// External analyzer: runs gcc/g++ -MM and optional pkg-config/include_path_commands.
@@ -158,3 +158,41 @@ impl Default for TeraAnalyzerConfig {
     }
 }
 
+impl KnownFields for CppAnalyzerConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "include_paths", "pkg_config", "include_path_commands",
+            "src_exclude_dirs", "cc", "cxx", "cflags", "cxxflags",
+        ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["include_paths", "pkg_config", "include_path_commands", "cc", "cxx", "cflags", "cxxflags"]
+    }
+}
+
+impl KnownFields for IcppAnalyzerConfig {
+    fn known_fields() -> &'static [&'static str] {
+        &[
+            "enabled", "include_paths", "pkg_config", "include_path_commands",
+            "src_exclude_dirs", "follow_angle_brackets", "skip_not_found",
+        ]
+    }
+    fn output_fields() -> &'static [&'static str] {
+        &["include_paths", "pkg_config", "include_path_commands", "follow_angle_brackets", "skip_not_found"]
+    }
+}
+
+impl KnownFields for PythonAnalyzerConfig {
+    fn known_fields() -> &'static [&'static str] { &["enabled"] }
+    fn output_fields() -> &'static [&'static str] { &[] }
+}
+
+impl KnownFields for MarkdownAnalyzerConfig {
+    fn known_fields() -> &'static [&'static str] { &["enabled"] }
+    fn output_fields() -> &'static [&'static str] { &[] }
+}
+
+impl KnownFields for TeraAnalyzerConfig {
+    fn known_fields() -> &'static [&'static str] { &["enabled"] }
+    fn output_fields() -> &'static [&'static str] { &[] }
+}

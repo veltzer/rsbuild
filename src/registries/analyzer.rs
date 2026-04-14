@@ -20,6 +20,9 @@ pub struct AnalyzerPlugin {
     pub create: fn(&str, &toml::Value, bool) -> Result<Box<dyn DepAnalyzer>>,
     /// Return the default config as a TOML string, or None if the analyzer has no config.
     pub defconfig_toml: fn() -> Option<String>,
+    /// Config field names known to this analyzer. Used by `validate_analyzer_fields`
+    /// to reject unknown fields before the analyzer is instantiated.
+    pub known_fields: fn() -> &'static [&'static str],
 }
 
 unsafe impl Sync for AnalyzerPlugin {}

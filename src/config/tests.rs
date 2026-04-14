@@ -228,3 +228,105 @@ fn substitute_variables_boolean() {
     let result = substitute_variables(content).expect("variable substitution failed");
     assert!(result.contains("flag = true"));
 }
+
+// Tests for the pre-construction config validators. These are the pass that
+// runs before any processor or analyzer is created, so regressions here would
+// push schema errors past config-load and into the Builder where they produce
+// worse messages.
+
+use crate::config::{validate_processor_fields_raw, validate_analyzer_fields_raw};
+
+fn toml_of(s: &str) -> toml::Value {
+    toml::from_str(s).expect("test fixture must be valid TOML")
+}
+
+#[test]
+fn analyzer_validator_accepts_known_fields() {
+    let raw = toml_of("[analyzer.python]\nenabled = false\n");
+    let errors = validate_analyzer_fields_raw(&raw);
+    assert!(errors.is_empty(), "unexpected errors: {:?}", errors);
+}
+
+#[test]
+fn analyzer_validator_accepts_empty_section() {
+    // `[analyzer.python]` with no fields is valid — everything defaults.
+    let raw = toml_of("[analyzer.python]\n");
+    let errors = validate_analyzer_fields_raw(&raw);
+    assert!(errors.is_empty(), "unexpected errors: {:?}", errors);
+}
+
+#[test]
+fn analyzer_validator_rejects_unknown_type() {
+    let raw = toml_of("[analyzer.nonsense]\n");
+    let errors = validate_analyzer_fields_raw(&raw);
+    assert_eq!(errors.len(), 1);
+    assert!(errors[0].contains("nonsense"));
+    assert!(errors[0].contains("unknown analyzer type"));
+}
+
+#[test]
+fn analyzer_validator_rejects_unknown_field() {
+    let raw = toml_of("[analyzer.python]\nenabeld = false\n");
+    let errors = validate_analyzer_fields_raw(&raw);
+    assert_eq!(errors.len(), 1);
+    assert!(errors[0].contains("enabeld"));
+    assert!(errors[0].contains("unknown field"));
+    // Error should list valid fields to help the user fix it.
+    assert!(errors[0].contains("enabled"));
+}
+
+#[test]
+fn analyzer_validator_collects_multiple_errors() {
+    let raw = toml_of(r#"
+[analyzer.python]
+enabeld = false
+
+[analyzer.nonsense]
+"#);
+    let errors = validate_analyzer_fields_raw(&raw);
+    assert!(errors.len() >= 2, "expected multiple errors, got: {:?}", errors);
+    assert!(errors.iter().any(|e| e.contains("enabeld")));
+    assert!(errors.iter().any(|e| e.contains("nonsense")));
+}
+
+#[test]
+fn analyzer_validator_handles_multi_instance() {
+    // `[analyzer.cpp.kernel]` and `[analyzer.cpp.userspace]` — multi-instance
+    // syntax. Each sub-section must still reject unknown fields.
+    let raw = toml_of(r#"
+[analyzer.cpp.kernel]
+include_paths = ["kernel/include"]
+
+[analyzer.cpp.userspace]
+typo_field = true
+"#);
+    let errors = validate_analyzer_fields_raw(&raw);
+    assert_eq!(errors.len(), 1);
+    assert!(errors[0].contains("typo_field"));
+    assert!(errors[0].contains("analyzer.cpp.userspace"));
+}
+
+#[test]
+fn analyzer_validator_is_noop_without_analyzer_section() {
+    let raw = toml_of("[processor.ruff]\nsrc_dirs = [\".\"]\n");
+    let errors = validate_analyzer_fields_raw(&raw);
+    assert!(errors.is_empty());
+}
+
+#[test]
+fn processor_and_analyzer_validators_are_independent() {
+    // Processor errors and analyzer errors must both be reported — neither
+    // short-circuits the other. This is the regression that would return if
+    // somebody changed `Config::load` to `?` on the first validator.
+    let raw = toml_of(r#"
+[processor.ruff]
+unknown_proc_field = "x"
+
+[analyzer.python]
+enabeld = false
+"#);
+    let proc_errors = validate_processor_fields_raw(&raw);
+    let analyzer_errors = validate_analyzer_fields_raw(&raw);
+    assert!(!proc_errors.is_empty(), "processor validator should have caught something");
+    assert!(!analyzer_errors.is_empty(), "analyzer validator should have caught something");
+}

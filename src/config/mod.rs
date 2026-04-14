@@ -1268,10 +1268,12 @@ fn validate_single_processor(
 
 /// Validate that all fields in `[processor.X]` sections are known fields for that processor
 /// and have the correct TOML types. Supports both single-instance and multi-instance formats.
-fn validate_processor_fields(raw: &toml::Value) -> Result<()> {
+/// Returns a list of error strings (empty if valid). `Config::load` combines this with the
+/// analyzer validator output under a single "Invalid config:" header.
+fn validate_processor_fields_raw(raw: &toml::Value) -> Vec<String> {
     let processor_table = match raw.get("processor").and_then(|v| v.as_table()) {
         Some(t) => t,
-        None => return Ok(()),
+        None => return Vec::new(),
     };
 
     let mut errors = Vec::new();
@@ -1313,10 +1315,80 @@ fn validate_processor_fields(raw: &toml::Value) -> Result<()> {
         }
     }
 
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        anyhow::bail!("Invalid config:\n{}", errors.join("\n"))
+    errors
+}
+
+/// Validate `[analyzer.X]` sections: reject unknown analyzer types and unknown
+/// fields within each section. Runs at config-load time, before any analyzer
+/// is instantiated, so users see schema errors up front instead of at build
+/// time. Returns a list of error strings (empty if valid). `Config::load`
+/// combines this with the processor validator output under a single
+/// "Invalid config:" header.
+fn validate_analyzer_fields_raw(raw: &toml::Value) -> Vec<String> {
+    let analyzer_table = match raw.get("analyzer").and_then(|v| v.as_table()) {
+        Some(t) => t,
+        None => return Vec::new(),
+    };
+
+    let mut errors = Vec::new();
+
+    for (type_name, value) in analyzer_table {
+        let table = match value.as_table() {
+            Some(t) => t,
+            None => {
+                errors.push(format!(
+                    "[analyzer.{}]: expected a table", type_name,
+                ));
+                continue;
+            }
+        };
+
+        let plugin = match registry::find_analyzer_plugin(type_name) {
+            Some(p) => p,
+            None => {
+                errors.push(format!(
+                    "[analyzer.{}]: unknown analyzer type '{}' (run 'rsconstruct analyzers list' to see available)",
+                    type_name, type_name,
+                ));
+                continue;
+            }
+        };
+
+        // Multi-instance: `[analyzer.cpp.kernel]` / `[analyzer.cpp.userspace]`.
+        // Detected iff every value is itself a table.
+        let is_multi_instance = !table.is_empty() && table.values().all(|v| v.is_table());
+
+        if is_multi_instance {
+            for (inst_name, inst_value) in table {
+                if let Some(inst_table) = inst_value.as_table() {
+                    let section = format!("analyzer.{}.{}", type_name, inst_name);
+                    validate_analyzer_section(plugin, &section, inst_table, &mut errors);
+                }
+            }
+        } else {
+            let section = format!("analyzer.{}", type_name);
+            validate_analyzer_section(plugin, &section, table, &mut errors);
+        }
+    }
+
+    errors
+}
+
+/// Check a single analyzer section's fields against the plugin's known_fields list.
+fn validate_analyzer_section(
+    plugin: &registry::AnalyzerPlugin,
+    section_label: &str,
+    table: &toml::map::Map<String, toml::Value>,
+    errors: &mut Vec<String>,
+) {
+    let known = (plugin.known_fields)();
+    for key in table.keys() {
+        if !known.contains(&key.as_str()) {
+            errors.push(format!(
+                "[{}]: unknown field '{}' (valid fields: {})",
+                section_label, key, known.join(", ")
+            ));
+        }
     }
 }
 
@@ -1342,7 +1414,15 @@ impl Config {
                 .with_context(|| format!("Failed to substitute variables in: {}", config_path.display()))?;
             let raw: toml::Value = toml::from_str(&substituted)
                 .with_context(|| format!("Failed to parse config file: {}", config_path.display()))?;
-            validate_processor_fields(&raw)?;
+            // Run both schema validators before serde sees the config, so users
+            // get pretty per-section errors instead of serde's raw messages.
+            // Errors from both validators are surfaced together under a single
+            // "Invalid config:" header.
+            let mut all_errors = validate_processor_fields_raw(&raw);
+            all_errors.extend(validate_analyzer_fields_raw(&raw));
+            if !all_errors.is_empty() {
+                anyhow::bail!("Invalid config:\n{}", all_errors.join("\n"));
+            }
             toml::from_str(&substituted)
                 .with_context(|| format!("Failed to parse config file: {}", config_path.display()))?
         } else {

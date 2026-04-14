@@ -125,21 +125,86 @@ to manually prefix their `bail!` messages. Just write the error naturally
 (e.g. `bail!("Misspelled words in {}", path)`) and the executor will produce
 `[aspell] Misspelled words in README.md`.
 
-## Reject unknown config fields
+## Never silently ignore user configuration
 
-All config structs that don't intentionally capture extra fields must use
-`#[serde(deny_unknown_fields)]`. This ensures that typos or unsupported
-options in `rsconstruct.toml` produce a clear error instead of being silently ignored.
+Every field a user can write in `rsconstruct.toml` (or in any YAML/TOML
+manifest we load: `cc.yaml`, `linux-module.yaml`, etc.) must produce an
+observable effect in the engine. The two failure modes to prevent are:
 
-Structs that use `#[serde(flatten)]` to embed other structs (like `ScanConfig`)
-cannot use `deny_unknown_fields` due to serde limitations. These structs must
-instead implement the `KnownFields` trait, returning a static slice of all
-valid field names (own fields + flattened fields). The `validate_processor_fields()`
-function in `Config::load()` checks all `[processor.X]` keys against these
-lists before deserialization.
+1. **Schema-level silent-ignore** — serde accepts an unknown field because
+   the struct doesn't reject it. A user typos `enabeld = false`, we accept
+   it, nothing happens, they wonder why their setting had no effect.
+2. **Runtime silent-ignore** — serde stores the field in a struct, but no
+   code in the engine ever reads it. This is exactly how the
+   `[analyzer.X] enabled = false` bug shipped: the CLI subcommand wrote the
+   field, the config loader happily deserialized it, and the analyzer
+   runner ignored it. A half-wired feature is worse than no feature.
 
-Structs that intentionally capture unknown fields (like `ProcessorConfig.extra`
-for Lua plugins) should use neither `deny_unknown_fields` nor `KnownFields`.
+### Rule 1: reject unknown fields at the schema level
+
+Every struct that deserializes user input must use one of:
+
+- `#[serde(deny_unknown_fields)]` — preferred for plain structs (no
+  `#[serde(flatten)]`). Serde enforces the reject at deserialize time.
+- `KnownFields` trait + `validate_processor_fields()` — for top-level
+  processor configs that use `#[serde(flatten)]` to embed `StandardConfig`.
+  Serde's `deny_unknown_fields` doesn't see through `flatten` (known
+  limitation), so we implement the check ourselves in `Config::load()`.
+
+Nested structs inside a flattened parent (e.g. `CcLibraryDef` inside
+`CcManifest`) must use `deny_unknown_fields` — they don't flatten, so the
+direct mechanism works.
+
+The only legitimate exception: structs that *intentionally* capture unknown
+fields (`ProcessorConfig.extra` for Lua plugins). These are rare and must
+be documented at the field.
+
+### Rule 2: every accepted field must be read
+
+When you add a field to any config struct, add the engine code that consumes
+it in the same change. Don't ship the schema first and the behaviour "soon."
+If the field is a toggle, the runner must check it. If it's a path, something
+must open or scan that path. If it's a value, a code path must branch on it.
+
+When you add a CLI subcommand that writes a field (like `analyzers disable`
+writing `enabled = false`), verify the runtime reads it by writing an
+integration test that exercises the toggle end-to-end — config → build →
+observable effect. A passing write-the-config test is not enough; the effect
+must be asserted.
+
+When you remove or rename a field, grep the codebase and docs to catch
+stragglers. A field that exists in `defconfig_toml` but no longer affects
+behaviour is a regression of Rule 2, even if no user reports it.
+
+### When reviewing
+
+Reject a patch that adds a new `Deserialize` struct without either
+`deny_unknown_fields` or a `KnownFields` impl. Reject a patch that adds a
+config field without the runtime code that reads it. Both failure modes
+cost users time in exactly the same way — they write something sensible,
+get no feedback, and conclude the tool is broken.
+
+### Rule 3: validate before constructing
+
+Schema validation must run inside `Config::load()`, before any processor or
+analyzer is instantiated. `Builder::new()` should never be the first place
+that surfaces an unknown-field or unknown-type error, because by the time
+`Builder::new()` runs it has already opened `redb` databases, walked the
+filesystem to build the `FileIndex`, and created CPU-bound infrastructure
+the user doesn't need just to see "you typoed a field name."
+
+The validators are `validate_processor_fields_raw` and
+`validate_analyzer_fields_raw` in `src/config/mod.rs`. They return
+`Vec<String>` so `Config::load()` can surface errors from both validators
+together under a single `Invalid config:` header. If you add a new config
+surface (a new top-level section with its own registered plugins), add a
+matching validator and call it from `Config::load()` alongside the
+existing two.
+
+Unit-test the validators directly (see `src/config/tests.rs`) — not only
+through `rsconstruct toml check`. Direct tests pin down the contract that
+validation is a pure function of the parsed TOML, independent of
+filesystem or plugin instantiation.
 
 ## No "latest" git tag
 

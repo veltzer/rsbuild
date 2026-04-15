@@ -26,3 +26,6 @@ python files dependency analysis:
 - I assume we have a centalized place where we draw tables. If we do not then arrange a place like that (src/tables.rs). In that place always put a horizontal line
     after the headers of the table
     in "rsconstruct status" I do not see a horizontal line after the headers. 
+
+- want a config system like the kernels config system.
+    This is a big item.

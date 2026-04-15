@@ -111,21 +111,32 @@ impl GraphSnapshot {
 
 /// Emit a one-line snapshot of the graph's size at a named point.
 /// No-op unless `--graph-stats` is set. Output goes to stderr so it can't
-/// corrupt stdout piping (e.g., `rsconstruct graph --format=dot`).
+/// corrupt stdout piping (e.g., `rsconstruct graph show --format=dot`).
+///
+/// Three counters per snapshot:
+///   - `products`: number of products in the graph.
+///   - `edges`: producer→consumer edges (one product's output is another's input).
+///   - `inputs`: total input-file references across all products. Headers added
+///     by analyzers don't form `edges` (they aren't outputs of any product),
+///     but they DO grow `inputs` — diff `inputs` between AFTER_DISCOVER and
+///     AFTER_ADD_DEPENDENCIES to see how much the analyzer phase contributed.
 pub(crate) fn print_graph_stats(snapshot: GraphSnapshot, graph: &BuildGraph) {
     if !crate::runtime_flags::graph_stats() {
         return;
     }
     let products = graph.products().len();
-    // Sum dependency-list lengths across all products to get total edges.
     // Cheap — each product's dependency list is a Vec already held in memory.
     let edges: usize = graph.products()
         .iter()
         .map(|p| graph.get_dependencies(p.id).len())
         .sum();
+    let inputs: usize = graph.products()
+        .iter()
+        .map(|p| p.inputs.len())
+        .sum();
     eprintln!(
-        "[graph-stats] {:<24}  products={}  edges={}",
-        snapshot.name(), products, edges,
+        "[graph-stats] {:<24}  products={}  edges={}  inputs={}",
+        snapshot.name(), products, edges, inputs,
     );
 }
 

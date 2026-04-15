@@ -29,3 +29,5 @@ python files dependency analysis:
 
 - want a config system like the kernels config system.
     This is a big item.
+
+- call the error EXIT_[XXX]. It wail make it clearer.

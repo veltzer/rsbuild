@@ -353,7 +353,7 @@ impl Builder {
         // before the build phase. We only know the total up front; the hit/miss
         // breakdown is computed during the scan and reported in the summary.
         if total > 0 && !suppress {
-            println!("{} files to scan for dependencies", total);
+            println!("[deps] {} files to scan for dependencies", total);
         }
 
         // Hide in verbose/JSON mode, matching executor style. The summary is
@@ -370,7 +370,7 @@ impl Builder {
         pb.finish_and_clear();
         if total > 0 && !suppress {
             println!(
-                "Dependency summary: {} cache hits ({} rescanned)",
+                "[deps] summary: {} cache hits ({} rescanned)",
                 stats.hits, stats.misses,
             );
         }

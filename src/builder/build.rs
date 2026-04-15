@@ -193,13 +193,13 @@ impl Builder {
         let t = Instant::now();
         let order = graph.topological_sort()?;
         if !crate::runtime_flags::quiet() {
-            println!("{} products to check for updates", order.len());
+            println!("[build] {} products to check for updates", order.len());
         }
         let (skip_count, restore_count, build_count) =
             crate::executor::classify_products(&graph, &order, &self.object_store, opts.force);
         phase_timings.push(("classify".to_string(), t.elapsed()));
         if !crate::runtime_flags::quiet() {
-            println!("{} up-to-date ({} to restore, {} to build)",
+            println!("[build] {} up-to-date ({} to restore, {} to build)",
                 skip_count, restore_count, build_count);
         }
 

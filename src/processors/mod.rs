@@ -1324,9 +1324,9 @@ impl BuildStats {
             }
 
             if parts.is_empty() {
-                println!("{}", color::dim("Nothing to build."));
+                println!("{}", color::dim("[build] nothing to build."));
             } else {
-                let line = format!("Build summary: {}", parts.join(", "));
+                let line = format!("[build] summary: {}", parts.join(", "));
                 if total_failed > 0 {
                     println!("{}", color::red(&line));
                 } else {

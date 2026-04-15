@@ -44,8 +44,8 @@ use std::time::Instant;
 fn main() -> std::process::ExitCode {
     platform::reset_sigpipe();
 
-    match run() {
-        Ok(()) => std::process::ExitCode::from(RsconstructExitCode::Success.code()),
+    let exit_code = match run() {
+        Ok(()) => RsconstructExitCode::Success,
         Err(err) => {
             let exit_code = classify_error(&err);
             if json_output::is_json_mode() {
@@ -59,9 +59,28 @@ fn main() -> std::process::ExitCode {
             } else {
                 eprintln!("Error [{}]: {:#}", exit_code.name(), err);
             }
-            std::process::ExitCode::from(exit_code.code())
+            exit_code
+        }
+    };
+
+    // Final status line. Green on Success, red on any error. Suppressed in
+    // quiet mode and JSON mode (the JSON error event above already carries
+    // exit-code info). Uses non-panicking flag accessors because CLI parse
+    // errors can reach this point without `runtime_flags::init` having run.
+    if !runtime_flags::quiet_or_default() && !runtime_flags::json_mode_or_default() {
+        let line = format!(
+            "Exited with {} ({})",
+            exit_code.name(),
+            exit_code.code(),
+        );
+        if exit_code == RsconstructExitCode::Success {
+            eprintln!("{}", color::green(&line));
+        } else {
+            eprintln!("{}", color::red(&line));
         }
     }
+
+    std::process::ExitCode::from(exit_code.code())
 }
 
 fn run() -> Result<()> {

@@ -1330,16 +1330,15 @@ impl BuildStats {
                     aside.push(format!("{} unchanged", total_skipped));
                 }
 
+                // Emitted without color: the final "Exited with ..." line
+                // printed by main() is the one coloured green/red so there's
+                // a single signal of overall success/failure.
                 let line = if aside.is_empty() {
                     format!("[build] summary: {}", lead)
                 } else {
                     format!("[build] summary: {} ({})", lead, aside.join(", "))
                 };
-                if total_failed > 0 {
-                    println!("{}", color::red(&line));
-                } else {
-                    println!("{}", color::green(&line));
-                }
+                println!("{}", line);
             }
         }
 

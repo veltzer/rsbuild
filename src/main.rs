@@ -255,7 +255,7 @@ fn run() -> Result<()> {
             match action.unwrap_or(CleanAction::Outputs) {
                 CleanAction::Outputs => {
                     let builder = Builder::new()?;
-                    builder.clean(cli.verbose)?;
+                    builder.clean(&ctx, cli.verbose)?;
                 }
                 CleanAction::All => {
                     let builder = Builder::new()?;
@@ -267,7 +267,7 @@ fn run() -> Result<()> {
                 }
                 CleanAction::Unknown { dry_run, no_gitignore } => {
                     let builder = Builder::new()?;
-                    builder.clean_unknown(!dry_run, cli.verbose, !no_gitignore)?;
+                    builder.clean_unknown(&ctx, !dry_run, cli.verbose, !no_gitignore)?;
                 }
             }
         }
@@ -317,7 +317,7 @@ fn run() -> Result<()> {
                 }
                 _ => {
                     let builder = Builder::new()?;
-                    builder.analyzers(action, cli.verbose)?;
+                    builder.analyzers(&ctx, action, cli.verbose)?;
                 }
             }
         }
@@ -330,13 +330,13 @@ fn run() -> Result<()> {
         }
         Commands::Graph { action } => {
             let builder = Builder::new()?;
-            builder.graph(action)?;
+            builder.graph(&ctx, action)?;
         }
         Commands::Info { action } => {
             match action {
                 cli::InfoAction::Source => {
                     let builder = Builder::new()?;
-                    builder.info_source()?;
+                    builder.info_source(&ctx)?;
                 }
             }
         }
@@ -375,7 +375,7 @@ fn run() -> Result<()> {
                 }
                 action => {
                     let builder = Builder::new()?;
-                    builder.processor(action, cli.verbose)?;
+                    builder.processor(&ctx, action, cli.verbose)?;
                 }
             }
         }
@@ -425,14 +425,14 @@ fn run() -> Result<()> {
                 }
                 cli::SmartAction::RemoveNoFileProcessors => {
                     let builder = Builder::new()?;
-                    let empty = builder.no_file_processors()?;
+                    let empty = builder.no_file_processors(&ctx)?;
                     builder::smart::remove_no_file_processors(&empty)?;
                 }
             }
         }
         Commands::Status { breakdown } => {
             let builder = Builder::new()?;
-            builder.status(cli.verbose, breakdown)?;
+            builder.status(&ctx, cli.verbose, breakdown)?;
         }
         Commands::SymlinkInstall => {
             let config = Config::load()?;

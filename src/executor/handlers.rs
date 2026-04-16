@@ -166,7 +166,7 @@ impl<'a> Executor<'a> {
             object_store.store_marker(&desc_key).map(|()| false)
         } else if ctx.product.outputs.len() == 1 && !ctx.product.has_output_dirs() {
             // Generator: single output file → blob
-            object_store.store_blob_descriptor(&desc_key, &ctx.product.outputs[0])
+            object_store.store_blob_descriptor(self.build_ctx, &desc_key, &ctx.product.outputs[0])
         } else {
             // Creator/Explicit or multi-output: always tree.
             // When walking output_dirs, skip paths declared as outputs of OTHER products —
@@ -174,7 +174,7 @@ impl<'a> Executor<'a> {
             let is_foreign = |path: &std::path::Path| -> bool {
                 matches!(graph.path_owner(path), Some(owner) if owner != ctx.id)
             };
-            object_store.store_tree_descriptor(&desc_key, &ctx.product.output_dirs, &ctx.product.outputs, &is_foreign)
+            object_store.store_tree_descriptor(self.build_ctx, &desc_key, &ctx.product.output_dirs, &ctx.product.outputs, &is_foreign)
         };
         match cache_result {
             Ok(changed) => {

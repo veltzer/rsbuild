@@ -25,6 +25,7 @@ unsafe impl Send for CtxPtr {}
 unsafe impl Sync for CtxPtr {}
 
 impl CtxPtr {
+    #[allow(dead_code)]
     fn get(&self) -> &crate::build_context::BuildContext {
         // SAFETY: caller guarantees the BuildContext outlives all uses.
         unsafe { &*self.0 }
@@ -32,10 +33,14 @@ impl CtxPtr {
 }
 
 /// Retrieve the BuildContext from Lua app data. Panics if not set (programming error).
+///
+/// SAFETY: The raw pointer stored in CtxPtr is guaranteed to be valid because:
+/// 1. It is set in execute() which holds a &BuildContext for the entire Lua call
+/// 2. The Lua closures only run during execute()
 fn get_ctx_from_lua(lua: &Lua) -> &crate::build_context::BuildContext {
-    let ptr = *lua.app_data_ref::<CtxPtr>()
+    let guard = lua.app_data_ref::<CtxPtr>()
         .expect("BuildContext not set in Lua app data");
-    ptr.get()
+    unsafe { &*guard.0 }
 }
 
 pub struct LuaProcessor {

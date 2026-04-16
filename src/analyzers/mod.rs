@@ -197,7 +197,7 @@ pub fn run_include_path_commands(ctx: &crate::build_context::BuildContext, tag: 
 /// - `match_product`: given a product, returns `Some(source_path)` if the product is relevant
 /// - `scan_deps`: given a source path, returns the list of dependency paths
 pub fn analyze_with_scanner<F, G>(
-    ctx: &crate::build_context::BuildContext,
+    _ctx: &crate::build_context::BuildContext,
     graph: &mut BuildGraph,
     deps_cache: &mut DepsCache,
     analyzer_name: &str,

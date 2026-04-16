@@ -298,7 +298,7 @@ impl ObjectStore {
     }
 
     /// Store a blob descriptor (generator produced a single output).
-    pub fn store_blob_descriptor(&self, cache_key: &str, output_path: &Path) -> Result<bool> {
+    pub fn store_blob_descriptor(&self, ctx: &crate::build_context::BuildContext, cache_key: &str, output_path: &Path) -> Result<bool> {
         let content = fs::read(output_path)
             .with_context(|| format!("Failed to read output: {}", output_path.display()))?;
         let checksum = self.store_object(&content)?;
@@ -312,7 +312,7 @@ impl ObjectStore {
         };
 
         if self.remote_push {
-            self.try_push_object_to_remote(&checksum)?;
+            self.try_push_object_to_remote(ctx, &checksum)?;
         }
 
         self.store_descriptor(cache_key, &CacheDescriptor::Blob {
@@ -331,6 +331,7 @@ impl ObjectStore {
     /// different processor; they are skipped so that restore never clobbers them.
     pub fn store_tree_descriptor(
         &self,
+        ctx: &crate::build_context::BuildContext,
         cache_key: &str,
         output_dirs: &[std::sync::Arc<PathBuf>],
         output_files: &[PathBuf],
@@ -355,7 +356,7 @@ impl ObjectStore {
                 let mode = fs::metadata(&file_path).ok()
                     .and_then(|m| crate::platform::get_mode(&m));
                 if self.remote_push {
-                    self.try_push_object_to_remote(&checksum)?;
+                    self.try_push_object_to_remote(ctx, &checksum)?;
                 }
                 entries.push(TreeEntry {
                     path: file_path.display().to_string(),
@@ -375,7 +376,7 @@ impl ObjectStore {
             let mode = fs::metadata(file_path).ok()
                 .and_then(|m| crate::platform::get_mode(&m));
             if self.remote_push {
-                self.try_push_object_to_remote(&checksum)?;
+                self.try_push_object_to_remote(ctx, &checksum)?;
             }
             entries.push(TreeEntry {
                 path: Self::path_string(file_path),

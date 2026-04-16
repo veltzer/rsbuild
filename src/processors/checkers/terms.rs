@@ -101,7 +101,7 @@ impl crate::processors::Processor for TermsProcessor {
         )
     }
 
-    fn execute(&self, ctx: &crate::build_context::BuildContext, product: &Product) -> Result<()> {
+    fn execute(&self, _ctx: &crate::build_context::BuildContext, product: &Product) -> Result<()> {
         self.execute_product(product)
     }
 
@@ -110,7 +110,7 @@ impl crate::processors::Processor for TermsProcessor {
     }
 
     fn execute_batch(&self, ctx: &crate::build_context::BuildContext, products: &[&Product]) -> Vec<Result<()>> {
-        execute_checker_batch(ctx, products, |ctx, files| self.check_files(files))
+        execute_checker_batch(ctx, products, |_ctx, files| self.check_files(files))
     }
 }
 

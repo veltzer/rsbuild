@@ -117,11 +117,15 @@ fn run() -> Result<()> {
         checksum::set_mtime_check(false);
     }
 
+    // Create the build context before the signal handler so the handler can
+    // call ctx.interrupt() to signal all running subprocesses.
+    let ctx = Arc::new(build_context::BuildContext::new());
+
     // Set up Ctrl+C handler: sets a flag so the executor can stop gracefully
     let interrupted = Arc::new(AtomicBool::new(false));
     {
         let interrupted = Arc::clone(&interrupted);
-        // Spawn a background thread to handle Ctrl+C using tokio's signal handling
+        let ctx_for_signal = Arc::clone(&ctx);
         std::thread::spawn(move || {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -130,7 +134,7 @@ fn run() -> Result<()> {
             rt.block_on(async {
                 tokio::signal::ctrl_c().await.expect(errors::SIGNAL_LISTEN);
                 interrupted.store(true, std::sync::atomic::Ordering::SeqCst);
-                processors::set_interrupted();
+                ctx_for_signal.interrupt();
                 eprintln!("\nInterrupted. Press Ctrl+C again to force exit.");
                 tokio::signal::ctrl_c().await.expect(errors::SIGNAL_LISTEN);
                 std::process::exit(130);
@@ -138,7 +142,6 @@ fn run() -> Result<()> {
         });
     }
     let init_dur = t.elapsed();
-    let ctx = build_context::BuildContext::new();
 
     match cli.command {
         Commands::Build { force, dry_run, verify_tool_versions, stop_after, ref shared } => {
@@ -557,7 +560,7 @@ fn run() -> Result<()> {
         }
         Commands::Watch { ref shared } => {
             let opts = shared.to_build_options(&cli, false, BuildPhase::Build);
-            watcher::watch(&opts, Arc::clone(&interrupted))?;
+            watcher::watch(&ctx, &opts, Arc::clone(&interrupted))?;
         }
     }
 

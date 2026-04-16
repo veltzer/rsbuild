@@ -80,7 +80,7 @@ impl crate::processors::Processor for MarpImagesProcessor {
     }
 
 
-    fn execute(&self, ctx: &crate::build_context::BuildContext, product: &Product) -> Result<()> {
+    fn execute(&self, _ctx: &crate::build_context::BuildContext, product: &Product) -> Result<()> {
         self.execute_product(product)
     }
 
@@ -93,7 +93,7 @@ impl crate::processors::Processor for MarpImagesProcessor {
     fn supports_batch(&self) -> bool { self.config.standard.batch }
 
     fn execute_batch(&self, ctx: &crate::build_context::BuildContext, products: &[&Product]) -> Vec<Result<()>> {
-        crate::processors::execute_checker_batch(ctx, products, |ctx, files| self.check_files(files))
+        crate::processors::execute_checker_batch(ctx, products, |_ctx, files| self.check_files(files))
     }
 }
 

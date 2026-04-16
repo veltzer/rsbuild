@@ -341,15 +341,16 @@ mod tests {
         let temp_dir = TempDir::new().expect("failed to create temp dir");
         let url = format!("file://{}", temp_dir.path().display());
         let backend = FileBackend::new(&url).expect("failed to create file backend");
+        let ctx = crate::build_context::BuildContext::new();
 
         // Test upload and download bytes
         let key = "test/data.txt";
         let data = b"hello world";
 
-        backend.upload_bytes(key, data).expect("upload failed");
-        assert!(backend.exists(key).expect("exists check failed"));
+        backend.upload_bytes(&ctx, key, data).expect("upload failed");
+        assert!(backend.exists(&ctx, key).expect("exists check failed"));
 
-        let downloaded = backend.download_bytes(key).expect("download failed");
+        let downloaded = backend.download_bytes(&ctx, key).expect("download failed");
         assert_eq!(downloaded, Some(data.to_vec()));
     }
 

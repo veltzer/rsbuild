@@ -13,14 +13,9 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::OnceLock;
 use std::time::Duration;
-use tokio::runtime::Runtime;
-use tokio::sync::watch;
 
 use crate::color;
-use crate::errors;
 use crate::config::{
     output_config_hash, resolve_extra_inputs,
     CheckerConfigWithCommand, SimpleCheckerParams, StandardConfig,
@@ -59,35 +54,6 @@ pub mod names {
     pub const RUST_SINGLE_FILE: &str = "rust_single_file";
 }
 
-/// Global flag: set to true on Ctrl+C so subprocesses can be killed promptly.
-static INTERRUPTED: AtomicBool = AtomicBool::new(false);
-
-/// Global tokio runtime for running async subprocess code from sync context.
-static RUNTIME: OnceLock<Runtime> = OnceLock::new();
-
-/// Global channel for broadcasting interrupt signals to all running tasks.
-static INTERRUPT_SENDER: OnceLock<watch::Sender<bool>> = OnceLock::new();
-
-/// Get or initialize the global tokio runtime.
-fn get_runtime() -> &'static Runtime {
-    RUNTIME.get_or_init(|| {
-        Runtime::new().expect(errors::TOKIO_RUNTIME)
-    })
-}
-
-/// Get or initialize the interrupt channel sender.
-fn get_interrupt_sender() -> &'static watch::Sender<bool> {
-    INTERRUPT_SENDER.get_or_init(|| {
-        let (tx, _rx) = watch::channel(false);
-        tx
-    })
-}
-
-/// Get a receiver for interrupt signals.
-fn get_interrupt_receiver() -> watch::Receiver<bool> {
-    get_interrupt_sender().subscribe()
-}
-
 /// Resolve a relative path against an anchor directory.
 /// If the anchor directory is empty, the relative path is returned as-is.
 pub(crate) fn resolve_anchor_path(anchor_dir: &Path, rel: &str) -> PathBuf {
@@ -96,13 +62,6 @@ pub(crate) fn resolve_anchor_path(anchor_dir: &Path, rel: &str) -> PathBuf {
     } else {
         anchor_dir.join(rel)
     }
-}
-
-/// Mark the global interrupted flag and notify all waiting tasks.
-pub(crate) fn set_interrupted() {
-    INTERRUPTED.store(true, Ordering::SeqCst);
-    // Notify all tasks waiting on the interrupt channel
-    let _ = get_interrupt_sender().send(true);
 }
 
 

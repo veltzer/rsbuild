@@ -61,14 +61,14 @@ fn register_watches(
     }
 }
 
-pub fn watch(opts: &BuildOptions, interrupted: Arc<AtomicBool>) -> Result<()> {
+pub fn watch(ctx: &crate::build_context::BuildContext, opts: &BuildOptions, interrupted: Arc<AtomicBool>) -> Result<()> {
     // Initial build
     println!("{}", color::bold("Running initial build..."));
     let mut watch_paths;
     {
         let mut builder = Builder::new()?;
         watch_paths = builder.watch_paths();
-        if let Err(e) = builder.build(opts, Arc::clone(&interrupted), Vec::new()) {
+        if let Err(e) = builder.build(ctx, opts, Arc::clone(&interrupted), Vec::new()) {
             println!("{}", color::red(&format!("Initial build error: {}", e)));
         }
     }
@@ -132,7 +132,7 @@ pub fn watch(opts: &BuildOptions, interrupted: Arc<AtomicBool>) -> Result<()> {
         {
             let mut builder = Builder::new()?;
             let new_paths = builder.watch_paths();
-            if let Err(e) = builder.build(opts, Arc::clone(&interrupted), Vec::new()) {
+            if let Err(e) = builder.build(ctx, opts, Arc::clone(&interrupted), Vec::new()) {
                 println!("{}", color::red(&format!("Build error: {}", e)));
             }
 

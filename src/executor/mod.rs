@@ -168,7 +168,7 @@ impl<'a> Executor<'a> {
 
     /// Check if the build was interrupted (Ctrl+C).
     fn is_interrupted(&self) -> bool {
-        self.interrupted.load(Ordering::SeqCst)
+        self.interrupted.load(Ordering::SeqCst) || self.build_ctx.is_interrupted()
     }
 
     /// Display a product with the current display options.

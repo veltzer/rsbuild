@@ -9,7 +9,6 @@ use crate::errors;
 /// channel. Creating a fresh `BuildContext` gives an isolated build
 /// environment — the prerequisite for daemon mode, LSP integration, and
 /// parallel test harnesses.
-#[allow(dead_code)]
 pub(crate) struct BuildContext {
     runtime: Runtime,
     interrupted: AtomicBool,
@@ -17,7 +16,6 @@ pub(crate) struct BuildContext {
     interrupt_rx: watch::Receiver<bool>,
 }
 
-#[allow(dead_code)]
 impl BuildContext {
     pub(crate) fn new() -> Self {
         let runtime = Runtime::new().expect(errors::TOKIO_RUNTIME);

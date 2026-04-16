@@ -101,5 +101,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::DuplicateFilesConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::DuplicateFilesConfig>,
         keywords: &["checker", "duplicates", "files"],
+        description: "Detect duplicate files by content (SHA-256)",
+        is_native: true,
+        can_fix: false,
     }
 }

@@ -22,11 +22,7 @@ use crate::processors::{Processor, ProcessorType};
 /// immutable processor.
 pub struct ProcessorPlugin {
     pub name: &'static str,
-    /// Processor type. Declared by every plugin but not yet queried by any
-    /// runtime code path — kept as plugin metadata so future features
-    /// (e.g. `processors list --type=checker`) can filter without touching
-    /// every registration.
-    #[allow(dead_code)]
+    /// Processor type (checker, generator, creator, explicit).
     pub processor_type: ProcessorType,
     /// Implementation version. **Bump this when changes would make the processor
     /// produce different output for the same inputs**, or change which inputs are
@@ -47,10 +43,14 @@ pub struct ProcessorPlugin {
     /// Return the default config as pretty JSON. Receives the processor name
     /// so it can apply the correct defaults.
     pub defconfig_json: fn(&str) -> Option<String>,
-    /// Search keywords for `processors search`. Includes language names, tool
-    /// categories, file types, and related terms not already in the name or
-    /// description.
+    /// Search keywords for `processors search`.
     pub keywords: &'static [&'static str],
+    /// Human-readable description (static, no instantiation needed).
+    pub description: &'static str,
+    /// Whether this is a native (pure Rust) processor.
+    pub is_native: bool,
+    /// Whether this processor has fix capability (`rsconstruct fix`).
+    pub can_fix: bool,
 }
 
 unsafe impl Sync for ProcessorPlugin {}

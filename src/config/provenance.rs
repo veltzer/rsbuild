@@ -172,6 +172,18 @@ pub(crate) fn build_global_span_map(source: &str) -> GlobalSpanMap {
     map
 }
 
+/// Convert a byte offset into a 1-based line number, counting `\n` bytes.
+fn byte_offset_to_line(source: &str, offset: usize) -> usize {
+    let clamped = offset.min(source.len());
+    let mut line = 1usize;
+    for b in source.as_bytes()[..clamped].iter() {
+        if *b == b'\n' {
+            line += 1;
+        }
+    }
+    line
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,16 +217,4 @@ parallel = 4
         let build = spans.get("build").expect("expected [build] section in span map");
         assert_eq!(build.get("parallel"), Some(&3), "expected parallel on line 3");
     }
-}
-
-/// Convert a byte offset into a 1-based line number, counting `\n` bytes.
-fn byte_offset_to_line(source: &str, offset: usize) -> usize {
-    let clamped = offset.min(source.len());
-    let mut line = 1usize;
-    for b in source.as_bytes()[..clamped].iter() {
-        if *b == b'\n' {
-            line += 1;
-        }
-    }
-    line
 }

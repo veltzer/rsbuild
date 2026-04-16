@@ -154,5 +154,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::GeneratorConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::GeneratorConfig>,
         keywords: &["generator", "generic"],
+        description: "Run a user-configured script as a generator",
+        is_native: false,
+        can_fix: false,
     }
 }

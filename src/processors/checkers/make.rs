@@ -102,5 +102,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::MakeConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::MakeConfig>,
         keywords: &["make", "makefile", "builder", "checker"],
+        description: "Run make in directories containing Makefiles",
+        is_native: false,
+        can_fix: false,
     }
 }

@@ -78,14 +78,13 @@ fn fast_checksum(ctx: &BuildContext, path: &Path) -> Result<(String, Option<(Str
     };
     drop(db_guard);
 
-    if let Some(ref entry) = cached {
-        if entry.mtime_secs == mtime_secs && entry.mtime_nanos == mtime_nanos {
-            // Also populate the in-memory cache
-            let mut guard = ctx.checksum_cache.lock().unwrap();
-            let cache = guard.get_or_insert_with(HashMap::new);
-            cache.insert(path.to_path_buf(), entry.checksum.clone());
-            return Ok((entry.checksum.clone(), None));
-        }
+    if let Some(ref entry) = cached
+        && entry.mtime_secs == mtime_secs && entry.mtime_nanos == mtime_nanos
+    {
+        let mut guard = ctx.checksum_cache.lock().unwrap();
+        let cache = guard.get_or_insert_with(HashMap::new);
+        cache.insert(path.to_path_buf(), entry.checksum.clone());
+        return Ok((entry.checksum.clone(), None));
     }
 
     // mtime changed or no cache entry — compute checksum

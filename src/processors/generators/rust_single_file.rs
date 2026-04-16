@@ -123,5 +123,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::RustSingleFileConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::RustSingleFileConfig>,
         keywords: &["rust", "compiler", "rs", "cargo", "binary", "executable"],
+        description: "Compile single-file Rust programs into executables",
+        is_native: false,
+        can_fix: false,
     }
 }

@@ -95,5 +95,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::ClangTidyConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ClangTidyConfig>,
         keywords: &["c", "cpp", "linter", "clang", "checker", "cc", "h", "hpp"],
+        description: "Run clang-tidy static analysis on C/C++ source files",
+        is_native: false,
+        can_fix: false,
     }
 }

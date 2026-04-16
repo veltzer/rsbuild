@@ -17,4 +17,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["svg", "optimizer", "xml", "node", "npm"],
+    description: "Validate SVG files using svgo (stdout discarded; non-zero exit = malformed SVG)",
+    is_native: false,
+    can_fix: false,
 } }

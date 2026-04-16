@@ -43,4 +43,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["markdown", "converter", "pdf", "html", "docx", "generator"],
+    description: "Convert documents using pandoc",
+    is_native: false,
+    can_fix: false,
 } }

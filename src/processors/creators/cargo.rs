@@ -148,5 +148,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::CargoConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::CargoConfig>,
         keywords: &["rust", "builder", "cargo", "rs", "package-manager"],
+        description: "Build Rust projects using Cargo",
+        is_native: false,
+        can_fix: false,
     }
 }

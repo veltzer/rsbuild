@@ -581,5 +581,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::CcSingleFileConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::CcSingleFileConfig>,
         keywords: &["c", "cpp", "compiler", "gcc", "clang", "binary", "executable"],
+        description: "Compile C/C++ source files into executables (single-file)",
+        is_native: false,
+        can_fix: false,
     }
 }

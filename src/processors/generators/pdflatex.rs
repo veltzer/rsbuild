@@ -159,5 +159,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::PdflatexConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::PdflatexConfig>,
         keywords: &["latex", "tex", "pdf", "generator", "typesetting"],
+        description: "Compile LaTeX documents using pdflatex",
+        is_native: false,
+        can_fix: false,
     }
 }

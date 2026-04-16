@@ -105,5 +105,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::AsciiConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::AsciiConfig>,
         keywords: &["checker", "encoding", "ascii", "text", "validator"],
+        description: "Check files for non-ASCII characters",
+        is_native: true,
+        can_fix: false,
     }
 }

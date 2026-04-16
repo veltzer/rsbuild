@@ -132,5 +132,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::MakoConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::MakoConfig>,
         keywords: &["python", "template", "generator", "pip"],
+        description: "Render Mako templates into output files",
+        is_native: false,
+        can_fix: false,
     }
 }

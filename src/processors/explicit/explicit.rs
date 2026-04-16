@@ -186,5 +186,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::ExplicitConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ExplicitConfig>,
         keywords: &["explicit", "command", "custom", "script"],
+        description: "Run a command with explicitly declared inputs and outputs",
+        is_native: false,
+        can_fix: false,
     }
 }

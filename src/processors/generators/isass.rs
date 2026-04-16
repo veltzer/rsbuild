@@ -33,4 +33,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["sass", "scss", "css", "converter", "web", "frontend"],
+    description: "Compile Sass/SCSS to CSS (in-process)",
+    is_native: true,
+    can_fix: false,
 } }

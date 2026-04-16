@@ -39,4 +39,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["binary", "disassembler", "c", "cpp", "generator"],
+    description: "Disassemble object files using objdump",
+    is_native: false,
+    can_fix: false,
 } }

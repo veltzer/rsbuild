@@ -15,4 +15,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["yaml", "yml", "linter", "validator", "pip"],
+    description: "Lint YAML files using yamllint",
+    is_native: false,
+    can_fix: false,
 } }

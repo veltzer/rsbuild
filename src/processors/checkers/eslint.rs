@@ -15,4 +15,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["javascript", "typescript", "linter", "js", "ts", "jsx", "tsx", "node", "npm", "web", "frontend"],
+    description: "Lint JavaScript/TypeScript files using ESLint",
+    is_native: false,
+    can_fix: true,
 } }

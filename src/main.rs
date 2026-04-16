@@ -346,11 +346,20 @@ fn run() -> (Result<()>, bool) {
         Commands::Errors => {
             list_exit_codes(cli.verbose)?;
         }
-        Commands::Fix { processors } => {
+        Commands::Fix { action } => {
             let builder = Builder::new()?;
             builder.apply_config_to_context(&ctx);
-            let filter = if processors.is_empty() { None } else { Some(processors) };
-            builder.fix(&ctx, filter.as_deref())?;
+            match action {
+                cli::FixAction::Run { processors } => {
+                    if processors.is_empty() {
+                        bail!("No processors specified. Usage: rsconstruct fix run <processor1,processor2,...>");
+                    }
+                    builder.fix(&ctx, Some(&processors))?;
+                }
+                cli::FixAction::List => {
+                    builder.fix_list()?;
+                }
+            }
         }
         Commands::Graph { action } => {
             let builder = Builder::new()?;
@@ -370,8 +379,8 @@ fn run() -> (Result<()>, bool) {
         Commands::Processors { action } => {
             let has_config = std::path::Path::new("rsconstruct.toml").exists();
             match action {
-                cli::ProcessorAction::List => {
-                    builder::processors::list_processors_no_config(cli.verbose)?;
+                cli::ProcessorAction::List { ref processor_type } => {
+                    builder::processors::list_processors_no_config(cli.verbose, processor_type.as_deref())?;
                 }
                 cli::ProcessorAction::Types => {
                     builder::processors::list_processor_types(cli.verbose)?;

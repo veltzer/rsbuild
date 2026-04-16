@@ -128,5 +128,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::SphinxConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::SphinxConfig>,
         keywords: &["python", "sphinx", "documentation", "rst", "html", "pip"],
+        description: "Build Sphinx documentation",
+        is_native: false,
+        can_fix: false,
     }
 }

@@ -362,5 +362,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::CcConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::CcConfig>,
         keywords: &["c", "cpp", "builder", "compiler", "gcc", "clang", "cc", "h", "hpp"],
+        description: "Build C/C++ projects from cc.yaml manifests",
+        is_native: false,
+        can_fix: false,
     }
 }

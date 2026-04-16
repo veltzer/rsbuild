@@ -15,4 +15,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["python", "linter", "formatter", "py", "pip"],
+    description: "Lint and format Python files using ruff",
+    is_native: false,
+    can_fix: true,
 } }

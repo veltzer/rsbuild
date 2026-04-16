@@ -267,5 +267,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::IpdfuniteConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IpdfuniteConfig>,
         keywords: &["pdf", "merger", "generator"],
+        description: "Merge PDFs from subdirectories into course bundles (in-process)",
+        is_native: true,
+        can_fix: false,
     }
 }

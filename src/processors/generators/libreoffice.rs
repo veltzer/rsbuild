@@ -61,4 +61,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["document", "converter", "pdf", "docx", "odt", "generator"],
+    description: "Convert documents using LibreOffice",
+    is_native: false,
+    can_fix: false,
 } }

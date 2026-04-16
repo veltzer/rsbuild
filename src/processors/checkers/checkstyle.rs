@@ -15,4 +15,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["java", "linter", "checker", "style"],
+    description: "Check Java code style using Checkstyle",
+    is_native: false,
+    can_fix: false,
 } }

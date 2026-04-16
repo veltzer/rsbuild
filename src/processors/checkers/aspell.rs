@@ -171,5 +171,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::AspellConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::AspellConfig>,
         keywords: &["spellcheck", "spelling", "english", "checker"],
+        description: "Check spelling using aspell",
+        is_native: false,
+        can_fix: false,
     }
 }

@@ -25,11 +25,7 @@ impl ObjectStore {
         // we retry once after forcing writable.
         if let Err(first_err) = fs::write(&path, &data) {
             if first_err.kind() == std::io::ErrorKind::PermissionDenied {
-                if let Ok(meta) = fs::metadata(&path) {
-                    let mut perms = meta.permissions();
-                    perms.set_readonly(false);
-                    let _ = fs::set_permissions(&path, perms);
-                }
+                let _ = crate::platform::set_permissions_mode(&path, 0o644);
                 fs::write(&path, &data)
                     .with_context(|| format!("Failed to write cache descriptor (retry): {}", path.display()))?;
             } else {

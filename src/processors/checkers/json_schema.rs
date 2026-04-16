@@ -140,5 +140,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::JsonSchemaConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::JsonSchemaConfig>,
         keywords: &["json", "schema", "validator", "checker"],
+        description: "Validate propertyOrdering in JSON schema files",
+        is_native: true,
+        can_fix: false,
     }
 }

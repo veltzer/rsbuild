@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 use anyhow::Result;
+use tabled::builder::Builder as TableBuilder;
 use crate::color;
-use super::Builder;
+use super::{Builder, sorted_keys};
 
 impl Builder {
     /// Run fix mode on all (or filtered) checker processors that have fix capability.
@@ -69,7 +70,7 @@ impl Builder {
 
             if processor.supports_fix_batch() && proc_products.len() > 1 {
                 // Batch fix
-                let refs: Vec<&crate::graph::Product> = proc_products.iter().copied().collect();
+                let refs: Vec<&crate::graph::Product> = proc_products.to_vec();
                 let results = processor.fix_batch(ctx, &refs);
                 for result in results {
                     match result {
@@ -106,6 +107,45 @@ impl Builder {
                 fixed_count,
             )));
         }
+
+        Ok(())
+    }
+
+    /// List all fix-capable processors declared in this project.
+    pub fn fix_list(&self) -> Result<()> {
+        let processors = self.create_processors()?;
+        let proc_names = sorted_keys(&processors);
+
+        let fixers: Vec<&String> = proc_names.iter()
+            .filter(|name| processors[name.as_str()].can_fix())
+            .copied()
+            .collect();
+
+        if fixers.is_empty() {
+            println!("{}", color::yellow("No fix-capable processors declared in this project."));
+            return Ok(());
+        }
+
+        if crate::json_output::is_json_mode() {
+            let entries: Vec<serde_json::Value> = fixers.iter().map(|name| {
+                let proc = &processors[name.as_str()];
+                serde_json::json!({
+                    "name": name,
+                    "type": proc.processor_type().as_str(),
+                    "description": proc.description(),
+                })
+            }).collect();
+            println!("{}", serde_json::to_string_pretty(&entries)?);
+            return Ok(());
+        }
+
+        let mut builder = TableBuilder::new();
+        builder.push_record(["Name", "Type", "Description"]);
+        for name in &fixers {
+            let proc = &processors[name.as_str()];
+            builder.push_record([name.as_str(), proc.processor_type().as_str(), proc.description()]);
+        }
+        color::print_table(builder.build());
 
         Ok(())
     }

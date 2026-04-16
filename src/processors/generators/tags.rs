@@ -1969,5 +1969,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::TagsConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::TagsConfig>,
         keywords: &["ctags", "tags", "generator", "code-navigation"],
+        description: "Extract YAML frontmatter tags from markdown files into a searchable database",
+        is_native: true,
+        can_fix: false,
     }
 }

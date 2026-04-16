@@ -87,5 +87,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::IjqConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IjqConfig>,
         keywords: &["json", "checker", "jq", "validator"],
+        description: "Validate JSON files (in-process)",
+        is_native: true,
+        can_fix: false,
     }
 }

@@ -106,5 +106,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::EncodingConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::EncodingConfig>,
         keywords: &["checker", "encoding", "utf8", "text", "validator"],
+        description: "Validate that text files are valid UTF-8 without BOM",
+        is_native: true,
+        can_fix: false,
     }
 }

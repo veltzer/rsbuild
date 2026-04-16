@@ -536,5 +536,8 @@ inventory::submit! {
         must_fields: registry::typed_must_fields::<crate::config::TeraConfig>,
         field_descriptions: registry::typed_field_descriptions::<crate::config::TeraConfig>,
         keywords: &["template", "generator", "jinja", "html", "rust"],
+        description: "Render Tera templates into output files",
+        is_native: true,
+        can_fix: false,
     }
 }

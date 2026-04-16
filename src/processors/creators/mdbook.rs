@@ -112,5 +112,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::MdbookConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::MdbookConfig>,
         keywords: &["markdown", "md", "rust", "documentation", "book", "html"],
+        description: "Build mdbook documentation",
+        is_native: false,
+        can_fix: false,
     }
 }

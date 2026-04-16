@@ -15,4 +15,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["javascript", "linter", "js", "node", "npm", "web", "frontend"],
+    description: "Check JavaScript style using standard",
+    is_native: false,
+    can_fix: true,
 } }

@@ -114,5 +114,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::PipConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::PipConfig>,
         keywords: &["python", "pip", "package-manager", "py"],
+        description: "Install Python dependencies using pip",
+        is_native: false,
+        can_fix: false,
     }
 }

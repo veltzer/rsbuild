@@ -87,5 +87,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::IyamllintConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IyamllintConfig>,
         keywords: &["yaml", "yml", "linter", "validator"],
+        description: "Validate YAML files (in-process)",
+        is_native: true,
+        can_fix: false,
     }
 }

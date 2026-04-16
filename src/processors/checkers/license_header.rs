@@ -126,5 +126,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::LicenseHeaderConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::LicenseHeaderConfig>,
         keywords: &["checker", "license", "header", "copyright"],
+        description: "Verify source files contain required license headers",
+        is_native: true,
+        can_fix: false,
     }
 }

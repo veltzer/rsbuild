@@ -674,5 +674,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::TermsConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::TermsConfig>,
         keywords: &["checker", "terminology", "text", "words"],
+        description: "Check that technical terms are backtick-quoted in markdown files",
+        is_native: true,
+        can_fix: false,
     }
 }

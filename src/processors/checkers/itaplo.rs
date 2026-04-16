@@ -87,5 +87,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::ItaploConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ItaploConfig>,
         keywords: &["toml", "formatter", "linter", "validator"],
+        description: "Validate TOML files (in-process)",
+        is_native: true,
+        can_fix: false,
     }
 }

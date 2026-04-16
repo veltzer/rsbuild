@@ -245,5 +245,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::ZspellConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ZspellConfig>,
         keywords: &["spellcheck", "spelling", "markdown", "md", "english"],
+        description: "Check documentation files for spelling errors",
+        is_native: true,
+        can_fix: false,
     }
 }

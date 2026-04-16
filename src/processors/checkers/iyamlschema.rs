@@ -237,5 +237,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::IyamlschemaConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IyamlschemaConfig>,
         keywords: &["yaml", "yml", "schema", "validator"],
+        description: "Validate YAML files against JSON schemas (in-process)",
+        is_native: true,
+        can_fix: false,
     }
 }

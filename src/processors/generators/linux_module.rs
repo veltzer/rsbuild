@@ -243,5 +243,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::LinuxModuleConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::LinuxModuleConfig>,
         keywords: &["c", "linux", "kernel", "module", "builder"],
+        description: "Build Linux kernel modules from linux-module.yaml manifests",
+        is_native: false,
+        can_fix: false,
     }
 }

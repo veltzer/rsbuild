@@ -87,5 +87,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::IjsonlintConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IjsonlintConfig>,
         keywords: &["json", "linter", "validator"],
+        description: "Lint JSON files (in-process)",
+        is_native: true,
+        can_fix: false,
     }
 }

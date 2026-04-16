@@ -19,10 +19,9 @@ pub fn search_processors(query: &str) -> Result<()> {
             .map(|p| p.description().to_lowercase().contains(&query_lower))
             .unwrap_or(false);
 
-        if name_match || keyword_match || desc_match {
-            if let Some(proc) = processors.get(plugin.name) {
-                matches.push((plugin.name, proc.as_ref(), plugin.keywords));
-            }
+        if (name_match || keyword_match || desc_match)
+            && let Some(proc) = processors.get(plugin.name) {
+            matches.push((plugin.name, proc.as_ref(), plugin.keywords));
         }
     }
 
@@ -96,25 +95,31 @@ pub fn list_processor_types(verbose: bool) -> Result<()> {
 }
 
 /// List all built-in processors (works without rsconstruct.toml).
-/// Used when no project config is available.
-pub fn list_processors_no_config(verbose: bool) -> Result<()> {
-    let processors = create_all_default_processors();
-    let proc_names = sorted_keys(&processors);
+/// Uses static plugin metadata — no processor instantiation needed.
+/// Optionally filters by processor type (e.g., "checker", "generator").
+pub fn list_processors_no_config(verbose: bool, type_filter: Option<&str>) -> Result<()> {
+    let mut plugins: Vec<&crate::registries::ProcessorPlugin> =
+        crate::registries::processor::all_plugins().collect();
+    plugins.sort_by_key(|p| p.name);
+
+    if let Some(filter) = type_filter {
+        plugins.retain(|p| p.processor_type.as_str() == filter);
+        if plugins.is_empty() {
+            anyhow::bail!("No processors of type '{}'. Valid types: checker, generator, creator, explicit.", filter);
+        }
+    }
 
     if crate::json_output::is_json_mode() {
-        let entries: Vec<crate::json_output::ProcessorListEntry> = proc_names.iter()
-            .map(|name| {
-                let proc = &processors[name.as_str()];
-                crate::json_output::ProcessorListEntry {
-                    name: name.to_string(),
-                    processor_type: proc.processor_type().as_str().to_string(),
-                    enabled: false,
-                    detected: false,
-                    batch: proc.supports_batch(),
-                    native: proc.is_native(),
-                    fix: proc.can_fix(),
-                    description: proc.description().to_string(),
-                }
+        let entries: Vec<crate::json_output::ProcessorListEntry> = plugins.iter()
+            .map(|p| crate::json_output::ProcessorListEntry {
+                name: p.name.to_string(),
+                processor_type: p.processor_type.as_str().to_string(),
+                enabled: false,
+                detected: false,
+                batch: false, // not available from static metadata
+                native: p.is_native,
+                fix: p.can_fix,
+                description: p.description.to_string(),
             })
             .collect();
         println!("{}", serde_json::to_string_pretty(&entries)?);
@@ -123,22 +128,18 @@ pub fn list_processors_no_config(verbose: bool) -> Result<()> {
 
     let mut builder = TableBuilder::new();
     if verbose {
-        builder.push_record(["Name", "Type", "Native", "Batch", "Fix", "Description"]);
-        for name in &proc_names {
-            let proc = &processors[name.as_str()];
-            let native_tag = if proc.is_native() { "native" } else { "external" };
-            let batch_tag = if proc.supports_batch() { "batch" } else { "single" };
-            let fix_tag = color::yes_no(proc.can_fix());
-            builder.push_record([name.as_str(), proc.processor_type().as_str(), native_tag, batch_tag, fix_tag, proc.description()]);
+        builder.push_record(["Name", "Type", "Native", "Fix", "Description"]);
+        for p in &plugins {
+            let native_tag = if p.is_native { "native" } else { "external" };
+            let fix_tag = color::yes_no(p.can_fix);
+            builder.push_record([p.name, p.processor_type.as_str(), native_tag, fix_tag, p.description]);
         }
     } else {
-        builder.push_record(["Name", "Type", "Native", "Batch", "Fix"]);
-        for name in &proc_names {
-            let proc = &processors[name.as_str()];
-            let native_tag = if proc.is_native() { "native" } else { "external" };
-            let batch_tag = if proc.supports_batch() { "batch" } else { "single" };
-            let fix_tag = color::yes_no(proc.can_fix());
-            builder.push_record([name.as_str(), proc.processor_type().as_str(), native_tag, batch_tag, fix_tag]);
+        builder.push_record(["Name", "Type", "Native", "Fix"]);
+        for p in &plugins {
+            let native_tag = if p.is_native { "native" } else { "external" };
+            let fix_tag = color::yes_no(p.can_fix);
+            builder.push_record([p.name, p.processor_type.as_str(), native_tag, fix_tag]);
         }
     }
     color::print_table(builder.build());
@@ -229,7 +230,7 @@ fn config_diff(name: &str, current: &serde_json::Value) -> serde_json::Value {
 /// Columns: Field, Type, Default, Required, Output (and Description in verbose mode).
 /// - Required: "yes" if the field is in `must_fields()` (must be set non-empty by user).
 /// - Output:   "yes" if the field is in `output_fields()` (changes affect what the tool produces
-///             and trigger rebuilds).
+///   and trigger rebuilds).
 fn print_processor_metadata(name: &str, verbose: bool) {
     use crate::config::{SCAN_FIELD_DESCRIPTIONS, SHARED_FIELD_DESCRIPTIONS};
 
@@ -320,7 +321,7 @@ impl Builder {
         let proc_names = sorted_keys(&processors);
 
         match action {
-            ProcessorAction::List | ProcessorAction::Recommend | ProcessorAction::Types | ProcessorAction::Add { .. }
+            ProcessorAction::List { .. } | ProcessorAction::Recommend | ProcessorAction::Types | ProcessorAction::Add { .. }
             | ProcessorAction::Delete { .. } | ProcessorAction::Disable { .. } | ProcessorAction::Enable { .. }
             | ProcessorAction::Search { .. } => unreachable!("handled before Builder is constructed"),
             ProcessorAction::Used => {

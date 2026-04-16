@@ -141,5 +141,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::CreatorConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::CreatorConfig>,
         keywords: &["builder", "creator", "generic"],
+        description: "Run a command and cache declared outputs",
+        is_native: false,
+        can_fix: false,
     }
 }

@@ -15,4 +15,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["perl", "linter", "pl", "pm"],
+    description: "Analyze Perl code using perlcritic",
+    is_native: false,
+    can_fix: false,
 } }

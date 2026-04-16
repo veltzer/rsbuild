@@ -136,5 +136,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::ScriptConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ScriptConfig>,
         keywords: &["shell", "script", "checker", "sh", "bash"],
+        description: "Run a user-configured script as a checker",
+        is_native: false,
+        can_fix: false,
     }
 }

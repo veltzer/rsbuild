@@ -127,5 +127,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::GemConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::GemConfig>,
         keywords: &["ruby", "gem", "package-manager", "rb"],
+        description: "Install Ruby dependencies using Bundler",
+        is_native: false,
+        can_fix: false,
     }
 }

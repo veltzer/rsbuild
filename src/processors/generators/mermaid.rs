@@ -35,4 +35,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["diagram", "mermaid", "svg", "png", "generator", "node", "npm"],
+    description: "Render Mermaid diagrams to images",
+    is_native: false,
+    can_fix: false,
 } }

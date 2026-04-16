@@ -132,5 +132,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::Jinja2Config>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::Jinja2Config>,
         keywords: &["python", "template", "generator", "jinja", "pip"],
+        description: "Render Jinja2 templates into output files",
+        is_native: false,
+        can_fix: false,
     }
 }

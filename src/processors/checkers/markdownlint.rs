@@ -78,5 +78,8 @@ inventory::submit! {
         must_fields: crate::registries::typed_must_fields::<crate::config::MarkdownlintConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::MarkdownlintConfig>,
         keywords: &["markdown", "md", "linter", "node", "npm"],
+        description: "Lint Markdown files using markdownlint",
+        is_native: false,
+        can_fix: true,
     }
 }

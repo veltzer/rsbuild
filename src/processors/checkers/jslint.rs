@@ -15,4 +15,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["javascript", "linter", "js", "node", "web", "frontend"],
+    description: "Lint JavaScript files using JSLint",
+    is_native: false,
+    can_fix: false,
 } }

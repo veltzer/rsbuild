@@ -36,4 +36,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
     keywords: &["markdown", "md", "html", "converter", "generator"],
+    description: "Convert Markdown to HTML (in-process)",
+    is_native: true,
+    can_fix: false,
 } }

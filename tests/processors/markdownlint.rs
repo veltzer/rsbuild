@@ -17,10 +17,10 @@ fn markdownlint_valid_file() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let project_path = temp_dir.path();
 
-    // Point markdownlint_bin to the system markdownlint, skip npm dependency
+    // Point command to the system markdownlint, skip npm dependency
     fs::write(
         project_path.join("rsconstruct.toml"),
-        "[processor.markdownlint]\nmarkdownlint_bin = \"markdownlint\"\nsrc_dirs = [\".\"]\n",
+        "[processor.markdownlint]\ncommand = \"markdownlint\"\nsrc_dirs = [\".\"]\n",
     )
     .unwrap();
 

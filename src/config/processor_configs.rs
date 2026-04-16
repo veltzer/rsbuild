@@ -1273,14 +1273,8 @@ impl KnownFields for MdlConfig {
 
 
 
-fn default_markdownlint_bin() -> String {
-    "markdownlint".into()
-}
-
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MarkdownlintConfig {
-    #[serde(default = "default_markdownlint_bin")]
-    pub markdownlint_bin: String,
     #[serde(flatten)]
     pub standard: StandardConfig,
 }
@@ -1288,8 +1282,10 @@ pub struct MarkdownlintConfig {
 impl Default for MarkdownlintConfig {
     fn default() -> Self {
         Self {
-            markdownlint_bin: "markdownlint".into(),
-            standard: StandardConfig::default(),
+            standard: StandardConfig {
+                command: "markdownlint".into(),
+                ..StandardConfig::default()
+            },
         }
     }
 }
@@ -1297,16 +1293,16 @@ impl Default for MarkdownlintConfig {
 impl KnownFields for MarkdownlintConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "markdownlint_bin", "args", "dep_inputs", "dep_auto", "batch", "max_jobs",
+            "command", "args", "dep_inputs", "dep_auto", "batch", "max_jobs",
         ]
     }
     fn output_fields() -> &'static [&'static str] {
-        &["markdownlint_bin", "args"]
+        &["command", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
         &[
-            ("markdownlint_bin", "Path to the markdownlint executable"),
-            ("args",             "Extra arguments passed to markdownlint"),
+            ("command", "Path to the markdownlint executable"),
+            ("args",    "Extra arguments passed to markdownlint"),
         ]
     }
 }

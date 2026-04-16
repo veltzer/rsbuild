@@ -658,7 +658,7 @@ pub(crate) fn processor_defaults_for(type_name: &str) -> Option<ProcessorDefault
         "yaml2json" => ProcessorDefaults { output_dir: "out/yaml2json", ..d },
         // Checkers with custom dep_auto
         "mdl" => ProcessorDefaults { dep_auto: &[".mdlrc"], ..d },
-        "markdownlint" => ProcessorDefaults { dep_auto: &[".markdownlint.json", ".markdownlint.jsonc", ".markdownlint.yaml"], ..d },
+        "markdownlint" => ProcessorDefaults { command: "markdownlint", dep_auto: &[".markdownlint.json", ".markdownlint.jsonc", ".markdownlint.yaml"], ..d },
         "aspell" => ProcessorDefaults { dep_auto: &[".aspell.conf", ".aspell.en.pws", ".aspell.en.prepl"], ..d },
         // Generators with custom output_dir
         "pdflatex" => ProcessorDefaults { output_dir: "out/pdflatex", ..d },
@@ -1255,7 +1255,7 @@ fn expected_field_type(processor: &str, field: &str) -> Option<FieldType> {
         ("mdl", "gem_home" | "mdl_bin" | "gem_stamp") => Some(FieldType::String),
         ("mdl", "local_repo") => Some(FieldType::Bool),
         // markdownlint
-        ("markdownlint", "markdownlint_bin" | "npm_stamp") => Some(FieldType::String),
+        ("markdownlint", "command" | "npm_stamp") => Some(FieldType::String),
         ("markdownlint", "local_repo") => Some(FieldType::Bool),
         // aspell
         ("aspell", "aspell" | "conf" | "words_file") => Some(FieldType::String),

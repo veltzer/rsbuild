@@ -38,7 +38,7 @@ impl Processor for MarkdownlintProcessor {
     }
 
     fn required_tools(&self) -> Vec<String> {
-        vec![self.config.markdownlint_bin.clone()]
+        vec![self.config.standard.command.clone()]
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
@@ -53,7 +53,7 @@ impl Processor for MarkdownlintProcessor {
 
     fn execute(&self, ctx: &crate::build_context::BuildContext, product: &Product) -> Result<()> {
         let file = product.primary_input();
-        let mut cmd = Command::new(&self.config.markdownlint_bin);
+        let mut cmd = Command::new(&self.config.standard.command);
         for arg in &self.config.standard.args {
             cmd.arg(arg);
         }

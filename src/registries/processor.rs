@@ -74,9 +74,14 @@ pub(crate) fn processor_name_parser() -> clap::builder::PossibleValuesParser {
 }
 
 /// Apply both processor defaults and scan defaults to a TOML value.
-pub fn apply_all_defaults(name: &str, value: &mut toml::Value) {
-    crate::config::apply_processor_defaults(name, value);
-    crate::config::apply_scan_defaults(name, value);
+/// Every field that's injected is recorded in `provenance`.
+pub fn apply_all_defaults(
+    name: &str,
+    value: &mut toml::Value,
+    provenance: &mut crate::config::ProvenanceMap,
+) {
+    crate::config::apply_processor_defaults(name, value, provenance);
+    crate::config::apply_scan_defaults(name, value, provenance);
 }
 
 // --- Helpers that processor files call from their create/defconfig functions ---
@@ -93,7 +98,8 @@ pub fn deserialize_and_create<C: Default + DeserializeOwned>(
 /// Build default config JSON for a config type, applying defaults for the given processor name.
 pub fn default_config_json<C: Default + DeserializeOwned + Serialize>(name: &str) -> Option<String> {
     let mut val = toml::Value::Table(toml::map::Map::new());
-    apply_all_defaults(name, &mut val);
+    let mut prov = crate::config::ProvenanceMap::new();
+    apply_all_defaults(name, &mut val, &mut prov);
     let cfg: C = toml::from_str(&toml::to_string(&val).ok()?).ok()?;
     serde_json::to_string_pretty(&serde_json::to_value(cfg).ok()?).ok()
 }

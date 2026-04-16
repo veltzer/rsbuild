@@ -1,11 +1,13 @@
 mod analyzer_configs;
 mod processor_configs;
+mod provenance;
 mod variables;
 #[cfg(test)]
 mod tests;
 
 pub(crate) use analyzer_configs::*;
 pub(crate) use processor_configs::*;
+pub(crate) use provenance::{FieldProvenance, ProvenanceMap, Section, SpanMap};
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -238,6 +240,13 @@ pub(crate) struct Config {
     pub dependencies: DependenciesConfig,
     #[serde(default)]
     pub command: CommandsConfig,
+    /// Field-level provenance for every top-level `[section]` (build, cache,
+    /// graph, plugins, dependencies, command, completions). Each key is the
+    /// section name; the inner map's keys are field names within that section.
+    /// Populated by `Config::load` from a toml_edit walk — never present in
+    /// user TOML, so skipped during (de)serialization.
+    #[serde(skip)]
+    pub global_provenance: HashMap<String, ProvenanceMap>,
 }
 
 /// Configuration for the `symlink-install` command.
@@ -373,6 +382,8 @@ pub(crate) struct ProcessorInstance {
     pub type_name: String,
     /// The raw TOML config for this instance (deserialized lazily per processor type)
     pub config_toml: toml::Value,
+    /// Source of every field in `config_toml` (user TOML, processor default, scan default, …).
+    pub provenance: ProvenanceMap,
 }
 
 use crate::registries::{self as registry, ProcessorPlugin};
@@ -396,10 +407,30 @@ pub(crate) fn is_builtin_type(name: &str) -> bool {
     find_registry_entry(name).is_some()
 }
 
+/// Seed a provenance map with every top-level key currently present in `value`,
+/// marking each as originating from the user's TOML. Defaults applied afterwards
+/// will see these entries and not overwrite them.
+///
+/// Line numbers are filled in later by the toml_edit span pass; until then we
+/// use line 0 as a sentinel meaning "from user TOML, line unknown".
+pub(crate) fn seed_user_provenance(value: &toml::Value) -> ProvenanceMap {
+    let mut map = ProvenanceMap::new();
+    if let Some(table) = value.as_table() {
+        for key in table.keys() {
+            map.insert(key.clone(), FieldProvenance::UserToml { line: 0 });
+        }
+    }
+    map
+}
+
 /// Resolve scan and processor defaults for an instance config in-place.
-pub(crate) fn resolve_instance_defaults(type_name: &str, value: &mut toml::Value) -> anyhow::Result<()> {
+pub(crate) fn resolve_instance_defaults(
+    type_name: &str,
+    value: &mut toml::Value,
+    provenance: &mut ProvenanceMap,
+) -> anyhow::Result<()> {
     if find_registry_entry(type_name).is_some() {
-        registry::apply_all_defaults(type_name, value);
+        registry::apply_all_defaults(type_name, value, provenance);
     }
     Ok(())
 }
@@ -630,63 +661,109 @@ pub(crate) fn processor_defaults_for(type_name: &str) -> Option<ProcessorDefault
 
 /// Apply processor-specific defaults to a config TOML value.
 /// Sets command and dep_auto if they weren't explicitly provided by the user.
-pub(crate) fn apply_processor_defaults(type_name: &str, value: &mut toml::Value) {
-    if let Some(defaults) = processor_defaults_for(type_name) {
-        let table = match value.as_table_mut() {
-            Some(t) => t,
-            None => return,
-        };
-        let set_string = |t: &mut toml::map::Map<String, toml::Value>, key: &str, val: &str| {
-            if !val.is_empty() && !t.contains_key(key) {
-                t.insert(key.into(), toml::Value::String(val.into()));
-            }
-        };
-        let set_array = |t: &mut toml::map::Map<String, toml::Value>, key: &str, vals: &[&str]| {
-            if !vals.is_empty() && !t.contains_key(key) {
-                let arr: Vec<toml::Value> = vals.iter().map(|s| toml::Value::String(s.to_string())).collect();
-                t.insert(key.into(), toml::Value::Array(arr));
-            }
-        };
-        set_string(table, "command", defaults.command);
-        set_string(table, "output_dir", defaults.output_dir);
-        set_array(table, "dep_auto", defaults.dep_auto);
-        set_array(table, "formats", defaults.formats);
-        set_array(table, "args", defaults.args);
-        if let Some(batch) = defaults.batch {
-            if !table.contains_key("batch") {
-                table.insert("batch".into(), toml::Value::Boolean(batch));
-            }
-        }
+/// Every field that's actually injected is recorded in `provenance` as a processor default.
+/// Fields already present in `provenance` (i.e. user-set) are skipped.
+pub(crate) fn apply_processor_defaults(
+    type_name: &str,
+    value: &mut toml::Value,
+    provenance: &mut ProvenanceMap,
+) {
+    let defaults = match processor_defaults_for(type_name) {
+        Some(d) => d,
+        None => return,
+    };
+    let table = match value.as_table_mut() {
+        Some(t) => t,
+        None => return,
+    };
+    set_string_default(table, "command", defaults.command, provenance, FieldProvenance::ProcessorDefault);
+    set_string_default(table, "output_dir", defaults.output_dir, provenance, FieldProvenance::ProcessorDefault);
+    set_string_array_default(table, "dep_auto", defaults.dep_auto, provenance, FieldProvenance::ProcessorDefault);
+    set_string_array_default(table, "formats", defaults.formats, provenance, FieldProvenance::ProcessorDefault);
+    set_string_array_default(table, "args", defaults.args, provenance, FieldProvenance::ProcessorDefault);
+    if let Some(batch) = defaults.batch
+        && !table.contains_key("batch")
+    {
+        table.insert("batch".into(), toml::Value::Boolean(batch));
+        provenance::record_if_absent(provenance, "batch", FieldProvenance::ProcessorDefault);
+    }
+}
+
+fn set_string_default(
+    table: &mut toml::map::Map<String, toml::Value>,
+    key: &str,
+    val: &str,
+    provenance: &mut ProvenanceMap,
+    source: FieldProvenance,
+) {
+    if !val.is_empty() && !table.contains_key(key) {
+        table.insert(key.into(), toml::Value::String(val.into()));
+        provenance::record_if_absent(provenance, key, source);
+    }
+}
+
+fn set_string_array_default(
+    table: &mut toml::map::Map<String, toml::Value>,
+    key: &str,
+    vals: &[&str],
+    provenance: &mut ProvenanceMap,
+    source: FieldProvenance,
+) {
+    if !vals.is_empty() && !table.contains_key(key) {
+        let arr: Vec<toml::Value> = vals.iter().map(|s| toml::Value::String(s.to_string())).collect();
+        table.insert(key.into(), toml::Value::Array(arr));
+        provenance::record_if_absent(provenance, key, source);
+    }
+}
+
+fn set_empty_array_default(
+    table: &mut toml::map::Map<String, toml::Value>,
+    key: &str,
+    provenance: &mut ProvenanceMap,
+    source: FieldProvenance,
+) {
+    if !table.contains_key(key) {
+        table.insert(key.into(), toml::Value::Array(Vec::new()));
+        provenance::record_if_absent(provenance, key, source);
+    }
+}
+
+fn set_maybe_empty_array_default(
+    table: &mut toml::map::Map<String, toml::Value>,
+    key: &str,
+    vals: &[&str],
+    provenance: &mut ProvenanceMap,
+    source: FieldProvenance,
+) {
+    if !table.contains_key(key) {
+        let arr: Vec<toml::Value> = vals.iter().map(|s| toml::Value::String(s.to_string())).collect();
+        table.insert(key.into(), toml::Value::Array(arr));
+        provenance::record_if_absent(provenance, key, source);
     }
 }
 
 /// Apply scan defaults to a config TOML value.
 /// Sets src_dirs, src_extensions, and src_exclude_dirs if not explicitly provided.
-pub(crate) fn apply_scan_defaults(type_name: &str, value: &mut toml::Value) {
-    if let Some(defaults) = scan_defaults_for(type_name) {
-        let table = match value.as_table_mut() {
-            Some(t) => t,
-            None => return,
-        };
-        let set_array = |t: &mut toml::map::Map<String, toml::Value>, key: &str, vals: &[&str]| {
-            if !t.contains_key(key) {
-                let arr: Vec<toml::Value> = vals.iter().map(|s| toml::Value::String(s.to_string())).collect();
-                t.insert(key.into(), toml::Value::Array(arr));
-            }
-        };
-        set_array(table, "src_dirs", defaults.src_dirs);
-        set_array(table, "src_extensions", defaults.src_extensions);
-        set_array(table, "src_exclude_dirs", defaults.src_exclude_dirs);
-        // resolve_with also fills these with empty vecs if None
-        let set_empty = |t: &mut toml::map::Map<String, toml::Value>, key: &str| {
-            if !t.contains_key(key) {
-                t.insert(key.into(), toml::Value::Array(Vec::new()));
-            }
-        };
-        set_empty(table, "src_exclude_files");
-        set_empty(table, "src_exclude_paths");
-        set_empty(table, "src_files");
-    }
+/// Every field that's actually injected is recorded in `provenance` as a scan default.
+pub(crate) fn apply_scan_defaults(
+    type_name: &str,
+    value: &mut toml::Value,
+    provenance: &mut ProvenanceMap,
+) {
+    let defaults = match scan_defaults_for(type_name) {
+        Some(d) => d,
+        None => return,
+    };
+    let table = match value.as_table_mut() {
+        Some(t) => t,
+        None => return,
+    };
+    set_maybe_empty_array_default(table, "src_dirs", defaults.src_dirs, provenance, FieldProvenance::ScanDefault);
+    set_maybe_empty_array_default(table, "src_extensions", defaults.src_extensions, provenance, FieldProvenance::ScanDefault);
+    set_maybe_empty_array_default(table, "src_exclude_dirs", defaults.src_exclude_dirs, provenance, FieldProvenance::ScanDefault);
+    set_empty_array_default(table, "src_exclude_files", provenance, FieldProvenance::ScanDefault);
+    set_empty_array_default(table, "src_exclude_paths", provenance, FieldProvenance::ScanDefault);
+    set_empty_array_default(table, "src_files", provenance, FieldProvenance::ScanDefault);
 }
 
 /// Processor configuration: a collection of declared processor instances.
@@ -766,21 +843,25 @@ impl ProcessorConfig {
                     for (name, inst_val) in sub_table {
                         let instance_name = format!("{}.{}", key, name);
                         let mut config = inst_val.clone();
-                        resolve_instance_defaults(key, &mut config)?;
+                        let mut provenance = seed_user_provenance(&config);
+                        resolve_instance_defaults(key, &mut config, &mut provenance)?;
                         instances.push(ProcessorInstance {
                             instance_name,
                             type_name: key.clone(),
                             config_toml: config,
+                            provenance,
                         });
                     }
                 } else {
                     // Single instance: [processor.pylint]
                     let mut config = val.clone();
-                    resolve_instance_defaults(key, &mut config)?;
+                    let mut provenance = seed_user_provenance(&config);
+                    resolve_instance_defaults(key, &mut config, &mut provenance)?;
                     instances.push(ProcessorInstance {
                         instance_name: key.clone(),
                         type_name: key.clone(),
                         config_toml: config,
+                        provenance,
                     });
                 }
             } else {
@@ -825,7 +906,7 @@ impl ProcessorConfig {
     /// Resolve scan defaults for all instances.
     pub(crate) fn resolve_scan_defaults(&mut self) {
         for inst in &mut self.instances {
-            resolve_instance_defaults(&inst.type_name, &mut inst.config_toml).ok();
+            resolve_instance_defaults(&inst.type_name, &mut inst.config_toml, &mut inst.provenance).ok();
         }
     }
 
@@ -834,6 +915,10 @@ impl ProcessorConfig {
     ///    to `out/{instance_name}` so each instance gets its own output directory.
     /// 2. If the global `output_dir` is not "out", replace the `out/` prefix with the
     ///    global value (e.g., `build/` → `build/marp`).
+    ///
+    /// When a field was originally a ProcessorDefault and gets rewritten here, its
+    /// provenance is upgraded to OutputDirDefault so `config show` can explain why
+    /// the value differs from the processor's own default.
     pub(crate) fn apply_output_dir_defaults(&mut self, global_output_dir: &str) {
         for inst in &mut self.instances {
             let type_default_prefix = format!("out/{}", inst.type_name);
@@ -855,6 +940,15 @@ impl ProcessorConfig {
                 };
                 if let Some(table) = inst.config_toml.as_table_mut() {
                     table.insert(field.to_string(), toml::Value::String(new_val));
+                }
+                // Only upgrade provenance if the field wasn't user-set — we must not
+                // overwrite a UserToml entry, since the user explicitly chose the
+                // pre-rewrite value.
+                if matches!(
+                    inst.provenance.get(*field),
+                    Some(FieldProvenance::ProcessorDefault) | None,
+                ) {
+                    inst.provenance.insert((*field).to_string(), FieldProvenance::OutputDirDefault);
                 }
             }
         }
@@ -917,6 +1011,8 @@ pub(crate) struct AnalyzerInstance {
     pub type_name: String,
     /// The raw TOML config for this instance
     pub config_toml: toml::Value,
+    /// Source of every field in `config_toml` (user TOML, serde default, …).
+    pub provenance: ProvenanceMap,
 }
 
 /// Configuration for dependency analyzers.
@@ -987,17 +1083,21 @@ impl AnalyzerConfig {
             };
             if Self::is_multi_instance(sub_table) {
                 for (name, inst_val) in sub_table {
+                    let provenance = seed_user_provenance(inst_val);
                     instances.push(AnalyzerInstance {
                         instance_name: format!("{}.{}", type_name, name),
                         type_name: type_name.clone(),
                         config_toml: inst_val.clone(),
+                        provenance,
                     });
                 }
             } else {
+                let provenance = seed_user_provenance(val);
                 instances.push(AnalyzerInstance {
                     instance_name: type_name.clone(),
                     type_name: type_name.clone(),
                     config_toml: val.clone(),
+                    provenance,
                 });
             }
         }
@@ -1407,7 +1507,7 @@ impl Config {
     pub(crate) fn load() -> Result<Self> {
         let config_path = Path::new(CONFIG_FILE);
 
-        let mut config = if config_path.exists() {
+        let (mut config, span_map, global_span_map) = if config_path.exists() {
             let content = fs::read_to_string(config_path)
                 .with_context(|| format!("Failed to read config file: {}", config_path.display()))?;
             let substituted = substitute_variables(&content)
@@ -1423,14 +1523,94 @@ impl Config {
             if !all_errors.is_empty() {
                 anyhow::bail!("Invalid config:\n{}", all_errors.join("\n"));
             }
-            toml::from_str(&substituted)
-                .with_context(|| format!("Failed to parse config file: {}", config_path.display()))?
+            let config: Config = toml::from_str(&substituted)
+                .with_context(|| format!("Failed to parse config file: {}", config_path.display()))?;
+            // Capture byte-level spans from the substituted source so we can
+            // report user-set fields as `rsconstruct.toml:<line>` instead of
+            // the sentinel `line: 0` we seeded during deserialization.
+            let spans = provenance::build_span_map(&substituted);
+            let global_spans = provenance::build_global_span_map(&substituted);
+            (config, spans, global_spans)
         } else {
-            Config::default()
+            (Config::default(), SpanMap::new(), provenance::GlobalSpanMap::new())
         };
         config.processor.resolve_scan_defaults();
         config.processor.apply_output_dir_defaults(&config.build.output_dir);
+        config.apply_span_map(&span_map);
+        config.populate_global_provenance(&global_span_map)?;
         Ok(config)
+    }
+
+    /// Seed `global_provenance` for every top-level section. Every field
+    /// listed in the span map is `UserToml { line }`; every other field of
+    /// the section — discovered by serializing the section struct and reading
+    /// its keys — is `SerdeDefault`.
+    fn populate_global_provenance(
+        &mut self,
+        global_spans: &provenance::GlobalSpanMap,
+    ) -> Result<()> {
+        // Serialize the whole config once so we can walk each section's
+        // effective keys without reaching into every section struct.
+        let serialized = toml::Value::try_from(&*self)
+            .context("Failed to serialize config for global provenance walk")?;
+        let root = match serialized.as_table() {
+            Some(t) => t,
+            None => return Ok(()),
+        };
+        for (section_name, section_value) in root {
+            // Skip processor/analyzer — those are tracked per-instance in the
+            // instances' own provenance maps.
+            if section_name == "processor" || section_name == "analyzer" {
+                continue;
+            }
+            let section_table = match section_value.as_table() {
+                Some(t) => t,
+                None => continue,
+            };
+            let user_fields = global_spans.get(section_name);
+            let mut map = ProvenanceMap::new();
+            for field in section_table.keys() {
+                let source = match user_fields.and_then(|f| f.get(field)) {
+                    Some(&line) => FieldProvenance::UserToml { line },
+                    None => FieldProvenance::SerdeDefault,
+                };
+                map.insert(field.clone(), source);
+            }
+            self.global_provenance.insert(section_name.clone(), map);
+        }
+        Ok(())
+    }
+
+    /// Replace sentinel `UserToml { line: 0 }` entries with real line numbers
+    /// from the toml_edit pass. Any user-set field that didn't get a span
+    /// stays at line 0 (fine — the `config show` formatter falls back to
+    /// "from rsconstruct.toml" without a line number).
+    fn apply_span_map(&mut self, spans: &SpanMap) {
+        for inst in &mut self.processor.instances {
+            apply_spans_to_instance(&mut inst.provenance, spans, Section::Processor, &inst.instance_name);
+        }
+        for inst in &mut self.analyzer.instances {
+            apply_spans_to_instance(&mut inst.provenance, spans, Section::Analyzer, &inst.instance_name);
+        }
+    }
+}
+
+fn apply_spans_to_instance(
+    provenance: &mut ProvenanceMap,
+    spans: &SpanMap,
+    section: Section,
+    instance_name: &str,
+) {
+    let keys: Vec<String> = provenance.keys().cloned().collect();
+    for key in keys {
+        if let Some(FieldProvenance::UserToml { line }) = provenance.get(&key) {
+            if *line != 0 {
+                continue; // already enriched
+            }
+            if let Some(&real_line) = spans.get(&(section, instance_name.to_string(), key.clone())) {
+                provenance.insert(key, FieldProvenance::UserToml { line: real_line });
+            }
+        }
     }
 }
 

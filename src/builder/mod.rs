@@ -167,7 +167,8 @@ pub(crate) fn create_processor_for_instance(
 ) -> anyhow::Result<Option<Box<dyn Processor>>> {
     if let Some(entry) = find_registry_entry(type_name) {
         let mut resolved = config_toml.clone();
-        crate::registries::apply_all_defaults(entry.name, &mut resolved);
+        let mut prov = crate::config::ProvenanceMap::new();
+        crate::registries::apply_all_defaults(entry.name, &mut resolved, &mut prov);
         return (entry.create)(&resolved).map(Some);
     }
     Ok(None)
@@ -178,7 +179,8 @@ pub(crate) fn create_all_default_processors() -> ProcessorMap {
     let mut processors: ProcessorMap = HashMap::new();
     for entry in registry_entries() {
         let mut empty_toml = toml::Value::Table(toml::map::Map::new());
-        crate::registries::apply_all_defaults(entry.name, &mut empty_toml);
+        let mut prov = crate::config::ProvenanceMap::new();
+        crate::registries::apply_all_defaults(entry.name, &mut empty_toml, &mut prov);
         let proc = (entry.create)(&empty_toml).unwrap();
         processors.insert(entry.name.to_string(), proc);
     }

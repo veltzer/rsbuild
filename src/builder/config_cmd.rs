@@ -1,7 +1,7 @@
 use anyhow::Result;
 use crate::cli::ConfigAction;
 use crate::color;
-use crate::config::Config;
+use crate::config::{Config, FieldProvenance};
 use super::{Builder, ValidationSeverity, ValidationIssue, sorted_keys};
 
 impl Builder {
@@ -10,13 +10,13 @@ impl Builder {
         match action {
             ConfigAction::Show => {
                 let output = toml::to_string_pretty(&self.config)?;
-                let annotated = Self::annotate_config(&output);
+                let annotated = Self::annotate_config(&output, Some(&self.config));
                 println!("{}", annotated);
             }
             ConfigAction::ShowDefault => {
                 let config = Config::default();
                 let output = toml::to_string_pretty(&config)?;
-                let annotated = Self::annotate_config(&output);
+                let annotated = Self::annotate_config(&output, None);
                 println!("{}", annotated);
             }
             ConfigAction::Validate => {
@@ -123,20 +123,137 @@ impl Builder {
         issues
     }
 
-    /// Annotate TOML config output with comments for constrained values
-    pub(super) fn annotate_config(toml: &str) -> String {
+    /// Annotate TOML config output with comments for constrained values, and —
+    /// when `config` is provided — append a provenance comment to every field
+    /// line showing whether the field came from the user's TOML, a processor
+    /// default, a scan default, or a serde default.
+    ///
+    /// `config` is `None` when printing the default config (`config show --default`)
+    /// since provenance isn't meaningful there.
+    pub(super) fn annotate_config(toml: &str, config: Option<&Config>) -> String {
+        let mut section: Option<SectionContext> = None;
         toml.lines()
-            .map(|line| {
-                let trimmed = line.trim();
-                if trimmed.starts_with("parallel = ") {
-                    format!("{} # 0 = auto-detect CPU cores", line)
-                } else if trimmed.starts_with("restore_method = ") {
-                    format!("{} # options: auto, hardlink, copy (auto = copy in CI, hardlink otherwise)", line)
-                } else {
-                    line.to_string()
-                }
-            })
+            .map(|line| annotate_line(line, &mut section, config))
             .collect::<Vec<_>>()
             .join("\n")
+    }
+}
+
+/// Which `[section]` a line belongs to. Instance sections carry the instance
+/// name so we can look up the right ProcessorInstance/AnalyzerInstance.
+#[derive(Debug, Clone)]
+enum SectionContext {
+    Global(String),                     // [build], [cache], [graph], …
+    Processor { instance_name: String }, // [processor.ruff] or [processor.pylint.core]
+    Analyzer { instance_name: String },  // [analyzer.cpp] or [analyzer.cpp.kernel]
+    Other,                               // unrecognized section — no provenance
+}
+
+fn annotate_line(
+    line: &str,
+    section: &mut Option<SectionContext>,
+    config: Option<&Config>,
+) -> String {
+    let trimmed = line.trim();
+
+    // Section header: [name] or [processor.pylint.core]
+    if trimmed.starts_with('[') && trimmed.ends_with(']') {
+        let inner = &trimmed[1..trimmed.len() - 1];
+        *section = Some(classify_section(inner));
+        return line.to_string();
+    }
+
+    // Field line: key = value. We need the literal key as it appears in the
+    // serialized TOML (not stripped, since toml::to_string_pretty preserves
+    // the raw field name).
+    let key = match extract_key(line) {
+        Some(k) => k,
+        None => return line.to_string(),
+    };
+
+    // Existing baseline annotations — retained.
+    let base_comment = if key == "parallel" {
+        Some("0 = auto-detect CPU cores".to_string())
+    } else if key == "restore_method" {
+        Some("options: auto, hardlink, copy (auto = copy in CI, hardlink otherwise)".to_string())
+    } else {
+        None
+    };
+
+    // Provenance annotation.
+    let provenance_comment = config
+        .zip(section.as_ref())
+        .and_then(|(cfg, ctx)| lookup_provenance(cfg, ctx, key))
+        .map(|p| p.to_string());
+
+    match (base_comment, provenance_comment) {
+        (None, None) => line.to_string(),
+        (Some(b), None) => format!("{} # {}", line, b),
+        (None, Some(p)) => format!("{}  # {}", line, p),
+        (Some(b), Some(p)) => format!("{} # {} | {}", line, b, p),
+    }
+}
+
+/// Turn a section header's inner text into a SectionContext.
+/// `processor.ruff` → Processor { instance_name: "ruff" }.
+/// `processor.pylint.core` → Processor { instance_name: "pylint.core" }.
+/// `analyzer.cpp.kernel` → Analyzer { instance_name: "cpp.kernel" }.
+/// `build` → Global("build").
+fn classify_section(inner: &str) -> SectionContext {
+    if let Some(rest) = inner.strip_prefix("processor.") {
+        return SectionContext::Processor { instance_name: rest.to_string() };
+    }
+    if let Some(rest) = inner.strip_prefix("analyzer.") {
+        return SectionContext::Analyzer { instance_name: rest.to_string() };
+    }
+    match inner {
+        "build" | "cache" | "completions" | "graph" | "plugins"
+            | "dependencies" | "command" => SectionContext::Global(inner.to_string()),
+        _ => SectionContext::Other,
+    }
+}
+
+/// Extract the key portion of a `key = value` line. Returns None for comments,
+/// blank lines, and section headers.
+fn extract_key(line: &str) -> Option<&str> {
+    let trimmed = line.trim_start();
+    if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with('[') {
+        return None;
+    }
+    let eq = line.find('=')?;
+    let key_part = line[..eq].trim();
+    if key_part.is_empty() {
+        return None;
+    }
+    // toml::to_string_pretty emits unquoted bare keys for ordinary identifiers.
+    // If the key is quoted, strip the quotes — but provenance was recorded
+    // under the bare key name.
+    let unquoted = key_part.trim_matches('"').trim_matches('\'');
+    Some(unquoted)
+}
+
+fn lookup_provenance(
+    config: &Config,
+    section: &SectionContext,
+    field: &str,
+) -> Option<FieldProvenance> {
+    match section {
+        SectionContext::Processor { instance_name } => config
+            .processor
+            .instances
+            .iter()
+            .find(|i| i.instance_name == *instance_name)
+            .and_then(|i| i.provenance.get(field).cloned()),
+        SectionContext::Analyzer { instance_name } => config
+            .analyzer
+            .instances
+            .iter()
+            .find(|i| i.instance_name == *instance_name)
+            .and_then(|i| i.provenance.get(field).cloned()),
+        SectionContext::Global(name) => config
+            .global_provenance
+            .get(name)
+            .and_then(|m| m.get(field).cloned()),
+        SectionContext::Other => None,
     }
 }

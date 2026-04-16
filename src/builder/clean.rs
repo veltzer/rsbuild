@@ -18,7 +18,8 @@ impl Builder {
         let graph = self.build_graph_for_clean_with_processors(ctx, &processors)?;
 
         // Use executor to clean (batch_size doesn't matter for clean)
-        let executor = Executor::new(&processors, ctx, ExecutorOptions {
+        let policy = crate::executor::IncrementalPolicy;
+        let executor = Executor::new(&processors, ctx, &policy, ExecutorOptions {
             parallel: 1,
             verbose: false,
             display_opts: DisplayOptions::minimal(),

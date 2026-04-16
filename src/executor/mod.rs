@@ -1,5 +1,8 @@
 mod execution;
 mod handlers;
+mod policy;
+
+pub(crate) use policy::{BuildPolicy, IncrementalPolicy, ProductAction};
 
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
@@ -88,6 +91,7 @@ struct SharedState {
 /// Products are processed in topological order so that dependency changes propagate:
 /// if a product will be rebuilt or restored, its dependents are also marked for rebuild.
 pub fn classify_products(
+    policy: &dyn BuildPolicy,
     graph: &BuildGraph,
     order: &[usize],
     object_store: &ObjectStore,
@@ -96,13 +100,10 @@ pub fn classify_products(
     let mut skip_count = 0;
     let mut restore_count = 0;
     let mut build_count = 0;
-    // Track which products will be rebuilt or restored (their dependents can't be skipped)
     let mut will_change: HashSet<usize> = HashSet::new();
 
     for &id in order {
         let product = graph.get_product(id).expect(errors::INVALID_PRODUCT_ID);
-
-        // If any dependency will change, this product must rebuild
         let dep_changed = graph.get_dependencies(id).iter().any(|d| will_change.contains(d));
 
         let input_checksum = match crate::checksum::combined_input_checksum(&product.inputs) {
@@ -114,18 +115,18 @@ pub fn classify_products(
             }
         };
 
-        let desc_key = product.descriptor_key(&input_checksum);
-        let needs_rebuild = object_store.needs_rebuild_descriptor(&desc_key, &product.outputs);
-        let can_restore = object_store.can_restore_descriptor(&desc_key);
-
-        if !force && !dep_changed && !needs_rebuild {
-            skip_count += 1;
-        } else if !force && !dep_changed && can_restore {
-            restore_count += 1;
-            will_change.insert(id);
-        } else {
-            build_count += 1;
-            will_change.insert(id);
+        match policy.classify(product, object_store, &input_checksum, dep_changed, force) {
+            ProductAction::Skip => {
+                skip_count += 1;
+            }
+            ProductAction::Restore => {
+                restore_count += 1;
+                will_change.insert(id);
+            }
+            ProductAction::Build => {
+                build_count += 1;
+                will_change.insert(id);
+            }
         }
     }
 
@@ -137,6 +138,7 @@ pub fn classify_products(
 pub struct Executor<'a> {
     processors: &'a ProcessorMap,
     build_ctx: &'a crate::build_context::BuildContext,
+    policy: &'a dyn BuildPolicy,
     parallel: usize,
     verbose: bool,
     display_opts: DisplayOptions,
@@ -150,12 +152,14 @@ impl<'a> Executor<'a> {
     pub fn new(
         processors: &'a ProcessorMap,
         build_ctx: &'a crate::build_context::BuildContext,
+        policy: &'a dyn BuildPolicy,
         opts: ExecutorOptions,
         interrupted: Arc<AtomicBool>,
     ) -> Self {
         Self {
             processors,
             build_ctx,
+            policy,
             parallel: opts.parallel,
             verbose: opts.verbose,
             display_opts: opts.display_opts,
@@ -189,12 +193,13 @@ impl<'a> Executor<'a> {
 
     /// Pre-build classification (delegates to the free function).
     fn classify_products(
+        &self,
         graph: &BuildGraph,
         order: &[usize],
         object_store: &ObjectStore,
         force: bool,
     ) -> (usize, usize, usize) {
-        classify_products(graph, order, object_store, force)
+        classify_products(self.policy, graph, order, object_store, force)
     }
 
     /// Print an explain line for a product showing what action will be taken and why.

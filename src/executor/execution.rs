@@ -190,7 +190,7 @@ impl<'a> Executor<'a> {
         let global_total = order.len();
 
         // Pre-build classification: count skip/restore/build for progress bar sizing
-        let (_skip_count, restore_count, build_count) = Self::classify_products(graph, order, object_store, force);
+        let (_skip_count, restore_count, build_count) = self.classify_products(graph, order, object_store, force);
         let work_count = restore_count + build_count;
 
         // Create progress bar sized to actual work (excludes instant skips)
@@ -295,8 +295,7 @@ impl<'a> Executor<'a> {
         let product = lctx.graph.get_product(item.product_id).expect(errors::INVALID_PRODUCT_ID);
 
         if self.explain {
-            let desc_key = product.descriptor_key(&item.input_checksum);
-            let action = lctx.object_store.explain_descriptor(&desc_key, &product.outputs, lctx.force);
+            let action = self.policy.explain(product, lctx.object_store, &item.input_checksum, lctx.force);
             self.print_explain(product, &action);
         }
 

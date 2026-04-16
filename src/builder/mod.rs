@@ -395,15 +395,26 @@ impl Builder {
         // checksum tells the user how much of the cache work was I/O-free
         // (mtime matched) vs had to re-hash the file (mtime stale but
         // content unchanged, e.g. a touched file).
+        // Dedup (analyzer, source) pairs: multiple products can share the same
+        // primary input (e.g. one .md file consumed by markdownlint, marp,
+        // zspell, and a script processor). The cache key is (analyzer, source),
+        // so classifying the same pair multiple times does redundant I/O and
+        // inflates hit/miss counts. We still want the user-facing total to
+        // reflect work-per-product, so each unique classify result is multiplied
+        // by the number of products that reference that source.
         let mut mtime_hits: usize = 0;
         let mut content_hits: usize = 0;
         let mut misses: usize = 0;
         for name in &active_analyzers {
+            let mut by_source: std::collections::HashMap<PathBuf, usize> = std::collections::HashMap::new();
             for source in analyzers[*name].matching_sources(graph) {
-                match deps_cache.classify(ctx, name, &source) {
-                    crate::deps_cache::ClassifyResult::MtimeHit => mtime_hits += 1,
-                    crate::deps_cache::ClassifyResult::ContentHit => content_hits += 1,
-                    crate::deps_cache::ClassifyResult::Miss => misses += 1,
+                *by_source.entry(source).or_insert(0) += 1;
+            }
+            for (source, count) in &by_source {
+                match deps_cache.classify(ctx, name, source) {
+                    crate::deps_cache::ClassifyResult::MtimeHit => mtime_hits += count,
+                    crate::deps_cache::ClassifyResult::ContentHit => content_hits += count,
+                    crate::deps_cache::ClassifyResult::Miss => misses += count,
                 }
             }
         }

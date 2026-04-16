@@ -209,19 +209,20 @@ where
     F: Fn(&crate::graph::Product) -> Option<PathBuf>,
     G: Fn(&Path) -> Result<Vec<PathBuf>>,
 {
-    // Collect matching products: (product_id, source_path)
-    let products: Vec<(usize, PathBuf)> = graph.products()
-        .iter()
-        .filter_map(|p| {
-            match_product(p).map(|source| (p.id, source))
-        })
-        .collect();
+    // Group product IDs by source path so each unique source is scanned once,
+    // then fan the resulting deps out to every product that referenced it.
+    let mut by_source: std::collections::BTreeMap<PathBuf, Vec<usize>> = std::collections::BTreeMap::new();
+    for p in graph.products() {
+        if let Some(source) = match_product(p) {
+            by_source.entry(source).or_default().push(p.id);
+        }
+    }
 
-    if products.is_empty() {
+    if by_source.is_empty() {
         return Ok(());
     }
 
-    for (id, source) in &products {
+    for (source, product_ids) in &by_source {
         progress.set_message(format!("[{}] {}", analyzer_name, source.display()));
 
         // Try to get cached dependencies, otherwise scan
@@ -235,17 +236,22 @@ where
             scanned
         };
 
-        // Add dependencies to the product (filter out duplicates via HashSet)
-        if !deps.is_empty()
-            && let Some(product) = graph.get_product_mut(*id) {
-                let existing: HashSet<&PathBuf> = product.inputs.iter().collect();
-                let new_deps: Vec<PathBuf> = deps.into_iter()
-                    .filter(|dep| !existing.contains(dep))
-                    .collect();
-                product.inputs.extend(new_deps);
+        // Fan deps out to every product that has this source as primary input
+        if !deps.is_empty() {
+            for &id in product_ids {
+                if let Some(product) = graph.get_product_mut(id) {
+                    let existing: HashSet<&PathBuf> = product.inputs.iter().collect();
+                    let new_deps: Vec<PathBuf> = deps.iter()
+                        .filter(|dep| !existing.contains(dep))
+                        .cloned()
+                        .collect();
+                    product.inputs.extend(new_deps);
+                }
             }
+        }
 
-        progress.inc(1);
+        // Tick once per product so the progress total still matches the pre-scan count
+        progress.inc(product_ids.len() as u64);
     }
 
     Ok(())

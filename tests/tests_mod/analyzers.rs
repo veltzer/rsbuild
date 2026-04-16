@@ -264,3 +264,56 @@ src_dirs = ["."]
         "modified file should trigger exactly one rescan: {}", combined
     );
 }
+
+/// When several processors all consume the same source file, an analyzer must
+/// scan that file ONCE — not once per consuming product. The pre-scan classify
+/// pass and the actual scan both used to iterate `(analyzer, source)` per
+/// product, doing redundant cache lookups and (on a miss) redundant file reads
+/// for the same source. The user-facing "files to check" count still reflects
+/// per-product work, but the underlying cache `get`/`set` calls (visible in the
+/// summary line) must equal the number of UNIQUE source files.
+#[test]
+fn analyzer_dedupes_shared_source_across_processors() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let project_path = temp_dir.path();
+
+    // Three processors, all consuming the same single .md file. The markdown
+    // analyzer would naively be invoked 3 times — once per product.
+    fs::write(
+        project_path.join("rsconstruct.toml"),
+        r#"[processor.markdown2html]
+src_dirs = ["."]
+
+[processor.zspell]
+src_dirs = ["."]
+
+[processor.markdownlint]
+src_dirs = ["."]
+
+[analyzer.markdown]
+"#,
+    )
+    .unwrap();
+
+    fs::write(project_path.join("doc.md"), "# hi\n![pic](pic.png)\n").unwrap();
+    fs::write(project_path.join("pic.png"), []).unwrap();
+
+    // Prime the cache.
+    let _ = run_rsconstruct_with_env(project_path, &["status"], &[("NO_COLOR", "1")]);
+
+    // Second run: every product still appears in the per-product display total
+    // (3 files to check), but the underlying cache should see only 1 hit —
+    // the source was scanned once and fanned out to all 3 products.
+    let out = run_rsconstruct_with_env(project_path, &["status"], &[("NO_COLOR", "1")]);
+    assert!(out.status.success(), "second status failed: {}", String::from_utf8_lossy(&out.stderr));
+    let combined = format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    assert!(
+        combined.contains("[deps] 3 files to check for dependencies"),
+        "user-facing total should still count per-product (3 products): {}", combined
+    );
+    assert!(
+        combined.contains("[deps] summary: 0 rescanned (1 cache hits:"),
+        "shared source must be looked up in the cache exactly once, \
+         not once per consuming product: {}", combined
+    );
+}

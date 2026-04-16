@@ -133,6 +133,7 @@ The chapters below cover the internal design and implementation of rsconstruct. 
 - [Missing Processors](internal/missing-processors.md)
 - [Crates.io Publishing](internal/crates-io.md)
 - [Per-Processor max_jobs](internal/per-processor-max-jobs.md)
+- [Plugin Registry Survey](internal/plugin-registry-survey.md)
 - [Rejected Audit Findings](internal/rejected-problems.md)
 - [Suggestions](internal/suggestions.md)
 - [Suggestions Done](internal/suggestions-done.md)

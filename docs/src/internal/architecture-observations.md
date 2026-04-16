@@ -173,57 +173,43 @@ kinds of features are easy vs. hard.
 
 ---
 
-### 7. Processor instance ↔ typed processor mapping is one-way
+### 7. Processor instance ↔ typed processor mapping is one-way — PARTIALLY ADDRESSED
 
 A `ProcessorInstance` in the config holds `(type_name, instance_name,
 config_toml)`. `Builder::create_processors()` deserializes the TOML and
 produces a `Box<dyn Processor>`. Afterwards, the TOML blob is discarded.
 
-You can't go from a running processor back to its declaration. Which
-`rsconstruct.toml` section produced this processor? Which other instances
-exist of the same type? What config field values did the user explicitly
-set vs. inherit from defaults?
+**Update:** `ProcessorInstance` now carries a `provenance: ProvenanceMap`
+that records where each field came from (user TOML with line number,
+processor default, scan default, etc.). This means `config show` can
+annotate fields with their source without reparsing TOML, and `smart`
+commands can distinguish user-set from defaulted fields.
 
-**Implication:** features that want to introspect *declarations* — `smart
-disable`, `config show` with field provenance, hypothetical "re-run only
-processors whose config changed" — can't use the live processor objects.
-They have to reparse the TOML. There are effectively two models of the
-system (declarations vs. runtime) that don't point at each other.
-
-**A healthier shape** would have processors carry a handle back to their
-declaration (even just the raw TOML value), or better, a config-resolution
-record showing each field's source.
+The remaining gap: a running `Box<dyn Processor>` still can't navigate
+back to its `ProcessorInstance` or the originating TOML section. The
+provenance lives on the config side, not the runtime processor side.
 
 **Load-bearing:** medium.
 
 ---
 
-### 8. Global state in the processor runtime
+### 8. Global state in the processor runtime — MOSTLY RESOLVED
 
-Three `static` items in `src/processors/mod.rs` back the runtime:
-- `INTERRUPTED` — atomic bool set on Ctrl+C.
-- `RUNTIME` — a lazy-initialized global tokio runtime for subprocesses.
-- `INTERRUPT_SENDER` — broadcast channel for signaling active subprocesses.
+**Update:** the three processor globals (`INTERRUPTED`, `RUNTIME`,
+`INTERRUPT_SENDER`) have been replaced by a `BuildContext` struct
+(`src/build_context.rs`) threaded through the `Processor` trait's
+`execute()`/`execute_batch()`, the executor, analyzers, and remote cache.
+The globals are deleted. `run_command` now takes `&BuildContext` explicitly.
 
-This is necessary: subprocesses have to know when to terminate, and the
-cleanest way is a process-wide signal. But it has consequences:
+The remaining globals are in `src/checksum.rs` (`CACHE`, `MTIME_DB`,
+`MTIME_ENABLED`) — these are per-build caches that could move into
+`BuildContext` in a follow-up but don't block daemon mode or testing.
 
-- **Tests can't isolate**: parallel tests that want different interrupt
-  scenarios share the same flag.
-- **The runtime is fixed**: you can't swap tokio for another executor or
-  have multiple concurrent build contexts (e.g. a daemon mode serving
-  multiple projects).
-- **Hidden dependencies**: modules that call `run_command` transitively
-  depend on the runtime being initialized. It's not in anyone's function
-  signature.
+`RuntimeFlags` in `src/runtime_flags.rs` is also global but is genuinely
+immutable after startup — it doesn't vary between concurrent build contexts
+and doesn't need to move.
 
-**Implication:** any feature that wants multiple builds in one process
-(daemon mode, LSP integration, test harness) has to reckon with these
-globals. They'd need to be moved into a `BuildContext` struct passed
-through the call chain — a big refactor.
-
-**Load-bearing:** medium. Scoped to the process runtime, but it caps what
-you can build on top of the library.
+**Load-bearing:** medium, but the core tension is resolved.
 
 ---
 
@@ -275,29 +261,21 @@ and likely requires CLI reorganization. Bigger than it sounds.
 
 ---
 
-### 11. Object store as a multi-responsibility module
+### 11. Object store as a multi-responsibility module — RESOLVED
 
-The `ObjectStore` handles: blob storage (content-addressed), descriptor
-lookup (by cache key), mtime database, config-hash comparison, file
-restoration (hardlink/copy/decompress), remote cache integration (partial),
-and conflict resolution when two processors produce the same output. It's
-~1000 lines of Rust covering very different concerns.
+**Update:** `ObjectStore` has been decomposed into focused submodules:
+- `blobs.rs` — content-addressed blob storage (store, read, restore, checksum)
+- `descriptors.rs` — cache descriptor CRUD (store_marker, store_blob, store_tree)
+- `restore.rs` — cache query and restoration (restore_from_descriptor,
+  needs_rebuild, can_restore, explain)
+- `management.rs` — cache management (size, trim, remove_stale, list, stats)
+- `operations.rs` — remote cache push/fetch
+- `config_diff.rs` — processor config change tracking
 
-**Implication:** almost any caching change lands here. Remote caching is
-partially implemented (`remote_pull` is unused) because extending the
-monolith is harder than extending focused modules. A better decomposition
-might be:
-- `BlobStore` — content-addressed bytes, knows nothing about products.
-- `DescriptorIndex` — cache key → blob reference, plus metadata.
-- `Restorer` — given a descriptor, materializes files on disk (hardlink
-  vs. copy vs. decompress).
-- `RemoteBackend` — pure transport layer.
+`mod.rs` went from ~664 to ~223 lines (struct definition, types, constructor).
+Each concern is now a focused 100–150 line file.
 
-The current monolith mixes these and makes "add a third backend" or "change
-how restoration handles permissions" into cross-cutting changes.
-
-**Load-bearing:** very high. Second only to the executor for performance
-impact.
+**Load-bearing:** very high, but the monolith is resolved.
 
 ---
 
@@ -383,9 +361,12 @@ All four highest-leverage refactors are now complete:
    through the `Processor` trait, executor, analyzers, and remote cache.
    See `src/build_context.rs`.
 
-Entries 1, 2, 5, 9, 10 are observations about the shape — not necessarily
-problems to fix, but things a new contributor should understand before
-making structural changes.
+Entries 3, 7, and 8 are partially addressed — the core issues are resolved
+but minor gaps remain (see individual entries above).
+
+Entries 1, 2, 5, 6, 9, 10, 12, 13, 14 are observations about the code's
+shape — not necessarily problems to fix, but constraints a new contributor
+should understand before making structural changes.
 
 The technical observations (code duplication in discovery helpers, dead
 fields in `ProcessorPlugin`, scattered error handling) are recorded in

@@ -361,5 +361,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::CcConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::CcConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::CcConfig>,
+        keywords: &["c", "cpp", "builder", "compiler", "gcc", "clang", "cc", "h", "hpp"],
     }
 }

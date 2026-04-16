@@ -86,5 +86,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::IjsonlintConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::IjsonlintConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IjsonlintConfig>,
+        keywords: &["json", "linter", "validator"],
     }
 }

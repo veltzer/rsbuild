@@ -130,5 +130,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::NpmConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::NpmConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::NpmConfig>,
+        keywords: &["javascript", "typescript", "node", "npm", "package-manager", "web", "frontend"],
     }
 }

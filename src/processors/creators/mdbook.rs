@@ -111,5 +111,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::MdbookConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::MdbookConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::MdbookConfig>,
+        keywords: &["markdown", "md", "rust", "documentation", "book", "html"],
     }
 }

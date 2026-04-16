@@ -676,5 +676,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::TermsConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::TermsConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::TermsConfig>,
+        keywords: &["checker", "terminology", "text", "words"],
     }
 }

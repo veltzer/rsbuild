@@ -535,5 +535,6 @@ inventory::submit! {
         output_fields: registry::typed_output_fields::<crate::config::TeraConfig>,
         must_fields: registry::typed_must_fields::<crate::config::TeraConfig>,
         field_descriptions: registry::typed_field_descriptions::<crate::config::TeraConfig>,
+        keywords: &["template", "generator", "jinja", "html", "rust"],
     }
 }

@@ -153,5 +153,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::GeneratorConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::GeneratorConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::GeneratorConfig>,
+        keywords: &["generator", "generic"],
     }
 }

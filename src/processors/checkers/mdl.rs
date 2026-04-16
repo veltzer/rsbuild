@@ -105,5 +105,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::MdlConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::MdlConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::MdlConfig>,
+        keywords: &["markdown", "md", "linter", "ruby", "gem"],
     }
 }

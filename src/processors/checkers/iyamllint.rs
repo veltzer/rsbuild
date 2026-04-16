@@ -86,5 +86,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::IyamllintConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::IyamllintConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IyamllintConfig>,
+        keywords: &["yaml", "yml", "linter", "validator"],
     }
 }

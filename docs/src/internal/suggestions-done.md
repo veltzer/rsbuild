@@ -91,7 +91,7 @@ Items from `suggestions.md` that have been implemented.
 ## Completed Architecture Refactors
 
 - **Config provenance tracking** — Every config field now carries `FieldProvenance` (UserToml with line number, ProcessorDefault, ScanDefault, OutputDirDefault, SerdeDefault). `rsconstruct config show` annotates every field with its source. Uses `toml_edit::Document` for span capture.
-- **`BuildContext` replacing process globals** — The three process globals (`INTERRUPTED`, `RUNTIME`, `INTERRUPT_SENDER`) are replaced by a `BuildContext` struct threaded through the `Processor` trait's `execute()`/`execute_batch()`, the executor, analyzers, and remote cache. Signal handler uses `Arc<BuildContext>`.
+- **`BuildContext` replacing process globals** — All mutable process globals moved into `BuildContext`: the three processor globals (`INTERRUPTED`, `RUNTIME`, `INTERRUPT_SENDER`) and the three checksum globals (`CACHE`, `MTIME_DB`, `MTIME_ENABLED`). Threaded through the `Processor` trait, executor, analyzers, remote cache, checksum functions, and deps cache. Signal handler uses `Arc<BuildContext>`.
 - **`BuildPolicy` trait** — Extracted from the executor. `classify_products` delegates per-product skip/restore/rebuild decisions to a `&dyn BuildPolicy`. `IncrementalPolicy` implements the current logic. Future policies (dry-run, always-rebuild, time-windowed) are a single trait impl.
 - **`ObjectStore` decomposition** — `mod.rs` split from 664 → 223 lines into focused submodules: `blobs.rs` (content-addressed storage), `descriptors.rs` (cache descriptor CRUD), `restore.rs` (restore/needs_rebuild/can_restore/explain).
 
@@ -103,3 +103,5 @@ Items from `suggestions.md` that have been implemented.
 - **Bare `clean` requires subcommand** — `rsconstruct clean` now errors with usage hint instead of silently defaulting to `clean outputs`.
 - **Nondeterministic test race fix** — Fixed TOCTOU race in `store_descriptor` where parallel writers could get `Permission denied`. Now retries after forcing writable on first failure.
 - **Suppress status line for non-build commands** — The `Exited with SUCCESS/ERROR` footer only shows for `build`, `watch`, and `clean`.
+- **Configurable graph validation** — Four checks run after `resolve_dependencies()`: (1) reject empty inputs (default on), (2) validate dep references (default on), (3) detect duplicate inputs within same processor (default off), (4) early cycle detection (default off). Config: `[graph]` section fields `validate_empty_inputs`, `validate_dep_references`, `validate_duplicate_inputs`, `validate_early_cycles`.
+- **Checksum globals moved to BuildContext** — `CACHE`, `MTIME_DB`, `MTIME_ENABLED` moved from `src/checksum.rs` statics into `BuildContext`. `combined_input_checksum`, `checksum_fast`, `file_checksum` all take `&BuildContext`. Completes the isolated-build-context story.

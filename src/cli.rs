@@ -485,6 +485,11 @@ pub enum ProcessorAction {
         #[arg(value_parser = crate::registries::processor_name_parser())]
         pname: String,
     },
+    /// Search processors by name, description, or keywords
+    Search {
+        /// Search term (case-insensitive, matches name, description, and keywords)
+        query: String,
+    },
     /// Add a processor to rsconstruct.toml with must-fill fields pre-populated and comments
     Add {
         /// Processor name (pname) — the type name (e.g., ruff, pip, tera)

@@ -127,5 +127,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::SphinxConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::SphinxConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::SphinxConfig>,
+        keywords: &["python", "sphinx", "documentation", "rst", "html", "pip"],
     }
 }

@@ -14,4 +14,5 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     must_fields: crate::registries::typed_must_fields::<crate::config::StandardConfig>,
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,
+    keywords: &["javascript", "typescript", "css", "html", "json", "markdown", "yaml", "formatter", "web", "frontend", "node", "npm"],
 } }

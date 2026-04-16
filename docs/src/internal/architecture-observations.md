@@ -193,23 +193,23 @@ provenance lives on the config side, not the runtime processor side.
 
 ---
 
-### 8. Global state in the processor runtime — MOSTLY RESOLVED
+### 8. Global state in the processor runtime — RESOLVED
 
-**Update:** the three processor globals (`INTERRUPTED`, `RUNTIME`,
-`INTERRUPT_SENDER`) have been replaced by a `BuildContext` struct
-(`src/build_context.rs`) threaded through the `Processor` trait's
-`execute()`/`execute_batch()`, the executor, analyzers, and remote cache.
-The globals are deleted. `run_command` now takes `&BuildContext` explicitly.
+**Update:** all mutable process globals have been moved into `BuildContext`
+(`src/build_context.rs`):
+- The three processor globals (`INTERRUPTED`, `RUNTIME`, `INTERRUPT_SENDER`)
+  are replaced and deleted. `run_command` takes `&BuildContext` explicitly.
+- The three checksum globals (`CACHE`, `MTIME_DB`, `MTIME_ENABLED`) are
+  moved into `BuildContext`. `combined_input_checksum` and `checksum_fast`
+  take `&BuildContext`.
 
-The remaining globals are in `src/checksum.rs` (`CACHE`, `MTIME_DB`,
-`MTIME_ENABLED`) — these are per-build caches that could move into
-`BuildContext` in a follow-up but don't block daemon mode or testing.
+Remaining process-wide state is all immutable or correctly scoped:
+- `RuntimeFlags` — immutable after startup, doesn't vary between contexts.
+- `DECLARED_TOOLS` — `thread_local!`, debug-only.
+- Compiled regexes — `LazyLock<Regex>`, stateless.
 
-`RuntimeFlags` in `src/runtime_flags.rs` is also global but is genuinely
-immutable after startup — it doesn't vary between concurrent build contexts
-and doesn't need to move.
-
-**Load-bearing:** medium, but the core tension is resolved.
+**Load-bearing:** resolved. Multiple `BuildContext` instances can now run
+independently (daemon mode, LSP, testing).
 
 ---
 

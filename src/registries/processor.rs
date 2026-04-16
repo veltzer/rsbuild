@@ -47,6 +47,10 @@ pub struct ProcessorPlugin {
     /// Return the default config as pretty JSON. Receives the processor name
     /// so it can apply the correct defaults.
     pub defconfig_json: fn(&str) -> Option<String>,
+    /// Search keywords for `processors search`. Includes language names, tool
+    /// categories, file types, and related terms not already in the name or
+    /// description.
+    pub keywords: &'static [&'static str],
 }
 
 unsafe impl Sync for ProcessorPlugin {}

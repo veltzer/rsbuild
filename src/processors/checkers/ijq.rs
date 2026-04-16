@@ -86,5 +86,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::IjqConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::IjqConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IjqConfig>,
+        keywords: &["json", "checker", "jq", "validator"],
     }
 }

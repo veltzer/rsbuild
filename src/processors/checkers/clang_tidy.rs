@@ -94,5 +94,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::ClangTidyConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::ClangTidyConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ClangTidyConfig>,
+        keywords: &["c", "cpp", "linter", "clang", "checker", "cc", "h", "hpp"],
     }
 }

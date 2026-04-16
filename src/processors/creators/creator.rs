@@ -140,5 +140,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::CreatorConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::CreatorConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::CreatorConfig>,
+        keywords: &["builder", "creator", "generic"],
     }
 }

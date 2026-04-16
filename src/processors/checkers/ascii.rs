@@ -104,5 +104,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::AsciiConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::AsciiConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::AsciiConfig>,
+        keywords: &["checker", "encoding", "ascii", "text", "validator"],
     }
 }

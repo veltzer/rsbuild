@@ -125,5 +125,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::LicenseHeaderConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::LicenseHeaderConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::LicenseHeaderConfig>,
+        keywords: &["checker", "license", "header", "copyright"],
     }
 }

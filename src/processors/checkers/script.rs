@@ -112,5 +112,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::ScriptConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::ScriptConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ScriptConfig>,
+        keywords: &["shell", "script", "checker", "sh", "bash"],
     }
 }

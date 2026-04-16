@@ -158,5 +158,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::PdflatexConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::PdflatexConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::PdflatexConfig>,
+        keywords: &["latex", "tex", "pdf", "generator", "typesetting"],
     }
 }

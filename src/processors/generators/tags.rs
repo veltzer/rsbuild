@@ -1968,5 +1968,6 @@ inventory::submit! {
         output_fields: crate::registries::typed_output_fields::<crate::config::TagsConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::TagsConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::TagsConfig>,
+        keywords: &["ctags", "tags", "generator", "code-navigation"],
     }
 }

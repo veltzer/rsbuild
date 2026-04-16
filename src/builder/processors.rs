@@ -6,6 +6,61 @@ use crate::color;
 use crate::config::ProcessorConfig;
 use super::{Builder, create_all_default_processors, sorted_keys};
 
+/// Search processors by name, description, and keywords. Case-insensitive.
+pub fn search_processors(query: &str) -> Result<()> {
+    let query_lower = query.to_lowercase();
+    let processors = create_all_default_processors();
+    let mut matches: Vec<(&str, &dyn crate::processors::Processor, &[&str])> = Vec::new();
+
+    for plugin in crate::registries::processor::all_plugins() {
+        let name_match = plugin.name.to_lowercase().contains(&query_lower);
+        let keyword_match = plugin.keywords.iter().any(|k| k.to_lowercase().contains(&query_lower));
+        let desc_match = processors.get(plugin.name)
+            .map(|p| p.description().to_lowercase().contains(&query_lower))
+            .unwrap_or(false);
+
+        if name_match || keyword_match || desc_match {
+            if let Some(proc) = processors.get(plugin.name) {
+                matches.push((plugin.name, proc.as_ref(), plugin.keywords));
+            }
+        }
+    }
+
+    matches.sort_by_key(|(name, _, _)| *name);
+
+    if matches.is_empty() {
+        println!("No processors matching '{}'.", query);
+        return Ok(());
+    }
+
+    if crate::json_output::is_json_mode() {
+        let entries: Vec<serde_json::Value> = matches.iter().map(|(name, proc, keywords)| {
+            serde_json::json!({
+                "name": name,
+                "type": proc.processor_type().as_str(),
+                "description": proc.description(),
+                "keywords": keywords,
+            })
+        }).collect();
+        println!("{}", serde_json::to_string_pretty(&entries)?);
+        return Ok(());
+    }
+
+    let mut builder = TableBuilder::new();
+    builder.push_record(["Name", "Type", "Description", "Keywords"]);
+    for (name, proc, keywords) in &matches {
+        builder.push_record([
+            *name,
+            proc.processor_type().as_str(),
+            proc.description(),
+            &keywords.join(", "),
+        ]);
+    }
+    color::print_table(builder.build());
+
+    Ok(())
+}
+
 /// List all processor types (generator, checker, creator, explicit).
 pub fn list_processor_types(verbose: bool) -> Result<()> {
     use strum::IntoEnumIterator;
@@ -263,7 +318,8 @@ impl Builder {
 
         match action {
             ProcessorAction::List | ProcessorAction::Recommend | ProcessorAction::Types | ProcessorAction::Add { .. }
-            | ProcessorAction::Delete { .. } | ProcessorAction::Disable { .. } | ProcessorAction::Enable { .. } => unreachable!("handled before Builder is constructed"),
+            | ProcessorAction::Delete { .. } | ProcessorAction::Disable { .. } | ProcessorAction::Enable { .. }
+            | ProcessorAction::Search { .. } => unreachable!("handled before Builder is constructed"),
             ProcessorAction::Used => {
                 let mut builder = TableBuilder::new();
                 if verbose {

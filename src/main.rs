@@ -379,6 +379,9 @@ fn run() -> (Result<()>, bool) {
                 cli::ProcessorAction::Add { ref pname, dry_run } => {
                     builder::add_processor(pname, dry_run)?;
                 }
+                cli::ProcessorAction::Search { ref query } => {
+                    builder::processors::search_processors(query)?;
+                }
                 cli::ProcessorAction::Delete { ref iname } => {
                     builder::smart::delete_processor(iname)?;
                 }

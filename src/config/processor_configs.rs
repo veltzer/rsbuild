@@ -1277,18 +1277,10 @@ fn default_markdownlint_bin() -> String {
     "markdownlint".into()
 }
 
-fn default_npm_stamp() -> String {
-    "out/npm/root.stamp".into()
-}
-
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MarkdownlintConfig {
-    #[serde(default)]
-    pub local_repo: bool,
     #[serde(default = "default_markdownlint_bin")]
     pub markdownlint_bin: String,
-    #[serde(default = "default_npm_stamp")]
-    pub npm_stamp: String,
     #[serde(flatten)]
     pub standard: StandardConfig,
 }
@@ -1296,9 +1288,7 @@ pub struct MarkdownlintConfig {
 impl Default for MarkdownlintConfig {
     fn default() -> Self {
         Self {
-            local_repo: false,
             markdownlint_bin: "markdownlint".into(),
-            npm_stamp: "out/npm/root.stamp".into(),
             standard: StandardConfig::default(),
         }
     }
@@ -1307,18 +1297,16 @@ impl Default for MarkdownlintConfig {
 impl KnownFields for MarkdownlintConfig {
     fn known_fields() -> &'static [&'static str] {
         &[
-            "local_repo", "markdownlint_bin", "args", "dep_inputs", "dep_auto", "npm_stamp", "batch", "max_jobs",
+            "markdownlint_bin", "args", "dep_inputs", "dep_auto", "batch", "max_jobs",
         ]
     }
     fn output_fields() -> &'static [&'static str] {
-        &["local_repo", "markdownlint_bin", "args", "npm_stamp"]
+        &["markdownlint_bin", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
         &[
-            ("local_repo",       "Use a local npm repository instead of system install"),
             ("markdownlint_bin", "Path to the markdownlint executable"),
             ("args",             "Extra arguments passed to markdownlint"),
-            ("npm_stamp",        "Stamp file tracking the local npm installation"),
         ]
     }
 }

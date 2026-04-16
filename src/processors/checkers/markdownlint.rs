@@ -1,11 +1,10 @@
 use anyhow::Result;
-use std::path::PathBuf;
 use std::process::Command;
 
-use crate::config::{MarkdownlintConfig, output_config_hash, resolve_extra_inputs};
+use crate::config::MarkdownlintConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, Processor, check_command_output, config_file_inputs, run_command};
+use crate::processors::{ProcessorBase, Processor, check_command_output, run_command};
 
 pub struct MarkdownlintProcessor {
     base: ProcessorBase,
@@ -43,34 +42,11 @@ impl Processor for MarkdownlintProcessor {
     }
 
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
-        let files = file_index.scan(&self.config.standard, true);
-        if files.is_empty() {
-            return Ok(());
-        }
-        let hash = Some(output_config_hash(&self.config, &[]));
-        let mut dep_inputs = self.config.standard.dep_inputs.clone();
-        for ai in &self.config.standard.dep_auto {
-            dep_inputs.extend(config_file_inputs(ai));
-        }
-        let extra = resolve_extra_inputs(&dep_inputs)?;
-
-        // Only depend on the npm stamp when using a local repo install
-        let npm_stamp = if self.config.local_repo {
-            Some(PathBuf::from(&self.config.npm_stamp))
-        } else {
-            None
-        };
-
-        for file in files {
-            let mut inputs = Vec::with_capacity(1 + extra.len() + 1);
-            inputs.push(file);
-            inputs.extend_from_slice(&extra);
-            if let Some(ref stamp) = npm_stamp {
-                inputs.push(stamp.clone());
-            }
-            graph.add_product(inputs, vec![], instance_name, hash.clone())?;
-        }
-        Ok(())
+        crate::processors::discover_checker_products(
+            graph, &self.config.standard, file_index,
+            &self.config.standard.dep_inputs, &self.config.standard.dep_auto,
+            &self.config, instance_name,
+        )
     }
 
     fn supports_batch(&self) -> bool { false }

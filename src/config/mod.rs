@@ -1119,6 +1119,18 @@ impl AnalyzerConfig {
 pub(crate) struct GraphConfig {
     #[serde(default)]
     pub viewer: Option<String>,
+    /// Reject products with no input files. Default: true.
+    #[serde(default = "default_true")]
+    pub validate_empty_inputs: bool,
+    /// Validate that dependency references point to existing products. Default: true.
+    #[serde(default = "default_true")]
+    pub validate_dep_references: bool,
+    /// Warn when the same input file appears in multiple products of the same processor. Default: false.
+    #[serde(default)]
+    pub validate_duplicate_inputs: bool,
+    /// Check for cycles immediately after resolving dependencies (rather than at topological sort time). Default: false.
+    #[serde(default)]
+    pub validate_early_cycles: bool,
 }
 
 /// Expected TOML type for a config field.

@@ -91,7 +91,7 @@ impl Builder {
 
         // CLI override for mtime pre-check
         if opts.no_mtime {
-            crate::checksum::set_mtime_check(false);
+            ctx.set_mtime_check(false);
         }
 
         // Create processors
@@ -233,7 +233,7 @@ impl Builder {
         }
         let policy = crate::executor::IncrementalPolicy;
         let (skip_count, restore_count, build_count) =
-            crate::executor::classify_products(&policy, &graph, &order, &self.object_store, opts.force);
+            crate::executor::classify_products(ctx, &policy, &graph, &order, &self.object_store, opts.force);
         phase_timings.push(("classify".to_string(), t.elapsed()));
         if !crate::runtime_flags::quiet() {
             println!("[build] {} to build, {} to restore ({} up-to-date)",
@@ -322,7 +322,7 @@ impl Builder {
             new: (color::yellow("BUILD"), "build-new"),
         };
 
-        self.print_product_status(&products, &StatusPrintOptions {
+        self.print_product_status(ctx, &products, &StatusPrintOptions {
             force, labels: &labels, explain,
             display_opts: DisplayOptions::default(), verbose: true,
             all_processor_names: &[],
@@ -358,7 +358,7 @@ impl Builder {
             .filter(|(_, proc)| proc.is_native())
             .map(|(name, _)| name.as_str())
             .collect();
-        self.print_product_status(&products, &StatusPrintOptions {
+        self.print_product_status(ctx, &products, &StatusPrintOptions {
             force: false, labels: &labels, explain: false,
             display_opts: DisplayOptions::default(), verbose,
             all_processor_names: &all_proc_names,
@@ -453,6 +453,7 @@ impl Builder {
     /// When `verbose` is false, only the per-processor and total summary lines are printed.
     pub(super) fn print_product_status(
         &self,
+        ctx: &crate::build_context::BuildContext,
         products: &[&crate::graph::Product],
         opts: &StatusPrintOptions<'_>,
     ) {
@@ -477,7 +478,7 @@ impl Builder {
             let cache_key = product.cache_key();
             let display = product.display(opts.display_opts);
 
-            let input_checksum = match crate::checksum::combined_input_checksum(&product.inputs) {
+            let input_checksum = match crate::checksum::combined_input_checksum(ctx, &product.inputs) {
                 Ok(cs) => cs,
                 Err(_) => {
                     // Can't compute checksum — classify as new or stale based on cache

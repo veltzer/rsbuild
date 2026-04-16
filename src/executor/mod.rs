@@ -91,6 +91,7 @@ struct SharedState {
 /// Products are processed in topological order so that dependency changes propagate:
 /// if a product will be rebuilt or restored, its dependents are also marked for rebuild.
 pub fn classify_products(
+    ctx: &crate::build_context::BuildContext,
     policy: &dyn BuildPolicy,
     graph: &BuildGraph,
     order: &[usize],
@@ -106,7 +107,7 @@ pub fn classify_products(
         let product = graph.get_product(id).expect(errors::INVALID_PRODUCT_ID);
         let dep_changed = graph.get_dependencies(id).iter().any(|d| will_change.contains(d));
 
-        let input_checksum = match crate::checksum::combined_input_checksum(&product.inputs) {
+        let input_checksum = match crate::checksum::combined_input_checksum(ctx, &product.inputs) {
             Ok(cs) => cs,
             Err(_) => {
                 build_count += 1;
@@ -199,7 +200,7 @@ impl<'a> Executor<'a> {
         object_store: &ObjectStore,
         force: bool,
     ) -> (usize, usize, usize) {
-        classify_products(self.policy, graph, order, object_store, force)
+        classify_products(self.build_ctx, self.policy, graph, order, object_store, force)
     }
 
     /// Print an explain line for a product showing what action will be taken and why.

@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::build_context::BuildContext;
 use crate::checksum::{checksum_fast, ChecksumPath};
 
 const RSBUILD_DIR: &str = ".rsconstruct";
@@ -92,7 +93,7 @@ impl DepsCache {
     /// Updates internal statistics (hits/misses). Every caller hits exactly
     /// one of the two counters — no silent path that leaves both unchanged,
     /// so `hits + misses` always equals the number of `get` calls.
-    pub fn get(&mut self, analyzer: &str, source: &Path) -> Option<Vec<PathBuf>> {
+    pub fn get(&mut self, ctx: &BuildContext, analyzer: &str, source: &Path) -> Option<Vec<PathBuf>> {
         let key = key_for(analyzer, source);
 
         // Any failure to reach the stored entry — DB not yet created, table
@@ -123,7 +124,7 @@ impl DepsCache {
 
         // Verify source file hasn't changed. `checksum_fast` consults the
         // persistent mtime cache so unchanged files skip the full read + hash.
-        let (current_checksum, checksum_path) = match checksum_fast(source) {
+        let (current_checksum, checksum_path) = match checksum_fast(ctx, source) {
             Ok(c) => c,
             Err(_) => {
                 self.stats.misses += 1;
@@ -160,13 +161,13 @@ impl DepsCache {
     /// Used by the pre-scan classify pass to count expected hits vs rescans
     /// before the actual scan runs. Identical validity rules to `get`.
     /// Does not touch stats.
-    pub fn classify(&self, analyzer: &str, source: &Path) -> ClassifyResult {
+    pub fn classify(&self, ctx: &BuildContext, analyzer: &str, source: &Path) -> ClassifyResult {
         let key = key_for(analyzer, source);
         let Ok(read_txn) = self.db.begin_read() else { return ClassifyResult::Miss };
         let Ok(table) = read_txn.open_table(DEPS_TABLE) else { return ClassifyResult::Miss };
         let Ok(Some(data)) = table.get(key.as_str()) else { return ClassifyResult::Miss };
         let Ok(entry) = serde_json::from_slice::<DepsEntry>(data.value()) else { return ClassifyResult::Miss };
-        let Ok((current_checksum, checksum_path)) = checksum_fast(source) else { return ClassifyResult::Miss };
+        let Ok((current_checksum, checksum_path)) = checksum_fast(ctx, source) else { return ClassifyResult::Miss };
         if entry.source_checksum != current_checksum {
             return ClassifyResult::Miss;
         }
@@ -182,9 +183,9 @@ impl DepsCache {
     /// Store dependencies for a (analyzer, source) pair.
     /// Uses `checksum_fast` so the mtime cache is populated alongside the
     /// deps entry — subsequent `get()` calls can then short-circuit on mtime.
-    pub fn set(&self, analyzer: &str, source: &Path, dependencies: &[PathBuf]) -> Result<()> {
+    pub fn set(&self, ctx: &BuildContext, analyzer: &str, source: &Path, dependencies: &[PathBuf]) -> Result<()> {
         let key = key_for(analyzer, source);
-        let (source_checksum, _) = checksum_fast(source)?;
+        let (source_checksum, _) = checksum_fast(ctx, source)?;
 
         let entry = DepsEntry {
             source_checksum,
@@ -412,9 +413,10 @@ mod tests {
         // the current dir for the duration of the test.
         let orig = std::env::current_dir().unwrap();
         std::env::set_current_dir(tmp.path()).unwrap();
+        let ctx = crate::build_context::BuildContext::new();
         let mut cache = DepsCache::open().expect("open fresh cache");
         let nonexistent = tmp.path().join("does_not_exist.py");
-        let result = cache.get("python", &nonexistent);
+        let result = cache.get(&ctx, "python", &nonexistent);
         std::env::set_current_dir(orig).unwrap();
 
         assert!(result.is_none(), "missing entry must return None");

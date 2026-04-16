@@ -194,6 +194,16 @@ pub struct Builder {
 }
 
 impl Builder {
+    /// Apply config-derived settings to the BuildContext. Call this once after
+    /// creating the Builder, before any build/status operations. This bridges
+    /// config values that affect BuildContext state (e.g. mtime_check) without
+    /// requiring Builder::new() to take &BuildContext.
+    pub fn apply_config_to_context(&self, ctx: &crate::build_context::BuildContext) {
+        if !self.config.cache.mtime_check {
+            ctx.set_mtime_check(false);
+        }
+    }
+
     pub fn new() -> Result<Self> {
         Config::require_config()?;
         let config = Config::load()?;
@@ -213,10 +223,10 @@ impl Builder {
             None => None,
         };
 
-        // Config can disable mtime check (CLI --no-mtime-cache may have already disabled it)
-        if !config.cache.mtime_check {
-            crate::checksum::set_mtime_check(false);
-        }
+        // Note: config.cache.mtime_check is applied by the caller via
+        // ctx.set_mtime_check() — Builder::new() doesn't have access to
+        // BuildContext. The CLI --no-mtime-cache flag is also applied by
+        // the caller in main.rs.
         let object_store = ObjectStore::new(ObjectStoreOptions {
             restore_method,
             compression: config.cache.compression,
@@ -402,7 +412,7 @@ impl Builder {
         let mut misses: usize = 0;
         for name in &active_analyzers {
             for source in analyzers[*name].matching_sources(graph) {
-                match deps_cache.classify(name, &source) {
+                match deps_cache.classify(ctx, name, &source) {
                     crate::deps_cache::ClassifyResult::MtimeHit => mtime_hits += 1,
                     crate::deps_cache::ClassifyResult::ContentHit => content_hits += 1,
                     crate::deps_cache::ClassifyResult::Miss => misses += 1,
@@ -634,6 +644,14 @@ impl Builder {
         phase_timings.push(("resolve".to_string(), t.elapsed()));
         print_graph_stats(GraphSnapshot::AfterResolve, &graph);
 
+        // Phase 5: Validate graph
+        let t = Instant::now();
+        let validation_errors = graph.validate(&self.config.graph);
+        if !validation_errors.is_empty() {
+            anyhow::bail!("Graph validation failed:\n{}", validation_errors.join("\n"));
+        }
+        phase_timings.push(("validate".to_string(), t.elapsed()));
+
         // Note: BuildPhase::Resolve and BuildPhase::Build both complete the graph
         Ok((graph, phase_timings))
     }
@@ -667,6 +685,12 @@ impl Builder {
         self.run_analyzers(ctx, &mut graph, false)?;
 
         graph.resolve_dependencies();
+
+        let validation_errors = graph.validate(&self.config.graph);
+        if !validation_errors.is_empty() {
+            anyhow::bail!("Graph validation failed:\n{}", validation_errors.join("\n"));
+        }
+
         Ok(graph)
     }
 

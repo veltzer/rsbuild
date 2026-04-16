@@ -600,6 +600,73 @@ impl BuildGraph {
         }
         Ok(())
     }
+
+    /// Run configurable validation checks on the fully-built graph.
+    /// Returns a list of error messages. The caller decides whether to
+    /// bail or warn based on the config.
+    pub fn validate(&self, config: &crate::config::GraphConfig) -> Vec<String> {
+        let mut errors = Vec::new();
+
+        // Check 1: reject products with no input files
+        if config.validate_empty_inputs {
+            for product in &self.products {
+                if product.inputs.is_empty() {
+                    errors.push(format!(
+                        "[{}] product {} has no input files",
+                        product.processor,
+                        product.display(crate::cli::DisplayOptions::minimal()),
+                    ));
+                }
+            }
+        }
+
+        // Check 2: validate dependency references point to existing products
+        if config.validate_dep_references {
+            for (id, deps) in self.dependencies.iter().enumerate() {
+                for &dep_id in deps {
+                    if dep_id >= self.products.len() {
+                        let product = &self.products[id];
+                        errors.push(format!(
+                            "[{}] product {} has dependency on non-existent product id {}",
+                            product.processor,
+                            product.display(crate::cli::DisplayOptions::minimal()),
+                            dep_id,
+                        ));
+                    }
+                }
+            }
+        }
+
+        // Check 3: detect duplicate inputs within same processor
+        if config.validate_duplicate_inputs {
+            let mut seen: HashMap<(&str, &Path), usize> = HashMap::new();
+            for product in &self.products {
+                for input in &product.inputs {
+                    let key = (product.processor.as_str(), input.as_path());
+                    if let Some(first_id) = seen.get(&key) {
+                        errors.push(format!(
+                            "[{}] input {} appears in both product {} and product {}",
+                            product.processor,
+                            input.display(),
+                            first_id,
+                            product.id,
+                        ));
+                    } else {
+                        seen.insert(key, product.id);
+                    }
+                }
+            }
+        }
+
+        // Check 4: early cycle detection
+        if config.validate_early_cycles {
+            if let Err(e) = self.topological_sort() {
+                errors.push(format!("{}", e));
+            }
+        }
+
+        errors
+    }
 }
 
 impl BuildGraph {

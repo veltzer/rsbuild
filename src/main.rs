@@ -113,14 +113,14 @@ fn run() -> (Result<()>, bool) {
         color_enabled,
     });
 
-    // Apply CLI override for mtime cache before any Builder is created
-    if cli.no_mtime_cache {
-        checksum::set_mtime_check(false);
-    }
-
     // Create the build context before the signal handler so the handler can
     // call ctx.interrupt() to signal all running subprocesses.
     let ctx = Arc::new(build_context::BuildContext::new());
+
+    // Apply CLI override for mtime cache
+    if cli.no_mtime_cache {
+        ctx.set_mtime_check(false);
+    }
 
     // Set up Ctrl+C handler: sets a flag so the executor can stop gracefully
     let interrupted = Arc::new(AtomicBool::new(false));
@@ -156,10 +156,12 @@ fn run() -> (Result<()>, bool) {
         Commands::Build { force, dry_run, verify_tool_versions, stop_after, ref shared } => {
             if dry_run {
                 let builder = Builder::new()?;
+                builder.apply_config_to_context(&ctx);
                 builder.dry_run(&ctx, force, shared.explain)?;
             } else {
                 let t = Instant::now();
                 let mut builder = Builder::new()?;
+                builder.apply_config_to_context(&ctx);
                 let builder_new_dur = t.elapsed();
                 let t = Instant::now();
                 if verify_tool_versions {
@@ -448,6 +450,7 @@ fn run() -> (Result<()>, bool) {
         }
         Commands::Status { breakdown } => {
             let builder = Builder::new()?;
+            builder.apply_config_to_context(&ctx);
             builder.status(&ctx, cli.verbose, breakdown)?;
         }
         Commands::SymlinkInstall => {

@@ -7,9 +7,13 @@ use crate::checksum;
 use crate::config::RestoreMethod;
 
 impl ObjectStore {
-    /// Calculate SHA-256 checksum of a file
+    /// Calculate SHA-256 checksum of a file by reading its contents directly.
+    /// Does not use the BuildContext's in-memory cache — intended for one-off
+    /// integrity checks (e.g. restore verification), not hot-path input hashing.
     pub fn calculate_checksum(file_path: &Path) -> Result<String> {
-        checksum::file_checksum(file_path)
+        let contents = fs::read(file_path)
+            .with_context(|| format!("Failed to read file for checksum: {}", file_path.display()))?;
+        Ok(Self::calculate_checksum_bytes(&contents))
     }
 
     /// Calculate SHA-256 checksum of bytes

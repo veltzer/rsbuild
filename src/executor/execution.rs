@@ -699,7 +699,7 @@ impl<'a> Executor<'a> {
                     continue;
                 }
                 // reuse the cached input checksum instead of recomputing
-                let input_checksum = crate::checksum::combined_input_checksum(&product.inputs);
+                let input_checksum = crate::checksum::combined_input_checksum(self.build_ctx, &product.inputs);
 
                 let input_checksum = match input_checksum {
                     Ok(cs) => cs,

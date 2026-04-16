@@ -1,12 +1,14 @@
 use anyhow::{Context, Result};
-use redb::{Database, ReadableDatabase, TableDefinition};
+use redb::ReadableDatabase;
+use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 use std::time::SystemTime;
+
+use crate::build_context::BuildContext;
 
 const MTIME_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("mtime_cache");
 
@@ -18,24 +20,9 @@ struct MtimeEntry {
     checksum: String,
 }
 
-/// Global in-memory checksum cache. Avoids re-reading and re-hashing
-/// the same file multiple times within a single build run.
-static CACHE: Mutex<Option<HashMap<PathBuf, String>>> = Mutex::new(None);
-
-/// Global mtime database, opened lazily on first use.
-static MTIME_DB: Mutex<Option<Database>> = Mutex::new(None);
-
-/// Whether mtime pre-check is enabled (set via `set_mtime_check`).
-static MTIME_ENABLED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
-
-/// Set whether mtime pre-check is enabled.
-pub(crate) fn set_mtime_check(enabled: bool) {
-    MTIME_ENABLED.store(enabled, std::sync::atomic::Ordering::Relaxed);
-}
-
-/// Open or get the mtime database.
-fn get_mtime_db() -> Result<std::sync::MutexGuard<'static, Option<Database>>> {
-    let mut guard = MTIME_DB.lock().unwrap();
+/// Open or get the mtime database from the BuildContext.
+fn get_mtime_db(ctx: &BuildContext) -> Result<std::sync::MutexGuard<'_, Option<redb::Database>>> {
+    let mut guard = ctx.mtime_db.lock().unwrap();
     if guard.is_none() {
         let dir = PathBuf::from(".rsconstruct");
         crate::errors::ctx(fs::create_dir_all(&dir), "Failed to create .rsconstruct directory")?;
@@ -45,11 +32,11 @@ fn get_mtime_db() -> Result<std::sync::MutexGuard<'static, Option<Database>>> {
     Ok(guard)
 }
 
-/// Calculate SHA-256 checksum of a file's contents, using the global cache.
-/// First call for a given path reads the file and caches the result.
-/// Subsequent calls return the cached value.
-pub(crate) fn file_checksum(path: &Path) -> Result<String> {
-    let mut guard = CACHE.lock().unwrap();
+/// Calculate SHA-256 checksum of a file's contents, using the BuildContext's
+/// in-memory cache. First call for a given path reads the file and caches the
+/// result. Subsequent calls return the cached value.
+pub(crate) fn file_checksum(ctx: &BuildContext, path: &Path) -> Result<String> {
+    let mut guard = ctx.checksum_cache.lock().unwrap();
     let cache = guard.get_or_insert_with(HashMap::new);
     if let Some(cached) = cache.get(path) {
         return Ok(cached.clone());
@@ -63,7 +50,7 @@ pub(crate) fn file_checksum(path: &Path) -> Result<String> {
 
 /// Get checksum using mtime pre-check to avoid re-reading unchanged files.
 /// Returns the checksum and optionally a dirty mtime entry to flush.
-fn fast_checksum(path: &Path) -> Result<(String, Option<(String, MtimeEntry)>)> {
+fn fast_checksum(ctx: &BuildContext, path: &Path) -> Result<(String, Option<(String, MtimeEntry)>)> {
     let metadata = fs::metadata(path)
         .with_context(|| format!("Failed to stat file: {}", path.display()))?;
     let mtime = metadata.modified()
@@ -75,7 +62,7 @@ fn fast_checksum(path: &Path) -> Result<(String, Option<(String, MtimeEntry)>)> 
     let path_str = path.display().to_string();
 
     // Check mtime cache in DB
-    let db_guard = get_mtime_db()?;
+    let db_guard = get_mtime_db(ctx)?;
     let cached = if let Some(ref db) = *db_guard {
         let read_txn = crate::errors::ctx(db.begin_read(), "Failed to begin read transaction for mtime cache")?;
         match read_txn.open_table(MTIME_TABLE) {
@@ -94,7 +81,7 @@ fn fast_checksum(path: &Path) -> Result<(String, Option<(String, MtimeEntry)>)> 
     if let Some(ref entry) = cached {
         if entry.mtime_secs == mtime_secs && entry.mtime_nanos == mtime_nanos {
             // Also populate the in-memory cache
-            let mut guard = CACHE.lock().unwrap();
+            let mut guard = ctx.checksum_cache.lock().unwrap();
             let cache = guard.get_or_insert_with(HashMap::new);
             cache.insert(path.to_path_buf(), entry.checksum.clone());
             return Ok((entry.checksum.clone(), None));
@@ -102,7 +89,7 @@ fn fast_checksum(path: &Path) -> Result<(String, Option<(String, MtimeEntry)>)> 
     }
 
     // mtime changed or no cache entry — compute checksum
-    let checksum = file_checksum(path)?;
+    let checksum = file_checksum(ctx, path)?;
     let new_entry = MtimeEntry {
         mtime_secs,
         mtime_nanos,
@@ -113,11 +100,11 @@ fn fast_checksum(path: &Path) -> Result<(String, Option<(String, MtimeEntry)>)> 
 }
 
 /// Flush a batch of dirty mtime entries in a single write transaction.
-fn flush_mtime_entries(dirty: Vec<(String, MtimeEntry)>) -> Result<()> {
+fn flush_mtime_entries(ctx: &BuildContext, dirty: Vec<(String, MtimeEntry)>) -> Result<()> {
     if dirty.is_empty() {
         return Ok(());
     }
-    let db_guard = get_mtime_db()?;
+    let db_guard = get_mtime_db(ctx)?;
     let db = crate::errors::ctx_opt(db_guard.as_ref(), "Mtime database not available")?;
     let write_txn = crate::errors::ctx(db.begin_write(), "Failed to begin write transaction for mtime cache")?;
     {
@@ -141,49 +128,34 @@ fn hash_checksums(checksums: &[String]) -> String {
 }
 
 /// Outcome of a `checksum_fast` call, surfacing whether the mtime cache
-/// succeeded in avoiding a file read. Used by the deps cache to report
-/// mtime-vs-content cache-hit splits.
+/// succeeded in avoiding a file read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ChecksumPath {
-    /// mtime matched the stored entry → cached checksum returned, no I/O.
     MtimeShortcut,
-    /// mtime was stale or disabled → file was read and re-hashed.
     FullRead,
 }
 
 /// Compute a file's checksum, consulting the persistent mtime cache first.
-/// When the file's mtime matches the cached entry, returns the cached checksum
-/// without re-reading the file — avoiding the I/O + SHA cost across builds.
-/// When the mtime cache is disabled (`set_mtime_check(false)` or the global
-/// `--no-mtime-cache` flag), falls back to a full read + hash via
-/// `file_checksum`.
-///
-/// Returns the checksum and which path was taken. Dirty mtime entries (new
-/// files or changed mtimes) are flushed inline, so callers don't need to
-/// batch flushes themselves. For hot loops that compute many checksums at
-/// once (like `combined_input_checksum`), prefer the internal
-/// `fast_checksum` + `flush_mtime_entries` pattern to amortize the write
-/// transaction.
-pub(crate) fn checksum_fast(path: &Path) -> Result<(String, ChecksumPath)> {
-    if !MTIME_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
-        return Ok((file_checksum(path)?, ChecksumPath::FullRead));
+pub(crate) fn checksum_fast(ctx: &BuildContext, path: &Path) -> Result<(String, ChecksumPath)> {
+    if !ctx.mtime_enabled.load(std::sync::atomic::Ordering::Relaxed) {
+        return Ok((file_checksum(ctx, path)?, ChecksumPath::FullRead));
     }
-    let (checksum, dirty) = fast_checksum(path)?;
+    let (checksum, dirty) = fast_checksum(ctx, path)?;
     let path_taken = if dirty.is_some() {
         ChecksumPath::FullRead
     } else {
         ChecksumPath::MtimeShortcut
     };
     if let Some(entry) = dirty {
-        flush_mtime_entries(vec![entry])?;
+        flush_mtime_entries(ctx, vec![entry])?;
     }
     Ok((checksum, path_taken))
 }
 
 /// Get the combined input checksum for a list of input files, using mtime
 /// pre-check to avoid re-reading unchanged files across builds.
-pub(crate) fn combined_input_checksum(inputs: &[PathBuf]) -> Result<String> {
-    let mtime_enabled = MTIME_ENABLED.load(std::sync::atomic::Ordering::Relaxed);
+pub(crate) fn combined_input_checksum(ctx: &BuildContext, inputs: &[PathBuf]) -> Result<String> {
+    let mtime_enabled = ctx.mtime_enabled.load(std::sync::atomic::Ordering::Relaxed);
 
     let mut checksums = Vec::with_capacity(inputs.len());
     let mut dirty_entries = Vec::new();
@@ -191,13 +163,13 @@ pub(crate) fn combined_input_checksum(inputs: &[PathBuf]) -> Result<String> {
     for input in inputs {
         if input.exists() {
             if mtime_enabled {
-                let (checksum, dirty) = fast_checksum(input)?;
+                let (checksum, dirty) = fast_checksum(ctx, input)?;
                 checksums.push(checksum);
                 if let Some(entry) = dirty {
                     dirty_entries.push(entry);
                 }
             } else {
-                checksums.push(file_checksum(input)?);
+                checksums.push(file_checksum(ctx, input)?);
             }
         } else {
             checksums.push(format!("MISSING:{}", input.display()));
@@ -205,13 +177,13 @@ pub(crate) fn combined_input_checksum(inputs: &[PathBuf]) -> Result<String> {
     }
 
     if mtime_enabled {
-        flush_mtime_entries(dirty_entries)?;
+        flush_mtime_entries(ctx, dirty_entries)?;
     }
 
     Ok(hash_checksums(&checksums))
 }
 
-/// Calculate SHA-256 checksum of a byte slice. Not cached.
+/// Calculate SHA-256 checksum of a byte slice. Not cached — pure function.
 pub(crate) fn bytes_checksum(data: &[u8]) -> String {
     hex::encode(Sha256::digest(data))
 }

@@ -197,7 +197,7 @@ pub fn run_include_path_commands(ctx: &crate::build_context::BuildContext, tag: 
 /// - `match_product`: given a product, returns `Some(source_path)` if the product is relevant
 /// - `scan_deps`: given a source path, returns the list of dependency paths
 pub fn analyze_with_scanner<F, G>(
-    _ctx: &crate::build_context::BuildContext,
+    ctx: &crate::build_context::BuildContext,
     graph: &mut BuildGraph,
     deps_cache: &mut DepsCache,
     analyzer_name: &str,
@@ -225,11 +225,11 @@ where
         progress.set_message(format!("[{}] {}", analyzer_name, source.display()));
 
         // Try to get cached dependencies, otherwise scan
-        let deps = if let Some(cached) = deps_cache.get(analyzer_name, source) {
+        let deps = if let Some(cached) = deps_cache.get(ctx, analyzer_name, source) {
             cached
         } else {
             let scanned = scan_deps(source)?;
-            if let Err(e) = deps_cache.set(analyzer_name, source, &scanned) {
+            if let Err(e) = deps_cache.set(ctx, analyzer_name, source, &scanned) {
                 eprintln!("Warning: failed to cache dependencies for {}: {}", source.display(), e);
             }
             scanned

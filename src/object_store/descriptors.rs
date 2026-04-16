@@ -19,20 +19,28 @@ impl ObjectStore {
         }
         let data = serde_json::to_vec(descriptor)
             .context("Failed to serialize cache descriptor")?;
-        if path.exists() {
-            let mut perms = fs::metadata(&path)
-                .with_context(|| format!("Failed to read metadata for descriptor: {}", path.display()))?.permissions();
-            perms.set_readonly(false);
-            fs::set_permissions(&path, perms)
-                .with_context(|| format!("Failed to make descriptor writable: {}", path.display()))?;
+        // Make writable if the file already exists (it was set read-only by a
+        // previous store). This races with concurrent writers that also toggle
+        // permissions, so if the first write attempt fails with PermissionDenied
+        // we retry once after forcing writable.
+        if let Err(first_err) = fs::write(&path, &data) {
+            if first_err.kind() == std::io::ErrorKind::PermissionDenied {
+                if let Ok(meta) = fs::metadata(&path) {
+                    let mut perms = meta.permissions();
+                    perms.set_readonly(false);
+                    let _ = fs::set_permissions(&path, perms);
+                }
+                fs::write(&path, &data)
+                    .with_context(|| format!("Failed to write cache descriptor (retry): {}", path.display()))?;
+            } else {
+                return Err(first_err).with_context(|| format!("Failed to write cache descriptor: {}", path.display()));
+            }
         }
-        fs::write(&path, &data)
-            .with_context(|| format!("Failed to write cache descriptor: {}", path.display()))?;
-        let mut perms = fs::metadata(&path)
-            .with_context(|| format!("Failed to read metadata for descriptor: {}", path.display()))?.permissions();
-        perms.set_readonly(true);
-        fs::set_permissions(&path, perms)
-            .with_context(|| format!("Failed to make descriptor read-only: {}", path.display()))?;
+        if let Ok(meta) = fs::metadata(&path) {
+            let mut perms = meta.permissions();
+            perms.set_readonly(true);
+            let _ = fs::set_permissions(&path, perms);
+        }
         Ok(())
     }
 

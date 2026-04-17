@@ -6,7 +6,6 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use crate::color;
 use crate::processors::ProcessorMap;
 
 const LOCK_FILE: &str = ".tools.versions";
@@ -194,21 +193,17 @@ pub fn processor_tool_hashes(
 
 /// Verify that the current tool versions match the lock file.
 /// Returns Ok(()) if everything matches, or an error describing mismatches.
+/// Errors if the lock file does not exist — callers must run `rsconstruct
+/// tools lock` to create one.
 pub fn verify_lock_file(
     tool_commands: &[(String, Vec<String>)],
 ) -> Result<()> {
     let lock = match read_lock_file()? {
         Some(lock) => lock,
-        None => {
-            let lock = create_lock(tool_commands)?;
-            write_lock_file(&lock)?;
-            for (name, info) in &lock.tools {
-                let version = extract_semver(&info.version_output).unwrap_or("?");
-                eprintln!("{} {} {}", name, color::green("locked"), color::dim(version));
-            }
-            eprintln!("Created {}", color::bold(".tools.versions"));
-            return Ok(());
-        }
+        None => anyhow::bail!(
+            "No {} found. Run `rsconstruct tools lock` to create one.",
+            LOCK_FILE
+        ),
     };
 
     let mut mismatches = Vec::new();

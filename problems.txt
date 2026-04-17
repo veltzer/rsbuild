@@ -30,4 +30,6 @@ python files dependency analysis:
 - want a config system like the kernels config system.
     This is a big item.
 
-- call the error EXIT_[XXX]. It wail make it clearer.
+- call the errors EXIT_[XXX]. It wail make it clearer.
+
+- There is knowledge that we know when we run the tera processor (for instance, how many files are under the charge of each prcoessor) - we can make that knowledge available to the processor so we woulnd't have to do things like counting files.

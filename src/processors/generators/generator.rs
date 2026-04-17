@@ -6,7 +6,7 @@ use crate::config::GeneratorConfig;
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
 use crate::processors::{
-    ProcessorBase, Processor, scan_root_valid,
+    Processor, scan_root_valid,
     run_command, check_command_output, execute_generator_batch,
     config_file_inputs,
 };

@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::{SphinxConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, Processor, SiblingFilter, run_command, anchor_display_dir, check_command_output};
+use crate::processors::{Processor, SiblingFilter, run_command, anchor_display_dir, check_command_output};
 
 pub struct SphinxProcessor {
     config: SphinxConfig,

@@ -6,7 +6,7 @@ use std::process::Command;
 use crate::config::{LinuxModuleConfig, LinuxModuleManifest, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, Processor, run_command, check_command_output, anchor_display_dir};
+use crate::processors::{Processor, run_command, check_command_output, anchor_display_dir};
 
 pub struct LinuxModuleProcessor {
     config: LinuxModuleConfig,

@@ -328,7 +328,7 @@ use std::path::PathBuf;
 use crate::config::{CcSingleFileConfig, CompilerProfile, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, Processor, format_command, run_command};
+use crate::processors::{Processor, format_command, run_command};
 
 
 pub struct CcSingleFileProcessor {

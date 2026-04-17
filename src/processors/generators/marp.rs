@@ -42,7 +42,7 @@ fn execute_marp(ctx: &crate::build_context::BuildContext, config: &StandardConfi
 
 
 fn create_marp(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
-    crate::registries::deserialize_and_create(toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "Convert Marp Markdown presentations to PDF/HTML", extra_tools: &["node"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_marp, is_native: false })))
+    crate::registries::deserialize_and_create(toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { extra_tools: &["node"], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_marp, is_native: false })))
 }
 inventory::submit! { crate::registries::ProcessorPlugin {
     version: 1,

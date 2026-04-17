@@ -16,7 +16,7 @@ use crate::analyzers::python::scan_python_imports;
 use crate::config::{RequirementsConfig, output_config_hash, resolve_extra_inputs, KnownFields};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, Processor, scan_root_valid, ensure_output_dir};
+use crate::processors::{Processor, scan_root_valid, ensure_output_dir};
 
 use super::python_distribution_map;
 use super::python_stdlib;

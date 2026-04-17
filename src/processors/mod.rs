@@ -27,32 +27,11 @@ use crate::graph::{BuildGraph, Product};
 pub mod names {
     pub const TERA: &str = "tera";
     pub const CC_SINGLE_FILE: &str = "cc_single_file";
-    pub const CC: &str = "cc";
-    pub const ZSPELL: &str = "zspell";
-    pub const MAKE: &str = "make";
     pub const CARGO: &str = "cargo";
     pub const CLIPPY: &str = "clippy";
-    pub const TAGS: &str = "tags";
-    pub const PIP: &str = "pip";
-    pub const REQUIREMENTS: &str = "requirements";
-    pub const SPHINX: &str = "sphinx";
-    pub const MDBOOK: &str = "mdbook";
-    pub const NPM: &str = "npm";
-    pub const GEM: &str = "gem";
-    pub const MDL: &str = "mdl";
-    pub const MARKDOWNLINT: &str = "markdownlint";
-    pub const ASPELL: &str = "aspell";
-    pub const PDFLATEX: &str = "pdflatex";
-    pub const MAKO: &str = "mako";
-    pub const JINJA2: &str = "jinja2";
-    pub const PDFUNITE: &str = "pdfunite";
-    pub const IPDFUNITE: &str = "ipdfunite";
     pub const SCRIPT: &str = "script";
     pub const GENERATOR: &str = "generator";
     pub const EXPLICIT: &str = "explicit";
-    pub const LINUX_MODULE: &str = "linux_module";
-    pub const JEKYLL: &str = "jekyll";
-    pub const RUST_SINGLE_FILE: &str = "rust_single_file";
 }
 
 /// Resolve a relative path against an anchor directory.
@@ -1375,7 +1354,6 @@ pub(crate) enum DiscoverMode {
 /// processor registry.
 #[derive(Copy, Clone)]
 pub(crate) struct SimpleGeneratorParams {
-    pub description: &'static str,
     pub extra_tools: &'static [&'static str],
     pub discover_mode: DiscoverMode,
     pub execute_fn: fn(&crate::build_context::BuildContext, &StandardConfig, &Product) -> Result<()>,

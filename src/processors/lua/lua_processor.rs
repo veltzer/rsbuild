@@ -8,7 +8,7 @@ use std::process::Command;
 use crate::config::{output_config_hash, standard_config_from_toml, StandardConfig};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{clean_outputs, ensure_stub_dir, run_command, Processor, ProcessorType};
+use crate::processors::{clean_outputs, ensure_stub_dir, run_command, Processor};
 
 /// Convert a LuaResult to an anyhow::Result with a contextual message.
 fn lua_context<T>(result: LuaResult<T>, msg: impl std::fmt::Display) -> Result<T> {

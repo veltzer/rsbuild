@@ -4,7 +4,7 @@ use std::process::Command;
 use crate::config::{Jinja2Config, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, Processor, run_command, check_command_output};
+use crate::processors::{Processor, run_command, check_command_output};
 
 use super::TemplateItem;
 

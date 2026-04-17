@@ -8,7 +8,7 @@ use crate::color;
 use crate::config::{TagsConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, Processor, scan_root_valid};
+use crate::processors::{Processor, scan_root_valid};
 
 const FRONTMATTER: TableDefinition<&str, &str> = TableDefinition::new("frontmatter");
 const TAG_INDEX: TableDefinition<&str, &str> = TableDefinition::new("tag_index");

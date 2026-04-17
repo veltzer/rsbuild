@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::config::{ScriptConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, Processor, config_file_inputs, run_checker, execute_checker_batch};
+use crate::processors::{Processor, config_file_inputs, run_checker, execute_checker_batch};
 
 pub struct ScriptProcessor {
     config: ScriptConfig,

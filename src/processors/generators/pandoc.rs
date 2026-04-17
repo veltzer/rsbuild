@@ -32,7 +32,7 @@ fn execute_pandoc(ctx: &crate::build_context::BuildContext, config: &StandardCon
 
 
 fn create_pandoc(toml: &toml::Value) -> anyhow::Result<Box<dyn crate::processors::Processor>> {
-    crate::registries::deserialize_and_create(toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { description: "Convert documents using pandoc", extra_tools: &[], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_pandoc, is_native: false })))
+    crate::registries::deserialize_and_create(toml, |cfg| Box::new(SimpleGenerator::new(cfg, SimpleGeneratorParams { extra_tools: &[], discover_mode: DiscoverMode::MultiFormat, execute_fn: execute_pandoc, is_native: false })))
 }
 inventory::submit! { crate::registries::ProcessorPlugin {
     version: 1,

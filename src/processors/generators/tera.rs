@@ -12,7 +12,7 @@ use tera::{Context as TeraContext, Function, Tera, Value as TeraValue, to_value}
 use crate::config::{TeraConfig, output_config_hash, resolve_extra_inputs};
 use crate::file_index::FileIndex;
 use crate::graph::{BuildGraph, Product};
-use crate::processors::{ProcessorBase, Processor, run_command_capture};
+use crate::processors::{Processor, run_command_capture};
 
 use super::TemplateItem;
 

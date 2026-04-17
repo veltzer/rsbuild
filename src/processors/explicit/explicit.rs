@@ -107,7 +107,7 @@ impl Processor for ExplicitProcessor {
 
         let output_files: Vec<PathBuf> = self.config.output_files.iter().map(PathBuf::from).collect();
         let output_dirs: Vec<PathBuf> = self.config.output_dirs.iter().map(PathBuf::from).collect();
-        let hash = Some(output_config_hash(&self.config, &["inputs", "input_globs"]));
+        let hash = Some(output_config_hash(&self.config, <crate::config::ExplicitConfig as crate::config::KnownFields>::checksum_fields()));
 
         if output_dirs.is_empty() {
             graph.add_product(inputs, output_files, instance_name, hash)?;
@@ -182,7 +182,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::ExplicitConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::ExplicitConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::ExplicitConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::ExplicitConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::ExplicitConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ExplicitConfig>,
         keywords: &["explicit", "command", "custom", "script"],

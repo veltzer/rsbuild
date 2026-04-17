@@ -108,7 +108,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::MarpImagesConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::MarpImagesConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::MarpImagesConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::MarpImagesConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::MarpImagesConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::MarpImagesConfig>,
         keywords: &["markdown", "marp", "images", "checker", "presentation"],

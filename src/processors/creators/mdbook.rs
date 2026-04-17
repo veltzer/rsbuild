@@ -77,6 +77,7 @@ impl Processor for MdbookProcessor {
             file_index,
             dep_inputs: &self.config.standard.dep_inputs,
             cfg_hash: &self.config,
+            checksum_fields: <crate::config::MdbookConfig as crate::config::KnownFields>::checksum_fields(),
             siblings: &SiblingFilter {
                 extensions: &[".md", ".toml"],
                 excludes: &["/.git/", "/out/", "/.rsconstruct/", "/book/"],
@@ -108,7 +109,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::MdbookConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::MdbookConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::MdbookConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::MdbookConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::MdbookConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::MdbookConfig>,
         keywords: &["markdown", "md", "rust", "documentation", "book", "html"],

@@ -71,6 +71,7 @@ impl Processor for MakeProcessor {
             file_index,
             dep_inputs: &self.config.standard.dep_inputs,
             cfg_hash: &self.config,
+            checksum_fields: <crate::config::MakeConfig as crate::config::KnownFields>::checksum_fields(),
             siblings: &SiblingFilter {
                 extensions: &[""],
                 excludes: &["/.git/", "/out/", "/.rsconstruct/"],
@@ -98,7 +99,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::MakeConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::MakeConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::MakeConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::MakeConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::MakeConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::MakeConfig>,
         keywords: &["make", "makefile", "builder", "checker"],

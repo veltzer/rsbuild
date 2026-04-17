@@ -68,7 +68,7 @@ impl Processor for GemProcessor {
             return Ok(());
         };
 
-        let hash = Some(output_config_hash(&self.config, &[]));
+        let hash = Some(output_config_hash(&self.config, <crate::config::GemConfig as crate::config::KnownFields>::checksum_fields()));
         let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
 
         let siblings = SiblingFilter {
@@ -123,7 +123,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::GemConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::GemConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::GemConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::GemConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::GemConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::GemConfig>,
         keywords: &["ruby", "gem", "package-manager", "rb"],

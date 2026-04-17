@@ -184,7 +184,7 @@ impl Processor for LinuxModuleProcessor {
         let Some(files) = crate::processors::scan_or_skip(&self.config.standard, file_index) else {
             return Ok(());
         };
-        let hash = Some(output_config_hash(&self.config, &[]));
+        let hash = Some(output_config_hash(&self.config, <crate::config::LinuxModuleConfig as crate::config::KnownFields>::checksum_fields()));
         let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
 
         for yaml_path in files {
@@ -239,7 +239,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::LinuxModuleConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::LinuxModuleConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::LinuxModuleConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::LinuxModuleConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::LinuxModuleConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::LinuxModuleConfig>,
         keywords: &["c", "linux", "kernel", "module", "builder"],

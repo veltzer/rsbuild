@@ -47,7 +47,7 @@ impl Processor for MdlProcessor {
         if files.is_empty() {
             return Ok(());
         }
-        let hash = Some(output_config_hash(&self.config, &[]));
+        let hash = Some(output_config_hash(&self.config, <crate::config::MdlConfig as crate::config::KnownFields>::checksum_fields()));
         let mut dep_inputs = self.config.standard.dep_inputs.clone();
         for ai in &self.config.standard.dep_auto {
             dep_inputs.extend(config_file_inputs(ai));
@@ -102,7 +102,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::MdlConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::MdlConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::MdlConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::MdlConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::MdlConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::MdlConfig>,
         keywords: &["markdown", "md", "linter", "ruby", "gem"],

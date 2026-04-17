@@ -83,7 +83,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::ItaploConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::ItaploConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::ItaploConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::ItaploConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::ItaploConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ItaploConfig>,
         keywords: &["toml", "formatter", "linter", "validator"],

@@ -72,7 +72,7 @@ impl Processor for NpmProcessor {
             return Ok(());
         };
 
-        let hash = Some(output_config_hash(&self.config, &[]));
+        let hash = Some(output_config_hash(&self.config, <crate::config::NpmConfig as crate::config::KnownFields>::checksum_fields()));
         let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
 
         let siblings = SiblingFilter {
@@ -127,7 +127,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::NpmConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::NpmConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::NpmConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::NpmConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::NpmConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::NpmConfig>,
         keywords: &["javascript", "typescript", "node", "npm", "package-manager", "web", "frontend"],

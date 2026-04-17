@@ -10,7 +10,7 @@ inventory::submit! { crate::registries::ProcessorPlugin {
     version: 1,
     name: "jsonlint", processor_type: crate::processors::ProcessorType::Checker, create: create_jsonlint,
     known_fields: crate::registries::typed_known_fields::<crate::config::StandardConfig>,
-    output_fields: crate::registries::typed_output_fields::<crate::config::StandardConfig>,
+    checksum_fields: crate::registries::typed_checksum_fields::<crate::config::StandardConfig>,
     must_fields: crate::registries::typed_must_fields::<crate::config::StandardConfig>,
     field_descriptions: crate::registries::typed_field_descriptions::<crate::config::StandardConfig>,
     defconfig_json: crate::registries::default_config_json::<crate::config::StandardConfig>,

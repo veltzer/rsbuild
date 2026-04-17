@@ -78,7 +78,7 @@ impl Processor for PipProcessor {
             return Ok(());
         }
 
-        let hash = Some(output_config_hash(&self.config, &[]));
+        let hash = Some(output_config_hash(&self.config, <crate::config::PipConfig as crate::config::KnownFields>::checksum_fields()));
         let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
 
         for anchor in files {
@@ -110,7 +110,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::PipConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::PipConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::PipConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::PipConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::PipConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::PipConfig>,
         keywords: &["python", "pip", "package-manager", "py"],

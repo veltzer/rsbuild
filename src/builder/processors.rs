@@ -224,12 +224,12 @@ fn config_diff(name: &str, current: &serde_json::Value) -> serde_json::Value {
     serde_json::Value::Object(diff)
 }
 
-/// Print metadata annotations (required fields and output-affecting fields) for a processor.
+/// Print metadata annotations (required fields and checksum-affecting fields) for a processor.
 /// Only shown in text mode (not JSON mode).
 ///
-/// Columns: Field, Type, Default, Required, Output (and Description in verbose mode).
+/// Columns: Field, Type, Default, Required, Checksum (and Description in verbose mode).
 /// - Required: "yes" if the field is in `must_fields()` (must be set non-empty by user).
-/// - Output:   "yes" if the field is in `output_fields()` (changes affect what the tool produces
+/// - Checksum: "yes" if the field is in `checksum_fields()` (changes affect what the tool produces
 ///   and trigger rebuilds).
 fn print_processor_metadata(name: &str, verbose: bool) {
     use crate::config::{SCAN_FIELD_DESCRIPTIONS, SHARED_FIELD_DESCRIPTIONS};
@@ -243,8 +243,8 @@ fn print_processor_metadata(name: &str, verbose: bool) {
             .iter()
             .copied()
             .collect();
-    let output_fields: std::collections::HashSet<&str> =
-        crate::config::ProcessorConfig::output_fields_for(name)
+    let checksum_fields: std::collections::HashSet<&str> =
+        crate::config::ProcessorConfig::checksum_fields_for(name)
             .unwrap_or(&[])
             .iter()
             .copied()
@@ -256,9 +256,9 @@ fn print_processor_metadata(name: &str, verbose: bool) {
 
     let mut builder = TableBuilder::new();
     if verbose {
-        builder.push_record(["Field", "Type", "Default", "Required", "Output", "Description"]);
+        builder.push_record(["Field", "Type", "Default", "Required", "Checksum", "Description"]);
     } else {
-        builder.push_record(["Field", "Type", "Default", "Required", "Output"]);
+        builder.push_record(["Field", "Type", "Default", "Required", "Checksum"]);
     }
 
     // Processor-specific fields first, then shared dep/exec, then scan fields
@@ -287,11 +287,11 @@ fn print_processor_metadata(name: &str, verbose: bool) {
             }
         };
         let required = color::yes_no(must_fields.contains(*field));
-        let output = color::yes_no(output_fields.contains(*field));
+        let checksum = color::yes_no(checksum_fields.contains(*field));
         if verbose {
-            builder.push_record([field, type_str, &default_str, required, output, desc]);
+            builder.push_record([field, type_str, &default_str, required, checksum, desc]);
         } else {
-            builder.push_record([field, type_str, &default_str, required, output]);
+            builder.push_record([field, type_str, &default_str, required, checksum]);
         }
     }
 

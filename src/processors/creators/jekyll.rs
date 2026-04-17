@@ -82,6 +82,7 @@ impl Processor for JekyllProcessor {
             file_index,
             dep_inputs: &self.config.standard.dep_inputs,
             cfg_hash: &self.config,
+            checksum_fields: <crate::config::JekyllConfig as crate::config::KnownFields>::checksum_fields(),
             siblings: &SiblingFilter {
                 extensions: &[""],
                 excludes: &["/.git/", "/out/", "/.rsconstruct/", "/_site/"],
@@ -109,7 +110,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::JekyllConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::JekyllConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::JekyllConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::JekyllConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::JekyllConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::JekyllConfig>,
         keywords: &["ruby", "jekyll", "static-site", "html", "markdown", "web", "gem"],

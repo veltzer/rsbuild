@@ -97,7 +97,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::DuplicateFilesConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::DuplicateFilesConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::DuplicateFilesConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::DuplicateFilesConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::DuplicateFilesConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::DuplicateFilesConfig>,
         keywords: &["checker", "duplicates", "files"],

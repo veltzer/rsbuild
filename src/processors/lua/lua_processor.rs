@@ -425,7 +425,15 @@ impl Processor for LuaProcessor {
             format!("Lua plugin '{}': discover() failed", self.name),
         )?;
 
-        let hash = Some(output_config_hash(&self.config_value, &[]));
+        // Lua plugins don't have a typed `KnownFields` impl. With the allowlist
+        // hashing API, we synthesize an allowlist at runtime from every top-level
+        // key present in the TOML value — so the hash behavior matches "hash the
+        // whole config," which is the safest default for arbitrary user plugins.
+        let keys: Vec<String> = self.config_value.as_table()
+            .map(|t| t.keys().cloned().collect())
+            .unwrap_or_default();
+        let key_refs: Vec<&str> = keys.iter().map(|s| s.as_str()).collect();
+        let hash = Some(output_config_hash(&self.config_value, &key_refs));
 
         // Parse each product from the returned table
         let len = lua_context(products_table.len(), "Failed to get products length")?;

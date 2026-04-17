@@ -61,7 +61,9 @@ impl crate::processors::Processor for ClangTidyProcessor {
         crate::processors::discover_checker_products(
             graph, &self.config.standard, file_index,
             &self.config.standard.dep_inputs, &self.config.standard.dep_auto,
-            &self.config, instance_name,
+            &self.config,
+            <crate::config::ClangTidyConfig as crate::config::KnownFields>::checksum_fields(),
+            instance_name,
         )
     }
 
@@ -91,7 +93,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::ClangTidyConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::ClangTidyConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::ClangTidyConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::ClangTidyConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::ClangTidyConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ClangTidyConfig>,
         keywords: &["c", "cpp", "linter", "clang", "checker", "cc", "h", "hpp"],

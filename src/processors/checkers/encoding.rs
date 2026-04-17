@@ -102,7 +102,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::EncodingConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::EncodingConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::EncodingConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::EncodingConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::EncodingConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::EncodingConfig>,
         keywords: &["checker", "encoding", "utf8", "text", "validator"],

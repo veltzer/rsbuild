@@ -14,7 +14,7 @@ pub fn add_processor(pname: &str, dry_run: bool) -> Result<()> {
 
     let known: Vec<&str> = (plugin.known_fields)().to_vec();
     let must: Vec<&str> = (plugin.must_fields)().to_vec();
-    let output_fields: Vec<&str> = (plugin.output_fields)().to_vec();
+    let checksum_fields: Vec<&str> = (plugin.checksum_fields)().to_vec();
     let mut descs: HashMap<&str, &str> = (plugin.field_descriptions)()
         .iter().copied().collect();
     for (f, d) in crate::config::SHARED_FIELD_DESCRIPTIONS { descs.entry(f).or_insert(d); }
@@ -32,7 +32,7 @@ pub fn add_processor(pname: &str, dry_run: bool) -> Result<()> {
         description.as_deref(),
         &known,
         &must,
-        &output_fields,
+        &checksum_fields,
         &defaults,
         &descs,
     );
@@ -85,7 +85,7 @@ fn render_section(
     description: Option<&str>,
     fields: &[&str],
     must: &[&str],
-    output_fields: &[&str],
+    checksum_fields: &[&str],
     defaults: &serde_json::Value,
     descs: &HashMap<&str, &str>,
 ) -> String {
@@ -97,7 +97,7 @@ fn render_section(
 
     let def_obj = defaults.as_object();
     let must_set: std::collections::HashSet<&str> = must.iter().copied().collect();
-    let output_set: std::collections::HashSet<&str> = output_fields.iter().copied().collect();
+    let checksum_set: std::collections::HashSet<&str> = checksum_fields.iter().copied().collect();
 
     // must-fill fields first, uncommented, with TODO placeholders where the default is empty.
     for field in must {
@@ -115,7 +115,7 @@ fn render_section(
         if must_set.contains(field) { continue; }
         let desc = descs.get(field).copied().unwrap_or("");
         let value_str = default_value_for_optional(def_obj.and_then(|m| m.get(*field)));
-        let tag = if output_set.contains(field) { " (affects output)" } else { "" };
+        let tag = if checksum_set.contains(field) { " (affects checksum)" } else { "" };
         if !desc.is_empty() {
             out.push_str(&format!("# {}{}\n", desc, tag));
         }

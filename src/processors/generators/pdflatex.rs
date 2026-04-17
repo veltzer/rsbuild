@@ -74,6 +74,7 @@ impl Processor for PdflatexProcessor {
             config: &self.config,
             output_dir: &self.config.standard.output_dir,
             processor_name: instance_name,
+            checksum_fields: <crate::config::PdflatexConfig as crate::config::KnownFields>::checksum_fields(),
         };
         super::discover_single_format(graph, file_index, &params, "pdf")
     }
@@ -155,7 +156,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::PdflatexConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::PdflatexConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::PdflatexConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::PdflatexConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::PdflatexConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::PdflatexConfig>,
         keywords: &["latex", "tex", "pdf", "generator", "typesetting"],

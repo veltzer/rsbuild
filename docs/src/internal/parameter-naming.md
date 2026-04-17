@@ -65,13 +65,14 @@ config files that may or may not be present in a given project.
 
 `command` and `args` always appear together. Every processor that has `command`
 must also have `args`. They are treated as a unit: both participate in the
-output checksum, so changing either the command or any argument invalidates the
-cache and triggers a rebuild.
+config checksum (computed from each processor's `checksum_fields()`), so
+changing either the command or any argument invalidates the cache and triggers
+a rebuild.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `command` | string | The executable to run. Required when the processor is active. If the value is a path to a local file, its content checksum is also tracked as a dependency. |
-| `args` | string[] | Arguments passed to the command before file paths. Always present alongside `command`. Both `command` and `args` values are included in the output checksum. |
+| `args` | string[] | Arguments passed to the command before file paths. Always present alongside `command`. Both `command` and `args` values are included in the config checksum. |
 
 ### `command` dependency tracking
 

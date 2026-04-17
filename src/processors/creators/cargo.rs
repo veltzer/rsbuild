@@ -77,7 +77,7 @@ impl Processor for CargoProcessor {
             extensions: &[".rs", ".toml"],
             excludes: &["/.git/", "/target/", "/.rsconstruct/"],
         };
-        let hash = Some(output_config_hash(&self.config, &[]));
+        let hash = Some(output_config_hash(&self.config, <crate::config::CargoConfig as crate::config::KnownFields>::checksum_fields()));
         let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
 
         for anchor in files {
@@ -144,7 +144,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::CargoConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::CargoConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::CargoConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::CargoConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::CargoConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::CargoConfig>,
         keywords: &["rust", "builder", "cargo", "rs", "package-manager"],

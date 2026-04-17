@@ -74,7 +74,7 @@ impl Processor for CreatorProcessor {
             return Ok(());
         };
 
-        let hash = Some(output_config_hash(&self.config, &["output_dirs", "output_files"]));
+        let hash = Some(output_config_hash(&self.config, <crate::config::CreatorConfig as crate::config::KnownFields>::checksum_fields()));
         let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
 
         for anchor in files {
@@ -137,7 +137,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::CreatorConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::CreatorConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::CreatorConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::CreatorConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::CreatorConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::CreatorConfig>,
         keywords: &["builder", "creator", "generic"],

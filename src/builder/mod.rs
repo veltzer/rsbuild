@@ -285,14 +285,14 @@ impl Builder {
                 None => continue,
             };
 
-            // Keep only output-affecting fields for change detection (unless show_all).
+            // Keep only checksum-affecting fields for change detection (unless show_all).
             // Each processor declares which config fields affect its output;
             // changes to other fields (src_dirs, batch, max_jobs, etc.)
             // should not trigger config change detection by default.
             let config_json = if show_all {
                 config_json
             } else {
-                Self::filter_output_fields(name, &config_json)
+                Self::filter_checksum_fields(name, &config_json)
             };
 
             // Store the config and check if it changed
@@ -307,18 +307,18 @@ impl Builder {
         }
     }
 
-    /// Filter a config JSON string to only include output-affecting fields.
-    /// Uses the processor's `output_fields()` declaration to determine which
+    /// Filter a config JSON string to only include checksum-affecting fields.
+    /// Uses the processor's `checksum_fields()` declaration to determine which
     /// fields matter for build output.
-    fn filter_output_fields(processor_name: &str, json: &str) -> String {
-        let output_fields = ProcessorConfig::output_fields_for(processor_name);
+    fn filter_checksum_fields(processor_name: &str, json: &str) -> String {
+        let checksum_fields = ProcessorConfig::checksum_fields_for(processor_name);
         let Ok(value) = serde_json::from_str::<serde_json::Value>(json) else {
             return json.to_string();
         };
         let Some(obj) = value.as_object() else {
             return json.to_string();
         };
-        match output_fields {
+        match checksum_fields {
             Some(fields) => {
                 let filtered: serde_json::Map<String, serde_json::Value> = obj.iter()
                     .filter(|(k, _)| fields.contains(&k.as_str()))
@@ -326,7 +326,7 @@ impl Builder {
                     .collect();
                 serde_json::to_string(&filtered).unwrap_or_else(|_| json.to_string())
             }
-            // Lua plugins: no output_fields declaration, use full config
+            // Lua plugins: no checksum_fields declaration, use full config
             None => json.to_string(),
         }
     }

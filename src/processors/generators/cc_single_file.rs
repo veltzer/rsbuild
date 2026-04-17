@@ -474,7 +474,7 @@ impl CcSingleFileProcessor {
             return Ok(());
         }
 
-        let cfg_hash = if for_clean { None } else { Some(output_config_hash(&self.config, &[])) };
+        let cfg_hash = if for_clean { None } else { Some(output_config_hash(&self.config, <crate::config::CcSingleFileConfig as crate::config::KnownFields>::checksum_fields())) };
         let extra = if for_clean { Vec::new() } else { resolve_extra_inputs(&self.config.standard.dep_inputs)? };
 
         for profile in &self.profiles {
@@ -577,7 +577,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::CcSingleFileConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::CcSingleFileConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::CcSingleFileConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::CcSingleFileConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::CcSingleFileConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::CcSingleFileConfig>,
         keywords: &["c", "cpp", "compiler", "gcc", "clang", "binary", "executable"],

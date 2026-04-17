@@ -205,7 +205,9 @@ impl crate::processors::Processor for IyamlschemaProcessor {
         crate::processors::discover_checker_products(
             graph, &self.config.standard, file_index,
             &self.config.standard.dep_inputs, &self.config.standard.dep_auto,
-            &self.config, instance_name,
+            &self.config,
+            <crate::config::IyamlschemaConfig as crate::config::KnownFields>::checksum_fields(),
+            instance_name,
         )
     }
 
@@ -233,7 +235,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::IyamlschemaConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::IyamlschemaConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::IyamlschemaConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::IyamlschemaConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::IyamlschemaConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IyamlschemaConfig>,
         keywords: &["yaml", "yml", "schema", "validator"],

@@ -37,7 +37,7 @@ pub struct ProcessorPlugin {
     pub create: fn(&toml::Value) -> Result<Box<dyn Processor>>,
     /// Config metadata
     pub known_fields: fn() -> &'static [&'static str],
-    pub output_fields: fn() -> &'static [&'static str],
+    pub checksum_fields: fn() -> &'static [&'static str],
     pub must_fields: fn() -> &'static [&'static str],
     pub field_descriptions: fn() -> &'static [(&'static str, &'static str)],
     /// Return the default config as pretty JSON. Receives the processor name
@@ -100,15 +100,49 @@ pub fn deserialize_and_create<C: Default + DeserializeOwned>(
 }
 
 /// Build default config JSON for a config type, applying defaults for the given processor name.
-pub fn default_config_json<C: Default + DeserializeOwned + Serialize>(name: &str) -> Option<String> {
+pub fn default_config_json<C: Default + DeserializeOwned + Serialize + KnownFields>(name: &str) -> Option<String> {
     let mut val = toml::Value::Table(toml::map::Map::new());
     let mut prov = crate::config::ProvenanceMap::new();
     apply_all_defaults(name, &mut val, &mut prov);
     let cfg: C = toml::from_str(&toml::to_string(&val).ok()?).ok()?;
-    serde_json::to_string_pretty(&serde_json::to_value(cfg).ok()?).ok()
+    let json_val = serde_json::to_value(&cfg).ok()?;
+
+    // Stage C defense-in-depth check (debug builds only): every key the user
+    // can write must be classified as either "in checksum_fields" (affects
+    // output) or "in known_fields - checksum_fields" (recognized but not
+    // hashed). Configs that `#[serde(flatten)]` StandardConfig inherit all of
+    // its fields at serialization time even when the per-processor
+    // known_fields() omits them, so StandardConfig's known_fields are also
+    // accepted as recognized.
+    #[cfg(debug_assertions)]
+    {
+        if let Some(obj) = json_val.as_object() {
+            let known: std::collections::HashSet<&str> = C::known_fields().iter().copied()
+                .chain(crate::config::StandardConfig::known_fields().iter().copied())
+                .chain(crate::config::SCAN_CONFIG_FIELDS.iter().copied())
+                .collect();
+            let checksum: std::collections::HashSet<&str> = C::checksum_fields().iter().copied().collect();
+            for key in obj.keys() {
+                debug_assert!(
+                    known.contains(key.as_str()),
+                    "Processor '{}': default config field '{}' is serialized but not declared in known_fields() or scan fields",
+                    name, key
+                );
+            }
+            for k in &checksum {
+                debug_assert!(
+                    known.contains(k),
+                    "Processor '{}': checksum_fields() contains '{}' which is not in known_fields()",
+                    name, k
+                );
+            }
+        }
+    }
+
+    serde_json::to_string_pretty(&json_val).ok()
 }
 
 pub fn typed_known_fields<C: KnownFields>() -> &'static [&'static str] { C::known_fields() }
-pub fn typed_output_fields<C: KnownFields>() -> &'static [&'static str] { C::output_fields() }
+pub fn typed_checksum_fields<C: KnownFields>() -> &'static [&'static str] { C::checksum_fields() }
 pub fn typed_must_fields<C: KnownFields>() -> &'static [&'static str] { C::must_fields() }
 pub fn typed_field_descriptions<C: KnownFields>() -> &'static [(&'static str, &'static str)] { C::field_descriptions() }

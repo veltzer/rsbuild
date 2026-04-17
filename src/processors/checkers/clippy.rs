@@ -70,6 +70,7 @@ impl Processor for ClippyProcessor {
             file_index,
             dep_inputs: &self.config.standard.dep_inputs,
             cfg_hash: &self.config,
+            checksum_fields: <crate::config::ClippyConfig as crate::config::KnownFields>::checksum_fields(),
             siblings: &SiblingFilter {
                 extensions: &[".rs", ".toml"],
                 excludes: &["/.git/", "/target/", "/.rsconstruct/"],
@@ -97,7 +98,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::ClippyConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::ClippyConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::ClippyConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::ClippyConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::ClippyConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ClippyConfig>,
         keywords: &["rust", "linter", "cargo", "rs"],

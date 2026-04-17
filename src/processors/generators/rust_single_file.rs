@@ -67,7 +67,7 @@ impl Processor for RustSingleFileProcessor {
             return Ok(());
         }
 
-        let hash = Some(output_config_hash(&self.config, &[]));
+        let hash = Some(output_config_hash(&self.config, <crate::config::RustSingleFileConfig as crate::config::KnownFields>::checksum_fields()));
         let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
 
         for source in &files {
@@ -119,7 +119,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::RustSingleFileConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::RustSingleFileConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::RustSingleFileConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::RustSingleFileConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::RustSingleFileConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::RustSingleFileConfig>,
         keywords: &["rust", "compiler", "rs", "cargo", "binary", "executable"],

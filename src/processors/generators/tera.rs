@@ -157,7 +157,7 @@ impl Processor for TeraProcessor {
                 inputs,
                 vec![item.output_path.clone()],
                 instance_name,
-                Some(output_config_hash(&self.config, &[])),
+                Some(output_config_hash(&self.config, <crate::config::TeraConfig as crate::config::KnownFields>::checksum_fields())),
             )?;
         }
 
@@ -532,7 +532,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: registry::default_config_json::<crate::config::TeraConfig>,
         known_fields: registry::typed_known_fields::<crate::config::TeraConfig>,
-        output_fields: registry::typed_output_fields::<crate::config::TeraConfig>,
+        checksum_fields: registry::typed_checksum_fields::<crate::config::TeraConfig>,
         must_fields: registry::typed_must_fields::<crate::config::TeraConfig>,
         field_descriptions: registry::typed_field_descriptions::<crate::config::TeraConfig>,
         keywords: &["template", "generator", "jinja", "html", "rust"],

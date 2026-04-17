@@ -99,7 +99,7 @@ impl Processor for MakoProcessor {
                 inputs,
                 vec![item.output_path.clone()],
                 instance_name,
-                Some(output_config_hash(&self.config, &[])),
+                Some(output_config_hash(&self.config, <crate::config::MakoConfig as crate::config::KnownFields>::checksum_fields())),
             )?;
         }
 
@@ -128,7 +128,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::MakoConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::MakoConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::MakoConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::MakoConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::MakoConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::MakoConfig>,
         keywords: &["python", "template", "generator", "pip"],

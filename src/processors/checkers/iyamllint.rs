@@ -83,7 +83,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::IyamllintConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::IyamllintConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::IyamllintConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::IyamllintConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::IyamllintConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IyamllintConfig>,
         keywords: &["yaml", "yml", "linter", "validator"],

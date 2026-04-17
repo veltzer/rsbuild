@@ -35,7 +35,7 @@ pub(crate) trait KnownFields {
     /// Changes to these fields should trigger config change detection.
     /// Fields not listed here (e.g., src_dirs, src_exclude_dirs, batch, max_jobs)
     /// are discovery or execution parameters that don't affect what the tool produces.
-    fn output_fields() -> &'static [&'static str];
+    fn checksum_fields() -> &'static [&'static str];
 
     /// Return fields that must be explicitly set (non-empty) for the processor to work.
     /// If any of these fields are absent or empty in the user's config, an error is reported.
@@ -155,26 +155,17 @@ pub(crate) const SHARED_FIELD_DESCRIPTIONS: &[(&str, &str)] = &[
     ("max_jobs",    "Maximum parallel jobs for this processor (overrides global --jobs)"),
 ];
 
-/// Fields that never affect product output and are excluded from the output config hash.
-/// These control file discovery, caching strategy, and execution batching.
-const NON_OUTPUT_FIELDS: &[&str] = &[
-    "src_dirs", "src_extensions", "src_exclude_dirs", "src_exclude_files", "src_exclude_paths",
-    "dep_inputs", "dep_auto", "batch",
-];
-
-/// Compute a config hash including only fields that affect the product output.
-/// Strips scan config, discovery, and batching fields. Additional non-output
-/// fields can be excluded via `extra_exclude`.
-pub(crate) fn output_config_hash(value: &impl Serialize, extra_exclude: &[&str]) -> String {
+/// Compute a config hash including only the fields named in `checksum_fields`.
+/// This is allowlist-based: any key not in `checksum_fields` is removed before
+/// hashing. Each processor declares its own checksum_fields() list, which is the
+/// single source of truth for which config fields trigger cache invalidation.
+pub(crate) fn output_config_hash(value: &impl Serialize, checksum_fields: &[&str]) -> String {
     let json_value: serde_json::Value = serde_json::to_value(value).expect(errors::CONFIG_SERIALIZE);
-    let filtered = if let serde_json::Value::Object(mut map) = json_value {
-        for field in NON_OUTPUT_FIELDS {
-            map.remove(*field);
-        }
-        for field in extra_exclude {
-            map.remove(*field);
-        }
-        serde_json::Value::Object(map)
+    let filtered = if let serde_json::Value::Object(map) = json_value {
+        let kept: serde_json::Map<String, serde_json::Value> = map.into_iter()
+            .filter(|(k, _)| checksum_fields.contains(&k.as_str()))
+            .collect();
+        serde_json::Value::Object(kept)
     } else {
         json_value
     };
@@ -467,9 +458,9 @@ impl ProcessorConfig {
         find_registry_entry(type_name).map(|e| (e.known_fields)())
     }
 
-    /// Return output-affecting fields for a builtin processor type, or None for Lua plugins.
-    pub(crate) fn output_fields_for(type_name: &str) -> Option<&'static [&'static str]> {
-        find_registry_entry(type_name).map(|e| (e.output_fields)())
+    /// Return checksum-affecting fields for a builtin processor type, or None for Lua plugins.
+    pub(crate) fn checksum_fields_for(type_name: &str) -> Option<&'static [&'static str]> {
+        find_registry_entry(type_name).map(|e| (e.checksum_fields)())
     }
 
     /// Return must fields (required non-empty fields) for a builtin processor type, or None for Lua plugins.

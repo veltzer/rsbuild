@@ -190,7 +190,7 @@ impl Processor for IpdfuniteProcessor {
             return Ok(());
         }
 
-        let hash = Some(output_config_hash(&self.config, &[]));
+        let hash = Some(output_config_hash(&self.config, <crate::config::IpdfuniteConfig as crate::config::KnownFields>::checksum_fields()));
         let extra = resolve_extra_inputs(&self.config.standard.dep_inputs)?;
         let ext = self.config.source_ext.strip_prefix('.').unwrap_or(&self.config.source_ext);
 
@@ -263,7 +263,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::IpdfuniteConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::IpdfuniteConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::IpdfuniteConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::IpdfuniteConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::IpdfuniteConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IpdfuniteConfig>,
         keywords: &["pdf", "merger", "generator"],

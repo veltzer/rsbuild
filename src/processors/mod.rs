@@ -444,6 +444,8 @@ pub(crate) struct DirectoryProductOpts<'a, H: serde::Serialize> {
     pub file_index: &'a FileIndex,
     pub dep_inputs: &'a [String],
     pub cfg_hash: &'a H,
+    /// Allowlist of field names to include in the config-change checksum.
+    pub checksum_fields: &'static [&'static str],
     pub siblings: &'a SiblingFilter<'a>,
     pub processor_name: &'a str,
     pub output_dir_name: Option<&'a str>,
@@ -462,13 +464,13 @@ pub(crate) fn discover_directory_products(
     graph: &mut BuildGraph,
     opts: DirectoryProductOpts<'_, impl serde::Serialize>,
 ) -> Result<()> {
-    let DirectoryProductOpts { scan, file_index, dep_inputs, cfg_hash, siblings, processor_name, output_dir_name } = opts;
+    let DirectoryProductOpts { scan, file_index, dep_inputs, cfg_hash, checksum_fields, siblings, processor_name, output_dir_name } = opts;
     let files = file_index.scan(scan, true);
     if files.is_empty() {
         return Ok(());
     }
 
-    let hash = Some(output_config_hash(cfg_hash, &[]));
+    let hash = Some(output_config_hash(cfg_hash, checksum_fields));
     let extra = resolve_extra_inputs(dep_inputs)?;
 
     for anchor in files {
@@ -519,6 +521,7 @@ pub(crate) fn discover_checker_products(
     dep_inputs: &[String],
     dep_auto: &[String],
     cfg_hash: &impl serde::Serialize,
+    checksum_fields: &[&str],
     processor_name: &str,
 ) -> Result<()> {
     let files = file_index.scan(scan, true);
@@ -529,7 +532,7 @@ pub(crate) fn discover_checker_products(
     for ai in dep_auto {
         all_dep_inputs.extend(config_file_inputs(ai));
     }
-    let hash = Some(output_config_hash(cfg_hash, &[]));
+    let hash = Some(output_config_hash(cfg_hash, checksum_fields));
     let extra = resolve_extra_inputs(&all_dep_inputs)?;
     for file in files {
         let mut inputs = Vec::with_capacity(1 + extra.len());
@@ -883,7 +886,7 @@ pub trait Processor: Sync + Send {
     /// Default: standard checker discover using dep_inputs/dep_auto from standard_config.
     fn discover(&self, graph: &mut BuildGraph, file_index: &FileIndex, instance_name: &str) -> Result<()> {
         let cfg = self.standard_config().expect("discover() requires standard_config() or must be overridden");
-        discover_checker_products(graph, cfg, file_index, &cfg.dep_inputs, &cfg.dep_auto, cfg, instance_name)
+        discover_checker_products(graph, cfg, file_index, &cfg.dep_inputs, &cfg.dep_auto, cfg, <crate::config::StandardConfig as crate::config::KnownFields>::checksum_fields(), instance_name)
     }
 
     /// Discover products for clean operation (outputs only, skip expensive dependency scanning).
@@ -1393,7 +1396,9 @@ impl Processor for SimpleChecker {
         discover_checker_products(
             graph, &self.config.standard, file_index,
             &self.config.standard.dep_inputs, &self.config.standard.dep_auto,
-            &self.config, instance_name,
+            &self.config,
+            <crate::config::CheckerConfigWithCommand as crate::config::KnownFields>::checksum_fields(),
+            instance_name,
         )
     }
 
@@ -1517,6 +1522,7 @@ impl Processor for SimpleGenerator {
             config: &self.config,
             output_dir: &self.config.output_dir,
             processor_name: instance_name,
+            checksum_fields: <crate::config::StandardConfig as crate::config::KnownFields>::checksum_fields(),
         };
         match &self.params.discover_mode {
             DiscoverMode::MultiFormat => {

@@ -136,7 +136,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::JsonSchemaConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::JsonSchemaConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::JsonSchemaConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::JsonSchemaConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::JsonSchemaConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::JsonSchemaConfig>,
         keywords: &["json", "schema", "validator", "checker"],

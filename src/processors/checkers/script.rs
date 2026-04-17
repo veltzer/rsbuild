@@ -75,7 +75,7 @@ impl Processor for ScriptProcessor {
         if files.is_empty() {
             return Ok(());
         }
-        let hash = Some(output_config_hash(&self.config, &[]));
+        let hash = Some(output_config_hash(&self.config, <crate::config::ScriptConfig as crate::config::KnownFields>::checksum_fields()));
         let mut dep_inputs = self.config.standard.dep_inputs.clone();
         for ai in &self.config.standard.dep_auto {
             dep_inputs.extend(config_file_inputs(ai));
@@ -132,7 +132,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::ScriptConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::ScriptConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::ScriptConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::ScriptConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::ScriptConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ScriptConfig>,
         keywords: &["shell", "script", "checker", "sh", "bash"],

@@ -123,10 +123,13 @@ impl StandardConfig {
 
 impl KnownFields for StandardConfig {
     fn known_fields() -> &'static [&'static str] {
-        &["command", "formats", "args", "dep_inputs", "dep_auto", "output_dir", "batch", "max_jobs", "enabled"]
+        &["command", "formats", "args", "dep_inputs", "dep_auto", "output_dir", "batch", "max_jobs", "cache", "enabled"]
     }
-    fn output_fields() -> &'static [&'static str] {
-        &["command", "formats", "args", "output_dir"]
+    fn checksum_fields() -> &'static [&'static str] {
+        // formats and output_dir are excluded: format is encoded as a per-product
+        // variant in the cache key, and output_dir is encoded in the product's
+        // declared outputs path — both would double-count if hashed here.
+        &["command", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
         &[
@@ -151,7 +154,7 @@ impl Default for CheckerConfig {
 }
 impl KnownFields for CheckerConfig {
     fn known_fields() -> &'static [&'static str] { StandardConfig::known_fields() }
-    fn output_fields() -> &'static [&'static str] { StandardConfig::output_fields() }
+    fn checksum_fields() -> &'static [&'static str] { StandardConfig::checksum_fields() }
     fn must_fields() -> &'static [&'static str] { StandardConfig::must_fields() }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] { StandardConfig::field_descriptions() }
 }
@@ -189,8 +192,10 @@ impl KnownFields for CreatorConfig {
     fn known_fields() -> &'static [&'static str] {
         &["command", "args", "dep_inputs", "dep_auto", "output_dirs", "output_files", "batch", "max_jobs", "cache"]
     }
-    fn output_fields() -> &'static [&'static str] {
-        &["command", "args", "output_dirs", "output_files"]
+    fn checksum_fields() -> &'static [&'static str] {
+        // output_dirs/output_files are excluded: the output paths themselves are
+        // already part of the product's identity, not its config-change checksum.
+        &["command", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
         &[
@@ -213,7 +218,7 @@ impl Default for TeraConfig {
 }
 impl KnownFields for TeraConfig {
     fn known_fields() -> &'static [&'static str] { StandardConfig::known_fields() }
-    fn output_fields() -> &'static [&'static str] { StandardConfig::output_fields() }
+    fn checksum_fields() -> &'static [&'static str] { StandardConfig::checksum_fields() }
     fn must_fields() -> &'static [&'static str] { StandardConfig::must_fields() }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] { StandardConfig::field_descriptions() }
 }
@@ -230,7 +235,7 @@ impl Default for MakoConfig {
 }
 impl KnownFields for MakoConfig {
     fn known_fields() -> &'static [&'static str] { StandardConfig::known_fields() }
-    fn output_fields() -> &'static [&'static str] { StandardConfig::output_fields() }
+    fn checksum_fields() -> &'static [&'static str] { StandardConfig::checksum_fields() }
     fn must_fields() -> &'static [&'static str] { StandardConfig::must_fields() }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] { StandardConfig::field_descriptions() }
 }
@@ -247,7 +252,7 @@ impl Default for Jinja2Config {
 }
 impl KnownFields for Jinja2Config {
     fn known_fields() -> &'static [&'static str] { StandardConfig::known_fields() }
-    fn output_fields() -> &'static [&'static str] { StandardConfig::output_fields() }
+    fn checksum_fields() -> &'static [&'static str] { StandardConfig::checksum_fields() }
     fn must_fields() -> &'static [&'static str] { StandardConfig::must_fields() }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] { StandardConfig::field_descriptions() }
 }
@@ -284,7 +289,7 @@ impl KnownFields for ClangTidyConfig {
             "args", "compiler_args", "dep_inputs", "dep_auto", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["args", "compiler_args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -410,7 +415,7 @@ impl KnownFields for CcSingleFileConfig {
             "include_scanner", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &[
             "cc", "cxx", "cflags", "cxxflags", "ldflags", "output_suffix",
             "compilers", "include_paths", "output_dir", "include_scanner",
@@ -538,7 +543,7 @@ impl KnownFields for CcConfig {
             "dep_inputs", "cache_output_dir", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &[
             "cc", "cxx", "cflags", "cxxflags", "ldflags",
             "include_dirs", "single_invocation",
@@ -613,7 +618,7 @@ impl Default for LinuxModuleConfig {
 }
 impl KnownFields for LinuxModuleConfig {
     fn known_fields() -> &'static [&'static str] { StandardConfig::known_fields() }
-    fn output_fields() -> &'static [&'static str] { StandardConfig::output_fields() }
+    fn checksum_fields() -> &'static [&'static str] { StandardConfig::checksum_fields() }
     fn must_fields() -> &'static [&'static str] { StandardConfig::must_fields() }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] { StandardConfig::field_descriptions() }
 }
@@ -658,7 +663,7 @@ impl KnownFields for ZspellConfig {
             "language", "words_file", "auto_add_words", "dep_inputs", "dep_auto", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["language", "auto_add_words"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -713,7 +718,7 @@ impl KnownFields for CargoConfig {
             "src_exclude_paths",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["cargo", "command", "args", "profiles"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -751,7 +756,7 @@ impl KnownFields for ClippyConfig {
             "cargo", "command", "args", "dep_inputs", "dep_auto", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["cargo", "command", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -787,7 +792,7 @@ impl KnownFields for MakeConfig {
             "command", "args", "target", "dep_inputs", "dep_auto", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["command", "args", "target"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -875,12 +880,12 @@ impl KnownFields for TagsConfig {
             "check_unused", "dep_inputs", "dep_auto", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
-        &[
-            "output", "tags_dir", "required_fields", "required_values",
-            "unique_fields", "field_types", "required_field_groups", "sorted_tags",
-            "check_unused",
-        ]
+    fn checksum_fields() -> &'static [&'static str] {
+        // The validation-rule fields (required_fields, required_values, etc.)
+        // are excluded: they affect whether the build passes, not the bytes of
+        // the produced tags database. A change in those triggers a re-validation
+        // pass via dep_inputs, not a re-hash of the output.
+        &["output", "tags_dir", "check_unused"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
         &[
@@ -931,7 +936,7 @@ impl KnownFields for ScriptConfig {
         &["command", "formats", "args", "dep_inputs", "dep_auto", "output_dir", "batch", "max_jobs", "enabled",
           "fix_command", "fix_args", "fix_batch"]
     }
-    fn output_fields() -> &'static [&'static str] { StandardConfig::output_fields() }
+    fn checksum_fields() -> &'static [&'static str] { StandardConfig::checksum_fields() }
     fn must_fields() -> &'static [&'static str] { StandardConfig::must_fields() }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
         &[
@@ -974,7 +979,7 @@ impl KnownFields for GeneratorConfig {
             "dep_inputs", "dep_auto", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["command", "output_dir", "output_extension", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1020,8 +1025,10 @@ impl KnownFields for ExplicitConfig {
     fn known_fields() -> &'static [&'static str] {
         &["command", "args", "inputs", "input_globs", "output_files", "output_dirs"]
     }
-    fn output_fields() -> &'static [&'static str] {
-        &["command", "args", "inputs", "input_globs", "output_files", "output_dirs"]
+    fn checksum_fields() -> &'static [&'static str] {
+        // inputs/input_globs are excluded: input changes are detected by content
+        // hashing of the resolved input file set, not by hashing the pattern list.
+        &["command", "args", "output_files", "output_dirs"]
     }
     fn must_fields() -> &'static [&'static str] {
         &["command"]
@@ -1057,7 +1064,7 @@ impl KnownFields for PipConfig {
             "command", "args", "dep_inputs", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["command", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1099,7 +1106,7 @@ impl KnownFields for SphinxConfig {
             "command", "output_dir", "working_dir", "args", "dep_inputs", "cache_output_dir", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["command", "output_dir", "working_dir", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1140,7 +1147,7 @@ impl KnownFields for MdbookConfig {
             "command", "output_dir", "args", "dep_inputs", "cache_output_dir", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["command", "output_dir", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1176,7 +1183,7 @@ impl KnownFields for NpmConfig {
             "command", "args", "dep_inputs", "cache_output_dir", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["command", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1224,7 +1231,7 @@ impl KnownFields for MdlConfig {
             "local_repo", "gem_home", "command", "args", "dep_inputs", "dep_auto", "gem_stamp", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["local_repo", "gem_home", "command", "args", "gem_stamp"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1263,7 +1270,7 @@ impl KnownFields for MarkdownlintConfig {
             "command", "args", "dep_inputs", "dep_auto", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["command", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1312,7 +1319,7 @@ impl KnownFields for AspellConfig {
             "command", "args", "conf", "auto_add_words", "words_file", "dep_inputs", "dep_auto", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["command", "args", "conf", "auto_add_words"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1354,7 +1361,7 @@ impl KnownFields for TermsConfig {
     fn known_fields() -> &'static [&'static str] {
         &["terms_dir", "dep_inputs", "dep_auto", "batch", "max_jobs"]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["terms_dir"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1401,7 +1408,7 @@ impl KnownFields for PdflatexConfig {
             "command", "args", "dep_inputs", "dep_auto", "runs", "qpdf", "output_dir", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["command", "args", "runs", "qpdf", "output_dir"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1444,7 +1451,7 @@ impl KnownFields for GemConfig {
             "command", "gem_home", "args", "dep_inputs", "cache_output_dir", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["command", "gem_home", "args"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1489,7 +1496,7 @@ impl KnownFields for IyamlschemaConfig {
     fn known_fields() -> &'static [&'static str] {
         &["check_ordering", "dep_inputs", "dep_auto", "batch", "max_jobs"]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["check_ordering"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1531,7 +1538,7 @@ impl KnownFields for RustSingleFileConfig {
     fn known_fields() -> &'static [&'static str] {
         &["command", "flags", "output_suffix", "dep_inputs", "dep_auto", "output_dir", "batch", "max_jobs"]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["command", "flags", "output_suffix", "output_dir"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {
@@ -1591,7 +1598,7 @@ impl KnownFields for PdfuniteConfig {
             "args", "dep_inputs", "dep_auto", "output_dir", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &[
             "command", "source_dir", "source_ext", "source_output_dir",
             "args", "output_dir",
@@ -1654,7 +1661,7 @@ impl KnownFields for IpdfuniteConfig {
             "dep_inputs", "dep_auto", "output_dir", "batch", "max_jobs",
         ]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &[
             "source_dir", "source_ext", "source_output_dir", "output_dir",
         ]
@@ -1735,7 +1742,7 @@ impl KnownFields for LicenseHeaderConfig {
     fn known_fields() -> &'static [&'static str] {
         &["args", "dep_inputs", "dep_auto", "batch", "max_jobs", "header_lines"]
     }
-    fn output_fields() -> &'static [&'static str] {
+    fn checksum_fields() -> &'static [&'static str] {
         &["args", "header_lines"]
     }
     fn field_descriptions() -> &'static [(&'static str, &'static str)] {

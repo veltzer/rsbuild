@@ -94,7 +94,9 @@ impl crate::processors::Processor for TermsProcessor {
         }
         discover_checker_products(
             graph, &self.config.standard, file_index, &dep_inputs,
-            &self.config.standard.dep_auto, &self.config, instance_name,
+            &self.config.standard.dep_auto, &self.config,
+            <crate::config::TermsConfig as crate::config::KnownFields>::checksum_fields(),
+            instance_name,
         )
     }
 
@@ -670,7 +672,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::TermsConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::TermsConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::TermsConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::TermsConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::TermsConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::TermsConfig>,
         keywords: &["checker", "terminology", "text", "words"],

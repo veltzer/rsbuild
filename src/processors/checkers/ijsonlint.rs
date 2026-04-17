@@ -83,7 +83,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::IjsonlintConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::IjsonlintConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::IjsonlintConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::IjsonlintConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::IjsonlintConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::IjsonlintConfig>,
         keywords: &["json", "linter", "validator"],

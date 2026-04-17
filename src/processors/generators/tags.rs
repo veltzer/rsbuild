@@ -103,10 +103,7 @@ impl Processor for TagsProcessor {
             inputs,
             vec![output],
             instance_name,
-            Some(output_config_hash(&self.config, &[
-                "required_fields", "required_values", "unique_fields",
-                "field_types", "required_field_groups", "sorted_tags",
-            ])),
+            Some(output_config_hash(&self.config, <crate::config::TagsConfig as crate::config::KnownFields>::checksum_fields())),
         )?;
 
         Ok(())
@@ -1965,7 +1962,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::TagsConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::TagsConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::TagsConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::TagsConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::TagsConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::TagsConfig>,
         keywords: &["ctags", "tags", "generator", "code-navigation"],

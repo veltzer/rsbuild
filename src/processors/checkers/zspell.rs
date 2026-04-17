@@ -203,6 +203,7 @@ impl Processor for ZspellProcessor {
             &self.config.standard.dep_inputs,
             &self.config.standard.dep_auto,
             &self.config,
+            <crate::config::ZspellConfig as crate::config::KnownFields>::checksum_fields(),
             instance_name,
         )
     }
@@ -241,7 +242,7 @@ inventory::submit! {
         create: plugin_create,
         defconfig_json: crate::registries::default_config_json::<crate::config::ZspellConfig>,
         known_fields: crate::registries::typed_known_fields::<crate::config::ZspellConfig>,
-        output_fields: crate::registries::typed_output_fields::<crate::config::ZspellConfig>,
+        checksum_fields: crate::registries::typed_checksum_fields::<crate::config::ZspellConfig>,
         must_fields: crate::registries::typed_must_fields::<crate::config::ZspellConfig>,
         field_descriptions: crate::registries::typed_field_descriptions::<crate::config::ZspellConfig>,
         keywords: &["spellcheck", "spelling", "markdown", "md", "english"],
